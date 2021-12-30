@@ -1,6 +1,3 @@
-pub mod identity;
-pub mod message;
-
 use clap::Parser;
 use omni::identity::cose::CoseKeyIdentity;
 use omni::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
