@@ -83,8 +83,8 @@ impl<I: SimpleRequestHandler> OmniRequestHandler for SimpleRequestHandlerAdapter
             from: message.to,
             data: payload,
             to: message.from,
-            timestamp: None,
             id: message.id,
+            ..Default::default()
         })
     }
 }

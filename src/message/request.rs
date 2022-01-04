@@ -1,3 +1,4 @@
+use crate::protocol::Attribute;
 use crate::Identity;
 use derive_builder::Builder;
 use minicbor::data::{Tag, Type};
@@ -17,6 +18,7 @@ pub enum RequestMessageCborKey {
     Timestamp,
     Id,
     Nonce,
+    Attributes,
 }
 
 #[derive(Clone, Default, Builder)]
@@ -30,6 +32,7 @@ pub struct RequestMessage {
     pub timestamp: Option<SystemTime>,
     pub id: Option<u64>,
     pub nonce: Option<Vec<u8>>,
+    pub attributes: Vec<Attribute>,
 }
 
 impl std::fmt::Debug for RequestMessage {
@@ -50,6 +53,9 @@ impl std::fmt::Debug for RequestMessage {
         if let Some(id) = &self.id {
             s.field("id", id);
         }
+        if !self.attributes.is_empty() {
+            s.field("attributes", &self.attributes);
+        }
 
         s.finish()
     }
@@ -58,6 +64,11 @@ impl std::fmt::Debug for RequestMessage {
 impl RequestMessage {
     pub fn with_method(mut self, method: String) -> Self {
         self.method = method;
+        self
+    }
+
+    pub fn with_attribute(mut self, attr: Attribute) -> Self {
+        self.attributes.push(attr);
         self
     }
 
@@ -85,7 +96,8 @@ impl Encode for RequestMessage {
             } + if self.to.is_anonymous() { 0 } else { 1 }
                 + if self.data.is_empty() { 0 } else { 1 }
                 + if self.id.is_none() { 0 } else { 1 }
-                + if self.nonce.is_none() { 0 } else { 1 };
+                + if self.nonce.is_none() { 0 } else { 1 }
+                + if self.attributes.is_empty() { 0 } else { 1 };
         e.map(l)?;
 
         // Skip version for this version of the protocol. This message implementation
@@ -126,6 +138,11 @@ impl Encode for RequestMessage {
 
         if let Some(ref nonce) = self.nonce {
             e.i8(RequestMessageCborKey::Nonce as i8)?.bytes(nonce)?;
+        }
+
+        if !self.attributes.is_empty() {
+            e.i8(RequestMessageCborKey::Attributes as i8)?
+                .encode(&self.attributes)?;
         }
 
         Ok(())
@@ -176,6 +193,7 @@ impl<'b> Decode<'b> for RequestMessage {
                 }
                 Some(RequestMessageCborKey::Id) => builder.id(d.u64()?),
                 Some(RequestMessageCborKey::Nonce) => builder.nonce(d.bytes()?.to_vec()),
+                Some(RequestMessageCborKey::Attributes) => builder.attributes(d.decode()?),
             };
 
             i += 1;

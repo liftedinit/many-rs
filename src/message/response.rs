@@ -1,4 +1,5 @@
 use crate::message::RequestMessage;
+use crate::protocol::Attribute;
 use crate::Identity;
 use derive_builder::Builder;
 use minicbor::data::{Tag, Type};
@@ -18,6 +19,7 @@ pub enum ResponseMessageCborKey {
     Timestamp,
     Id,
     _Nonce, // Unused in Response.
+    Attributes,
 }
 
 /// An OMNI message response.
@@ -30,6 +32,7 @@ pub struct ResponseMessage {
     pub data: Result<Vec<u8>, super::OmniError>,
     pub timestamp: Option<SystemTime>,
     pub id: Option<u64>,
+    pub attributes: Vec<Attribute>,
 }
 
 impl Default for ResponseMessage {
@@ -41,6 +44,7 @@ impl Default for ResponseMessage {
             data: Ok(vec![]),
             timestamp: None,
             id: None,
+            attributes: Vec::new(),
         }
     }
 }
@@ -58,6 +62,7 @@ impl ResponseMessage {
             data,
             timestamp: None, // To be filled.
             id: request.id,
+            attributes: Vec::new(),
         }
     }
 
@@ -69,7 +74,13 @@ impl ResponseMessage {
             data: Err(data),
             timestamp: None, // To be filled.
             id: None,
+            attributes: Vec::new(),
         }
+    }
+
+    pub fn with_attribute(mut self, attr: Attribute) -> Self {
+        self.attributes.push(attr);
+        self
     }
 
     pub fn to_bytes(&self) -> Result<Vec<u8>, String> {
@@ -91,7 +102,8 @@ impl Encode for ResponseMessage {
             } else {
                 1
             }
-            + if self.id.is_none() { 0 } else { 1 };
+            + if self.id.is_none() { 0 } else { 1 }
+            + if self.attributes.is_empty() { 0 } else { 1 };
         e.map(l)?;
 
         // Skip version for this version of the protocol. This message implementation
@@ -126,6 +138,11 @@ impl Encode for ResponseMessage {
 
         if let Some(ref id) = self.id {
             e.i8(ResponseMessageCborKey::Id as i8)?.u64(*id)?;
+        }
+
+        if !self.attributes.is_empty() {
+            e.i8(ResponseMessageCborKey::Attributes as i8)?
+                .encode(&self.attributes)?;
         }
 
         Ok(())
@@ -176,6 +193,7 @@ impl<'b> Decode<'b> for ResponseMessage {
                         builder.timestamp(timestamp)
                     }
                 }
+                Some(ResponseMessageCborKey::Attributes) => builder.attributes(d.decode()?),
                 _ => &mut builder,
             };
 

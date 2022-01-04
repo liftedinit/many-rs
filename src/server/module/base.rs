@@ -9,7 +9,13 @@ pub struct BaseServerModule;
 lazy_static::lazy_static! {
     pub static ref BASE_SERVER_INFO: OmniModuleInfo = OmniModuleInfo {
         name: String::from("BaseServerModule"),
-        attributes: vec![crate::protocol::attributes::BASE_SERVER],
+        attributes: vec![crate::protocol::attributes::network::BASE],
+        endpoints: vec![
+            "status".to_string(),
+            "echo".to_string(),
+            "endpoints".to_string(),
+            "heartbeat".to_string(),
+        ]
     };
 }
 

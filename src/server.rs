@@ -18,7 +18,7 @@ pub struct OmniModuleList {}
 #[derive(Debug, Default)]
 pub struct OmniServer {
     modules: Vec<Box<dyn OmniModule>>,
-    method_cache: BTreeSet<&'static str>,
+    method_cache: BTreeSet<String>,
     identity: CoseKeyIdentity,
     name: String,
 }
@@ -37,7 +37,12 @@ impl OmniServer {
     where
         M: OmniModule + 'static,
     {
-        let OmniModuleInfo { attributes, .. } = module.info();
+        let info = module.info();
+        let OmniModuleInfo {
+            attributes,
+            endpoints,
+            ..
+        } = info;
         for a in attributes {
             let id = a.id;
 
@@ -54,22 +59,18 @@ impl OmniServer {
             }
         }
 
-        for a in attributes {
-            for e in a.endpoints.unwrap_or(&[]) {
-                if self.method_cache.contains(e) {
-                    unreachable!(
-                        "Method '{}' already implemented, but there was no attribute conflict.",
-                        e
-                    );
-                }
+        for e in endpoints {
+            if self.method_cache.contains(e.as_str()) {
+                unreachable!(
+                    "Method '{}' already implemented, but there was no attribute conflict.",
+                    e
+                );
             }
         }
 
         // Update the cache.
-        for a in attributes {
-            for e in a.endpoints.unwrap_or(&[]) {
-                self.method_cache.insert(e);
-            }
+        for e in endpoints {
+            self.method_cache.insert(e.clone());
         }
         self.modules.push(Box::new(module));
         self
@@ -94,8 +95,8 @@ impl OmniServer {
             .unwrap()
     }
 
-    fn endpoints(&self) -> Vec<&'static str> {
-        self.method_cache.iter().copied().collect()
+    fn endpoints(&self) -> Vec<&str> {
+        self.method_cache.iter().map(|x| x.as_str()).collect()
     }
 }
 
@@ -122,7 +123,7 @@ impl OmniRequestHandler for OmniServer {
     }
 
     async fn execute(&self, message: RequestMessage) -> Result<ResponseMessage, OmniError> {
-        let method = &message.method.as_str();
+        let method = message.method.as_str();
 
         if let Some(payload) = match message.method.as_str() {
             "status" => Some(
@@ -146,11 +147,8 @@ impl OmniRequestHandler for OmniServer {
         }
 
         for m in &self.modules {
-            let attrs = &m.info().attributes;
-            if attrs
-                .iter()
-                .any(|a| a.endpoints.unwrap_or(&[]).contains(method))
-            {
+            let endpoints = &m.info().endpoints;
+            if endpoints.contains(&method.to_string()) {
                 m.validate(&message)?;
 
                 return m.execute(message).await.map(|mut r| {

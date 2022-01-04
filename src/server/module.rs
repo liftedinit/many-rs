@@ -10,8 +10,12 @@ pub mod base;
 pub struct OmniModuleInfo {
     /// Returns the name of this module, for logs and metering.
     pub name: String,
+
     /// Returns a list of all attributes supported by this module.
     pub attributes: Vec<Attribute>,
+
+    /// The endpoints that this module exports.
+    pub endpoints: Vec<String>,
 }
 
 /// A module ran by an omni server.

@@ -89,37 +89,31 @@ impl<'d> Decode<'d> for AttributeArgument {
 pub struct Attribute {
     pub id: u32,
     pub arguments: Vec<AttributeArgument>,
-
-    /// If this is `None`, that means this attribute came from the wire and these should not be
-    /// relied upon. Endpoints are just meta information given when building modules and they
-    /// are not encoded/decoded in status.
-    pub endpoints: Option<&'static [&'static str]>,
 }
 
 impl Attribute {
-    const fn just_id(id: u32) -> Self {
+    const fn id(id: u32) -> Self {
         Self {
             id,
             arguments: Vec::new(),
-            endpoints: None,
         }
     }
 
-    pub const fn new(id: u32, endpoints: &'static [&'static str]) -> Self {
+    pub const fn new(id: u32, arguments: Vec<AttributeArgument>) -> Self {
+        Self { id, arguments }
+    }
+
+    pub fn with_arguments(&self, arguments: Vec<AttributeArgument>) -> Self {
         Self {
-            id,
-            arguments: Vec::new(),
-            endpoints: Some(endpoints),
+            arguments,
+            ..self.clone()
         }
     }
 
-    pub fn with_arguments(self, arguments: Vec<AttributeArgument>) -> Self {
-        Self { arguments, ..self }
-    }
-
-    pub fn with_argument(mut self, argument: AttributeArgument) -> Self {
-        self.arguments.push(argument);
-        self
+    pub fn with_argument(&self, argument: AttributeArgument) -> Self {
+        let mut s = self.clone();
+        s.arguments.push(argument);
+        s
     }
 }
 
@@ -150,9 +144,6 @@ impl Debug for Attribute {
         dbg.field("id", &self.id)
             .field("arguments", &self.arguments);
 
-        if let Some(ep) = self.endpoints {
-            dbg.field("endpoints", &ep.to_vec());
-        }
         dbg.finish()
     }
 }
@@ -199,13 +190,9 @@ impl<'d> Decode<'d> for Attribute {
                     }
                 }
 
-                Ok(Self {
-                    id,
-                    arguments,
-                    endpoints: None,
-                })
+                Ok(Self { id, arguments })
             }
-            _ => Ok(Self::just_id(d.u32()? as u32)),
+            _ => Ok(Self::id(d.u32()? as u32)),
         }
     }
 }
