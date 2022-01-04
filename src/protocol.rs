@@ -92,7 +92,7 @@ pub struct Attribute {
 }
 
 impl Attribute {
-    const fn id(id: u32) -> Self {
+    pub const fn id(id: u32) -> Self {
         Self {
             id,
             arguments: Vec::new(),
