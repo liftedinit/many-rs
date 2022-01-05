@@ -103,10 +103,9 @@ fn main() {
         }
         SubCommand::Message(o) => {
             // If `pem` is not provided, use anonymous and don't sign.
-            let key = o.pem.map_or_else(
-                CoseKeyIdentity::anonymous,
-                |p| CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap(),
-            );
+            let key = o.pem.map_or_else(CoseKeyIdentity::anonymous, |p| {
+                CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap()
+            });
             let from_identity = key.identity;
             let to_identity = o.to.unwrap_or_default();
 
@@ -116,12 +115,12 @@ fn main() {
 
             if let Some(s) = o.server {
                 let client = OmniClient::new(s, to_identity, key).unwrap();
-                let response = client.call_raw(o.method, &data);
+                let response = client.call_raw(o.method, &data).unwrap();
 
-                match response {
+                match &response.data {
                     Ok(payload) => {
                         if payload.is_empty() {
-                            eprintln!("Empty response.");
+                            eprintln!("Empty response:\n{:#?}", response);
                         } else {
                             println!(
                                 "{}",

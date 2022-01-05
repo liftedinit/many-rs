@@ -71,14 +71,15 @@ macro_rules! omni_error {
             $($(
                 #[doc = $description]
                 pub fn $snake_name( $($arg: String,)* ) -> Self {
-                    tracing::info!("Error: {:?} Backtrace: {:?}", OmniErrorCode::$name, backtrace::Backtrace::new());
-                    Self {
+                    let s = Self {
                         code: OmniErrorCode::$name,
                         message: None,
                         arguments: BTreeMap::from_iter(vec![
                             $( (stringify!($arg).to_string(), $arg) ),*
                         ]),
-                    }
+                    };
+                    tracing::error!("Error: {}", s);
+                    s
                 }
             )?)*
         }

@@ -1,7 +1,7 @@
 use crate::identity::cose::CoseKeyIdentity;
 use crate::message::{
     decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
-    RequestMessageBuilder,
+    RequestMessageBuilder, ResponseMessage,
 };
 use crate::protocol::Status;
 use crate::{Identity, OmniError};
@@ -53,17 +53,14 @@ impl OmniClient {
         CoseSign1::from_bytes(&bytes).map_err(|e| OmniError::deserialization_error(e.to_string()))
     }
 
-    pub fn send_message(&self, message: RequestMessage) -> Result<Vec<u8>, OmniError> {
+    pub fn send_message(&self, message: RequestMessage) -> Result<ResponseMessage, OmniError> {
         let cose = encode_cose_sign1_from_request(message, &self.id).unwrap();
         let cose_sign1 = Self::send_envelope(self.url.clone(), cose)?;
 
-        let response = decode_response_from_cose_sign1(cose_sign1, None)
-            .map_err(OmniError::deserialization_error)?;
-
-        response.data
+        decode_response_from_cose_sign1(cose_sign1, None).map_err(OmniError::deserialization_error)
     }
 
-    pub fn call_raw<M>(&self, method: M, argument: &[u8]) -> Result<Vec<u8>, OmniError>
+    pub fn call_raw<M>(&self, method: M, argument: &[u8]) -> Result<ResponseMessage, OmniError>
     where
         M: Into<String>,
     {
@@ -87,7 +84,7 @@ impl OmniClient {
         let bytes: Vec<u8> = minicbor::to_vec(argument)
             .map_err(|e| OmniError::serialization_error(e.to_string()))?;
 
-        self.call_raw(method, bytes.as_slice())
+        self.call_raw(method, bytes.as_slice())?.data
     }
 
     pub fn status(&self) -> Result<Status, OmniError> {

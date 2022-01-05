@@ -139,12 +139,14 @@ impl Ord for Attribute {
 
 impl Debug for Attribute {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut dbg = f.debug_struct("Attribute");
-
-        dbg.field("id", &self.id)
-            .field("arguments", &self.arguments);
-
-        dbg.finish()
+        if self.arguments.is_empty() {
+            f.write_fmt(format_args!("Attribute({})", self.id))
+        } else {
+            f.debug_struct("Attribute")
+                .field("id", &self.id)
+                .field("arguments", &self.arguments)
+                .finish()
+        }
     }
 }
 
