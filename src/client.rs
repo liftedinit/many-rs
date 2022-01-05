@@ -76,7 +76,7 @@ impl OmniClient {
         self.send_message(message)
     }
 
-    pub fn call_<M, I>(&self, method: M, argument: I) -> Result<Vec<u8>, OmniError>
+    pub fn call<M, I>(&self, method: M, argument: I) -> Result<ResponseMessage, OmniError>
     where
         M: Into<String>,
         I: Encode,
@@ -84,7 +84,15 @@ impl OmniClient {
         let bytes: Vec<u8> = minicbor::to_vec(argument)
             .map_err(|e| OmniError::serialization_error(e.to_string()))?;
 
-        self.call_raw(method, bytes.as_slice())?.data
+        self.call_raw(method, bytes.as_slice())
+    }
+
+    pub fn call_<M, I>(&self, method: M, argument: I) -> Result<Vec<u8>, OmniError>
+    where
+        M: Into<String>,
+        I: Encode,
+    {
+        self.call(method, argument)?.data
     }
 
     pub fn status(&self) -> Result<Status, OmniError> {
