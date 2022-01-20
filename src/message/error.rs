@@ -73,7 +73,7 @@ macro_rules! omni_error {
                 pub fn $snake_name( $($arg: String,)* ) -> Self {
                     let s = Self {
                         code: OmniErrorCode::$name,
-                        message: None,
+                        message: Some($description.to_string()),
                         arguments: BTreeMap::from_iter(vec![
                             $( (stringify!($arg).to_string(), $arg) ),*
                         ]),
@@ -88,7 +88,7 @@ macro_rules! omni_error {
 }
 
 omni_error! {
-    // Range -0-999 is for unexpected or transport errors.
+    // Range -0 - -999 is for generic, unexpected or transport errors.
        -1: Unknown as unknown(message)
             => "Unknown error: {message}",
        -2: MessageTooLong as message_too_long(max)
@@ -111,20 +111,20 @@ omni_error! {
      -102: InvalidIdentityKind as invalid_identity_kind(actual)
             => "Identity ",
 
-    // 1000-1999 is for request errors.
-     1000: InvalidMethodName as invalid_method_name(method)
+    // -1000 - -1999 is for request errors.
+    -1000: InvalidMethodName as invalid_method_name(method)
             => r#"Invalid method name: "{method}"."#,
-     1001: InvalidFromIdentity as invalid_from_identity()
+    -1001: InvalidFromIdentity as invalid_from_identity()
             => "The identity of the from field is invalid or unexpected.",
-     1002: CouldNotVerifySignature as could_not_verify_signature()
+    -1002: CouldNotVerifySignature as could_not_verify_signature()
             => "Signature does not match the public key.",
-     1003: UnknownDestination as unknown_destination(to, this)
+    -1003: UnknownDestination as unknown_destination(to, this)
             => "Unknown destination for message.\nThis is \"{this}\", message was for \"{to}\".",
-     1004: EmptyEnvelope as empty_envelope()
+    -1004: EmptyEnvelope as empty_envelope()
             => "An envelope must contain a payload.",
 
-    // 2000-2999 is for server errors.
-     2000: InternalServerError as internal_server_error()
+    // -2000 - -2999 is for server errors.
+    -2000: InternalServerError as internal_server_error()
             => "An internal server error happened.",
 
     // Negative 10000+ are reserved for attribute specified codes and are defined separately.
