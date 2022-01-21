@@ -35,17 +35,11 @@ impl Identity {
     }
 
     pub const fn is_anonymous(&self) -> bool {
-        match self.0 {
-            InnerIdentity::Anonymous() => true,
-            _ => false,
-        }
+        matches!(self.0, InnerIdentity::Anonymous())
     }
 
     pub const fn is_public_key(&self) -> bool {
-        match self.0 {
-            InnerIdentity::PublicKey(_) => true,
-            _ => false,
-        }
+        matches!(self.0, InnerIdentity::PublicKey(_))
     }
 
     pub const fn can_sign(&self) -> bool {
@@ -75,7 +69,7 @@ impl Identity {
         }
     }
 
-    pub fn to_vec(&self) -> Vec<u8> {
+    pub fn to_vec(self) -> Vec<u8> {
         self.0.to_vec()
     }
 
@@ -104,6 +98,7 @@ impl Identity {
 }
 
 impl PartialEq<&str> for Identity {
+    #[allow(clippy::cmp_owned)]
     fn eq(&self, other: &&str) -> bool {
         self.to_string() == *other
     }
@@ -344,7 +339,7 @@ impl InnerIdentity {
         }
     }
 
-    pub const fn to_byte_array(&self) -> [u8; MAX_IDENTITY_BYTE_LEN] {
+    pub const fn to_byte_array(self) -> [u8; MAX_IDENTITY_BYTE_LEN] {
         let mut bytes = [0; MAX_IDENTITY_BYTE_LEN];
         match self {
             InnerIdentity::Anonymous() => {}
@@ -383,7 +378,7 @@ impl InnerIdentity {
     }
 
     #[rustfmt::skip]
-    pub fn to_vec(&self) -> Vec<u8> {
+    pub fn to_vec(self) -> Vec<u8> {
         match self {
             InnerIdentity::Anonymous() => vec![0],
             InnerIdentity::PublicKey(pk) => {
@@ -408,27 +403,25 @@ impl InnerIdentity {
             InnerIdentity::_Private(_) => unreachable!(),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl std::fmt::Display for InnerIdentity {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let data = self.to_vec();
         let mut crc = crc_any::CRCu16::crc16();
         crc.digest(&data);
 
         let crc = crc.get_crc().to_be_bytes();
-        format!(
+        write!(
+            f,
             "o{}{}",
-            base32::encode(base32::Alphabet::RFC4648 { padding: false }, &data),
+            base32::encode(base32::Alphabet::RFC4648 { padding: false }, &data)
+                .to_ascii_lowercase(),
             base32::encode(base32::Alphabet::RFC4648 { padding: false }, &crc)
                 .get(0..2)
-                .unwrap(),
+                .unwrap()
+                .to_ascii_lowercase(),
         )
-        .to_lowercase()
-    }
-}
-
-impl ToString for InnerIdentity {
-    fn to_string(&self) -> String {
-        self.to_string()
     }
 }
 

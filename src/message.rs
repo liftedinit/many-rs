@@ -27,8 +27,7 @@ pub fn decode_request_from_cose_sign1(sign1: CoseSign1) -> Result<RequestMessage
         .sign1
         .payload
         .ok_or_else(OmniError::empty_envelope)?;
-    let message =
-        RequestMessage::from_bytes(&payload).map_err(OmniError::deserialization_error)?;
+    let message = RequestMessage::from_bytes(&payload).map_err(OmniError::deserialization_error)?;
 
     // Check the `from` field.
     if from_id != message.from.unwrap_or_default() {
@@ -52,7 +51,7 @@ pub fn decode_response_from_cose_sign1(
     let payload = request
         .sign1
         .payload
-        .ok_or("Envelope does not have payload.".to_string())?;
+        .ok_or_else(|| "Envelope does not have payload.".to_string())?;
     let message = ResponseMessage::from_bytes(&payload)?;
 
     // Check the `from` field.
@@ -164,7 +163,7 @@ impl CoseSign1RequestMessage {
                 }
 
                 self.get_public_key_for_identity(&id)
-                    .ok_or("Could not find a public key in the envelope".to_string())
+                    .ok_or_else(|| "Could not find a public key in the envelope".to_string())
                     .and_then(|key| {
                         self.sign1
                             .verify_with(|content, sig| {

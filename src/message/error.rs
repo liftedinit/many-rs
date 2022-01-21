@@ -48,14 +48,14 @@ macro_rules! omni_error {
                 }
             }
         }
-        impl Into<i64> for OmniErrorCode {
-            fn into(self) -> i64 {
-                match self {
+        impl From<OmniErrorCode> for i64 {
+            fn from(v: OmniErrorCode) -> i64 {
+                match v {
                     $(
-                        Self::$name => $v,
+                        OmniErrorCode::$name => $v,
                     )*
-                    Self::AttributeSpecific(x) => x as i64,
-                    Self::ApplicationSpecific(x) => x as i64,
+                    OmniErrorCode::AttributeSpecific(x) => x as i64,
+                    OmniErrorCode::ApplicationSpecific(x) => x as i64,
                 }
             }
         }

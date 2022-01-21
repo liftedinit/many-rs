@@ -128,7 +128,7 @@ impl Encode for ResponseMessage {
         };
 
         e.i8(ResponseMessageCborKey::Timestamp as i8)?;
-        let timestamp = self.timestamp.unwrap_or(SystemTime::now());
+        let timestamp = self.timestamp.unwrap_or_else(SystemTime::now);
         e.tag(minicbor::data::Tag::Timestamp)?.u64(
             timestamp
                 .duration_since(UNIX_EPOCH)

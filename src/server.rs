@@ -107,7 +107,7 @@ impl OmniRequestHandler for OmniServer {
         let method = message.method.as_str();
 
         // Verify that the message is for this server, if it's not anonymous.
-        if to.is_anonymous() || &self.identity.identity == &to {
+        if to.is_anonymous() || self.identity.identity == to {
             // Verify the endpoint.
             if self.method_cache.contains(method) {
                 Ok(())
