@@ -291,7 +291,7 @@ impl InnerIdentity {
         let mut len = SHA_OUTPUT_SIZE;
         while len > 0 {
             len -= 1;
-            bytes[1 + len] = hash[0 + len];
+            bytes[1 + len] = hash[len];
         }
         Self { bytes }
     }
@@ -399,20 +399,16 @@ impl InnerIdentity {
         self.bytes[0] == 1
     }
     pub const fn is_subresource(&self) -> bool {
-        match self.bytes[0] {
-            0x80..=0xFF => true,
-            _ => false,
-        }
+        matches!(self.bytes[0], 0x80..=0xFF)
     }
 
     pub const fn subresource_id(&self) -> Option<u32> {
         match self.bytes[0] {
             x @ 0x80..=0xFF => {
                 let high = ((x & 0x7F) as u32) << 24;
-                let low = (self.bytes[SHA_OUTPUT_SIZE + 1] as u32)
-                    << 16 + (self.bytes[SHA_OUTPUT_SIZE + 2] as u32)
-                    << 8 + (self.bytes[SHA_OUTPUT_SIZE + 3] as u32)
-                    << 16;
+                let mut low = (self.bytes[SHA_OUTPUT_SIZE + 1] as u32) << 16;
+                low += (self.bytes[SHA_OUTPUT_SIZE + 2] as u32) << 8;
+                low += self.bytes[SHA_OUTPUT_SIZE + 3] as u32;
                 Some(high + low)
             }
             _ => None,
