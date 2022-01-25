@@ -13,11 +13,10 @@ struct Opts {
 
 #[derive(Parser)]
 enum SubCommand {
-    /// Transform a textual ID into its binary value, or the other way around.
+    /// Transform a textual ID into its hexadecimal value, or the other way around.
+    /// If the argument is neither hexadecimal value or identity, try to see if it's
+    /// a file, and will parse it as a PEM file.
     Id(IdOpt),
-
-    /// Shows the identity ID from a PEM file.
-    IdOf(IdOfOpt),
 
     /// Creates a message and output it.
     Message(MessageOpt),
@@ -31,16 +30,6 @@ struct IdOpt {
     /// If the argument is a public key hexadecimal, allow to generate the
     /// identity with a specific subresource ID.
     subid: Option<u32>,
-}
-
-#[derive(Parser)]
-struct IdOfOpt {
-    /// The pem file to read from.
-    pem: PathBuf,
-
-    /// Whether to display the key in hexadecimal.
-    #[clap(long)]
-    hex: bool,
 }
 
 #[derive(Parser)]
@@ -94,24 +83,22 @@ fn main() {
                         std::process::exit(1);
                     }
                 }
-            } else {
-                let mut i = Identity::try_from(o.arg).unwrap();
+            } else if let Ok(mut i) = Identity::try_from(o.arg.clone()) {
                 if let Some(subid) = o.subid {
                     i = i.with_subresource_id(subid);
                 }
                 println!("{}", hex::encode(&i.to_vec()));
-            }
-        }
-        SubCommand::IdOf(o) => {
-            // Create the identity from the public key hash.
-            let id = CoseKeyIdentity::from_pem(&std::fs::read_to_string(&o.pem).unwrap())
-                .unwrap()
-                .identity;
+            } else if let Ok(pem_content) = std::fs::read_to_string(&o.arg) {
+                // Create the identity from the public key hash.
+                let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().identity;
+                if let Some(subid) = o.subid {
+                    i = i.with_subresource_id(subid);
+                }
 
-            if o.hex {
-                println!("{}", hex::encode(id.to_vec()));
+                println!("{}", i);
             } else {
-                println!("{}", id);
+                eprintln!("Could not understand the argument.");
+                std::process::exit(2);
             }
         }
         SubCommand::Message(o) => {
