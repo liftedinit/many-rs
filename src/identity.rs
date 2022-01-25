@@ -53,6 +53,14 @@ impl Identity {
         self.0.subresource_id()
     }
 
+    pub const fn with_subresource_id(&self, subid: u32) -> Self {
+        if let Some(h) = self.0.hash() {
+            Self(InnerIdentity::subresource(h, subid))
+        } else {
+            Self::anonymous()
+        }
+    }
+
     pub const fn can_sign(&self) -> bool {
         self.is_public_key() || self.is_subresource()
     }
@@ -410,6 +418,21 @@ impl InnerIdentity {
             _ => None,
         }
     }
+
+    pub const fn hash(&self) -> Option<[u8; SHA_OUTPUT_SIZE]> {
+        match self.bytes[0] {
+            1 | 0x80..=0xFF => {
+                let mut hash = [0; SHA_OUTPUT_SIZE];
+                let mut len = SHA_OUTPUT_SIZE;
+                while len > 0 {
+                    len -= 1;
+                    hash[len] = self.bytes[1 + len];
+                }
+                Some(hash)
+            }
+            _ => None,
+        }
+    }
 }
 
 impl std::fmt::Display for InnerIdentity {
@@ -593,6 +616,26 @@ mod tests {
         .unwrap();
 
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn subresource_1() {
+        let a = Identity::from_str("oahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys")
+            .unwrap()
+            .with_subresource_id(1);
+        let b = Identity::from_bytes(
+            &hex::decode("80c8aead03f915f128f0fa7ff696c656eaa93db87bd9aa73df693acb22000001")
+                .unwrap(),
+        )
+        .unwrap();
+        let c = Identity::from_bytes(
+            &hex::decode("80c8aead03f915f128f0fa7ff696c656eaa93db87bd9aa73df693acb22000002")
+                .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(a, b);
+        assert_eq!(b.with_subresource_id(2), c);
     }
 
     #[test]

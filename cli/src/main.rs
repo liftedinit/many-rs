@@ -27,6 +27,10 @@ enum SubCommand {
 struct IdOpt {
     /// An hexadecimal value to encode, or an identity textual format to decode.
     arg: String,
+
+    /// If the argument is a public key hexadecimal, allow to generate the
+    /// identity with a specific subresource ID.
+    subid: Option<u32>,
 }
 
 #[derive(Parser)]
@@ -79,14 +83,22 @@ fn main() {
         SubCommand::Id(o) => {
             if let Ok(data) = hex::decode(&o.arg) {
                 match Identity::try_from(data.as_slice()) {
-                    Ok(i) => println!("{}", i),
+                    Ok(mut i) => {
+                        if let Some(subid) = o.subid {
+                            i = i.with_subresource_id(subid);
+                        }
+                        println!("{}", i)
+                    }
                     Err(e) => {
-                        eprintln!("Invalid hexadecimal: {:?}", e.to_string());
+                        eprintln!("Identity did not parse: {:?}", e.to_string());
                         std::process::exit(1);
                     }
                 }
             } else {
-                let i = Identity::try_from(o.arg).unwrap();
+                let mut i = Identity::try_from(o.arg).unwrap();
+                if let Some(subid) = o.subid {
+                    i = i.with_subresource_id(subid);
+                }
                 println!("{}", hex::encode(&i.to_vec()));
             }
         }
