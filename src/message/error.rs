@@ -109,7 +109,7 @@ omni_error! {
      -101: InvalidIdentityPrefix as invalid_identity_prefix(actual)
             => "Identity string did not start with the right prefix. Expected 'o', was '{actual}'.",
      -102: InvalidIdentityKind as invalid_identity_kind(actual)
-            => "Identity ",
+            => r#"Identity kind "{actual}" was not recognized."#,
 
     // -1000 - -1999 is for request errors.
     -1000: InvalidMethodName as invalid_method_name(method)

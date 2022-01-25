@@ -26,47 +26,43 @@ impl Identity {
     }
 
     pub const fn anonymous() -> Self {
-        Self(InnerIdentity::Anonymous())
+        Self(InnerIdentity::anonymous())
     }
 
     pub fn public_key(key: &CoseKey) -> Self {
         let pk = Sha3_224::digest(&key.to_public_key().unwrap().to_bytes_stable().unwrap());
-        Self(InnerIdentity::PublicKey(pk.into()))
+        Self(InnerIdentity::public_key(pk.into()))
+    }
+
+    pub fn subresource(key: &CoseKey, subid: u32) -> Self {
+        let pk = Sha3_224::digest(&key.to_public_key().unwrap().to_bytes_stable().unwrap());
+        Self(InnerIdentity::subresource(pk.into(), subid))
     }
 
     pub const fn is_anonymous(&self) -> bool {
-        matches!(self.0, InnerIdentity::Anonymous())
+        self.0.is_anonymous()
+    }
+    pub const fn is_public_key(&self) -> bool {
+        self.0.is_public_key()
+    }
+    pub const fn is_subresource(&self) -> bool {
+        self.0.is_subresource()
     }
 
-    pub const fn is_public_key(&self) -> bool {
-        matches!(self.0, InnerIdentity::PublicKey(_))
+    pub const fn subresource_id(&self) -> Option<u32> {
+        self.0.subresource_id()
     }
 
     pub const fn can_sign(&self) -> bool {
-        match self.0 {
-            InnerIdentity::Anonymous() => false,
-            InnerIdentity::PublicKey(_) => true,
-            InnerIdentity::Subresource(_, _) => true,
-            InnerIdentity::_Private(_) => false,
-        }
+        self.is_public_key() || self.is_subresource()
     }
 
     pub const fn can_be_source(&self) -> bool {
-        match self.0 {
-            InnerIdentity::Anonymous() => true,
-            InnerIdentity::PublicKey(_) => true,
-            InnerIdentity::Subresource(_, _) => true,
-            InnerIdentity::_Private(_) => false,
-        }
+        self.is_anonymous() || self.is_public_key() || self.is_subresource()
     }
 
     pub const fn can_be_dest(&self) -> bool {
-        match self.0 {
-            InnerIdentity::Anonymous() => false,
-            InnerIdentity::PublicKey(_) => true,
-            InnerIdentity::Subresource(_, _) => true,
-            InnerIdentity::_Private(_) => false,
-        }
+        self.is_public_key() || self.is_subresource()
     }
 
     pub fn to_vec(self) -> Vec<u8> {
@@ -78,21 +74,24 @@ impl Identity {
     }
 
     pub fn matches_key(&self, key: Option<&CoseKey>) -> bool {
-        match &self.0 {
-            InnerIdentity::Anonymous() => key.is_none(),
-            InnerIdentity::PublicKey(hash) | InnerIdentity::Subresource(hash, _) => {
-                if let Some(cose_key) = key {
-                    let key_hash: [u8; SHA_OUTPUT_SIZE] = Sha3_224::digest(
-                        &cose_key.to_public_key().unwrap().to_bytes_stable().unwrap(),
-                    )
-                    .into();
+        if self.is_anonymous() {
+            key.is_none()
+        } else if self.is_public_key() || self.is_subresource() {
+            if let Some(cose_key) = key {
+                let key_hash: [u8; SHA_OUTPUT_SIZE] =
+                    Sha3_224::digest(&cose_key.to_public_key().unwrap().to_bytes_stable().unwrap())
+                        .into();
 
-                    &key_hash == hash
-                } else {
-                    false
-                }
+                self.0
+                    .bytes
+                    .iter()
+                    .zip(key_hash.iter())
+                    .all(|(a, b)| a == b)
+            } else {
+                false
             }
-            InnerIdentity::_Private(_) => false,
+        } else {
+            false
         }
     }
 }
@@ -107,11 +106,14 @@ impl PartialEq<&str> for Identity {
 impl Debug for Identity {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Identity")
-            .field(&match self.0 {
-                InnerIdentity::Anonymous() => "anonymous".to_string(),
-                InnerIdentity::PublicKey(_) => "public-key".to_string(),
-                InnerIdentity::Subresource(_, _) => "subresource".to_string(),
-                InnerIdentity::_Private(_) => "??".to_string(),
+            .field(&if self.is_anonymous() {
+                "anonymous".to_string()
+            } else if self.is_public_key() {
+                "public-key".to_string()
+            } else if self.is_subresource() {
+                format!("subresource({})", self.subresource_id().unwrap_or_default())
+            } else {
+                "??".to_string()
             })
             .field(&self.to_string())
             .finish()
@@ -230,45 +232,33 @@ impl FromStr for Identity {
 impl AsRef<[u8; MAX_IDENTITY_BYTE_LEN]> for Identity {
     fn as_ref(&self) -> &[u8; MAX_IDENTITY_BYTE_LEN] {
         let result: &[u8; MAX_IDENTITY_BYTE_LEN] = unsafe { std::mem::transmute(self) };
-
-        debug_assert_eq!(
-            result[0],
-            match self.0 {
-                InnerIdentity::Anonymous() => 0,
-                InnerIdentity::PublicKey(_) => 1,
-                InnerIdentity::Subresource(_, _) => 2,
-                InnerIdentity::_Private(_) => unreachable!(),
-            }
-        );
-
         result
     }
 }
 
 #[derive(Copy, Clone, Eq, Debug, Ord, PartialOrd)]
 #[non_exhaustive]
-enum InnerIdentity {
-    Anonymous(),
-    PublicKey([u8; SHA_OUTPUT_SIZE]),
-    Subresource([u8; SHA_OUTPUT_SIZE], [u8; 3]),
-
-    // Force the size to be 256 bits.
-    _Private([u8; MAX_IDENTITY_BYTE_LEN - 1]),
+struct InnerIdentity {
+    bytes: [u8; MAX_IDENTITY_BYTE_LEN],
 }
 
 // Identity needs to be bound to 32 bytes maximum.
 static_assertions::assert_eq_size!([u8; MAX_IDENTITY_BYTE_LEN], InnerIdentity);
-static_assertions::const_assert_eq!(InnerIdentity::Anonymous().to_byte_array()[0], 0);
+static_assertions::const_assert_eq!(InnerIdentity::anonymous().to_byte_array()[0], 0);
 
 impl PartialEq for InnerIdentity {
     fn eq(&self, other: &Self) -> bool {
-        // TODO: When subresources are involved, this should not match the subresource ID itself.
-        use InnerIdentity::*;
+        match (&self.bytes[0], &other.bytes[0]) {
+            // Anonymous
+            (0, 0) => true,
 
-        match (self, other) {
-            (Anonymous(), Anonymous()) => true,
-            (PublicKey(key1), PublicKey(key2)) => key1 == key2,
-            (Subresource(key1, sub1), Subresource(key2, sub2)) => key1 == key2 && sub1 == sub2,
+            // Public Key
+            (1, 1) => self.bytes[1..=SHA_OUTPUT_SIZE] == other.bytes[1..=SHA_OUTPUT_SIZE],
+
+            // Subresource
+            (x @ 0x80..=0xFF, y @ 0x80..=0xFF) if x == y => self.bytes[1..] == other.bytes[1..],
+
+            // Anything else if by default inequal.
             (_, _) => false,
         }
     }
@@ -276,11 +266,38 @@ impl PartialEq for InnerIdentity {
 
 impl Default for InnerIdentity {
     fn default() -> Self {
-        InnerIdentity::Anonymous()
+        InnerIdentity::anonymous()
     }
 }
 
 impl InnerIdentity {
+    pub const fn anonymous() -> Self {
+        Self {
+            bytes: [0; MAX_IDENTITY_BYTE_LEN],
+        }
+    }
+
+    pub const fn public_key(hash: [u8; SHA_OUTPUT_SIZE]) -> Self {
+        let mut bytes = [0; MAX_IDENTITY_BYTE_LEN];
+        bytes[0] = 1;
+        let mut len = SHA_OUTPUT_SIZE;
+        while len > 0 {
+            len -= 1;
+            bytes[1 + len] = hash[0 + len];
+        }
+        Self { bytes }
+    }
+
+    pub const fn subresource(hash: [u8; SHA_OUTPUT_SIZE], id: u32) -> Self {
+        // Get a public key and add the resource id.
+        let mut bytes = Self::public_key(hash).bytes;
+        bytes[0] = 0x80 + ((id & 0x7F000000) >> 24) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 1)] = ((id & 0x00FF0000) >> 16) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 2)] = ((id & 0x0000FF00) >> 8) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 3)] = (id & 0x000000FF) as u8;
+        Self { bytes }
+    }
+
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, OmniError> {
         let bytes = bytes;
         if bytes.is_empty() {
@@ -292,7 +309,7 @@ impl InnerIdentity {
                 if bytes.len() > 1 {
                     Err(OmniError::invalid_identity())
                 } else {
-                    Ok(Self::Anonymous())
+                    Ok(Self::anonymous())
                 }
             }
             1 => {
@@ -301,18 +318,19 @@ impl InnerIdentity {
                 } else {
                     let mut slice = [0; 28];
                     slice.copy_from_slice(&bytes[1..29]);
-                    Ok(Self::PublicKey(slice))
+                    Ok(Self::public_key(slice))
                 }
             }
-            2 => {
+            hi @ 0x80..=0xff => {
                 if bytes.len() != 32 {
                     Err(OmniError::invalid_identity())
                 } else {
                     let mut hash = [0; 28];
-                    let mut subid = [0; 3];
+                    let mut subid = [0; 4];
                     hash.copy_from_slice(&bytes[1..29]);
-                    subid.copy_from_slice(&bytes[29..32]);
-                    Ok(Self::Subresource(hash, subid))
+                    subid[0] = hi;
+                    subid[1..].copy_from_slice(&bytes[29..32]);
+                    Ok(Self::subresource(hash, u32::from_be_bytes(subid)))
                 }
             }
             x => Err(OmniError::invalid_identity_kind(x.to_string())),
@@ -325,7 +343,7 @@ impl InnerIdentity {
         }
 
         if &value[1..] == "aa" {
-            Ok(Self::Anonymous())
+            Ok(Self::anonymous())
         } else {
             let data = &value[..value.len() - 2][1..];
             let data = base32::decode(base32::Alphabet::RFC4648 { padding: false }, data).unwrap();
@@ -340,48 +358,17 @@ impl InnerIdentity {
     }
 
     pub const fn to_byte_array(self) -> [u8; MAX_IDENTITY_BYTE_LEN] {
-        let mut bytes = [0; MAX_IDENTITY_BYTE_LEN];
-        match self {
-            InnerIdentity::Anonymous() => {}
-            #[rustfmt::skip]
-            InnerIdentity::PublicKey(pk) => {
-                bytes[0] = 1;
-                // That's right, until rustc supports for loops or copy_from_slice in const fn,
-                // we need to roll this out.
-                bytes[ 1] = pk[ 0]; bytes[ 2] = pk[ 1]; bytes[ 3] = pk[ 2]; bytes[ 4] = pk[ 3];
-                bytes[ 5] = pk[ 4]; bytes[ 6] = pk[ 5]; bytes[ 7] = pk[ 6]; bytes[ 8] = pk[ 7];
-                bytes[ 9] = pk[ 8]; bytes[10] = pk[ 9]; bytes[11] = pk[10]; bytes[12] = pk[11];
-                bytes[13] = pk[12]; bytes[14] = pk[13]; bytes[15] = pk[14]; bytes[16] = pk[15];
-                bytes[17] = pk[16]; bytes[18] = pk[17]; bytes[19] = pk[18]; bytes[20] = pk[19];
-                bytes[21] = pk[20]; bytes[22] = pk[21]; bytes[23] = pk[22]; bytes[24] = pk[23];
-                bytes[25] = pk[24]; bytes[26] = pk[25]; bytes[27] = pk[26]; bytes[28] = pk[27];
-            }
-            #[rustfmt::skip]
-            InnerIdentity::Subresource(pk, sub) => {
-                bytes[0] = 2;
-                // That's right, until rustc supports for loops or copy_from_slice in const fn,
-                // we need to roll this out.
-                bytes[ 1] = pk[ 0]; bytes[ 2] = pk[ 1]; bytes[ 3] = pk[ 2]; bytes[ 4] = pk[ 3];
-                bytes[ 5] = pk[ 4]; bytes[ 6] = pk[ 5]; bytes[ 7] = pk[ 6]; bytes[ 8] = pk[ 7];
-                bytes[ 9] = pk[ 8]; bytes[10] = pk[ 9]; bytes[11] = pk[10]; bytes[12] = pk[11];
-                bytes[13] = pk[12]; bytes[14] = pk[13]; bytes[15] = pk[14]; bytes[16] = pk[15];
-                bytes[17] = pk[16]; bytes[18] = pk[17]; bytes[19] = pk[18]; bytes[20] = pk[19];
-                bytes[21] = pk[20]; bytes[22] = pk[21]; bytes[23] = pk[22]; bytes[24] = pk[23];
-                bytes[25] = pk[24]; bytes[26] = pk[25]; bytes[27] = pk[26]; bytes[28] = pk[27];
-
-                bytes[29] = sub[0]; bytes[30] = sub[1]; bytes[31] = sub[2];
-            }
-            InnerIdentity::_Private(_) => {}
-        }
-
-        bytes
+        self.bytes
     }
 
     #[rustfmt::skip]
     pub fn to_vec(self) -> Vec<u8> {
-        match self {
-            InnerIdentity::Anonymous() => vec![0],
-            InnerIdentity::PublicKey(pk) => {
+        // This makes sure we actually have a Vec<u8> that's smaller than 32 bytes if
+        // it can be.
+        match self.bytes[0] {
+            0 => vec![0],
+            1 => {
+                let pk = &self.bytes[1..=SHA_OUTPUT_SIZE];
                 vec![
                     1,
                     pk[ 0], pk[ 1], pk[ 2], pk[ 3], pk[ 4], pk[ 5], pk[ 6], pk[ 7],
@@ -390,17 +377,37 @@ impl InnerIdentity {
                     pk[24], pk[25], pk[26], pk[27],
                 ]
             }
-            InnerIdentity::Subresource(pk, sub) => {
-                vec![
-                    1,
-                    pk[ 0], pk[ 1], pk[ 2], pk[ 3], pk[ 4], pk[ 5], pk[ 6], pk[ 7],
-                    pk[ 8], pk[ 9], pk[10], pk[11], pk[12], pk[13], pk[14], pk[15],
-                    pk[16], pk[17], pk[18], pk[19], pk[20], pk[21], pk[22], pk[23],
-                    pk[24], pk[25], pk[26], pk[27],
-                    sub[0], sub[1], sub[2],
-                ]
+            0x80..=0xFF => {
+                self.bytes.to_vec()
             }
-            InnerIdentity::_Private(_) => unreachable!(),
+            _ => unreachable!(),
+        }
+    }
+
+    pub const fn is_anonymous(&self) -> bool {
+        self.bytes[0] == 0
+    }
+    pub const fn is_public_key(&self) -> bool {
+        self.bytes[0] == 1
+    }
+    pub const fn is_subresource(&self) -> bool {
+        match self.bytes[0] {
+            0x80..=0xFF => true,
+            _ => false,
+        }
+    }
+
+    pub const fn subresource_id(&self) -> Option<u32> {
+        match self.bytes[0] {
+            x @ 0x80..=0xFF => {
+                let high = ((x & 0x7F) as u32) << 24;
+                let low = (self.bytes[SHA_OUTPUT_SIZE + 1] as u32)
+                    << 16 + (self.bytes[SHA_OUTPUT_SIZE + 2] as u32)
+                    << 8 + (self.bytes[SHA_OUTPUT_SIZE + 3] as u32)
+                    << 16;
+                Some(high + low)
+            }
+            _ => None,
         }
     }
 }
@@ -569,6 +576,19 @@ mod tests {
         let a = Identity::from_str("oahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys").unwrap();
         let b = Identity::from_bytes(
             &hex::decode("01c8aead03f915f128f0fa7ff696c656eaa93db87bd9aa73df693acb22").unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn textual_format_2() {
+        let a =
+            Identity::from_str("oqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap();
+        let b = Identity::from_bytes(
+            &hex::decode("804a101d521d810211a0c6346ba89bd1cc1f821c03b969ff9d5c8b2f59000001")
+                .unwrap(),
         )
         .unwrap();
 

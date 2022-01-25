@@ -78,11 +78,12 @@ fn main() {
     match opt.subcommand {
         SubCommand::Id(o) => {
             if let Ok(data) = hex::decode(&o.arg) {
-                if let Ok(i) = Identity::try_from(data.as_slice()) {
-                    println!("{}", i);
-                } else {
-                    eprintln!("Invalid hexadecimal.");
-                    std::process::exit(1);
+                match Identity::try_from(data.as_slice()) {
+                    Ok(i) => println!("{}", i),
+                    Err(e) => {
+                        eprintln!("Invalid hexadecimal: {:?}", e.to_string());
+                        std::process::exit(1);
+                    }
                 }
             } else {
                 let i = Identity::try_from(o.arg).unwrap();
