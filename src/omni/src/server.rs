@@ -106,16 +106,25 @@ impl BaseModuleBackend for OmniServer {
             .collect();
         attributes.sort();
 
-        Ok(StatusBuilder::default()
+        let mut builder = StatusBuilder::default();
+
+        builder
             .name(self.name.clone())
             .version(1)
-            .public_key(self.identity.public_key())
             .identity(self.identity.identity)
-            .server_version(self.version.clone())
             .attributes(attributes)
-            .extras(BTreeMap::new())
+            .extras(BTreeMap::new());
+
+        if let Some(pk) = self.identity.public_key() {
+            builder.public_key(pk);
+        }
+        if let Some(sv) = self.version.clone() {
+            builder.server_version(sv);
+        }
+
+        builder
             .build()
-            .unwrap())
+            .map_err(|x| OmniError::unknown(x.to_string()))
     }
 }
 

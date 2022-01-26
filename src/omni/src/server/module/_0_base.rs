@@ -17,11 +17,14 @@ pub struct Endpoints(#[n(0)] pub Vec<String>);
 pub struct Status {
     pub version: u8,
     pub name: String,
+    #[builder(setter(into, strip_option))]
     pub public_key: Option<CoseKey>,
     pub identity: Identity,
     pub attributes: Vec<Attribute>,
+    #[builder(setter(into, strip_option))]
     pub server_version: Option<String>,
 
+    #[builder(default)]
     pub extras: BTreeMap<String, CborAny>,
 }
 
@@ -88,11 +91,11 @@ impl<'b> Decode<'b> for Status {
                             let key: CoseKey = CoseKey::from_bytes(bytes).map_err(|_e| {
                                 minicbor::decode::Error::Message("Invalid cose key.")
                             })?;
-                            builder.public_key(Some(key))
+                            builder.public_key(key)
                         }
                         3 => builder.identity(d.decode()?),
                         4 => builder.attributes(d.decode()?),
-                        5 => builder.server_version(Some(d.decode()?)),
+                        5 => builder.server_version(d.decode::<String>()?),
                         _ => &mut builder,
                     };
                 }
