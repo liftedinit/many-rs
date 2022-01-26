@@ -49,14 +49,6 @@ impl OmniServer {
         s
     }
 
-    pub fn with_module<M>(mut self, module: M) -> Self
-    where
-        M: OmniModule + 'static,
-    {
-        self.add_module(module);
-        self
-    }
-
     pub fn add_module<M>(&mut self, module: M) -> &mut Self
     where
         M: OmniModule + 'static,

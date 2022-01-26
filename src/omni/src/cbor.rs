@@ -78,6 +78,12 @@ impl<'d> Decode<'d> for CborAny {
                 d.array_iter()?
                     .collect::<Result<Vec<CborAny>, minicbor::decode::Error>>()?,
             )),
+            Type::MapIndef | Type::Map => {
+                Ok(CborAny::Map(d.map_iter()?.collect::<Result<
+                    BTreeMap<CborAny, CborAny>,
+                    minicbor::decode::Error,
+                >>()?))
+            }
             _ => Err(minicbor::decode::Error::Message(
                 "Invalid data type while decoding arguments.",
             )),
