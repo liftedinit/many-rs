@@ -8,7 +8,7 @@ name = "omni"
 path = "src/main.rs"
 
 [dependencies]
-omni = { path = "../" }
+omni = { path = "../omni" }
 anyhow = "1.0.44"
 async-trait = "0.1.51"
 backtrace = "0.3"

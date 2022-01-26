@@ -1,8 +1,10 @@
 use clap::Parser;
 use omni::identity::cose::CoseKeyIdentity;
 use omni::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
-use omni::{Identity, OmniClient};
+use omni::transport::http::HttpServer;
+use omni::{Identity, OmniClient, OmniServer};
 use std::convert::TryFrom;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -20,6 +22,10 @@ enum SubCommand {
 
     /// Creates a message and output it.
     Message(MessageOpt),
+
+    /// Starts a base server that can also be used for reverse proxying
+    /// to another OMNI server.
+    Server(ServerOpt),
 }
 
 #[derive(Parser)]
@@ -63,6 +69,17 @@ struct MessageOpt {
 
     /// The content of the message itself (its payload).
     data: Option<String>,
+}
+
+#[derive(Parser)]
+struct ServerOpt {
+    /// The location of a PEM file for the identity of this server.
+    #[clap(long)]
+    pem: PathBuf,
+
+    /// The address and port to bind to for the OMNI Http server.
+    #[clap(long, short, default_value = "127.0.0.1:8000")]
+    addr: SocketAddr,
 }
 
 fn main() {
@@ -160,6 +177,14 @@ fn main() {
                     panic!("Must specify one of hex, base64 or server...");
                 }
             }
+        }
+        SubCommand::Server(o) => {
+            let pem = std::fs::read_to_string(&o.pem).expect("Could not read PEM file.");
+            let key = CoseKeyIdentity::from_pem(&pem)
+                .expect("Could not generate identity from PEM file.");
+
+            let omni = OmniServer::new("omni-ledger", key.clone(), None);
+            HttpServer::simple(key, omni).bind(o.addr).unwrap();
         }
     }
 }

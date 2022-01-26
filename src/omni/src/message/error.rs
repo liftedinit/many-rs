@@ -78,7 +78,7 @@ macro_rules! omni_error {
                             $( (stringify!($arg).to_string(), $arg) ),*
                         ]),
                     };
-                    tracing::error!("{}", s);
+                    tracing::trace!("{}", s);
                     tracing::trace!("Backtrace:\n{:?}", backtrace::Backtrace::new());
                     s
                 }
