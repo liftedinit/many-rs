@@ -1,3 +1,4 @@
+use crate::cbor::CborAny;
 use crate::protocol::Attribute;
 use crate::{Identity, OmniError};
 use derive_builder::Builder;
@@ -91,6 +92,7 @@ impl<'b> Decode<'b> for Status {
                         }
                         3 => builder.identity(d.decode()?),
                         4 => builder.attributes(d.decode()?),
+                        5 => builder.server_version(Some(d.decode()?)),
                         _ => &mut builder,
                     };
                 }
@@ -117,7 +119,6 @@ impl<'b> Decode<'b> for Status {
 
 // This is needed here to work with the omni_module proc_macro.
 use crate as omni;
-use crate::cbor::CborAny;
 
 #[omni_module(name = BaseModule, id = 0)]
 pub trait BaseModuleBackend: Send {

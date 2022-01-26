@@ -84,8 +84,9 @@ impl<'d> Decode<'d> for CborAny {
                     minicbor::decode::Error,
                 >>()?))
             }
-            _ => Err(minicbor::decode::Error::Message(
-                "Invalid data type while decoding arguments.",
+            x => Err(minicbor::decode::Error::TypeMismatch(
+                x,
+                "invalid attribute type.",
             )),
         }
     }
