@@ -18,12 +18,14 @@ derive_builder = "0.10.2"
 ecdsa = "0.12.4"
 ed25519 = { version = "1.2.0", features = [ "std" ] }
 ed25519-dalek = { version = "1.0.1", features = [ "std" ] }
+fixed = "1.11.0"
 hex = "0.4.3"
 lazy_static = "1.4.0"
 minicbor = { version = "0.12.0", features = ["derive", "half", "std"] }
 minicose = { git = "ssh://git@github.com/l-1-labs/rust-minicose.git", features = [ "allow-unsigned" ] }
 num-derive = "0.3.3"
 num-traits = "0.2.14"
+num-bigint = "0.4.3"
 p256 = { version = "0.9.0", features = [ "pem", "ecdsa", "std" ] }
 pem = { version = "1.0.0", optional = true }
 pkcs8 = { version = "0.8", features = [ "pem", "std", "encryption" ] }

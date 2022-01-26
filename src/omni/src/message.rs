@@ -8,7 +8,7 @@ pub use request::RequestMessageBuilder;
 pub use response::ResponseMessage;
 pub use response::ResponseMessageBuilder;
 
-use crate::identity::cose::{CoseKeyIdentity, CoseKeyIdentitySignature};
+use crate::types::identity::cose::{CoseKeyIdentity, CoseKeyIdentitySignature};
 use crate::Identity;
 use minicose::exports::ciborium::value::Value;
 use minicose::{

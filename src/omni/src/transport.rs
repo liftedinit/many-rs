@@ -1,5 +1,5 @@
-use crate::identity::cose::CoseKeyIdentity;
 use crate::message::{OmniError, RequestMessage, ResponseMessage};
+use crate::types::identity::cose::CoseKeyIdentity;
 use async_trait::async_trait;
 use minicose::CoseSign1;
 use std::fmt::Debug;

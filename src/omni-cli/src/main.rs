@@ -1,7 +1,7 @@
 use clap::Parser;
-use omni::identity::cose::CoseKeyIdentity;
 use omni::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
 use omni::transport::http::HttpServer;
+use omni::types::identity::CoseKeyIdentity;
 use omni::{Identity, OmniClient, OmniServer};
 use std::convert::TryFrom;
 use std::net::SocketAddr;

@@ -4,7 +4,19 @@ use crate::OmniError;
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-pub mod base;
+macro_rules! reexport_module {
+    ($name: ident = $rename: ident) => {
+        mod $name;
+        pub mod $rename {
+            pub use super::$name::*;
+        }
+    };
+}
+
+reexport_module!(_0_base = base);
+reexport_module!(_2_ledger = ledger);
+reexport_module!(_3_kvstore = kvstore);
+reexport_module!(_4_ledger_transactions = ledger_transactions);
 
 #[derive(Clone, Debug)]
 pub struct OmniModuleInfo {

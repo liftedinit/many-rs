@@ -1,9 +1,9 @@
-use crate::identity::cose::CoseKeyIdentity;
 use crate::message::{
     decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
     RequestMessageBuilder, ResponseMessage,
 };
 use crate::server::module::base::Status;
+use crate::types::identity::CoseKeyIdentity;
 use crate::{Identity, OmniError};
 use minicbor::Encode;
 use minicose::CoseSign1;

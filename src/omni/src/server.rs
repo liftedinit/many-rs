@@ -1,4 +1,3 @@
-use crate::identity::cose::CoseKeyIdentity;
 use crate::message::{RequestMessage, ResponseMessage};
 use crate::protocol::Attribute;
 use crate::server::module::base::{
@@ -6,6 +5,7 @@ use crate::server::module::base::{
 };
 use crate::server::module::{OmniModule, OmniModuleInfo};
 use crate::transport::OmniRequestHandler;
+use crate::types::identity::cose::CoseKeyIdentity;
 use crate::{Identity, OmniError};
 use std::collections::{BTreeMap, BTreeSet};
 use std::future::Future;

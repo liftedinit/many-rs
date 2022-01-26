@@ -11,6 +11,7 @@ use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
 
 pub mod cose;
+pub use cose::CoseKeyIdentity;
 
 const MAX_IDENTITY_BYTE_LEN: usize = 32;
 const SHA_OUTPUT_SIZE: usize = <Sha3_224 as Digest>::OutputSize::USIZE;
@@ -546,7 +547,7 @@ mod serde {
 
 #[cfg(test)]
 mod tests {
-    use crate::identity::cose::CoseKeyIdentity;
+    use crate::types::identity::CoseKeyIdentity;
     use crate::Identity;
     use std::str::FromStr;
 
