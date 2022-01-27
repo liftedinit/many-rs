@@ -1,4 +1,3 @@
-use crate as omni;
 use crate::{Identity, OmniError};
 use omni_module::omni_module;
 
@@ -14,7 +13,7 @@ pub use info::*;
 pub use mint::*;
 pub use send::*;
 
-#[omni_module(name = LedgerModule, id = 2, namespace = ledger)]
+#[omni_module(name = LedgerModule, id = 2, namespace = ledger, omni_crate = crate)]
 pub trait LedgerModuleBackend: Send {
     fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturns, OmniError>;
     fn balance(&self, sender: &Identity, args: BalanceArgs) -> Result<BalanceReturns, OmniError>;

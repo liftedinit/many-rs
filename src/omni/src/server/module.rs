@@ -5,18 +5,24 @@ use async_trait::async_trait;
 use std::fmt::Debug;
 
 macro_rules! reexport_module {
-    ($name: ident = $rename: ident) => {
-        mod $name;
-        pub mod $rename {
-            pub use super::$name::*;
-        }
+    ( $( $name: ident = $rename: ident; )* ) => {
+        $(
+            mod $name;
+            pub mod $rename {
+                pub use super::$name::*;
+            }
+        )*
     };
 }
 
-reexport_module!(_0_base = base);
-reexport_module!(_2_ledger = ledger);
-reexport_module!(_3_kvstore = kvstore);
-reexport_module!(_4_ledger_transactions = ledger_transactions);
+reexport_module!(
+    _0_base = base;
+    _1_blockchain = blockchain;
+    _2_ledger = ledger;
+    _3_kvstore = kvstore;
+    _4_ledger_transactions = ledger_transactions;
+    _1000_abci_backend = abci_backend;
+);
 
 #[derive(Clone, Debug)]
 pub struct OmniModuleInfo {

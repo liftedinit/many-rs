@@ -120,10 +120,7 @@ impl<'b> Decode<'b> for Status {
     }
 }
 
-// This is needed here to work with the omni_module proc_macro.
-use crate as omni;
-
-#[omni_module(name = BaseModule, id = 0)]
+#[omni_module(name = BaseModule, id = 0, omni_crate = crate)]
 pub trait BaseModuleBackend: Send {
     fn endpoints(&self) -> Result<Endpoints, OmniError>;
     fn heartbeat(&self) -> Result<(), OmniError> {

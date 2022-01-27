@@ -17,6 +17,7 @@ struct OmniModuleAttributes {
     #[allow(dead_code)]
     pub attributes: Option<Vec<String>>,
     pub namespace: Option<String>,
+    pub omni_crate: Option<String>,
 }
 
 #[derive(Debug)]
@@ -134,6 +135,10 @@ impl Endpoint {
 
 fn omni_module_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, syn::Error> {
     let attrs: OmniModuleAttributes = from_tokenstream(&attr)?;
+    let omni = Ident::new(
+        attrs.omni_crate.as_ref().map_or("omni", |x| x.as_str()),
+        attr.span(),
+    );
 
     let namespace = attrs.namespace;
     let span = item.span();
@@ -211,13 +216,13 @@ fn omni_module_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream,
         }
     });
     let validate = quote! {
-        fn validate(&self, message: &omni::message::RequestMessage) -> Result<(), omni::OmniError> {
+        fn validate(&self, message: & #omni ::message::RequestMessage) -> Result<(),  #omni ::OmniError> {
             let method = message.method.as_str();
             let data = message.data.as_slice();
             match method {
                 #(#validate_endpoint_pat)*
 
-                _ => return Err(omni::OmniError::invalid_method_name(method.to_string())),
+                _ => return Err( #omni ::OmniError::invalid_method_name(method.to_string())),
             };
             Ok(())
         }
@@ -260,9 +265,9 @@ fn omni_module_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream,
     let execute = quote! {
         async fn execute(
             &self,
-            message: omni::message::RequestMessage,
-        ) -> Result<omni::message::ResponseMessage, omni::OmniError> {
-            use omni::OmniError;
+            message:  #omni ::message::RequestMessage,
+        ) -> Result< #omni ::message::ResponseMessage,  #omni ::OmniError> {
+            use  #omni ::OmniError;
             fn decode<'a, T: minicbor::Decode<'a>>(data: &'a [u8]) -> Result<T, OmniError> {
                 minicbor::decode(data).map_err(|e| OmniError::deserialization_error(e.to_string()))
             }
@@ -277,7 +282,7 @@ fn omni_module_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream,
                 _ => Err(OmniError::internal_server_error()),
             }?;
 
-            Ok(omni::message::ResponseMessage::from_request(
+            Ok( #omni ::message::ResponseMessage::from_request(
                 &message,
                 &message.to,
                 Ok(result),
@@ -286,14 +291,14 @@ fn omni_module_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream,
     };
 
     Ok(quote! {
-        #vis const #attr_ident: omni::protocol::Attribute = omni::protocol::Attribute::id(#attr_id);
+        #vis const #attr_ident:  #omni ::protocol::Attribute =  #omni ::protocol::Attribute::id(#attr_id);
 
         #vis struct #info_ident;
         impl std::ops::Deref for #info_ident {
-            type Target = omni::server::module::OmniModuleInfo;
+            type Target =  #omni ::server::module::OmniModuleInfo;
 
-            fn deref(&self) -> &omni::server::module::OmniModuleInfo {
-                use omni::server::module::OmniModuleInfo;
+            fn deref(&self) -> & #omni ::server::module::OmniModuleInfo {
+                use  #omni ::server::module::OmniModuleInfo;
                 static ONCE: std::sync::Once = std::sync::Once::new();
                 static mut VALUE: *mut OmniModuleInfo = 0 as *mut OmniModuleInfo;
 
@@ -328,8 +333,8 @@ fn omni_module_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream,
         }
 
         #[async_trait::async_trait]
-        impl<T: #trait_ident> omni::OmniModule for #struct_ident<T> {
-            fn info(&self) -> &omni::server::module::OmniModuleInfo {
+        impl<T: #trait_ident>  #omni ::OmniModule for #struct_ident<T> {
+            fn info(&self) -> & #omni ::server::module::OmniModuleInfo {
                 & #info_ident
             }
 
