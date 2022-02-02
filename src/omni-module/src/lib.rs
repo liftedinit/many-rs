@@ -14,8 +14,6 @@ use syn::{
 struct OmniModuleAttributes {
     pub id: u32,
     pub name: Option<String>,
-    #[allow(dead_code)]
-    pub attributes: Option<Vec<String>>,
     pub namespace: Option<String>,
     pub omni_crate: Option<String>,
 }
@@ -305,7 +303,7 @@ fn omni_module_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream,
                 unsafe {
                     ONCE.call_once(|| VALUE = Box::into_raw(Box::new(OmniModuleInfo {
                         name: #struct_name .to_string(),
-                        attributes: vec![ #attr_ident ],
+                        attribute: #attr_ident,
                         endpoints: vec![ #( #endpoint_strings .to_string() ),* ],
                     })));
                     &*VALUE

@@ -112,7 +112,12 @@ pub fn encode_cose_sign1_from_response(
     response: ResponseMessage,
     cose_key: &CoseKeyIdentity,
 ) -> Result<CoseSign1, String> {
-    encode_cose_sign1_from_payload(response.to_bytes().unwrap(), cose_key)
+    encode_cose_sign1_from_payload(
+        response
+            .to_bytes()
+            .map_err(|e| format!("Could not serialize response: {}", e))?,
+        cose_key,
+    )
 }
 
 pub fn encode_cose_sign1_from_request(

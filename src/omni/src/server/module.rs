@@ -30,7 +30,7 @@ pub struct OmniModuleInfo {
     pub name: String,
 
     /// Returns a list of all attributes supported by this module.
-    pub attributes: Vec<Attribute>,
+    pub attribute: Attribute,
 
     /// The endpoints that this module exports.
     pub endpoints: Vec<String>,

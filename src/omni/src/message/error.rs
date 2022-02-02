@@ -103,6 +103,8 @@ omni_error! {
             => "Response of a message was unexpectedly empty.",
        -7: UnexpectedTransportError as unexpected_transport_error(inner)
             => "The transport returned an error unexpectedly:\n{inner}",
+       -8: CouldNotRouteMessage as could_not_route_message()
+            => "Could not find a handler for the message.",
 
      -100: InvalidIdentity as invalid_identity()
             => "Identity is invalid (does not follow the protocol).",

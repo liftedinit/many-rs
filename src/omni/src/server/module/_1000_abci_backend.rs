@@ -4,7 +4,7 @@ use minicbor::{Decode, Encode};
 use omni_module::omni_module;
 use std::collections::BTreeMap;
 
-#[derive(Encode, Decode)]
+#[derive(Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct EndpointInfo {
     #[n(0)]

@@ -4,6 +4,8 @@ use async_trait::async_trait;
 use minicose::CoseSign1;
 use std::fmt::Debug;
 
+pub mod http;
+
 #[async_trait]
 pub trait LowLevelOmniRequestHandler: Send + Sync + Debug {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String>;
@@ -88,5 +90,3 @@ impl<I: SimpleRequestHandler> OmniRequestHandler for SimpleRequestHandlerAdapter
         })
     }
 }
-
-pub mod http;

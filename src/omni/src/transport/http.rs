@@ -26,11 +26,7 @@ impl<E: LowLevelOmniRequestHandler> HttpServer<E> {
         Self { executor }
     }
 
-    async fn handle_request(
-        &self,
-        request: &mut Request,
-        _buffer: &mut [u8],
-    ) -> Response<std::io::Cursor<Vec<u8>>> {
+    async fn handle_request(&self, request: &mut Request) -> Response<std::io::Cursor<Vec<u8>>> {
         match request.body_length() {
             Some(x) if x > READ_BUFFER_LEN => {
                 // This is a transport error, and as such an HTTP error.
@@ -45,6 +41,7 @@ impl<E: LowLevelOmniRequestHandler> HttpServer<E> {
         let bytes = &v;
 
         tracing::debug!("request  len={}", bytes.len());
+        tracing::trace!("request  {}", hex::encode(bytes));
 
         let envelope = match CoseSign1::from_bytes(bytes) {
             Ok(cs) => cs,
@@ -66,22 +63,19 @@ impl<E: LowLevelOmniRequestHandler> HttpServer<E> {
             }
         };
         tracing::debug!("response len={}", bytes.len());
+        tracing::trace!("response {}", hex::encode(&bytes));
 
         Response::from_data(bytes)
     }
 
     pub fn bind<A: ToSocketAddrs>(&self, addr: A) -> Result<(), anyhow::Error> {
-        let mut buffer: Vec<u8> = Vec::new();
-        buffer.resize(READ_BUFFER_LEN, 0);
         let server = tiny_http::Server::http(addr).map_err(|e| anyhow!("{}", e))?;
 
         let runtime = tokio::runtime::Runtime::new().unwrap();
 
         for mut request in server.incoming_requests() {
             runtime.block_on(async {
-                let response = self
-                    .handle_request(&mut request, buffer.as_mut_slice())
-                    .await;
+                let response = self.handle_request(&mut request).await;
 
                 // If there's a transport error (e.g. connection closed) on the response itself,
                 // we don't actually care and just continue waiting for the next request.

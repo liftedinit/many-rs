@@ -6,9 +6,18 @@ use omni::{Identity, OmniClient, OmniServer};
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use tracing::level_filters::LevelFilter;
 
 #[derive(Parser)]
 struct Opts {
+    /// Increase output logging verbosity to DEBUG level.
+    #[clap(short, long, parse(from_occurrences))]
+    verbose: i8,
+
+    /// Suppress all output logging. Can be used multiple times to suppress more.
+    #[clap(short, long, parse(from_occurrences))]
+    quiet: i8,
+
     #[clap(subcommand)]
     subcommand: SubCommand,
 }
@@ -56,13 +65,13 @@ struct MessageOpt {
     #[clap(long, conflicts_with("hex"))]
     base64: bool,
 
-    /// The server to connect to.
-    #[clap(long)]
-    server: Option<String>,
-
     /// The identity to send it to.
     #[clap(long)]
     to: Option<Identity>,
+
+    /// The server to connect to.
+    #[clap(long)]
+    server: Option<url::Url>,
 
     /// The method to call.
     method: String,
@@ -83,9 +92,24 @@ struct ServerOpt {
 }
 
 fn main() {
-    let opt: Opts = Opts::parse();
+    let Opts {
+        verbose,
+        quiet,
+        subcommand,
+    } = Opts::parse();
+    let verbose_level = 2 + verbose - quiet;
+    let log_level = match verbose_level {
+        x if x > 3 => LevelFilter::TRACE,
+        3 => LevelFilter::DEBUG,
+        2 => LevelFilter::INFO,
+        1 => LevelFilter::WARN,
+        0 => LevelFilter::ERROR,
+        x if x < 0 => LevelFilter::OFF,
+        _ => unreachable!(),
+    };
+    tracing_subscriber::fmt().with_max_level(log_level).init();
 
-    match opt.subcommand {
+    match subcommand {
         SubCommand::Id(o) => {
             if let Ok(data) = hex::decode(&o.arg) {
                 match Identity::try_from(data.as_slice()) {
@@ -183,8 +207,12 @@ fn main() {
             let key = CoseKeyIdentity::from_pem(&pem)
                 .expect("Could not generate identity from PEM file.");
 
-            let omni = OmniServer::new("omni-ledger", key.clone(), None);
-            HttpServer::simple(key, omni).bind(o.addr).unwrap();
+            let omni = OmniServer::simple(
+                "omni-server",
+                key.clone(),
+                Some(std::env!("CARGO_PKG_VERSION").to_string()),
+            );
+            HttpServer::new(omni).bind(o.addr).unwrap();
         }
     }
 }

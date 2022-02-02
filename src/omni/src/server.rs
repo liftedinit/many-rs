@@ -4,15 +4,14 @@ use crate::server::module::base::{
     BaseModule, BaseModuleBackend, Endpoints, Status, StatusBuilder,
 };
 use crate::server::module::{OmniModule, OmniModuleInfo};
-use crate::transport::OmniRequestHandler;
+use crate::transport::LowLevelOmniRequestHandler;
 use crate::types::identity::cose::CoseKeyIdentity;
-use crate::{Identity, OmniError};
+use crate::OmniError;
+use async_trait::async_trait;
+use minicose::CoseSign1;
 use std::collections::{BTreeMap, BTreeSet};
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
-pub mod function;
 pub mod module;
 
 #[derive(Debug, Clone)]
@@ -25,28 +24,39 @@ pub struct OmniServer {
     identity: CoseKeyIdentity,
     name: String,
     version: Option<String>,
+    fallback: Option<Arc<dyn LowLevelOmniRequestHandler + Send>>,
 }
 
 impl OmniServer {
-    pub fn new<N: ToString>(
+    pub fn simple<N: ToString>(
         name: N,
         identity: CoseKeyIdentity,
         version: Option<String>,
     ) -> Arc<Mutex<Self>> {
-        let s = Arc::new(Mutex::new(Self {
+        let s = Self::new(name, identity);
+        {
+            let mut s2 = s.lock().unwrap();
+            s2.version = version;
+            s2.add_module(BaseModule::new(s.clone()));
+        }
+
+        s
+    }
+
+    pub fn new<N: ToString>(name: N, identity: CoseKeyIdentity) -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Self {
             name: name.to_string(),
             identity,
-            version,
             ..Default::default()
-        }));
+        }))
+    }
 
-        {
-            let s2 = s.clone();
-            let mut backend = s.lock().unwrap();
-
-            backend.add_module(BaseModule::new(s2));
-        }
-        s
+    pub fn set_fallback_module<M>(&mut self, module: M) -> &mut Self
+    where
+        M: LowLevelOmniRequestHandler + 'static,
+    {
+        self.fallback = Some(Arc::new(module));
+        self
     }
 
     pub fn add_module<M>(&mut self, module: M) -> &mut Self
@@ -55,24 +65,19 @@ impl OmniServer {
     {
         let info = module.info();
         let OmniModuleInfo {
-            attributes,
+            attribute,
             endpoints,
             ..
         } = info;
-        for a in attributes {
-            let id = a.id;
 
-            if let Some(m) = self
-                .modules
-                .iter()
-                .find(|m| m.info().attributes.iter().any(|a| a.id == id))
-            {
-                panic!(
-                    "Module {} already implements attribute {}.",
-                    m.info().name,
-                    id
-                );
-            }
+        let id = attribute.id;
+
+        if let Some(m) = self.modules.iter().find(|m| m.info().attribute.id == id) {
+            panic!(
+                "Module {} already implements attribute {}.",
+                m.info().name,
+                id
+            );
         }
 
         for e in endpoints {
@@ -91,6 +96,27 @@ impl OmniServer {
         self.modules.push(Arc::new(module));
         self
     }
+
+    pub fn validate_id(&self, message: &RequestMessage) -> Result<(), OmniError> {
+        let to = &message.to;
+
+        // Verify that the message is for this server, if it's not anonymous.
+        if to.is_anonymous() || &self.identity.identity == to {
+            Ok(())
+        } else {
+            Err(OmniError::unknown_destination(
+                to.to_string(),
+                self.identity.identity.to_string(),
+            ))
+        }
+    }
+
+    pub fn find_module(&self, message: &RequestMessage) -> Option<Arc<dyn OmniModule + Send>> {
+        self.modules
+            .iter()
+            .find(|x| x.info().endpoints.contains(&message.method))
+            .cloned()
+    }
 }
 
 impl BaseModuleBackend for OmniServer {
@@ -102,7 +128,7 @@ impl BaseModuleBackend for OmniServer {
         let mut attributes: Vec<Attribute> = self
             .modules
             .iter()
-            .flat_map(|m| m.info().attributes.clone())
+            .map(|m| m.info().attribute.clone())
             .collect();
         attributes.sort();
 
@@ -128,64 +154,62 @@ impl BaseModuleBackend for OmniServer {
     }
 }
 
-impl OmniRequestHandler for Arc<Mutex<OmniServer>> {
-    fn validate(&self, message: &RequestMessage) -> Result<(), OmniError> {
-        let s = self.lock().unwrap();
-        let to = message.to;
-        let method = message.method.as_str();
+#[async_trait]
+impl LowLevelOmniRequestHandler for Arc<Mutex<OmniServer>> {
+    async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
+        let request = crate::message::decode_request_from_cose_sign1(envelope.clone());
 
-        // Verify that the message is for this server, if it's not anonymous.
-        if to.is_anonymous() || s.identity.identity == to {
-            // Verify the endpoint.
-            if s.method_cache.contains(method) {
-                Ok(())
-            } else {
-                Err(OmniError::invalid_method_name(method.to_string()))
+        let response = {
+            let this = self.lock().unwrap();
+            let cose_id = this.identity.clone();
+            eprintln!("id: {:?}", cose_id);
+            request
+                .and_then(|message| {
+                    this.validate_id(&message)?;
+                    Ok(message)
+                })
+                .and_then(|message| {
+                    let maybe_module = this.find_module(&message);
+                    Ok((message, maybe_module))
+                })
+                .and_then(|(message, maybe_module)| {
+                    if let Some(ref m) = maybe_module {
+                        m.validate(&message)?;
+                    }
+                    Ok((message, maybe_module))
+                })
+                .and_then(|(message, maybe_module)| {
+                    Ok((
+                        cose_id.clone(),
+                        message,
+                        maybe_module,
+                        this.fallback.clone(),
+                    ))
+                })
+                .or_else(|omni_err| Err(ResponseMessage::error(&cose_id.identity, omni_err)))
+        };
+
+        match response {
+            Ok((cose_id, message, maybe_module, fallback)) => match (maybe_module, fallback) {
+                (Some(m), _) => {
+                    let mut response = match m.execute(message).await {
+                        Ok(response) => response,
+                        Err(omni_err) => ResponseMessage::error(&cose_id.identity, omni_err),
+                    };
+                    response.from = cose_id.identity;
+                    crate::message::encode_cose_sign1_from_response(response, &cose_id)
+                }
+                (None, Some(fb)) => fb.execute(envelope).await,
+                (None, None) => {
+                    let err = OmniError::could_not_route_message();
+                    let response = ResponseMessage::error(&cose_id.identity, err);
+                    crate::message::encode_cose_sign1_from_response(response, &cose_id)
+                }
+            },
+            Err(response) => {
+                let this = self.lock().unwrap();
+                crate::message::encode_cose_sign1_from_response(response, &this.identity)
             }
-        } else {
-            Err(OmniError::unknown_destination(
-                to.to_string(),
-                s.identity.identity.to_string(),
-            ))
         }
-    }
-
-    fn execute<'life0, 'async_trait>(
-        &'life0 self,
-        message: RequestMessage,
-    ) -> Pin<Box<dyn Future<Output = Result<ResponseMessage, OmniError>> + Send + 'async_trait>>
-    where
-        'life0: 'async_trait,
-        Self: 'async_trait,
-    {
-        async fn ex(
-            method: String,
-            module: Option<Arc<dyn OmniModule + Send>>,
-            from: Identity,
-            message: RequestMessage,
-        ) -> Result<ResponseMessage, OmniError> {
-            if let Some(m) = module {
-                m.validate(&message)?;
-
-                return m.execute(message).await.map(|mut r| {
-                    r.from = from;
-                    r
-                });
-            } else {
-                Err(OmniError::invalid_method_name(method))
-            }
-        }
-
-        let s = self.lock().unwrap();
-        let method = message.method.clone();
-        let from = s.identity.identity;
-
-        let m = s
-            .modules
-            .iter()
-            .find(|x| x.info().endpoints.contains(&method.to_string()))
-            .cloned();
-
-        Box::pin(ex(method, m, from, message))
     }
 }
