@@ -1,9 +1,6 @@
 use crate::message::{RequestMessage, ResponseMessage};
 use crate::protocol::Attribute;
-use crate::server::module::base::{
-    BaseModule, BaseModuleBackend, Endpoints, Status, StatusBuilder,
-};
-use crate::server::module::{OmniModule, OmniModuleInfo};
+use crate::server::module::{base, OmniModule, OmniModuleInfo};
 use crate::transport::LowLevelOmniRequestHandler;
 use crate::types::identity::cose::CoseKeyIdentity;
 use crate::OmniError;
@@ -13,6 +10,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 
 pub mod module;
+
+trait OmniServerFallback: LowLevelOmniRequestHandler + base::BaseModuleBackend {}
+
+impl<M: LowLevelOmniRequestHandler + base::BaseModuleBackend + 'static> OmniServerFallback for M {}
 
 #[derive(Debug, Clone)]
 pub struct OmniModuleList {}
@@ -24,7 +25,7 @@ pub struct OmniServer {
     identity: CoseKeyIdentity,
     name: String,
     version: Option<String>,
-    fallback: Option<Arc<dyn LowLevelOmniRequestHandler + Send>>,
+    fallback: Option<Arc<dyn OmniServerFallback + Send + 'static>>,
 }
 
 impl OmniServer {
@@ -37,7 +38,7 @@ impl OmniServer {
         {
             let mut s2 = s.lock().unwrap();
             s2.version = version;
-            s2.add_module(BaseModule::new(s.clone()));
+            s2.add_module(base::BaseModule::new(s.clone()));
         }
 
         s
@@ -53,7 +54,7 @@ impl OmniServer {
 
     pub fn set_fallback_module<M>(&mut self, module: M) -> &mut Self
     where
-        M: LowLevelOmniRequestHandler + 'static,
+        M: LowLevelOmniRequestHandler + base::BaseModuleBackend + 'static,
     {
         self.fallback = Some(Arc::new(module));
         self
@@ -119,26 +120,33 @@ impl OmniServer {
     }
 }
 
-impl BaseModuleBackend for OmniServer {
-    fn endpoints(&self) -> Result<Endpoints, OmniError> {
-        Ok(Endpoints(self.method_cache.iter().cloned().collect()))
+impl base::BaseModuleBackend for OmniServer {
+    fn endpoints(&self) -> Result<base::Endpoints, OmniError> {
+        let mut endpoints: BTreeSet<String> = self.method_cache.iter().cloned().collect();
+
+        if let Some(fb) = &self.fallback {
+            endpoints = endpoints
+                .union(&fb.endpoints()?.0.iter().cloned().collect::<BTreeSet<_>>())
+                .cloned()
+                .collect();
+        }
+
+        Ok(base::Endpoints(endpoints))
     }
 
-    fn status(&self) -> Result<Status, OmniError> {
-        let mut attributes: Vec<Attribute> = self
+    fn status(&self) -> Result<base::Status, OmniError> {
+        let mut attributes: BTreeSet<Attribute> = self
             .modules
             .iter()
             .map(|m| m.info().attribute.clone())
             .collect();
-        attributes.sort();
 
-        let mut builder = StatusBuilder::default();
+        let mut builder = base::StatusBuilder::default();
 
         builder
             .name(self.name.clone())
             .version(1)
             .identity(self.identity.identity)
-            .attributes(attributes)
             .extras(BTreeMap::new());
 
         if let Some(pk) = self.identity.public_key() {
@@ -147,6 +155,36 @@ impl BaseModuleBackend for OmniServer {
         if let Some(sv) = self.version.clone() {
             builder.server_version(sv);
         }
+
+        if let Some(fb) = &self.fallback {
+            let fb_status = fb.status()?;
+            if fb_status.identity != self.identity.identity
+                || fb_status.version != 1
+                || (fb_status.server_version != self.version && self.version.is_some())
+            {
+                tracing::error!(
+                    "fallback status differs from internal status: {} != {} || {:?} != {:?}",
+                    fb_status.identity,
+                    self.identity.identity,
+                    fb_status.server_version,
+                    self.version
+                );
+                return Err(OmniError::internal_server_error());
+            }
+
+            if let Some(sv) = fb_status.server_version {
+                builder.server_version(sv);
+            }
+
+            builder.name(fb_status.name).extras(fb_status.extras);
+
+            attributes = attributes
+                .into_iter()
+                .chain(fb_status.attributes.into_iter())
+                .collect();
+        }
+
+        builder.attributes(attributes.into_iter().collect());
 
         builder
             .build()
@@ -199,7 +237,9 @@ impl LowLevelOmniRequestHandler for Arc<Mutex<OmniServer>> {
                     response.from = cose_id.identity;
                     crate::message::encode_cose_sign1_from_response(response, &cose_id)
                 }
-                (None, Some(fb)) => fb.execute(envelope).await,
+                (None, Some(fb)) => {
+                    LowLevelOmniRequestHandler::execute(fb.as_ref(), envelope).await
+                }
                 (None, None) => {
                     let err = OmniError::could_not_route_message();
                     let response = ResponseMessage::error(&cose_id.identity, err);

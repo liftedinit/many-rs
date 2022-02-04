@@ -8,7 +8,6 @@ use minicbor::{Decode, Decoder, Encode, Encoder};
 use minicose::CoseKey;
 use omni_module::omni_module;
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Debug, Decode, Encode)]
 #[cbor(transparent)]
@@ -18,11 +17,11 @@ pub struct Endpoints(#[n(0)] pub BTreeSet<String>);
 pub struct Status {
     pub version: u8,
     pub name: String,
-    #[builder(setter(into, strip_option))]
+    #[builder(setter(into, strip_option), default)]
     pub public_key: Option<CoseKey>,
     pub identity: Identity,
     pub attributes: Vec<Attribute>,
-    #[builder(setter(into, strip_option))]
+    #[builder(setter(into, strip_option), default)]
     pub server_version: Option<String>,
 
     #[builder(default)]
@@ -128,28 +127,4 @@ pub trait BaseModuleBackend: Send {
         Ok(())
     }
     fn status(&self) -> Result<Status, OmniError>;
-}
-
-pub struct StaticBaseModuleImpl {
-    endpoints: Endpoints,
-    status: Status,
-}
-
-impl StaticBaseModuleImpl {
-    pub fn module(endpoints: Endpoints, status: Status) -> BaseModule<StaticBaseModuleImpl> {
-        BaseModule::new(Arc::new(Mutex::new(StaticBaseModuleImpl {
-            endpoints,
-            status,
-        })))
-    }
-}
-
-impl BaseModuleBackend for StaticBaseModuleImpl {
-    fn endpoints(&self) -> Result<Endpoints, OmniError> {
-        Ok(self.endpoints.clone())
-    }
-
-    fn status(&self) -> Result<Status, OmniError> {
-        Ok(self.status.clone())
-    }
 }
