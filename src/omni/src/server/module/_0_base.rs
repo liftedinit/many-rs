@@ -7,11 +7,12 @@ use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use minicose::CoseKey;
 use omni_module::omni_module;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Debug, Decode, Encode)]
 #[cbor(transparent)]
-pub struct Endpoints(#[n(0)] pub Vec<String>);
+pub struct Endpoints(#[n(0)] pub BTreeSet<String>);
 
 #[derive(Clone, Debug, Builder)]
 pub struct Status {
@@ -127,4 +128,28 @@ pub trait BaseModuleBackend: Send {
         Ok(())
     }
     fn status(&self) -> Result<Status, OmniError>;
+}
+
+pub struct StaticBaseModuleImpl {
+    endpoints: Endpoints,
+    status: Status,
+}
+
+impl StaticBaseModuleImpl {
+    pub fn module(endpoints: Endpoints, status: Status) -> BaseModule<StaticBaseModuleImpl> {
+        BaseModule::new(Arc::new(Mutex::new(StaticBaseModuleImpl {
+            endpoints,
+            status,
+        })))
+    }
+}
+
+impl BaseModuleBackend for StaticBaseModuleImpl {
+    fn endpoints(&self) -> Result<Endpoints, OmniError> {
+        Ok(self.endpoints.clone())
+    }
+
+    fn status(&self) -> Result<Status, OmniError> {
+        Ok(self.status.clone())
+    }
 }
