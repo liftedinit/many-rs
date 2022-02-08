@@ -48,7 +48,7 @@ pub struct AbciCommitInfo {
     pub retain_height: u64,
 
     #[n(1)]
-    pub hash: Vec<u8>,
+    pub hash: ByteVec,
 }
 
 /// A module that adapt an OMNI application to an ABCI-OMNI bridge.

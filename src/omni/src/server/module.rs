@@ -22,6 +22,7 @@ reexport_module!(
     _3_kvstore = kvstore;
     _4_ledger_transactions = ledger_transactions;
     _1000_abci_backend = abci_backend;
+    _1001_abci_frontend = abci_frontend;
 );
 
 #[derive(Clone, Debug)]

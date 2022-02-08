@@ -27,8 +27,8 @@ struct Endpoint {
     pub is_mut: bool,
     pub has_sender: bool,
     pub arg_type: Option<Box<Type>>,
+    #[allow(unused)]
     pub ret_type: Box<Type>,
-    pub ret_result: bool,
 }
 
 impl Endpoint {
@@ -41,7 +41,6 @@ impl Endpoint {
         let mut has_sender = false;
         let arg_type: Option<Box<Type>>;
         let mut ret_type: Option<Box<Type>> = None;
-        let mut ret_result = false;
 
         let mut inputs = signature.inputs.iter();
         let receiver = inputs.next().ok_or_else(|| {
@@ -95,7 +94,6 @@ impl Endpoint {
                     if let AngleBracketed(AngleBracketedGenericArguments { ref args, .. }) =
                         segments[0].arguments
                     {
-                        ret_result = true;
                         ret_type = Some(
                             args.iter()
                                 .filter_map(|x| match x {
@@ -126,7 +124,6 @@ impl Endpoint {
             has_sender,
             arg_type,
             ret_type: ret_type.unwrap(),
-            ret_result,
         })
     }
 }
@@ -243,14 +240,14 @@ fn omni_module_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream,
         };
 
         let call = match (e.has_sender, e.arg_type.is_some(), e.is_async) {
-            (false, true, false) => quote! { encode( backend . #ep_ident ( decode( data )? ) ) },
-            (false, true, true) => quote! { encode( backend . #ep_ident ( decode( data ) ).await? ) },
-            (true, true, false) => quote! { encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )? ) ) },
-            (true, true, true) => quote! { encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data ) ).await? ) },
-            (false, false, false) => quote! { encode( backend . #ep_ident ( ) ) },
-            (false, false, true) => quote! { encode( backend . #ep_ident ( ).await? ) },
-            (true, false, false) => quote! { encode( backend . #ep_ident ( &message.from.unwrap_or_default() ) ) },
-            (true, false, true) => quote! { encode( backend . #ep_ident ( &message.from.unwrap_or_default() ).await? ) },
+            (false, true, false) => quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ) ) },
+            (false, true, true) => quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ).await ) },
+            (true, true, false) => quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )? ) ) },
+            (true, true, true) => quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )? ).await ) },
+            (false, false, false) => quote_spanned! { span => encode( backend . #ep_ident ( ) ) },
+            (false, false, true) => quote_spanned! { span => encode( backend . #ep_ident ( ).await ) },
+            (true, false, false) => quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default() ) ) },
+            (true, false, true) => quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default() ).await ) },
         };
 
         quote_spanned! { span =>
