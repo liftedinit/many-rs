@@ -1,4 +1,4 @@
-use crate::types::{Symbol, TokenAmount};
+use crate::types::ledger;
 use crate::Identity;
 use minicbor::{Decode, Encode};
 
@@ -12,8 +12,8 @@ pub struct SendArgs {
     pub to: Identity,
 
     #[n(2)]
-    pub amount: TokenAmount,
+    pub amount: ledger::TokenAmount,
 
     #[n(3)]
-    pub symbol: Symbol,
+    pub symbol: ledger::Symbol,
 }

@@ -1,4 +1,4 @@
-use crate::types::Symbol;
+use crate::types::ledger;
 use minicbor::bytes::ByteVec;
 use minicbor::{decode, Decode, Decoder, Encode};
 use std::collections::BTreeMap;
@@ -14,7 +14,7 @@ impl<'de> Decode<'de> for InfoArgs {
 #[cbor(map)]
 pub struct InfoReturns {
     #[n(0)]
-    pub symbols: Vec<Symbol>,
+    pub symbols: Vec<ledger::Symbol>,
 
     #[n(1)]
     pub hash: ByteVec,
@@ -29,5 +29,5 @@ pub struct InfoReturns {
     /// this map, it may not have a local name but can still be a valid
     /// symbol (refer to the list of symbols above).
     #[n(4)]
-    pub local_names: BTreeMap<Symbol, String>,
+    pub local_names: BTreeMap<ledger::Symbol, String>,
 }

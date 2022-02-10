@@ -29,7 +29,11 @@ pub struct RequestMessage {
     pub to: Identity,
     pub method: String,
     pub data: Vec<u8>,
+
+    /// An optional timestamp for this request. If [None] this will be filled
+    /// with [SystemTime::now()]
     pub timestamp: Option<SystemTime>,
+
     pub id: Option<u64>,
     pub nonce: Option<Vec<u8>>,
     pub attributes: Vec<Attribute>,

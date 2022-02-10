@@ -1,4 +1,4 @@
-use crate::types::{SortOrder, Transaction, TransactionFilter};
+use crate::types::{ledger, SortOrder, TransactionFilter};
 use minicbor::{Decode, Encode};
 
 #[derive(Encode, Decode)]
@@ -21,5 +21,5 @@ pub struct ListReturns {
     pub nb_transactions: u64,
 
     #[n(1)]
-    pub transactions: Vec<Transaction>,
+    pub transactions: Vec<ledger::Transaction>,
 }

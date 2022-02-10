@@ -30,7 +30,11 @@ pub struct ResponseMessage {
     pub from: Identity,
     pub to: Option<Identity>,
     pub data: Result<Vec<u8>, super::OmniError>,
+
+    /// An optional timestamp for this response. If [None] this will be filled
+    /// with [SystemTime::now()]
     pub timestamp: Option<SystemTime>,
+
     pub id: Option<u64>,
     pub attributes: Vec<Attribute>,
 }

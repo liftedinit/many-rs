@@ -1,4 +1,4 @@
-use crate::types::TokenAmount;
+use crate::types::ledger;
 use crate::Identity;
 use minicbor::{Decode, Encode};
 
@@ -9,7 +9,7 @@ pub struct BurnArgs {
     pub account: Identity,
 
     #[n(1)]
-    pub amount: TokenAmount,
+    pub amount: ledger::TokenAmount,
 
     #[n(2)]
     pub symbol: Identity,
