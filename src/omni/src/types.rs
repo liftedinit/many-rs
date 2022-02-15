@@ -37,7 +37,7 @@ impl<'b> Decode<'b> for Percent {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct VecOrSingle<T>(pub Vec<T>);
 
 impl<T> Into<Vec<T>> for VecOrSingle<T> {

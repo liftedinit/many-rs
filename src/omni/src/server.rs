@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use minicose::CoseSign1;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 pub mod module;
 
@@ -25,6 +26,7 @@ pub struct OmniServer {
     identity: CoseKeyIdentity,
     name: String,
     version: Option<String>,
+    timeout: u64,
     fallback: Option<Arc<dyn OmniServerFallback + Send + 'static>>,
 }
 
@@ -48,6 +50,7 @@ impl OmniServer {
         Arc::new(Mutex::new(Self {
             name: name.to_string(),
             identity,
+            timeout: 300,
             ..Default::default()
         }))
     }
@@ -112,6 +115,23 @@ impl OmniServer {
         }
     }
 
+    pub fn validate_time(&self, message: &RequestMessage) -> Result<(), OmniError> {
+        if self.timeout != 0 {
+            let ts = message
+                .timestamp
+                .ok_or(OmniError::timestamp_out_of_range())?;
+            let now = SystemTime::now();
+
+            let diff = now
+                .duration_since(ts)
+                .map_err(|_| OmniError::timestamp_out_of_range())?;
+            if diff.as_secs() >= self.timeout {
+                return Err(OmniError::timestamp_out_of_range());
+            }
+        }
+        Ok(())
+    }
+
     pub fn find_module(&self, message: &RequestMessage) -> Option<Arc<dyn OmniModule + Send>> {
         self.modules
             .iter()
@@ -147,6 +167,7 @@ impl base::BaseModuleBackend for OmniServer {
             .name(self.name.clone())
             .version(1)
             .identity(self.identity.identity)
+            .timeout(self.timeout)
             .extras(BTreeMap::new());
 
         if let Some(pk) = self.identity.public_key() {
@@ -202,6 +223,10 @@ impl LowLevelOmniRequestHandler for Arc<Mutex<OmniServer>> {
             let cose_id = this.identity.clone();
             eprintln!("id: {:?}", cose_id);
             request
+                .and_then(|message| {
+                    this.validate_time(&message)?;
+                    Ok(message)
+                })
                 .and_then(|message| {
                     this.validate_id(&message)?;
                     Ok(message)

@@ -1,5 +1,6 @@
 use crate::cbor::CborAny;
 use crate::protocol::attributes::AttributeSet;
+use crate::types::VecOrSingle;
 use crate::{Identity, OmniError};
 use derive_builder::Builder;
 use minicbor::data::Type;
@@ -23,6 +24,12 @@ pub struct Status {
     pub attributes: AttributeSet,
     #[builder(setter(into, strip_option), default)]
     pub server_version: Option<String>,
+
+    #[builder(setter(into, strip_option), default)]
+    pub network_name: Option<VecOrSingle<String>>,
+
+    #[builder(setter(into, strip_option), default)]
+    pub timeout: Option<u64>,
 
     #[builder(default)]
     pub extras: BTreeMap<String, CborAny>,
@@ -96,6 +103,8 @@ impl<'b> Decode<'b> for Status {
                         3 => builder.identity(d.decode()?),
                         4 => builder.attributes(d.decode()?),
                         5 => builder.server_version(d.decode::<String>()?),
+                        6 => builder.network_name(d.decode::<VecOrSingle<String>>()?),
+                        7 => builder.timeout(d.decode::<u64>()?),
                         _ => &mut builder,
                     };
                 }

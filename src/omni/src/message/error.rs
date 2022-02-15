@@ -121,6 +121,8 @@ omni_error! {
             => "Unknown destination for message.\nThis is \"{this}\", message was for \"{to}\".",
     -1004: EmptyEnvelope as empty_envelope()
             => "An envelope must contain a payload.",
+    -1005: TimestampOutOfRange as timestamp_out_of_range()
+            => "The message's timestamp is out of the accepted range of the server.",
 
     // -2000 - -2999 is for server errors.
     -2000: InternalServerError as internal_server_error()
