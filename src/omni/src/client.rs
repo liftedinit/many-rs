@@ -64,12 +64,16 @@ impl OmniClient {
     where
         M: Into<String>,
     {
+        let mut nonce = [0u8; 16];
+        rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut nonce);
+
         let message: RequestMessage = RequestMessageBuilder::default()
             .version(1)
             .from(self.id.identity)
             .to(self.to)
             .method(method.into())
             .data(argument.to_vec())
+            .nonce(nonce.to_vec())
             .build()
             .map_err(|_| OmniError::internal_server_error())?;
 

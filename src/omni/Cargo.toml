@@ -31,6 +31,7 @@ pem = { version = "1.0.0", optional = true }
 pkcs8 = { version = "0.8", features = [ "pem", "std", "encryption" ] }
 omni-module = { path = "../omni-module" }
 openssh-keys = "0.5.0"
+rand = "0.8.4"
 regex = "1.5.4"
 reqwest = { version = "0.11.5", features = ["blocking"] }
 ring = "0.16"

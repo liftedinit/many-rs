@@ -1,5 +1,5 @@
 use crate::cbor::CborAny;
-use crate::protocol::Attribute;
+use crate::protocol::attributes::AttributeSet;
 use crate::{Identity, OmniError};
 use derive_builder::Builder;
 use minicbor::data::Type;
@@ -20,7 +20,7 @@ pub struct Status {
     #[builder(setter(into, strip_option), default)]
     pub public_key: Option<CoseKey>,
     pub identity: Identity,
-    pub attributes: Vec<Attribute>,
+    pub attributes: AttributeSet,
     #[builder(setter(into, strip_option), default)]
     pub server_version: Option<String>,
 
@@ -53,7 +53,7 @@ impl Encode for Status {
         e.u8(3)?
             .encode(&self.identity)?
             .u8(4)?
-            .encode(self.attributes.as_slice())?;
+            .encode(&self.attributes)?;
 
         if let Some(ref sv) = self.server_version {
             e.u8(5)?.str(sv.as_str())?;

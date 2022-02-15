@@ -1,4 +1,5 @@
 use crate::message::RequestMessage;
+use crate::protocol::attributes::AttributeSet;
 use crate::protocol::Attribute;
 use crate::Identity;
 use derive_builder::Builder;
@@ -36,7 +37,7 @@ pub struct ResponseMessage {
     pub timestamp: Option<SystemTime>,
 
     pub id: Option<u64>,
-    pub attributes: Vec<Attribute>,
+    pub attributes: AttributeSet,
 }
 
 impl Default for ResponseMessage {
@@ -48,7 +49,7 @@ impl Default for ResponseMessage {
             data: Ok(vec![]),
             timestamp: None,
             id: None,
-            attributes: Vec::new(),
+            attributes: Default::default(),
         }
     }
 }
@@ -66,7 +67,7 @@ impl ResponseMessage {
             data,
             timestamp: None, // To be filled.
             id: request.id,
-            attributes: Vec::new(),
+            attributes: Default::default(),
         }
     }
 
@@ -78,12 +79,12 @@ impl ResponseMessage {
             data: Err(data),
             timestamp: None, // To be filled.
             id: None,
-            attributes: Vec::new(),
+            attributes: Default::default(),
         }
     }
 
     pub fn with_attribute(mut self, attr: Attribute) -> Self {
-        self.attributes.push(attr);
+        self.attributes.insert(attr);
         self
     }
 

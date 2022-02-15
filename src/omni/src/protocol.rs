@@ -7,35 +7,64 @@ use std::fmt::{Debug, Formatter};
 
 pub mod attributes;
 
+pub type AttributeId = u32;
+
 #[derive(Clone)]
 pub struct Attribute {
-    pub id: u32,
-    pub arguments: Vec<CborAny>,
+    pub id: AttributeId,
+    pub arguments: Option<Vec<CborAny>>,
 }
 
 impl Attribute {
-    pub const fn id(id: u32) -> Self {
+    pub const fn id(id: AttributeId) -> Self {
         Self {
             id,
-            arguments: Vec::new(),
+            arguments: None,
         }
     }
 
-    pub const fn new(id: u32, arguments: Vec<CborAny>) -> Self {
-        Self { id, arguments }
+    pub const fn new(id: AttributeId, arguments: Vec<CborAny>) -> Self {
+        Self {
+            id,
+            arguments: Some(arguments),
+        }
     }
 
     pub fn with_arguments(&self, arguments: Vec<CborAny>) -> Self {
         Self {
-            arguments,
+            arguments: Some(arguments),
             ..self.clone()
         }
     }
 
     pub fn with_argument(&self, argument: CborAny) -> Self {
-        let mut s = self.clone();
-        s.arguments.push(argument);
-        s
+        let mut arguments = self.arguments.as_ref().cloned().unwrap_or_default();
+        arguments.push(argument);
+        Self {
+            arguments: Some(arguments),
+            id: self.id,
+        }
+    }
+
+    pub fn into_arguments(self) -> Vec<CborAny> {
+        if let Some(a) = self.arguments {
+            a
+        } else {
+            vec![]
+        }
+    }
+
+    pub fn arguments(&self) -> Option<&Vec<CborAny>> {
+        match &self.arguments {
+            Some(arguments) => {
+                if arguments.is_empty() {
+                    None
+                } else {
+                    Some(arguments)
+                }
+            }
+            None => None,
+        }
     }
 }
 
@@ -61,29 +90,27 @@ impl Ord for Attribute {
 
 impl Debug for Attribute {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.arguments.is_empty() {
-            f.write_fmt(format_args!("Attribute({})", self.id))
-        } else {
+        if let Some(ref arguments) = self.arguments() {
             f.debug_struct("Attribute")
                 .field("id", &self.id)
-                .field("arguments", &self.arguments)
+                .field("arguments", &arguments)
                 .finish()
+        } else {
+            f.write_fmt(format_args!("Attribute({})", self.id))
         }
     }
 }
 
 impl Encode for Attribute {
     fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
-        if !self.arguments.is_empty() {
-            e.array(1 + self.arguments.len() as u64)?;
-        }
-
-        e.u32(self.id as u32)?;
-
-        if !self.arguments.is_empty() {
-            for a in &self.arguments {
+        if let Some(arguments) = self.arguments() {
+            e.array(1 + arguments.len() as u64)?;
+            e.u32(self.id as u32)?;
+            for a in arguments {
                 e.encode(a)?;
             }
+        } else {
+            e.u32(self.id as u32)?;
         }
 
         Ok(())
@@ -94,26 +121,21 @@ impl<'d> Decode<'d> for Attribute {
     fn decode(d: &mut Decoder<'d>) -> Result<Self, minicbor::decode::Error> {
         match d.datatype()? {
             Type::Array | Type::ArrayIndef => {
-                let len = d.array()?;
-                let id = d.u32()?;
-                let mut arguments = Vec::<CborAny>::with_capacity(len.unwrap_or(8) as usize);
+                let arr = d.array_iter()?.collect::<Result<Vec<CborAny>, _>>()?;
+                let (id, arguments) = arr
+                    .as_slice()
+                    .split_first()
+                    .ok_or_else(|| minicbor::decode::Error::Message("Invalid empty attribute."))?;
 
-                let mut i = 0;
-                loop {
-                    if d.datatype()? == Type::Break {
-                        d.skip()?;
-                        break;
-                    }
-
-                    arguments.push(d.decode()?);
-
-                    i += 1;
-                    if len.map_or(false, |x| i >= x) {
-                        break;
-                    }
+                match id {
+                    CborAny::Int(i) if i <= &(u32::MAX as i64) => Ok(Self {
+                        id: *i as u32,
+                        arguments: Some(arguments.to_vec()),
+                    }),
+                    _ => Err(minicbor::decode::Error::Message(
+                        "Expected an attribute ID.",
+                    )),
                 }
-
-                Ok(Self { id, arguments })
             }
             _ => Ok(Self::id(d.u32()? as u32)),
         }

@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 #[cbor(map)]
 pub struct EndpointInfo {
     #[n(0)]
-    pub should_commit: bool,
+    pub is_command: bool,
 }
 
 #[derive(Encode, Decode)]

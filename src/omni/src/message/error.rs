@@ -60,13 +60,6 @@ macro_rules! omni_error {
             }
         }
 
-        #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-        pub struct OmniError {
-            pub code: OmniErrorCode,
-            pub message: Option<String>,
-            pub arguments: BTreeMap<String, String>,
-        }
-
         impl OmniError {
             $($(
                 #[doc = $description]
@@ -105,6 +98,10 @@ omni_error! {
             => "The transport returned an error unexpectedly:\n{inner}",
        -8: CouldNotRouteMessage as could_not_route_message()
             => "Could not find a handler for the message.",
+       -9: InvalidAttribtueId as invalid_attribute_id(id) => "Unexpected attribute ID: {id}.",
+      -10: InvalidAttributeArguments as invalid_attribute_arguments()
+            => "Attribute does not have the right arguments.",
+      -11: AttributeNotFound as attribute_not_found(id) => "Expected attribute {id} not found.",
 
      -100: InvalidIdentity as invalid_identity()
             => "Identity is invalid (does not follow the protocol).",
@@ -172,6 +169,13 @@ impl OmniErrorCode {
     pub fn message_of(code: i64) -> Option<&'static str> {
         OmniErrorCode::from(code).message()
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct OmniError {
+    pub code: OmniErrorCode,
+    pub message: Option<String>,
+    pub arguments: BTreeMap<String, String>,
 }
 
 impl OmniError {

@@ -1,3 +1,4 @@
+use crate::protocol::attributes::AttributeSet;
 use crate::protocol::Attribute;
 use crate::Identity;
 use derive_builder::Builder;
@@ -36,7 +37,7 @@ pub struct RequestMessage {
 
     pub id: Option<u64>,
     pub nonce: Option<Vec<u8>>,
-    pub attributes: Vec<Attribute>,
+    pub attributes: AttributeSet,
 }
 
 impl std::fmt::Debug for RequestMessage {
@@ -72,7 +73,7 @@ impl RequestMessage {
     }
 
     pub fn with_attribute(mut self, attr: Attribute) -> Self {
-        self.attributes.push(attr);
+        self.attributes.insert(attr);
         self
     }
 
