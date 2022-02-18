@@ -2,5 +2,6 @@
 members = [
     "src/omni",
     "src/omni-cli",
+    "src/omni-client",
     "src/omni-module",
 ]

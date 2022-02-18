@@ -9,6 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 omni = { path = "../omni" }
+omni-client = { path = "../omni-client" }
 base64 = "0.13.0"
 cbor-diag = "0.1.8"
 clap = { version = "3.0.0-rc.9", features = [ "derive" ] }

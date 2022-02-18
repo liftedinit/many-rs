@@ -119,7 +119,7 @@ impl OmniServer {
         if self.timeout != 0 {
             let ts = message
                 .timestamp
-                .ok_or(OmniError::timestamp_out_of_range())?;
+                .ok_or(OmniError::required_field_missing("timestamp".to_string()))?;
             let now = SystemTime::now();
 
             let diff = now

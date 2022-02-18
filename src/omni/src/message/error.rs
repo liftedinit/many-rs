@@ -123,6 +123,8 @@ omni_error! {
             => "An envelope must contain a payload.",
     -1005: TimestampOutOfRange as timestamp_out_of_range()
             => "The message's timestamp is out of the accepted range of the server.",
+    -1006: RequiredFieldMissing as required_field_missing(field)
+            => "Field is required but missing: '{field}'.",
 
     // -2000 - -2999 is for server errors.
     -2000: InternalServerError as internal_server_error()
