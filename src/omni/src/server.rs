@@ -119,7 +119,7 @@ impl OmniServer {
         if self.timeout != 0 {
             let ts = message
                 .timestamp
-                .ok_or(OmniError::required_field_missing("timestamp".to_string()))?;
+                .ok_or_else(|| OmniError::required_field_missing("timestamp".to_string()))?;
             let now = SystemTime::now();
 
             let diff = now.duration_since(ts).map_err(|_| {
@@ -229,7 +229,6 @@ impl LowLevelOmniRequestHandler for Arc<Mutex<OmniServer>> {
             let cose_id = this.identity.clone();
             request
                 .and_then(|message| {
-                    eprintln!("message: {:?}", &message);
                     this.validate_time(&message)?;
                     Ok(message)
                 })
