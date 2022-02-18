@@ -221,9 +221,9 @@ impl LowLevelOmniRequestHandler for Arc<Mutex<OmniServer>> {
         let response = {
             let this = self.lock().unwrap();
             let cose_id = this.identity.clone();
-            eprintln!("id: {:?}", cose_id);
             request
                 .and_then(|message| {
+                    eprintln!("message: {:?}", &message);
                     this.validate_time(&message)?;
                     Ok(message)
                 })
