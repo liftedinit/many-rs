@@ -271,8 +271,10 @@ impl LowLevelOmniRequestHandler for Arc<Mutex<OmniServer>> {
                     LowLevelOmniRequestHandler::execute(fb.as_ref(), envelope).await
                 }
                 (None, None) => {
-                    let err = OmniError::could_not_route_message();
-                    let response = ResponseMessage::error(&cose_id.identity, err);
+                    let response = ResponseMessage::error(
+                        &cose_id.identity,
+                        OmniError::could_not_route_message(),
+                    );
                     crate::message::encode_cose_sign1_from_response(response, &cose_id)
                 }
             },

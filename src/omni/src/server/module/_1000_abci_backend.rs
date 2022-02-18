@@ -67,7 +67,7 @@ pub trait OmniAbciModuleBackend: std::fmt::Debug + Send + Sync {
     fn init_chain(&mut self) -> Result<(), OmniError>;
 
     /// Called at the start of a block.
-    fn block_begin(&mut self, _info: AbciBlock) -> Result<(), OmniError> {
+    fn begin_block(&mut self, _info: AbciBlock) -> Result<(), OmniError> {
         Ok(())
     }
 
@@ -75,7 +75,7 @@ pub trait OmniAbciModuleBackend: std::fmt::Debug + Send + Sync {
     fn info(&self) -> Result<AbciInfo, OmniError>;
 
     /// Called at the end of a block.
-    fn block_end(&mut self) -> Result<(), OmniError> {
+    fn end_block(&mut self) -> Result<(), OmniError> {
         Ok(())
     }
 
