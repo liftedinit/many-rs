@@ -122,10 +122,16 @@ impl OmniServer {
                 .ok_or(OmniError::required_field_missing("timestamp".to_string()))?;
             let now = SystemTime::now();
 
-            let diff = now
-                .duration_since(ts)
-                .map_err(|_| OmniError::timestamp_out_of_range())?;
+            let diff = now.duration_since(ts).map_err(|_| {
+                tracing::error!("ERR: System time error");
+                OmniError::timestamp_out_of_range()
+            })?;
             if diff.as_secs() >= self.timeout {
+                tracing::error!(
+                    "ERR: Timestamp outside of timeout: {} >= {}",
+                    diff.as_secs(),
+                    self.timeout
+                );
                 return Err(OmniError::timestamp_out_of_range());
             }
         }
