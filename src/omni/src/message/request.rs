@@ -176,7 +176,14 @@ impl<'b> Decode<'b> for RequestMessage {
 
             match num_traits::FromPrimitive::from_i8(d.i8()?) {
                 None => &mut builder,
-                Some(RequestMessageCborKey::ProtocolVersion) => builder.version(d.decode()?),
+                Some(RequestMessageCborKey::ProtocolVersion) => {
+                    let v = d.u8()?;
+                    // Only support version 1.
+                    if v != 1 {
+                        return Err(minicbor::decode::Error::Message("Invalid version."));
+                    }
+                    builder.version(v)
+                }
                 Some(RequestMessageCborKey::From) => builder.from(d.decode()?),
                 Some(RequestMessageCborKey::To) => builder.to(d.decode()?),
                 Some(RequestMessageCborKey::Endpoint) => builder.method(d.decode()?),

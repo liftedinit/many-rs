@@ -195,6 +195,13 @@ impl CoseSign1RequestMessage {
                 Err("Invalid (not an OMNI identity) key ID".to_string())
             }
         } else {
+            if let Some(s) = &self.sign1.signature {
+                if s.is_empty() {
+                    return Ok(Identity::anonymous());
+                }
+            } else if self.sign1.signature.is_none() {
+                return Ok(Identity::anonymous());
+            }
             Err("Missing key ID".to_string())
         }
     }

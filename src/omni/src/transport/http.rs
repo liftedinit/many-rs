@@ -1,5 +1,6 @@
 use crate::transport::{HandlerExecutorAdapter, LowLevelOmniRequestHandler, OmniRequestHandler};
 use crate::types::identity::cose::CoseKeyIdentity;
+use crate::OmniError;
 use anyhow::anyhow;
 use minicose::CoseSign1;
 use std::fmt::Debug;
