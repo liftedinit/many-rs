@@ -15,6 +15,7 @@ pub use cose::CoseKeyIdentity;
 
 const MAX_IDENTITY_BYTE_LEN: usize = 32;
 const SHA_OUTPUT_SIZE: usize = <Sha3_224 as Digest>::OutputSize::USIZE;
+pub type PublicKeyHash = [u8; SHA_OUTPUT_SIZE];
 
 /// An identity in the Omniverse. This could be a server, network, user, DAO, automated
 /// process, etc.
@@ -32,12 +33,22 @@ impl Identity {
 
     pub fn public_key(key: &CoseKey) -> Self {
         let pk = Sha3_224::digest(&key.to_public_key().unwrap().to_bytes_stable().unwrap());
-        Self(InnerIdentity::public_key(pk.into()))
+        Self::public_key_raw(pk.into())
     }
 
     pub fn subresource(key: &CoseKey, subid: u32) -> Self {
         let pk = Sha3_224::digest(&key.to_public_key().unwrap().to_bytes_stable().unwrap());
-        Self(InnerIdentity::subresource(pk.into(), subid))
+        Self::subresource_raw(pk.into(), subid)
+    }
+
+    #[inline(always)]
+    pub fn public_key_raw(hash: PublicKeyHash) -> Self {
+        Self(InnerIdentity::public_key(hash))
+    }
+
+    #[inline(always)]
+    pub fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
+        Self(InnerIdentity::subresource(hash, subid))
     }
 
     pub const fn is_anonymous(&self) -> bool {
