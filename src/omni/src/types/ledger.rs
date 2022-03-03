@@ -1,5 +1,6 @@
 use crate::types::{Percent, Timestamp};
 use crate::Identity;
+use minicbor::bytes::ByteVec;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::{BigInt, BigUint};
@@ -237,42 +238,58 @@ impl<'de> Deserialize<'de> for TokenAmount {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
+#[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
 #[repr(transparent)]
-pub struct TransactionId(pub u64);
+pub struct TransactionId(pub ByteVec);
 
 impl Encode for TransactionId {
     fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
-        e.u64(self.0)?;
+        e.bytes(&self.0)?;
         Ok(())
     }
 }
 
 impl<'b> Decode<'b> for TransactionId {
     fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-        Ok(TransactionId(d.u64()?))
+        Ok(TransactionId(ByteVec::from(d.bytes()?.to_vec())))
     }
 }
 
-impl Into<Vec<u8>> for TransactionId {
-    fn into(self) -> Vec<u8> {
-        self.0.to_be_bytes().to_vec()
+impl From<TransactionId> for Vec<u8> {
+    fn from(t: TransactionId) -> Vec<u8> {
+        t.0.to_vec()
     }
 }
 
-impl std::ops::Add<u64> for TransactionId {
+impl std::ops::Add<&ByteVec> for TransactionId {
     type Output = TransactionId;
 
-    fn add(self, rhs: u64) -> Self::Output {
-        TransactionId(self.0 + rhs)
+    fn add(self, rhs: &ByteVec) -> Self::Output {
+        TransactionId(ByteVec::from((BigUint::from_bytes_be(&self.0) + BigUint::from_bytes_be(rhs)).to_bytes_be()))
     }
 }
 
-impl std::ops::Sub<u64> for TransactionId {
+impl std::ops::Add<u32> for TransactionId {
     type Output = TransactionId;
 
-    fn sub(self, rhs: u64) -> Self::Output {
-        TransactionId(self.0 - rhs)
+    fn add(self, rhs: u32) -> Self::Output {
+        TransactionId(ByteVec::from((BigUint::from_bytes_be(&self.0) + rhs).to_bytes_be()))
+    }
+}
+
+impl std::ops::Sub<&ByteVec> for TransactionId {
+    type Output = TransactionId;
+
+    fn sub(self, rhs: &ByteVec) -> Self::Output {
+        TransactionId(ByteVec::from((BigUint::from_bytes_be(&self.0) - BigUint::from_bytes_be(rhs)).to_bytes_be()))
+    }
+}
+
+impl std::ops::Sub<u32> for TransactionId {
+    type Output = TransactionId;
+
+    fn sub(self, rhs: u32) -> Self::Output {
+        TransactionId(ByteVec::from((BigUint::from_bytes_be(&self.0) - rhs).to_bytes_be()))
     }
 }
 
