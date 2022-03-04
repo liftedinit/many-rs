@@ -256,7 +256,7 @@ impl From<Vec<u8>> for TransactionId {
 
 impl From<u64> for TransactionId {
     fn from(v: u64) -> TransactionId {
-        TransactionId(ByteVec::from((BigUint::from(v)).to_bytes_be()))
+        TransactionId(ByteVec::from(v.to_be_bytes().to_vec()))
     }
 }
 
@@ -322,7 +322,6 @@ impl From<TransactionId> for Vec<u8> {
         t.0.to_vec()
     }
 }
-
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u8)]
@@ -551,5 +550,71 @@ impl<'b> Decode<'b> for TransactionContent {
                 "Invalid TransactionContent array.",
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn txid_from_bytevec() {
+        let b = ByteVec::from(vec![1, 2, 3, 4, 5]);
+        let t = TransactionId::from(b.clone());
+
+        assert_eq!(b.as_slice(), Into::<Vec<u8>>::into(t));
+    }
+
+    #[test]
+    fn txid_from_biguint() {
+        let v = u64::MAX;
+        let t = TransactionId::from(BigUint::from(v));
+
+        assert_eq!(v.to_be_bytes(), Into::<Vec<u8>>::into(t).as_slice());
+    }
+
+    #[test]
+    fn txid_from_u64() {
+        let v = u64::MAX;
+        let t = TransactionId::from(v);
+
+        assert_eq!(v.to_be_bytes(), Into::<Vec<u8>>::into(t).as_slice());
+    }
+
+    #[test]
+    fn txid_add() {
+        let v = u64::MAX;
+        let mut t = TransactionId::from(v) + 1;
+
+        assert_eq!(
+            Into::<Vec<u8>>::into(t.clone()),
+            (BigUint::from(u64::MAX) + 1u32).to_bytes_be()
+        );
+        t += 1;
+        assert_eq!(
+            Into::<Vec<u8>>::into(t),
+            (BigUint::from(u64::MAX) + 2u32).to_bytes_be()
+        );
+
+        let b = ByteVec::from(v.to_be_bytes().to_vec());
+        let t2 = TransactionId::from(v) + b;
+
+        assert_eq!(
+            Into::<Vec<u8>>::into(t2),
+            (BigUint::from(v) * 2u64).to_bytes_be()
+        );
+    }
+
+    #[test]
+    fn txid_sub() {
+        let v = u64::MAX;
+        let t = TransactionId::from(v) - 1;
+
+        assert_eq!(Into::<Vec<u8>>::into(t), (v - 1).to_be_bytes());
+
+        let b = ByteVec::from(1u64.to_be_bytes().to_vec());
+        let t2 = TransactionId::from(v) - b;
+
+        assert_eq!(Into::<Vec<u8>>::into(t2), (v - 1).to_be_bytes());
     }
 }
