@@ -33,22 +33,12 @@ impl Identity {
 
     pub fn public_key(key: &CoseKey) -> Self {
         let pk = Sha3_224::digest(&key.to_public_key().unwrap().to_bytes_stable().unwrap());
-        Self::public_key_raw(pk.into())
+        Self(InnerIdentity::public_key(pk.into()))
     }
 
     pub fn subresource(key: &CoseKey, subid: u32) -> Self {
         let pk = Sha3_224::digest(&key.to_public_key().unwrap().to_bytes_stable().unwrap());
-        Self::subresource_raw(pk.into(), subid)
-    }
-
-    #[inline(always)]
-    pub(super) fn public_key_raw(hash: PublicKeyHash) -> Self {
-        Self(InnerIdentity::public_key(hash))
-    }
-
-    #[inline(always)]
-    pub(super) fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
-        Self(InnerIdentity::subresource(hash, subid))
+        Self(InnerIdentity::subresource(pk.into(), subid))
     }
 
     pub const fn is_anonymous(&self) -> bool {
@@ -113,6 +103,23 @@ impl Identity {
         } else {
             false
         }
+    }
+}
+
+#[cfg(feature = "raw")]
+impl Identity {
+    /// Create an identity from the raw value of a public key hash, without checking
+    /// its validity.
+    #[inline(always)]
+    pub fn public_key_raw(hash: PublicKeyHash) -> Self {
+        Self(InnerIdentity::public_key(hash))
+    }
+
+    /// Create an identity from the raw value of a public key hash and a subresource
+    /// id. The hash isn't validated, but the subid is.
+    #[inline(always)]
+    pub fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
+        Self(InnerIdentity::subresource(hash, subid))
     }
 }
 
@@ -556,7 +563,7 @@ mod serde {
     }
 }
 
-#[cfg(any(test, feature = "test"))]
+#[cfg(test)]
 pub mod tests {
     use crate::types::identity::CoseKeyIdentity;
     use crate::Identity;
@@ -575,17 +582,6 @@ pub mod tests {
             (seed >> 24) as u8, (seed >> 16) as u8, (seed >> 8) as u8, (seed & 0xFF) as u8
         ];
         Identity::from_bytes(&bytes).unwrap()
-    }
-
-    pub fn identity_from_raw_hash(
-        hash: super::PublicKeyHash,
-        sub_id: Option<u32>,
-    ) -> super::Identity {
-        if let Some(sub_id) = sub_id {
-            super::Identity::subresource_raw(hash, sub_id)
-        } else {
-            super::Identity::public_key_raw(hash)
-        }
     }
 
     #[test]
