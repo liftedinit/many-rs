@@ -87,9 +87,13 @@ impl Timestamp {
     }
 
     pub fn new(secs: u64) -> Result<Self, OmniError> {
-        Ok(Self(UNIX_EPOCH.checked_add(Duration::new(secs, 0)).ok_or_else(||
-            OmniError::unknown("duration value can not represent system time".to_string()),
-        )?))
+        Ok(Self(
+            UNIX_EPOCH
+                .checked_add(Duration::new(secs, 0))
+                .ok_or_else(|| {
+                    OmniError::unknown("duration value can not represent system time".to_string())
+                })?,
+        ))
     }
 }
 
