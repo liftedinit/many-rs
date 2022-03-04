@@ -236,9 +236,9 @@ impl LowLevelOmniRequestHandler for Arc<Mutex<OmniServer>> {
                     this.validate_id(&message)?;
                     Ok(message)
                 })
-                .and_then(|message| {
+                .map(|message| {
                     let maybe_module = this.find_module(&message);
-                    Ok((message, maybe_module))
+                    (message, maybe_module)
                 })
                 .and_then(|(message, maybe_module)| {
                     if let Some(ref m) = maybe_module {
@@ -246,15 +246,15 @@ impl LowLevelOmniRequestHandler for Arc<Mutex<OmniServer>> {
                     }
                     Ok((message, maybe_module))
                 })
-                .and_then(|(message, maybe_module)| {
-                    Ok((
+                .map(|(message, maybe_module)| {
+                    (
                         cose_id.clone(),
                         message,
                         maybe_module,
                         this.fallback.clone(),
-                    ))
+                    )
                 })
-                .or_else(|omni_err| Err(ResponseMessage::error(&cose_id.identity, omni_err)))
+                .map_err(|omni_err| ResponseMessage::error(&cose_id.identity, omni_err))
         };
 
         match response {

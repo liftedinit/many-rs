@@ -40,11 +40,12 @@ impl<'b> Decode<'b> for Percent {
 #[derive(Clone, Default, Debug)]
 pub struct VecOrSingle<T>(pub Vec<T>);
 
-impl<T> Into<Vec<T>> for VecOrSingle<T> {
-    fn into(self) -> Vec<T> {
-        self.0
+impl<T> From<VecOrSingle<T>> for Vec<T> {
+    fn from(v: VecOrSingle<T>) -> Vec<T> {
+        v.0
     }
 }
+
 impl<T> From<Vec<T>> for VecOrSingle<T> {
     fn from(v: Vec<T>) -> Self {
         Self(v)
@@ -86,7 +87,7 @@ impl Timestamp {
     }
 
     pub fn new(secs: u64) -> Result<Self, OmniError> {
-        Ok(Self(UNIX_EPOCH.checked_add(Duration::new(secs, 0)).ok_or(
+        Ok(Self(UNIX_EPOCH.checked_add(Duration::new(secs, 0)).ok_or_else(||
             OmniError::unknown("duration value can not represent system time".to_string()),
         )?))
     }
@@ -127,9 +128,9 @@ impl From<SystemTime> for Timestamp {
     }
 }
 
-impl Into<SystemTime> for Timestamp {
-    fn into(self) -> SystemTime {
-        self.0
+impl From<Timestamp> for SystemTime {
+    fn from(t: Timestamp) -> SystemTime {
+        t.0
     }
 }
 
@@ -206,9 +207,9 @@ where
     T: Encode,
 {
     fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
-        fn encode_bound<'a, T: Encode, W: Write>(
+        fn encode_bound<T: Encode, W: Write>(
             b: &Bound<T>,
-            e: &'a mut Encoder<W>,
+            e: &mut Encoder<W>,
         ) -> Result<(), Error<W::Error>> {
             match b {
                 Bound::Included(v) => {
