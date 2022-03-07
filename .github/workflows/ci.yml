@@ -4,7 +4,7 @@ name: CI
 
 jobs:
   build_and_test:
-    name: Rust
+    name: `omni-ledger` build and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -23,11 +23,23 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - uses: actions-rs/cargo@v1
+          components: clippy, rustfmt
+      - name: Check code formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - name: Check lints
+        with:
+          command: clippy
+          args: --release --all-targets --all-features -- -D warnings
+      - name: Perform build (--release)
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --all-targets --all-features
-      - uses: actions-rs/cargo@v1
+      - name: Run tests
+        uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all-targets --all-features
