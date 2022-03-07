@@ -136,9 +136,9 @@ op_impl!(u8 u16 u32 u64 u128 TokenAmount num_bigint::BigUint);
 from_impl!(u8 u16 u32 u64 u128 num_bigint::BigUint);
 eq_impl!(u8 u16 u32 u64 u128);
 
-impl Into<num_bigint::BigUint> for TokenAmount {
-    fn into(self) -> BigUint {
-        self.0
+impl From<TokenAmount> for BigUint {
+    fn from(t: TokenAmount) -> BigUint {
+        t.0
     }
 }
 
@@ -154,9 +154,9 @@ impl From<Vec<u8>> for TokenAmount {
     }
 }
 
-impl Into<Vec<u8>> for TokenAmount {
-    fn into(self) -> Vec<u8> {
-        self.0.to_bytes_be()
+impl From<TokenAmount> for Vec<u8> {
+    fn from(t: TokenAmount) -> Vec<u8> {
+        t.0.to_bytes_be()
     }
 }
 

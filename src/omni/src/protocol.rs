@@ -125,7 +125,7 @@ impl<'d> Decode<'d> for Attribute {
                 let (id, arguments) = arr
                     .as_slice()
                     .split_first()
-                    .ok_or_else(|| minicbor::decode::Error::Message("Invalid empty attribute."))?;
+                    .ok_or(minicbor::decode::Error::Message("Invalid empty attribute."))?;
 
                 match id {
                     CborAny::Int(i) if i <= &(u32::MAX as i64) => Ok(Self {

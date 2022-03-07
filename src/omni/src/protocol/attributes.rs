@@ -22,9 +22,9 @@ pub mod response {
         }
     }
 
-    impl Into<Attribute> for AsyncAttribute {
-        fn into(self) -> Attribute {
-            ASYNC.with_argument(CborAny::Bytes(self.token))
+    impl From<AsyncAttribute> for Attribute {
+        fn from(a: AsyncAttribute) -> Attribute {
+            ASYNC.with_argument(CborAny::Bytes(a.token))
         }
     }
 

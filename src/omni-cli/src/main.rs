@@ -210,7 +210,7 @@ fn main() {
 
             let omni = OmniServer::simple(
                 "omni-server",
-                key.clone(),
+                key,
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
             );
             HttpServer::new(omni).bind(o.addr).unwrap();

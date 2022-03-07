@@ -36,7 +36,7 @@ impl<'d> Decode<'d> for SingleBlockQuery {
         }?;
 
         let result = match key {
-            0 => Ok(SingleBlockQuery::Hash(d.bytes()?.to_vec().into())),
+            0 => Ok(SingleBlockQuery::Hash(d.bytes()?.to_vec())),
             1 => Ok(SingleBlockQuery::Height(d.u64()?)),
             x => Err(decode::Error::UnknownVariant(x as u32)),
         };
