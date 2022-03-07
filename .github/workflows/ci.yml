@@ -30,6 +30,7 @@ jobs:
           command: fmt
           args: --all -- --check
       - name: Check lints
+        uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: --release --all-targets --all-features -- -D warnings
