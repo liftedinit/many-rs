@@ -1,5 +1,6 @@
 use crate::types::{Percent, Timestamp};
 use crate::Identity;
+use minicbor::bytes::ByteVec;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::{BigInt, BigUint};
@@ -237,42 +238,88 @@ impl<'de> Deserialize<'de> for TokenAmount {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
+#[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
 #[repr(transparent)]
-pub struct TransactionId(pub u64);
+pub struct TransactionId(pub ByteVec);
+
+impl From<ByteVec> for TransactionId {
+    fn from(t: ByteVec) -> TransactionId {
+        TransactionId(t)
+    }
+}
+
+impl From<Vec<u8>> for TransactionId {
+    fn from(t: Vec<u8>) -> TransactionId {
+        TransactionId(ByteVec::from(t))
+    }
+}
+
+impl From<u64> for TransactionId {
+    fn from(v: u64) -> TransactionId {
+        TransactionId(ByteVec::from(v.to_be_bytes().to_vec()))
+    }
+}
+
+impl From<BigUint> for TransactionId {
+    fn from(b: BigUint) -> TransactionId {
+        TransactionId(ByteVec::from(b.to_bytes_be()))
+    }
+}
+
+impl std::ops::Add<ByteVec> for TransactionId {
+    type Output = TransactionId;
+
+    fn add(self, rhs: ByteVec) -> Self::Output {
+        (BigUint::from_bytes_be(&self.0) + BigUint::from_bytes_be(&rhs)).into()
+    }
+}
+
+impl std::ops::Add<u32> for TransactionId {
+    type Output = TransactionId;
+
+    fn add(self, rhs: u32) -> Self::Output {
+        (BigUint::from_bytes_be(&self.0) + rhs).into()
+    }
+}
+
+impl std::ops::AddAssign<u32> for TransactionId {
+    fn add_assign(&mut self, other: u32) {
+        *self = self.clone() + other;
+    }
+}
+
+impl std::ops::Sub<ByteVec> for TransactionId {
+    type Output = TransactionId;
+
+    fn sub(self, rhs: ByteVec) -> Self::Output {
+        (BigUint::from_bytes_be(&self.0) - BigUint::from_bytes_be(&rhs)).into()
+    }
+}
+
+impl std::ops::Sub<u32> for TransactionId {
+    type Output = TransactionId;
+
+    fn sub(self, rhs: u32) -> Self::Output {
+        (BigUint::from_bytes_be(&self.0) - rhs).into()
+    }
+}
 
 impl Encode for TransactionId {
     fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
-        e.u64(self.0)?;
+        e.bytes(&self.0)?;
         Ok(())
     }
 }
 
 impl<'b> Decode<'b> for TransactionId {
     fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-        Ok(TransactionId(d.u64()?))
+        Ok(TransactionId(ByteVec::from(d.bytes()?.to_vec())))
     }
 }
 
 impl From<TransactionId> for Vec<u8> {
     fn from(t: TransactionId) -> Vec<u8> {
-        t.0.to_be_bytes().to_vec()
-    }
-}
-
-impl std::ops::Add<u64> for TransactionId {
-    type Output = TransactionId;
-
-    fn add(self, rhs: u64) -> Self::Output {
-        TransactionId(self.0 + rhs)
-    }
-}
-
-impl std::ops::Sub<u64> for TransactionId {
-    type Output = TransactionId;
-
-    fn sub(self, rhs: u64) -> Self::Output {
-        TransactionId(self.0 - rhs)
+        t.0.to_vec()
     }
 }
 
@@ -503,5 +550,71 @@ impl<'b> Decode<'b> for TransactionContent {
                 "Invalid TransactionContent array.",
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn txid_from_bytevec() {
+        let b = ByteVec::from(vec![1, 2, 3, 4, 5]);
+        let t = TransactionId::from(b.clone());
+
+        assert_eq!(b.as_slice(), Into::<Vec<u8>>::into(t));
+    }
+
+    #[test]
+    fn txid_from_biguint() {
+        let v = u64::MAX;
+        let t = TransactionId::from(BigUint::from(v));
+
+        assert_eq!(v.to_be_bytes(), Into::<Vec<u8>>::into(t).as_slice());
+    }
+
+    #[test]
+    fn txid_from_u64() {
+        let v = u64::MAX;
+        let t = TransactionId::from(v);
+
+        assert_eq!(v.to_be_bytes(), Into::<Vec<u8>>::into(t).as_slice());
+    }
+
+    #[test]
+    fn txid_add() {
+        let v = u64::MAX;
+        let mut t = TransactionId::from(v) + 1;
+
+        assert_eq!(
+            Into::<Vec<u8>>::into(t.clone()),
+            (BigUint::from(u64::MAX) + 1u32).to_bytes_be()
+        );
+        t += 1;
+        assert_eq!(
+            Into::<Vec<u8>>::into(t),
+            (BigUint::from(u64::MAX) + 2u32).to_bytes_be()
+        );
+
+        let b = ByteVec::from(v.to_be_bytes().to_vec());
+        let t2 = TransactionId::from(v) + b;
+
+        assert_eq!(
+            Into::<Vec<u8>>::into(t2),
+            (BigUint::from(v) * 2u64).to_bytes_be()
+        );
+    }
+
+    #[test]
+    fn txid_sub() {
+        let v = u64::MAX;
+        let t = TransactionId::from(v) - 1;
+
+        assert_eq!(Into::<Vec<u8>>::into(t), (v - 1).to_be_bytes());
+
+        let b = ByteVec::from(1u64.to_be_bytes().to_vec());
+        let t2 = TransactionId::from(v) - b;
+
+        assert_eq!(Into::<Vec<u8>>::into(t2), (v - 1).to_be_bytes());
     }
 }

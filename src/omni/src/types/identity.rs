@@ -15,6 +15,7 @@ pub use cose::CoseKeyIdentity;
 
 const MAX_IDENTITY_BYTE_LEN: usize = 32;
 const SHA_OUTPUT_SIZE: usize = <Sha3_224 as Digest>::OutputSize::USIZE;
+pub type PublicKeyHash = [u8; SHA_OUTPUT_SIZE];
 
 /// An identity in the Omniverse. This could be a server, network, user, DAO, automated
 /// process, etc.
@@ -102,6 +103,23 @@ impl Identity {
         } else {
             false
         }
+    }
+}
+
+#[cfg(feature = "raw")]
+impl Identity {
+    /// Create an identity from the raw value of a public key hash, without checking
+    /// its validity.
+    #[inline(always)]
+    pub fn public_key_raw(hash: PublicKeyHash) -> Self {
+        Self(InnerIdentity::public_key(hash))
+    }
+
+    /// Create an identity from the raw value of a public key hash and a subresource
+    /// id. The hash isn't validated, but the subid is.
+    #[inline(always)]
+    pub fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
+        Self(InnerIdentity::subresource(hash, subid))
     }
 }
 
@@ -546,7 +564,7 @@ mod serde {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::types::identity::CoseKeyIdentity;
     use crate::Identity;
     use std::str::FromStr;
