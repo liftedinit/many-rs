@@ -1,7 +1,7 @@
 [workspace]
 members = [
-    "src/omni",
-    "src/omni-cli",
-    "src/omni-client",
-    "src/omni-module",
+    "src/many",
+    "src/many-cli",
+    "src/many-client",
+    "src/many-macros",
 ]

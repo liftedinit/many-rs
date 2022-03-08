@@ -1000,6 +1000,124 @@ dependencies = [
 ]
 
 [[package]]
+name = "many"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "backtrace",
+ "base32",
+ "base64 0.13.0",
+ "cbor-diag",
+ "crc-any",
+ "derive_builder",
+ "ecdsa",
+ "ed25519",
+ "ed25519-dalek",
+ "fixed",
+ "hex",
+ "lazy_static",
+ "many-macros",
+ "minicbor",
+ "minicose",
+ "num-bigint 0.4.3",
+ "num-derive",
+ "num-traits",
+ "openssh-keys",
+ "p256",
+ "pem",
+ "pkcs8 0.8.0",
+ "rand 0.8.4",
+ "regex",
+ "reqwest",
+ "ring",
+ "ring-compat",
+ "serde",
+ "sha3",
+ "signature",
+ "simple_asn1 0.5.4",
+ "static_assertions",
+ "thiserror",
+ "tiny_http",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "many-cli"
+version = "0.1.0"
+dependencies = [
+ "base64 0.13.0",
+ "cbor-diag",
+ "clap",
+ "hex",
+ "many",
+ "many-client",
+ "minicbor",
+ "minicose",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "many-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "backtrace",
+ "base32",
+ "base64 0.13.0",
+ "cbor-diag",
+ "crc-any",
+ "derive_builder",
+ "ecdsa",
+ "ed25519",
+ "ed25519-dalek",
+ "fixed",
+ "hex",
+ "lazy_static",
+ "many",
+ "minicbor",
+ "minicose",
+ "num-bigint 0.4.3",
+ "num-derive",
+ "num-traits",
+ "openssh-keys",
+ "p256",
+ "pem",
+ "pkcs8 0.8.0",
+ "rand 0.8.4",
+ "regex",
+ "reqwest",
+ "ring",
+ "ring-compat",
+ "serde",
+ "sha3",
+ "signature",
+ "simple_asn1 0.5.4",
+ "static_assertions",
+ "thiserror",
+ "tiny_http",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "many-macros"
+version = "0.1.0"
+dependencies = [
+ "inflections",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_tokenstream",
+ "syn",
+]
+
+[[package]]
 name = "matchers"
 version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1231,124 +1349,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67ac1d3f9a1d3616fd9a60c8d74296f22406a238b6a72f5cc1e6f314df4ffbf9"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "omni"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "backtrace",
- "base32",
- "base64 0.13.0",
- "cbor-diag",
- "crc-any",
- "derive_builder",
- "ecdsa",
- "ed25519",
- "ed25519-dalek",
- "fixed",
- "hex",
- "lazy_static",
- "minicbor",
- "minicose",
- "num-bigint 0.4.3",
- "num-derive",
- "num-traits",
- "omni-module",
- "openssh-keys",
- "p256",
- "pem",
- "pkcs8 0.8.0",
- "rand 0.8.4",
- "regex",
- "reqwest",
- "ring",
- "ring-compat",
- "serde",
- "sha3",
- "signature",
- "simple_asn1 0.5.4",
- "static_assertions",
- "thiserror",
- "tiny_http",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "omni-cli"
-version = "0.1.0"
-dependencies = [
- "base64 0.13.0",
- "cbor-diag",
- "clap",
- "hex",
- "minicbor",
- "minicose",
- "omni",
- "omni-client",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
-name = "omni-client"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "backtrace",
- "base32",
- "base64 0.13.0",
- "cbor-diag",
- "crc-any",
- "derive_builder",
- "ecdsa",
- "ed25519",
- "ed25519-dalek",
- "fixed",
- "hex",
- "lazy_static",
- "minicbor",
- "minicose",
- "num-bigint 0.4.3",
- "num-derive",
- "num-traits",
- "omni",
- "openssh-keys",
- "p256",
- "pem",
- "pkcs8 0.8.0",
- "rand 0.8.4",
- "regex",
- "reqwest",
- "ring",
- "ring-compat",
- "serde",
- "sha3",
- "signature",
- "simple_asn1 0.5.4",
- "static_assertions",
- "thiserror",
- "tiny_http",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "omni-module"
-version = "0.1.0"
-dependencies = [
- "inflections",
- "proc-macro2",
- "quote",
- "serde",
- "serde_tokenstream",
- "syn",
 ]
 
 [[package]]
