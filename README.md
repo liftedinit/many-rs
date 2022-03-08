@@ -1,2 +1,2 @@
-# omni-rust
-Rust implementation of the OMNI protocol.
+# many
+Rust implementation of the MANY protocol.
