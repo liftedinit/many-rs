@@ -1,5 +1,6 @@
 use clap::Parser;
 use many::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
+use many::server::module::ledger;
 use many::transport::http::HttpServer;
 use many::types::identity::CoseKeyIdentity;
 use many::{Identity, ManyServer};
@@ -7,6 +8,7 @@ use many_client::ManyClient;
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::process;
 use tracing::level_filters::LevelFilter;
 
 #[derive(Parser)]
@@ -36,6 +38,9 @@ enum SubCommand {
     /// Starts a base server that can also be used for reverse proxying
     /// to another MANY server.
     Server(ServerOpt),
+
+    /// Get the token ID per string of a ledger's token.
+    GetTokenId(GetTokenIdOpt),
 }
 
 #[derive(Parser)]
@@ -90,6 +95,16 @@ struct ServerOpt {
     /// The address and port to bind to for the MANY Http server.
     #[clap(long, short, default_value = "127.0.0.1:8000")]
     addr: SocketAddr,
+}
+
+#[derive(Parser)]
+struct GetTokenIdOpt {
+    /// The server to call. It MUST implement the ledger attribute (2).
+    server: url::Url,
+
+    /// The token to get. If not listed in the list of tokens, this will
+    /// error.
+    symbol: String,
 }
 
 fn main() {
@@ -214,6 +229,40 @@ fn main() {
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
             );
             HttpServer::new(many).bind(o.addr).unwrap();
+        }
+        SubCommand::GetTokenId(o) => {
+            let client = ManyClient::new(
+                o.server,
+                Identity::anonymous(),
+                CoseKeyIdentity::anonymous(),
+            )
+            .expect("Could not create a client");
+            let status = client.status().expect("Cannot get status of server");
+
+            if !status.attributes.contains(&ledger::LEDGER_MODULE_ATTRIBUTE) {
+                eprintln!("Server does not implement Ledger Attribute.");
+                process::exit(1);
+            }
+
+            let info: ledger::InfoReturns = minicbor::decode(
+                &client
+                    .call("ledger.info", ledger::InfoArgs)
+                    .unwrap()
+                    .data
+                    .expect("An error happened during the call to ledger.info"),
+            )
+            .expect("Invalid data returned by server; not CBOR");
+
+            let symbol = o.symbol;
+            let id = info
+                .local_names
+                .into_iter()
+                .find(|(_, y)| y == &symbol)
+                .map(|(x, _)| x)
+                .ok_or_else(|| format!("Could not resolve symbol '{}'", &symbol))
+                .unwrap();
+
+            println!("{}", id);
         }
     }
 }
