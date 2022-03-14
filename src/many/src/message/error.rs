@@ -137,7 +137,7 @@ many_error! {
     // server-specific error messages.
 }
 
-/// Easily define ManyError for specific applications.
+/// Easily define ManyError for specific attributes.
 #[macro_export]
 macro_rules! define_attribute_many_error {
     ( $( attribute $module_id: literal => { $( $id: literal : $vis: vis fn $name: ident ($( $var_name: ident ),*) => $message: literal ),* $(,)? } );* ) => {
@@ -156,8 +156,27 @@ macro_rules! define_attribute_many_error {
         )*
     }
 }
+/// Easily define ManyError for specific application.
+#[macro_export]
+macro_rules! define_application_many_error {
+    ( $( { $( $id: literal : $vis: vis fn $name: ident ($( $var_name: ident ),*) => $message: literal ),* $(,)? } );* ) => {
+        $(
+        $(
+            $vis fn $name ( $($var_name: String),* ) -> $crate::ManyError {
+                $crate::ManyError::application_specific(
+                    $id as u32,
+                    String::from($message),
+                    std::iter::FromIterator::from_iter(vec![
+                        $( (stringify!($var_name).to_string(), $var_name) ),*
+                    ]),
+                )
+            }
+        )*
+        )*
+    }
+}
 
-pub use define_attribute_many_error;
+pub use define_application_many_error;
 
 impl ManyErrorCode {
     #[inline]
