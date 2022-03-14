@@ -8,6 +8,7 @@ use many_client::ManyClient;
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::process;
 use tracing::level_filters::LevelFilter;
 
 #[derive(Parser)]
@@ -235,11 +236,12 @@ fn main() {
                 Identity::anonymous(),
                 CoseKeyIdentity::anonymous(),
             )
-            .unwrap();
-            let status = client.status().unwrap();
+            .expect("Could not create a client");
+            let status = client.status().expect("Cannot get status of server");
 
             if !status.attributes.contains(&ledger::LEDGER_MODULE_ATTRIBUTE) {
-                panic!("Server does not implement Ledger Attribute.");
+                eprintln!("Server does not implement Ledger Attribute.");
+                process::exit(1);
             }
 
             let info: ledger::InfoReturns = minicbor::decode(
@@ -247,9 +249,9 @@ fn main() {
                     .call("ledger.info", ledger::InfoArgs)
                     .unwrap()
                     .data
-                    .unwrap(),
+                    .expect("An error happened during the call to ledger.info"),
             )
-            .unwrap();
+            .expect("Invalid data returned by server; not CBOR");
 
             let symbol = o.symbol;
             let id = info
