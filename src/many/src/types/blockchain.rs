@@ -2,6 +2,52 @@ use crate::types::Timestamp;
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 
+
+pub enum SingleTxnQuery {
+    Hash(Vec<u8>),
+    Height(u64),
+}
+impl Encode for SingleTxnQuery {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+        match &self {
+            SingleTxnQuery::Hash(hash) => {
+                e.map(1)?.u8(0)?.bytes(hash)?;
+            }
+            SingleTxnQuery::Height(height) => {
+                e.map(1)?.u8(1)?.u64(*height)?;
+            }
+        }
+        Ok(())
+    }
+}
+impl<'d> Decode<'d> for SingleTxnQuery {
+    fn decode(d: &mut Decoder<'d>) -> Result<Self, decode::Error> {
+        let mut indefinite = false;
+        let key = match d.map()? {
+            None => {
+                indefinite = true;
+                d.u8()
+            }
+            Some(1) => d.u8(),
+            Some(_) => Err(decode::Error::Message(
+                "Invalid length for single block query map.",
+            )),
+        }?;
+
+        let result = match key {
+            0 => Ok(SingleTxnQuery::Hash(d.bytes()?.to_vec())),
+            1 => Ok(SingleTxnQuery::Height(d.u64()?)),
+            x => Err(decode::Error::UnknownVariant(x as u32)),
+        };
+
+        if indefinite {
+            d.skip()?;
+        }
+
+        result
+    }
+}
+
 pub enum SingleBlockQuery {
     Hash(Vec<u8>),
     Height(u64),

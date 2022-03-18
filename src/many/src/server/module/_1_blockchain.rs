@@ -1,4 +1,4 @@
-use crate::types::blockchain::{Block, BlockIdentifier, SingleBlockQuery};
+use crate::types::blockchain::{Block, BlockIdentifier, Transaction, SingleBlockQuery, SingleTxnQuery};
 use crate::{define_attribute_many_error, ManyError};
 use many_macros::many_module;
 use minicbor::{Decode, Encode};
@@ -41,8 +41,25 @@ pub struct BlockReturns {
     pub block: Block,
 }
 
+
+#[derive(Encode, Decode)]
+#[cbor(map)]
+pub struct TxnArgs {
+    #[n(0)]
+    pub query: SingleTxnQuery,
+}
+
+#[derive(Encode, Decode)]
+#[cbor(map)]
+pub struct TxnReturns {
+    #[n(0)]
+    pub txn: Transaction,
+}
+
+
 #[many_module(name = BlockchainModule, id = 1, namespace = blockchain, many_crate = crate)]
 pub trait BlockchainModuleBackend: Send {
     fn info(&self) -> Result<InfoReturns, ManyError>;
     fn block(&self, args: BlockArgs) -> Result<BlockReturns, ManyError>;
+    fn txns(&self, args: TxnArgs) -> Result<TxnReturns, ManyError>;
 }
