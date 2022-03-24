@@ -104,3 +104,46 @@ pub struct Block {
     #[n(4)]
     pub txs: Vec<Transaction>,
 }
+
+pub enum SingleTransactionQuery {
+    Hash(Vec<u8>),
+}
+
+impl Encode for SingleTransactionQuery {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+        match &self {
+            SingleTransactionQuery::Hash(hash) => {
+                e.map(1)?.u8(0)?.bytes(hash)?;
+            }
+
+        }
+        Ok(())
+    }
+}
+
+impl<'d> Decode<'d> for SingleTransactionQuery {
+    fn decode(d: &mut Decoder<'d>) -> Result<Self, decode::Error> {
+        let mut indefinite = false;
+        let key = match d.map()? {
+            None => {
+                indefinite = true;
+                d.u8()
+            }
+            Some(1) => d.u8(),
+            Some(_) => Err(decode::Error::Message(
+                "Invalid hash for single transaction query.",
+            )),
+        }?;
+
+        let result = match key {
+            0 => Ok(SingleTransactionQuery::Hash(d.bytes()?.to_vec())),
+            x => Err(decode::Error::UnknownVariant(x as u32)),
+        };
+
+        if indefinite {
+            d.skip()?;
+        }
+
+        result
+    }
+}
