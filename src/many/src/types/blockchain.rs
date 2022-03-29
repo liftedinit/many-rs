@@ -115,7 +115,6 @@ impl Encode for SingleTransactionQuery {
             SingleTransactionQuery::Hash(hash) => {
                 e.map(1)?.u8(0)?.bytes(hash)?;
             }
-
         }
         Ok(())
     }
