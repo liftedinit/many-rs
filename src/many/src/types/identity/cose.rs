@@ -1,14 +1,16 @@
+use crate::types::hsm::{HSMMechanism, HSMMechanismType, HSM_INSTANCE};
 use crate::Identity;
 use ed25519_dalek::PublicKey;
 use minicose::{
     Algorithm, CoseKey, EcDsaCoseKey, EcDsaCoseKeyBuilder, Ed25519CoseKey, Ed25519CoseKeyBuilder,
 };
-use p256::elliptic_curve::sec1::FromEncodedPoint;
 use p256::pkcs8::FromPrivateKey;
 use pkcs8::der::Document;
+use sha2::Digest;
 use signature::{Error, Signature, Signer, Verifier};
 use std::convert::TryFrom;
 use std::fmt::{Debug, Formatter};
+use tracing::trace;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct CoseKeyIdentitySignature {
@@ -43,6 +45,7 @@ impl Signature for CoseKeyIdentitySignature {
 pub struct CoseKeyIdentity {
     pub identity: Identity,
     pub key: Option<CoseKey>,
+    pub hsm: bool,
 }
 
 impl Default for CoseKeyIdentity {
@@ -56,22 +59,43 @@ impl CoseKeyIdentity {
         Self {
             identity: Identity::anonymous(),
             key: None,
+            hsm: false,
         }
     }
 
-    pub fn from_key(key: CoseKey) -> Result<Self, String> {
+    pub fn from_key(key: CoseKey, hsm: bool) -> Result<Self, String> {
         let identity = Identity::public_key(&key);
         if identity.is_anonymous() {
             Ok(Self {
                 identity,
                 key: None,
+                hsm,
             })
         } else {
             Ok(Self {
                 identity,
                 key: Some(key),
+                hsm,
             })
         }
+    }
+
+    pub fn from_hsm(mechanism: HSMMechanismType) -> Result<Self, String> {
+        let (raw_points, _) = HSM_INSTANCE
+            .lock()
+            .unwrap()
+            .ec_info(mechanism)
+            .map_err(|e| e.to_string())?;
+        trace!("Creating NIST P-256 SEC1 encoded point");
+        let points = p256::EncodedPoint::from_bytes(raw_points).map_err(|e| e.to_string())?;
+
+        let cose_key: CoseKey = EcDsaCoseKeyBuilder::default()
+            .x(points.x().unwrap().to_vec())
+            .y(points.y().unwrap().to_vec())
+            .build()
+            .expect("Unable to build EcDsaCoseKey")
+            .into();
+        Self::from_key(cose_key, true)
     }
 
     pub fn from_pem(pem: &str) -> Result<Self, String> {
@@ -97,7 +121,7 @@ impl CoseKeyIdentity {
                 .unwrap()
                 .into();
 
-            Self::from_key(cose_key)
+            Self::from_key(cose_key, false)
         } else if decoded.algorithm.oid == pkcs8::ObjectIdentifier::new("1.2.840.10045.2.1") {
             // ECDSA
             let sk = p256::SecretKey::from_pkcs8_pem(pem).unwrap();
@@ -111,7 +135,7 @@ impl CoseKeyIdentity {
                 .unwrap()
                 .into();
 
-            Self::from_key(cose_key)
+            Self::from_key(cose_key, false)
         } else {
             return Err(format!("Unknown algorithm OID: {}", decoded.algorithm.oid));
         }
@@ -131,6 +155,7 @@ impl TryFrom<String> for CoseKeyIdentity {
             Ok(Self {
                 identity,
                 key: None,
+                hsm: false,
             })
         } else {
             Err("Identity must be anonymous".to_string())
@@ -160,22 +185,14 @@ impl Verifier<CoseKeyIdentitySignature> for CoseKeyIdentity {
                         y.as_slice().into(),
                         false,
                     );
-                    let public_key = p256::PublicKey::from_encoded_point(&points).unwrap();
 
-                    let verify_key: p256::ecdsa::VerifyingKey = public_key.into();
-
-                    verify_key
-                        .verify(
-                            msg,
-                            &p256::ecdsa::Signature::from_bytes(&signature.bytes).map_err(|e| {
-                                eprintln!("Deserializing signature failed: {}", e);
-                                Error::new()
-                            })?,
-                        )
-                        .map_err(|e| {
-                            eprintln!("Key verify failed: {}", e);
-                            Error::new()
-                        })
+                    let verify_key =
+                        p256::ecdsa::VerifyingKey::from_encoded_point(&points).unwrap();
+                    let signature = p256::ecdsa::Signature::from_bytes(&signature.bytes).unwrap();
+                    verify_key.verify(msg, &signature).map_err(|e| {
+                        eprintln!("Key verify failed: {}", e);
+                        Error::new()
+                    })
                 }
                 Algorithm::EDDSA => {
                     let key = Ed25519CoseKey::try_from(cose_key.clone()).map_err(|e| {
@@ -208,17 +225,44 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
             match cose_key.alg {
                 Algorithm::None => Err(Error::new()),
                 Algorithm::ECDSA => {
-                    let key = EcDsaCoseKey::try_from(cose_key.clone()).map_err(|_| Error::new())?;
-                    if !key.can_sign() {
-                        return Err(Error::new());
+                    if self.hsm {
+                        trace!("Getting HSM lock");
+                        let hsm = HSM_INSTANCE.lock().unwrap();
+
+                        // TODO: This operation should be done on the HSM, but cryptoki doesn't support it yet
+                        // See https://github.com/parallaxsecond/rust-cryptoki/issues/88
+                        trace!("Digesting message using SHA256");
+                        let digest = sha2::Sha256::digest(msg);
+
+                        trace!("Singning message using HSM");
+                        let msg_signature = hsm
+                            .sign(digest.as_slice(), &HSMMechanism::Ecdsa)
+                            .map_err(|e| {
+                                eprintln!("Unable to sign message using HSM: {}", e);
+                                Error::new()
+                            })?;
+                        trace!("Message signature is {}", hex::encode(&msg_signature));
+
+                        trace!("Converting message signature to P256 structure");
+                        let signature = p256::ecdsa::Signature::try_from(msg_signature.as_slice())
+                            .expect("Can't create P256 signature from message signature");
+
+                        CoseKeyIdentitySignature::from_bytes(signature.as_ref())
+                    } else {
+                        let key =
+                            EcDsaCoseKey::try_from(cose_key.clone()).map_err(|_| Error::new())?;
+                        if !key.can_sign() {
+                            return Err(Error::new());
+                        }
+
+                        let d = key.d.ok_or_else(Error::new)?;
+                        let secret_key =
+                            p256::SecretKey::from_bytes(&d).map_err(|_| Error::new())?;
+                        let signing_key: p256::ecdsa::SigningKey = secret_key.into();
+
+                        let signature: p256::ecdsa::Signature = signing_key.sign(msg);
+                        CoseKeyIdentitySignature::from_bytes(signature.as_ref())
                     }
-
-                    let d = key.d.ok_or_else(Error::new)?;
-                    let secret_key = p256::SecretKey::from_bytes(&d).map_err(|_| Error::new())?;
-                    let signing_key: p256::ecdsa::SigningKey = secret_key.into();
-
-                    let signature: p256::ecdsa::Signature = signing_key.sign(msg);
-                    CoseKeyIdentitySignature::from_bytes(signature.as_ref())
                 }
                 Algorithm::EDDSA => {
                     let key =

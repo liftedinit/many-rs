@@ -152,7 +152,9 @@ impl CoseSign1RequestMessage {
 
         // Find the key_bytes.
         let cose_key = self.get_keyset()?.get_kid(&id.to_vec()).cloned()?;
-        let key = CoseKeyIdentity::from_key(cose_key).ok()?;
+        // The hsm: false parameter is not important here. We always perform
+        // signature verification on the CPU server-side
+        let key = CoseKeyIdentity::from_key(cose_key, false).ok()?;
         if id == &key.identity {
             Some(key)
         } else {

@@ -110,6 +110,26 @@ many_error! {
      -102: InvalidIdentityKind as invalid_identity_kind(actual)
             => r#"Identity kind "{actual}" was not recognized."#,
 
+     // HSM-related errors       
+     -103: HSMInitError as hsm_init_error(details)
+            => "PKCS#11 init error:\n{details}",
+     -104: HSMSessionError as hsm_session_error(details)
+            => "PKCS#11 session error:\n{details}",
+     -105: HSMLoginError as hsm_login_error(details)
+            => "PKCS#11 login error:\n{details}",
+     -106: HSMKeyIdError as hsm_keyid_error(details)
+            => "PKCS#11 key ID error:\n{details}",
+     -107: HSMSignError as hsm_sign_error(details)
+            => "PKCS#11 sign error:\n{details}",
+     -108: HSMVerifyError as hsm_verify_error(details)
+            => "PKCS#11 verify error:\n{details}",
+     -109: HSMECPointError as hsm_ec_point_error(details)
+            => "PKCS#11 EC Point error:\n{details}",
+     -110: HSMECParamsError as hsm_ec_params_error(details)
+            => "PKCS#11 EC Params error:\n{details}",
+     -111: HSMKeygenError as hsm_keygen_error(details)
+            => "PKCS#11 key generation error:\n{details}",
+
     // -1000 - -1999 is for request errors.
     -1000: InvalidMethodName as invalid_method_name(method)
             => r#"Invalid method name: "{method}"."#,
