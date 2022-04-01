@@ -226,12 +226,11 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
                 Algorithm::None => Err(Error::new()),
                 Algorithm::ECDSA => {
                     if self.hsm {
-                        trace!("Getting HSM lock");
                         let hsm = HSM_INSTANCE.lock().unwrap();
 
                         // TODO: This operation should be done on the HSM, but cryptoki doesn't support it yet
                         // See https://github.com/parallaxsecond/rust-cryptoki/issues/88
-                        trace!("Digesting message using SHA256");
+                        trace!("Digesting message using SHA256 (CPU)");
                         let digest = sha2::Sha256::digest(msg);
 
                         trace!("Singning message using HSM");

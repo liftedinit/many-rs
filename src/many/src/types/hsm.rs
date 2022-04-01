@@ -82,7 +82,7 @@ impl HSM {
             .as_ref()
             .ok_or_else(|| ManyError::hsm_keyid_error("No PKCS#11 key ID found".to_string()))?;
 
-        trace!("Looking for private key to perform signature");
+        trace!("Looking for private key");
         let template = &[Attribute::Id(keyid.clone()), Attribute::Sign(true)];
         let mut signers = session
             .find_objects(template)
@@ -91,7 +91,7 @@ impl HSM {
         trace!("Making sure we found one and only one private key");
         let signer = match signers.len() {
             0 => {
-                panic!("Unable to find private key for signature")
+                panic!("Unable to find private key")
             }
             1 => signers.pop().unwrap(),
             _ => {
@@ -132,7 +132,7 @@ impl HSM {
             .as_ref()
             .ok_or_else(|| ManyError::hsm_keyid_error("No PKCS#11 key ID found".to_string()))?;
 
-        trace!("Looking for public key to perform signature verification");
+        trace!("Looking for public key");
         let template = &[Attribute::Id(keyid.clone()), Attribute::Verify(true)];
         let mut verifiers = session
             .find_objects(template)
@@ -141,7 +141,7 @@ impl HSM {
         trace!("Making sure we found one and only one public key");
         let verifier = match verifiers.len() {
             0 => {
-                panic!("Unable to find public key for signature verification")
+                panic!("Unable to find public key")
             }
             1 => verifiers.pop().unwrap(),
             _ => {
@@ -257,7 +257,7 @@ impl HSM {
                 let session_flags = match session_type {
                     // Read-only PKCS#11 session
                     HSMSessionType::RO => {
-                        trace!("Creating RW session flags");
+                        trace!("Creating RO session flags");
                         let mut flags = SessionFlags::new();
                         flags.set_serial_session(true);
                         flags
