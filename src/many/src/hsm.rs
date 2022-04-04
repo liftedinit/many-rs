@@ -471,6 +471,9 @@ mod tests {
     }
 
     /// Test that message signing and signature verification works on the HSM
+    /// 
+    /// This test will initialize a new token and generate a new ECDSA P256 keypair.
+    /// The keypair will be destroyed at the end of the test, but the token will remain initialized.
     #[test]
     fn hsm_ecdsa_sign_verify() -> Result<(), ManyError> {
         let slot = init()?;
@@ -505,6 +508,9 @@ mod tests {
 
     /// Test that message signing works on the HSM and that the resulting
     /// signature can be verified on the CPU using the p256 crate
+    /// 
+    /// This test will initialize a new token and generate a new ECDSA P256 keypair.
+    /// The keypair will be destroyed at the end of the test, but the token will remain initialized.
     #[test]
     fn hsm_ecdsa_sign_p256_verify() -> Result<(), ManyError> {
         let slot = init()?;
