@@ -1,4 +1,5 @@
 pub mod cbor;
+pub mod hsm;
 pub mod message;
 pub mod protocol;
 pub mod server;

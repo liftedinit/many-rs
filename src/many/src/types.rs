@@ -7,7 +7,6 @@ use std::ops::{Bound, RangeBounds, Shl};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub mod blockchain;
-pub mod hsm;
 pub mod identity;
 pub mod ledger;
 

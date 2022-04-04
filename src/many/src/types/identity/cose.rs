@@ -1,4 +1,4 @@
-use crate::types::hsm::{HSMMechanism, HSMMechanismType, HSM_INSTANCE};
+use crate::hsm::{HSMMechanism, HSMMechanismType, HSM_INSTANCE};
 use crate::Identity;
 use ed25519_dalek::PublicKey;
 use minicose::{

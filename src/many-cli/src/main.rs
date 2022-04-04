@@ -2,10 +2,10 @@ use clap::{ArgGroup, Parser};
 use many::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
 use many::server::module::ledger;
 use many::transport::http::HttpServer;
-use many::types::{
-    hsm::HSMMechanismType, hsm::HSMSessionType, hsm::HSMUserType, hsm::HSM_INSTANCE,
-    identity::CoseKeyIdentity,
+use many::hsm::{
+    HSMMechanismType, HSMSessionType, HSMUserType, HSM_INSTANCE,
 };
+use many::types::identity::CoseKeyIdentity;
 use many::{Identity, ManyServer};
 use many_client::ManyClient;
 use std::convert::TryFrom;
