@@ -45,12 +45,39 @@ enum SubCommand {
 }
 
 #[derive(Parser)]
-struct IdOpt {
-    /// An hexadecimal value to encode, or an identity textual format to decode.
-    arg: String,
+#[clap(override_help(
+    r#"many-id
 
-    /// If the argument is a public key hexadecimal, allow to generate the
-    /// identity with a specific subresource ID.
+Transform a textual ID into its hexadecimal value, or the other way around. If the argument is
+neither hexadecimal value or identity, try to see if it's a file, and will parse it as a PEM file
+
+USAGE:
+   many id <ARG> -- [SUBID]
+   many id <MODULE> <SLOT> <KEYID> -- [SUBID]
+
+ARGS:
+    <ARG>       An hexadecimal value to encode, a textual identity to decode or a private key PEM
+                file to read
+
+    OR
+
+    <MODULE>    HSM PKCS#11 module path
+    <SLOT>      HSM PKCS#11 slot ID
+    <KEYID>     HSM PKCS#11 key ID
+
+OPTIONS:
+    [SUBID]     Allow to generate the identity with a specific subresource ID.
+    -h, --help  Print help information"#
+))]
+struct IdOpt {
+    // Workaround for https://github.com/clap-rs/clap/discussions/3613
+    //
+    /// An hexadecimal value to encode, an identity textual format to decode or
+    /// a PEM file to read
+    args: Vec<String>,
+
+    /// Allow to generate the identity with a specific subresource ID.
+    #[clap(last = true)]
     subid: Option<u32>,
 }
 
@@ -148,35 +175,62 @@ fn main() {
 
     match subcommand {
         SubCommand::Id(o) => {
-            if let Ok(data) = hex::decode(&o.arg) {
-                match Identity::try_from(data.as_slice()) {
-                    Ok(mut i) => {
+            // Workaround for https://github.com/clap-rs/clap/discussions/3613
+            match o.args.as_slice() {
+                // Get identity from PEM/Hex/Text
+                [data] => {
+                    if let Ok(data) = hex::decode(&data) {
+                        match Identity::try_from(data.as_slice()) {
+                            Ok(mut i) => {
+                                if let Some(subid) = o.subid {
+                                    i = i.with_subresource_id(subid);
+                                }
+                                println!("{}", i)
+                            }
+                            Err(e) => {
+                                error!("Identity did not parse: {:?}", e.to_string());
+                                std::process::exit(1);
+                            }
+                        }
+                    } else if let Ok(mut i) = Identity::try_from(data.clone()) {
                         if let Some(subid) = o.subid {
                             i = i.with_subresource_id(subid);
                         }
                         println!("{}", i)
                     }
-                    Err(e) => {
-                        error!("Identity did not parse: {:?}", e.to_string());
-                        std::process::exit(1);
-                    }
                 }
-            } else if let Ok(mut i) = Identity::try_from(o.arg.clone()) {
-                if let Some(subid) = o.subid {
-                    i = i.with_subresource_id(subid);
-                }
-                println!("{}", hex::encode(&i.to_vec()));
-            } else if let Ok(pem_content) = std::fs::read_to_string(&o.arg) {
-                // Create the identity from the public key hash.
-                let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().identity;
-                if let Some(subid) = o.subid {
-                    i = i.with_subresource_id(subid);
-                }
+                // Get identity from HSM
+                [module, slot, keyid] => {
+                    let slot = slot
+                        .parse::<u64>()
+                        .expect("Could not parse slot number to u64");
+                    let module = PathBuf::from(module);
+                    let keyid = hex::decode(keyid).expect("Failed to decode keyid to hex");
 
-                println!("{}", i);
-            } else {
-                error!("Could not understand the argument.");
-                std::process::exit(2);
+                    {
+                        let mut hsm = HSM::get_instance().expect("HSM mutex poisoned");
+                        hsm.init(module, keyid)
+                            .expect("Failed to initialize HSM module");
+
+                        // The session will stay open until the application terminates
+                        hsm.open_session(slot, HSMSessionType::RO, None, None)
+                            .expect("Failed to open HSM session");
+                    }
+
+                    let mut id = CoseKeyIdentity::from_hsm(HSMMechanismType::ECDSA)
+                        .expect("Unable to create CoseKeyIdentity from HSM")
+                        .identity;
+
+                    if let Some(subid) = o.subid {
+                        id = id.with_subresource_id(subid);
+                    }
+
+                    println!("{}", id);
+                }
+                _ => {
+                    error!("Could not understand the arguments.");
+                    std::process::exit(2);
+                }
             }
         }
         SubCommand::Message(o) => {
