@@ -1,4 +1,4 @@
-use crate::hsm::{HSMMechanism, HSMMechanismType, HSM_INSTANCE};
+use crate::hsm::{HSMMechanism, HSMMechanismType, HSM};
 use crate::Identity;
 use ed25519_dalek::PublicKey;
 use minicose::{
@@ -63,7 +63,7 @@ impl CoseKeyIdentity {
         }
     }
 
-    pub fn from_key(key: CoseKey, hsm: bool) -> Result<Self, String> {
+    pub(crate) fn from_key(key: CoseKey, hsm: bool) -> Result<Self, String> {
         let identity = Identity::public_key(&key);
         if identity.is_anonymous() {
             Ok(Self {
@@ -81,9 +81,8 @@ impl CoseKeyIdentity {
     }
 
     pub fn from_hsm(mechanism: HSMMechanismType) -> Result<Self, String> {
-        let (raw_points, _) = HSM_INSTANCE
-            .lock()
-            .unwrap()
+        let hsm = HSM::get_instance().map_err(|e| e.to_string())?;
+        let (raw_points, _) = hsm
             .ec_info(mechanism)
             .map_err(|e| e.to_string())?;
         trace!("Creating NIST P-256 SEC1 encoded point");
@@ -226,7 +225,10 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
                 Algorithm::None => Err(Error::new()),
                 Algorithm::ECDSA => {
                     if self.hsm {
-                        let hsm = HSM_INSTANCE.lock().unwrap();
+                        let hsm = HSM::get_instance().map_err(|e| {
+                            eprintln!("HSM mutex poisoned {}", e);
+                            Error::new()
+                        })?;
 
                         // TODO: This operation should be done on the HSM, but cryptoki doesn't support it yet
                         // See https://github.com/parallaxsecond/rust-cryptoki/issues/88

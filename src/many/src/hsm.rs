@@ -7,7 +7,7 @@ use once_cell::sync::Lazy;
 use tracing::{error, trace};
 
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 use crate::ManyError;
 
@@ -26,7 +26,7 @@ use crate::ManyError;
 ///
 /// If one ever modify this behavior, make sure that the application/tests don't
 /// hit the Cryptoki simultaneously
-pub static HSM_INSTANCE: Lazy<Mutex<HSM>> = Lazy::new(|| Mutex::new(HSM::new()));
+static HSM_INSTANCE: Lazy<Mutex<HSM>> = Lazy::new(|| Mutex::new(HSM::new()));
 
 /// Same as cryptoki::session::UserType
 pub type HSMUserType = UserType;
@@ -55,6 +55,14 @@ pub struct HSM {
 }
 
 impl HSM {
+    /// Return the HSM global instance
+    pub fn get_instance() -> Result<MutexGuard<'static, HSM>, ManyError> {
+        let hsm = HSM_INSTANCE
+            .lock()
+            .map_err(|e| ManyError::hsm_mutex_poisoned(e.to_string()))?;
+        Ok(hsm)
+    }
+
     /// Perform message signature on the HSM using the given mechanism
     ///
     /// Note: The NIST P-256 curve requires the user to hash the message with
@@ -93,7 +101,9 @@ impl HSM {
             0 => {
                 panic!("Unable to find private key")
             }
-            1 => signers.pop().unwrap(),
+            1 => signers.pop().ok_or_else(|| {
+                ManyError::hsm_sign_error("Unable to fetch private key".to_string())
+            })?,
             _ => {
                 panic!("Multiple private key found")
             }
@@ -143,7 +153,9 @@ impl HSM {
             0 => {
                 panic!("Unable to find public key")
             }
-            1 => verifiers.pop().unwrap(),
+            1 => verifiers.pop().ok_or_else(|| {
+                ManyError::hsm_verify_error("Unable to fetch public key".to_string())
+            })?,
             _ => {
                 panic!("Multiple public key found")
             }
@@ -362,7 +374,11 @@ mod tests {
                         SessionState::RW_SO_FUNCTIONS => {
                             self.session
                                 .as_ref()
-                                .unwrap()
+                                .ok_or_else(|| {
+                                    ManyError::hsm_session_error(
+                                        "Unable to access session".to_string(),
+                                    )
+                                })?
                                 .init_pin(&pin)
                                 .map_err(|e| ManyError::hsm_session_error(format!("{e}")))?;
                         }
@@ -386,7 +402,11 @@ mod tests {
                 Some(_) => {
                     self.pkcs11
                         .as_ref()
-                        .unwrap()
+                        .ok_or_else(|| {
+                            ManyError::hsm_init_error(
+                                "Unable to access PKCS#11 context".to_string(),
+                            )
+                        })?
                         .init_token(slot, &pin, &label)
                         .map_err(|e| ManyError::hsm_init_error(format!("{e}")))?;
                 }
@@ -448,14 +468,21 @@ mod tests {
     ///     - Generate a new ECDSA (secp256r1) keypair
     /// - Return the slot number
     fn init() -> Result<u64, ManyError> {
-        let mut hsm = HSM_INSTANCE.lock().unwrap();
+        let mut hsm = HSM::get_instance()?;
         let module = env::var("PKCS11_SOFTHSM2_MODULE")
             .unwrap_or_else(|_| "/usr/lib/softhsm/libsofthsm2.so".to_string());
         hsm.init(PathBuf::from(module), KEYPAIR_TEST_ID.to_vec())
             .expect("Unable to init PKCS#11");
+        let pkcs11 = hsm.pkcs11.as_ref().ok_or_else(|| {
+            ManyError::hsm_init_error("Unable to access PKCS#11 context".to_string())
+        })?;
 
-        let mut slots = hsm.pkcs11.as_ref().unwrap().get_slots_with_token().unwrap();
-        let slot = slots.pop().expect("Unable to fetch slots with token");
+        let mut slots = pkcs11
+            .get_slots_with_token()
+            .map_err(|e| ManyError::hsm_init_error(e.to_string()))?;
+        let slot = slots.pop().ok_or_else(|| ManyError::hsm_session_error(
+            "Unable to fetch slots with token".to_string(),
+        ))?;
         hsm.init_token(slot, SO_PIN.to_string(), "Test Token".to_string())?;
         let slot = slot.id();
 
@@ -471,14 +498,14 @@ mod tests {
     }
 
     /// Test that message signing and signature verification works on the HSM
-    /// 
+    ///
     /// This test will initialize a new token and generate a new ECDSA P256 keypair.
     /// The keypair will be destroyed at the end of the test, but the token will remain initialized.
     #[test]
     fn hsm_ecdsa_sign_verify() -> Result<(), ManyError> {
         let slot = init()?;
 
-        let mut hsm = HSM_INSTANCE.lock().unwrap();
+        let mut hsm = HSM::get_instance()?;
         hsm.open_session(
             slot,
             HSMSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
@@ -508,14 +535,14 @@ mod tests {
 
     /// Test that message signing works on the HSM and that the resulting
     /// signature can be verified on the CPU using the p256 crate
-    /// 
+    ///
     /// This test will initialize a new token and generate a new ECDSA P256 keypair.
     /// The keypair will be destroyed at the end of the test, but the token will remain initialized.
     #[test]
     fn hsm_ecdsa_sign_p256_verify() -> Result<(), ManyError> {
         let slot = init()?;
 
-        let mut hsm = HSM_INSTANCE.lock().unwrap();
+        let mut hsm = HSM::get_instance()?;
         hsm.open_session(
             slot,
             HSMSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test

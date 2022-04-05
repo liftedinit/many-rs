@@ -129,6 +129,8 @@ many_error! {
             => "PKCS#11 EC Params error:\n{details}",
      -111: HSMKeygenError as hsm_keygen_error(details)
             => "PKCS#11 key generation error:\n{details}",
+     -112: HSMMutexPoisoned as hsm_mutex_poisoned(details)
+            => "PKCS#11 global instance mutex poisoned:\n{details}",
 
     // -1000 - -1999 is for request errors.
     -1000: InvalidMethodName as invalid_method_name(method)

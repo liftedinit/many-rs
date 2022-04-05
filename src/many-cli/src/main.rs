@@ -1,10 +1,8 @@
 use clap::{ArgGroup, Parser};
+use many::hsm::{HSMMechanismType, HSMSessionType, HSMUserType, HSM};
 use many::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
 use many::server::module::ledger;
 use many::transport::http::HttpServer;
-use many::hsm::{
-    HSMMechanismType, HSMSessionType, HSMUserType, HSM_INSTANCE,
-};
 use many::types::identity::CoseKeyIdentity;
 use many::{Identity, ManyServer};
 use many_client::ManyClient;
@@ -94,7 +92,7 @@ struct MessageOpt {
     #[clap(long, conflicts_with("pem"))]
     module: Option<PathBuf>,
 
-    /// HSM PKCS#11 slot ID to use
+    /// HSM PKCS#11 slot ID
     #[clap(long, conflicts_with("pem"))]
     slot: Option<u64>,
 
@@ -182,24 +180,20 @@ fn main() {
             }
         }
         SubCommand::Message(o) => {
-            let key = if o.module.is_some() && o.slot.is_some() && o.keyid.is_some() {
+            let key = if let (Some(module), Some(slot), Some(keyid)) = (o.module, o.slot, o.keyid) {
                 trace!("Getting user PIN");
-                let pin = rpassword::prompt_password("Please enter the HSM user PIN: ").unwrap();
-                let keyid = hex::decode(o.keyid.unwrap()).expect("Failed to decode keyid to hex");
+                let pin = rpassword::prompt_password("Please enter the HSM user PIN: ")
+                    .expect("I/O error when reading HSM PIN");
+                let keyid = hex::decode(keyid).expect("Failed to decode keyid to hex");
 
                 {
-                    let mut hsm = HSM_INSTANCE.lock().unwrap();
-                    hsm.init(o.module.unwrap(), keyid)
+                    let mut hsm = HSM::get_instance().expect("HSM mutex poisoned");
+                    hsm.init(module, keyid)
                         .expect("Failed to initialize HSM module");
 
                     // The session will stay open until the application terminates
-                    hsm.open_session(
-                        o.slot.unwrap(),
-                        HSMSessionType::RO,
-                        Some(HSMUserType::User),
-                        Some(pin),
-                    )
-                    .expect("Failed to open HSM session");
+                    hsm.open_session(slot, HSMSessionType::RO, Some(HSMUserType::User), Some(pin))
+                        .expect("Failed to open HSM session");
                 }
 
                 trace!("Creating CoseKeyIdentity");
