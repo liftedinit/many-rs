@@ -480,9 +480,9 @@ mod tests {
         let mut slots = pkcs11
             .get_slots_with_token()
             .map_err(|e| ManyError::hsm_init_error(e.to_string()))?;
-        let slot = slots.pop().ok_or_else(|| ManyError::hsm_session_error(
-            "Unable to fetch slots with token".to_string(),
-        ))?;
+        let slot = slots.pop().ok_or_else(|| {
+            ManyError::hsm_session_error("Unable to fetch slots with token".to_string())
+        })?;
         hsm.init_token(slot, SO_PIN.to_string(), "Test Token".to_string())?;
         let slot = slot.id();
 

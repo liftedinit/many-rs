@@ -110,7 +110,7 @@ many_error! {
      -102: InvalidIdentityKind as invalid_identity_kind(actual)
             => r#"Identity kind "{actual}" was not recognized."#,
 
-     // HSM-related errors       
+     // HSM-related errors
      -103: HSMInitError as hsm_init_error(details)
             => "PKCS#11 init error:\n{details}",
      -104: HSMSessionError as hsm_session_error(details)

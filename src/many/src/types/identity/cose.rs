@@ -82,9 +82,7 @@ impl CoseKeyIdentity {
 
     pub fn from_hsm(mechanism: HSMMechanismType) -> Result<Self, String> {
         let hsm = HSM::get_instance().map_err(|e| e.to_string())?;
-        let (raw_points, _) = hsm
-            .ec_info(mechanism)
-            .map_err(|e| e.to_string())?;
+        let (raw_points, _) = hsm.ec_info(mechanism).map_err(|e| e.to_string())?;
         trace!("Creating NIST P-256 SEC1 encoded point");
         let points = p256::EncodedPoint::from_bytes(raw_points).map_err(|e| e.to_string())?;
 
