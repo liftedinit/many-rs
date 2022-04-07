@@ -10,7 +10,7 @@ use sha2::Digest;
 use signature::{Error, Signature, Signer, Verifier};
 use std::convert::TryFrom;
 use std::fmt::{Debug, Formatter};
-use tracing::trace;
+use tracing::{error, trace};
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct CoseKeyIdentitySignature {
@@ -173,7 +173,7 @@ impl Verifier<CoseKeyIdentitySignature> for CoseKeyIdentity {
                 Algorithm::None => Err(Error::new()),
                 Algorithm::ECDSA => {
                     let key = EcDsaCoseKey::try_from(cose_key.clone()).map_err(|e| {
-                        eprintln!("Deserializing ECDSA key failed: {}", e);
+                        error!("Deserializing ECDSA key failed: {}", e);
                         Error::new()
                     })?;
                     let (x, y) = (key.x.ok_or_else(Error::new)?, key.y.ok_or_else(Error::new)?);
@@ -187,25 +187,25 @@ impl Verifier<CoseKeyIdentitySignature> for CoseKeyIdentity {
                         p256::ecdsa::VerifyingKey::from_encoded_point(&points).unwrap();
                     let signature = p256::ecdsa::Signature::from_bytes(&signature.bytes).unwrap();
                     verify_key.verify(msg, &signature).map_err(|e| {
-                        eprintln!("Key verify failed: {}", e);
+                        error!("Key verify failed: {}", e);
                         Error::new()
                     })
                 }
                 Algorithm::EDDSA => {
                     let key = Ed25519CoseKey::try_from(cose_key.clone()).map_err(|e| {
-                        eprintln!("Deserializing Ed25519 key failed: {}", e);
+                        error!("Deserializing Ed25519 key failed: {}", e);
                         Error::new()
                     })?;
                     let x = key.x.ok_or_else(Error::new)?;
 
                     let public_key = ed25519_dalek::PublicKey::from_bytes(&x).map_err(|e| {
-                        eprintln!("Public key does not deserialize: {}", e);
+                        error!("Public key does not deserialize: {}", e);
                         Error::new()
                     })?;
                     public_key
                         .verify_strict(msg, &ed25519::Signature::from_bytes(&signature.bytes)?)
                         .map_err(|e| {
-                            eprintln!("Verification failed (ed25519): {}", e);
+                            error!("Verification failed (ed25519): {}", e);
                             Error::new()
                         })
                 }
@@ -224,7 +224,7 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
                 Algorithm::ECDSA => {
                     if self.hsm {
                         let hsm = HSM::get_instance().map_err(|e| {
-                            eprintln!("HSM mutex poisoned {}", e);
+                            error!("HSM mutex poisoned {}", e);
                             Error::new()
                         })?;
 
@@ -237,7 +237,7 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
                         let msg_signature = hsm
                             .sign(digest.as_slice(), &HSMMechanism::Ecdsa)
                             .map_err(|e| {
-                                eprintln!("Unable to sign message using HSM: {}", e);
+                                error!("Unable to sign message using HSM: {}", e);
                                 Error::new()
                             })?;
                         trace!("Message signature is {}", hex::encode(&msg_signature));

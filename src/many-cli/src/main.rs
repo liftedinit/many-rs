@@ -10,7 +10,7 @@ use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
-use tracing::{level_filters::LevelFilter, trace};
+use tracing::{error, level_filters::LevelFilter, trace};
 
 #[derive(Parser)]
 struct Opts {
@@ -157,7 +157,7 @@ fn main() {
                         println!("{}", i)
                     }
                     Err(e) => {
-                        eprintln!("Identity did not parse: {:?}", e.to_string());
+                        error!("Identity did not parse: {:?}", e.to_string());
                         std::process::exit(1);
                     }
                 }
@@ -175,7 +175,7 @@ fn main() {
 
                 println!("{}", i);
             } else {
-                eprintln!("Could not understand the argument.");
+                error!("Could not understand the argument.");
                 std::process::exit(2);
             }
         }
@@ -225,7 +225,7 @@ fn main() {
                 match &response.data {
                     Ok(payload) => {
                         if payload.is_empty() {
-                            eprintln!("Empty response:\n{:#?}", response);
+                            error!("Empty response:\n{:#?}", response);
                         } else {
                             println!(
                                 "{}",
@@ -235,7 +235,7 @@ fn main() {
                         std::process::exit(0);
                     }
                     Err(err) => {
-                        eprintln!(
+                        error!(
                             "Error returned by server:\n|  {}\n",
                             err.to_string()
                                 .split('\n')
@@ -288,7 +288,7 @@ fn main() {
             let status = client.status().expect("Cannot get status of server");
 
             if !status.attributes.contains(&ledger::LEDGER_MODULE_ATTRIBUTE) {
-                eprintln!("Server does not implement Ledger Attribute.");
+                error!("Server does not implement Ledger Attribute.");
                 process::exit(1);
             }
 

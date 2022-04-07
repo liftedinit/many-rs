@@ -15,11 +15,12 @@ use minicose::{
     Algorithm, CoseKeySet, CoseSign1, CoseSign1Builder, HeadersFields, ProtectedHeaders,
 };
 use signature::{Signature, Signer, Verifier};
+use tracing::error;
 
 pub fn decode_request_from_cose_sign1(sign1: CoseSign1) -> Result<RequestMessage, ManyError> {
     let request = CoseSign1RequestMessage { sign1 };
     let from_id = request.verify().map_err(|e| {
-        eprintln!("e {}", e);
+        error!("e {}", e);
         ManyError::could_not_verify_signature()
     })?;
 
@@ -179,7 +180,7 @@ impl CoseSign1RequestMessage {
                                 match result {
                                     Ok(()) => true,
                                     Err(e) => {
-                                        eprintln!("Error from verify: {}", e);
+                                        error!("Error from verify: {}", e);
                                         false
                                     }
                                 }
