@@ -197,14 +197,13 @@ fn main() {
                             i = i.with_subresource_id(subid);
                         }
                         println!("{}", i)
-                    }
-                    else if let Ok(pem_content) = std::fs::read_to_string(&data) {
+                    } else if let Ok(pem_content) = std::fs::read_to_string(&data) {
                         // Create the identity from the public key hash.
                         let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().identity;
                         if let Some(subid) = o.subid {
                             i = i.with_subresource_id(subid);
                         }
-        
+
                         println!("{}", i);
                     } else {
                         error!("Could not understand the argument.");
