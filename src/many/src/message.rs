@@ -15,11 +15,12 @@ use minicose::{
     Algorithm, CoseKeySet, CoseSign1, CoseSign1Builder, HeadersFields, ProtectedHeaders,
 };
 use signature::{Signature, Signer, Verifier};
+use tracing::error;
 
 pub fn decode_request_from_cose_sign1(sign1: CoseSign1) -> Result<RequestMessage, ManyError> {
     let request = CoseSign1RequestMessage { sign1 };
     let from_id = request.verify().map_err(|e| {
-        eprintln!("e {}", e);
+        error!("e {}", e);
         ManyError::could_not_verify_signature()
     })?;
 
@@ -152,7 +153,9 @@ impl CoseSign1RequestMessage {
 
         // Find the key_bytes.
         let cose_key = self.get_keyset()?.get_kid(&id.to_vec()).cloned()?;
-        let key = CoseKeyIdentity::from_key(cose_key).ok()?;
+        // The hsm: false parameter is not important here. We always perform
+        // signature verification on the CPU server-side
+        let key = CoseKeyIdentity::from_key(cose_key, false).ok()?;
         if id == &key.identity {
             Some(key)
         } else {
@@ -177,7 +180,7 @@ impl CoseSign1RequestMessage {
                                 match result {
                                     Ok(()) => true,
                                     Err(e) => {
-                                        eprintln!("Error from verify: {}", e);
+                                        error!("Error from verify: {}", e);
                                         false
                                     }
                                 }

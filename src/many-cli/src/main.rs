@@ -1,4 +1,5 @@
-use clap::Parser;
+use clap::{ArgGroup, Parser};
+use many::hsm::{HSMMechanismType, HSMSessionType, HSMUserType, HSM};
 use many::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
 use many::server::module::ledger;
 use many::transport::http::HttpServer;
@@ -9,7 +10,7 @@ use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
-use tracing::level_filters::LevelFilter;
+use tracing::{error, level_filters::LevelFilter, trace};
 
 #[derive(Parser)]
 struct Opts {
@@ -54,6 +55,14 @@ struct IdOpt {
 }
 
 #[derive(Parser)]
+#[clap(
+    group(
+        ArgGroup::new("hsm")
+        .multiple(true)
+        .args(&["module", "slot", "keyid"])
+        .requires_all(&["module", "slot", "keyid"])
+    )
+)]
 struct MessageOpt {
     /// A pem file to sign the message. If this is omitted, the message will be anonymous.
     #[clap(long)]
@@ -78,6 +87,18 @@ struct MessageOpt {
     /// The server to connect to.
     #[clap(long)]
     server: Option<url::Url>,
+
+    /// HSM PKCS#11 module path
+    #[clap(long, conflicts_with("pem"))]
+    module: Option<PathBuf>,
+
+    /// HSM PKCS#11 slot ID
+    #[clap(long, conflicts_with("pem"))]
+    slot: Option<u64>,
+
+    /// HSM PKCS#11 key ID
+    #[clap(long, conflicts_with("pem"))]
+    keyid: Option<String>,
 
     /// The method to call.
     method: String,
@@ -136,7 +157,7 @@ fn main() {
                         println!("{}", i)
                     }
                     Err(e) => {
-                        eprintln!("Identity did not parse: {:?}", e.to_string());
+                        error!("Identity did not parse: {:?}", e.to_string());
                         std::process::exit(1);
                     }
                 }
@@ -154,15 +175,42 @@ fn main() {
 
                 println!("{}", i);
             } else {
-                eprintln!("Could not understand the argument.");
+                error!("Could not understand the argument.");
                 std::process::exit(2);
             }
         }
         SubCommand::Message(o) => {
-            // If `pem` is not provided, use anonymous and don't sign.
-            let key = o.pem.map_or_else(CoseKeyIdentity::anonymous, |p| {
-                CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap()
-            });
+            let key = if let (Some(module), Some(slot), Some(keyid)) = (o.module, o.slot, o.keyid) {
+                trace!("Getting user PIN");
+                let pin = rpassword::prompt_password("Please enter the HSM user PIN: ")
+                    .expect("I/O error when reading HSM PIN");
+                let keyid = hex::decode(keyid).expect("Failed to decode keyid to hex");
+
+                {
+                    let mut hsm = HSM::get_instance().expect("HSM mutex poisoned");
+                    hsm.init(module, keyid)
+                        .expect("Failed to initialize HSM module");
+
+                    // The session will stay open until the application terminates
+                    hsm.open_session(slot, HSMSessionType::RO, Some(HSMUserType::User), Some(pin))
+                        .expect("Failed to open HSM session");
+                }
+
+                trace!("Creating CoseKeyIdentity");
+                // Only ECDSA is supported at the moment. It should be easy to add support for new EC mechanisms
+                CoseKeyIdentity::from_hsm(HSMMechanismType::ECDSA)
+                    .expect("Unable to create CoseKeyIdentity from HSM")
+            } else if o.pem.is_some() {
+                // If `pem` is not provided, use anonymous and don't sign.
+                o.pem.map_or_else(CoseKeyIdentity::anonymous, |p| {
+                    CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap()
+                })
+            } else {
+                // Clap should prevent reaching this code but I'm leaving it
+                // here to make sure we don't break anything during refactoring
+                panic!("Either --pem or (--module, --slot, --keyid) must be present.");
+            };
+
             let from_identity = key.identity;
             let to_identity = o.to.unwrap_or_default();
 
@@ -177,7 +225,7 @@ fn main() {
                 match &response.data {
                     Ok(payload) => {
                         if payload.is_empty() {
-                            eprintln!("Empty response:\n{:#?}", response);
+                            error!("Empty response:\n{:#?}", response);
                         } else {
                             println!(
                                 "{}",
@@ -187,7 +235,7 @@ fn main() {
                         std::process::exit(0);
                     }
                     Err(err) => {
-                        eprintln!(
+                        error!(
                             "Error returned by server:\n|  {}\n",
                             err.to_string()
                                 .split('\n')
@@ -240,7 +288,7 @@ fn main() {
             let status = client.status().expect("Cannot get status of server");
 
             if !status.attributes.contains(&ledger::LEDGER_MODULE_ATTRIBUTE) {
-                eprintln!("Server does not implement Ledger Attribute.");
+                error!("Server does not implement Ledger Attribute.");
                 process::exit(1);
             }
 
