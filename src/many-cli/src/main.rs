@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{ArgGroup, Parser};
 use many::hsm::{HSMMechanismType, HSMSessionType, HSMUserType, HSM};
 use many::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
 use many::server::module::ledger;
@@ -73,6 +73,14 @@ struct HsmIdOpt {
 }
 
 #[derive(Parser)]
+#[clap(
+    group(
+        ArgGroup::new("hsm")
+        .multiple(true)
+        .args(&["module", "slot", "keyid"])
+        .requires_all(&["module", "slot", "keyid"])
+    )
+)]
 struct MessageOpt {
     /// A pem file to sign the message. If this is omitted, the message will be anonymous.
     #[clap(long)]
