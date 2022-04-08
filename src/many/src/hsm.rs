@@ -337,7 +337,7 @@ mod tests {
     const MSG: &str = "FOOBAR";
     // 1.2.840.10045.3.1.7
     const SECP256R1_OID: &[u8] = &[0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07];
-    const ECDSA_PUB_KEY_TEMPLATE: Lazy<Vec<Attribute>> = Lazy::new(|| {
+    static ECDSA_PUB_KEY_TEMPLATE: Lazy<Vec<Attribute>> = Lazy::new(|| {
         vec![
             Attribute::Token(true),
             Attribute::Private(false),
@@ -347,7 +347,7 @@ mod tests {
             Attribute::Id(KEYPAIR_TEST_ID.to_vec()),
         ]
     });
-    const ECDSA_PRIV_KEY_TEMPLATE: Lazy<Vec<Attribute>> = Lazy::new(|| {
+    static ECDSA_PRIV_KEY_TEMPLATE: Lazy<Vec<Attribute>> = Lazy::new(|| {
         vec![
             Attribute::Token(true),
             Attribute::Private(true),
@@ -423,18 +423,18 @@ mod tests {
             priv_template: &[HSMAttribute],
         ) -> Result<(HSMObjectHandle, HSMObjectHandle), ManyError> {
             let session = self.session.as_ref().ok_or_else(|| {
-                ManyError::hsm_session_error(format!("No PKCS#11 open session found"))
+                ManyError::hsm_session_error("No PKCS#11 open session found".to_string())
             })?;
 
-            Ok(session
+            session
                 .generate_key_pair(mechanism, pub_template, priv_template)
-                .map_err(|e| ManyError::hsm_keygen_error(format!("{e}")))?)
+                .map_err(|e| ManyError::hsm_keygen_error(format!("{e}")))
         }
 
         /// Destroy test keys after test run
         fn destroy(&self, obj: ObjectHandle) -> Result<(), ManyError> {
             let session = self.session.as_ref().ok_or_else(|| {
-                ManyError::hsm_session_error(format!("No PKCS#11 open session found"))
+                ManyError::hsm_session_error("No PKCS#11 open session found".to_string())
             })?;
 
             session
