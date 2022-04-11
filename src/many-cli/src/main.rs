@@ -33,6 +33,9 @@ enum SubCommand {
     /// a file, and will parse it as a PEM file.
     Id(IdOpt),
 
+    /// Display the textual ID of a public key located on an HSM.
+    HsmId(HsmIdOpt),
+
     /// Creates a message and output it.
     Message(MessageOpt),
 
@@ -46,11 +49,26 @@ enum SubCommand {
 
 #[derive(Parser)]
 struct IdOpt {
-    /// An hexadecimal value to encode, or an identity textual format to decode.
+    /// An hexadecimal value to encode, an identity textual format to decode or
+    /// a PEM file to read
     arg: String,
 
-    /// If the argument is a public key hexadecimal, allow to generate the
-    /// identity with a specific subresource ID.
+    /// Allow to generate the identity with a specific subresource ID.
+    subid: Option<u32>,
+}
+
+#[derive(Parser)]
+struct HsmIdOpt {
+    /// HSM PKCS#11 module path
+    module: PathBuf,
+
+    /// HSM PKCS#11 slot ID
+    slot: u64,
+
+    /// HSM PKCS#11 key ID
+    keyid: String,
+
+    /// Allow to generate the identity with a specific subresource ID.
     subid: Option<u32>,
 }
 
@@ -178,6 +196,29 @@ fn main() {
                 error!("Could not understand the argument.");
                 std::process::exit(2);
             }
+        }
+        SubCommand::HsmId(o) => {
+            let keyid = hex::decode(o.keyid).expect("Failed to decode keyid to hex");
+
+            {
+                let mut hsm = HSM::get_instance().expect("HSM mutex poisoned");
+                hsm.init(o.module, keyid)
+                    .expect("Failed to initialize HSM module");
+
+                // The session will stay open until the application terminates
+                hsm.open_session(o.slot, HSMSessionType::RO, None, None)
+                    .expect("Failed to open HSM session");
+            }
+
+            let mut id = CoseKeyIdentity::from_hsm(HSMMechanismType::ECDSA)
+                .expect("Unable to create CoseKeyIdentity from HSM")
+                .identity;
+
+            if let Some(subid) = o.subid {
+                id = id.with_subresource_id(subid);
+            }
+
+            println!("{}", id);
         }
         SubCommand::Message(o) => {
             let key = if let (Some(module), Some(slot), Some(keyid)) = (o.module, o.slot, o.keyid) {
