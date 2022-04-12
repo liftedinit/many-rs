@@ -108,12 +108,6 @@ pub struct StatusArgs {
     pub token: AsyncToken,
 }
 
-pub enum RequestStatus {
-    Unknown = 0,
-    Processing = 1,
-    Done = 2,
-}
-
 #[derive(Debug, Clone)]
 pub enum StatusReturn {
     Unknown,
@@ -123,20 +117,44 @@ pub enum StatusReturn {
     Expired,
 }
 
+impl StatusReturn {
+    fn variant(&self) -> u8 {
+        match self {
+            StatusReturn::Unknown => 0,
+            StatusReturn::Queued => 1,
+            StatusReturn::Processing => 2,
+            StatusReturn::Done { .. } => 3,
+            StatusReturn::Expired => 4,
+        }
+    }
+
+    fn from_key(key: u8, response: Option<CoseSign1>) -> Result<Self, ()> {
+        match (key, response) {
+            (0, None) => Ok(Self::Unknown),
+            (1, None) => Ok(Self::Queued),
+            (2, None) => Ok(Self::Processing),
+            (3, Some(response)) => Ok(Self::Done { response }),
+            (4, None) => Ok(Self::Expired),
+            _ => Err(()),
+        }
+    }
+}
+
 impl Encode for StatusReturn {
     fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
-        match self {
-            StatusReturn::Unknown => e.map(1)?.u8(0)?.u8(0)?,
-            StatusReturn::Queued => e.map(1)?.u8(0)?.u8(1)?,
-            StatusReturn::Processing => e.map(1)?.u8(0)?.u8(2)?,
-            StatusReturn::Done { response } => {
-                let bytes = response
+        if let StatusReturn::Done { response } = self {
+            e.map(2)?;
+            e.u8(1)?.bytes(
+                response
                     .to_bytes()
-                    .map_err(|_err| Error::Message("Response could not be encoded."))?;
-                e.map(2)?.u8(0)?.u8(3)?.u8(1)?.bytes(&bytes)?
-            }
-            StatusReturn::Expired => e.map(1)?.u8(0)?.u8(4)?,
-        };
+                    .map_err(|_err| Error::Message("Response could not be encoded."))?
+                    .as_ref(),
+            )?
+        } else {
+            e.map(1)?
+        }
+        .u8(0)?
+        .u8(self.variant())?;
 
         Ok(())
     }
@@ -176,20 +194,17 @@ impl<'b> Decode<'b> for StatusReturn {
             }
         }
 
-        match (key, result) {
-            (Some(0), None) => Ok(Self::Unknown),
-            (Some(1), None) => Ok(Self::Queued),
-            (Some(2), None) => Ok(Self::Processing),
-            (Some(3), Some(result)) => Ok(Self::Done {
-                response: CoseSign1::from_bytes(result).map_err(|_| {
+        Self::from_key(
+            key.map_or(Err("Invalid variant."), Ok)
+                .map_err(minicbor::decode::Error::Message)?,
+            match result {
+                Some(result) => Some(CoseSign1::from_bytes(result).map_err(|_| {
                     minicbor::decode::Error::Message("Invalid result type, expected CoseSign1.")
-                })?,
-            }),
-            (Some(4), None) => Ok(Self::Expired),
-            _ => Err(minicbor::decode::Error::Message(
-                "Invalid variant or result.",
-            )),
-        }
+                })?),
+                _ => None,
+            },
+        )
+        .map_err(|_| minicbor::decode::Error::Message("Invalid variant or result."))
     }
 }
 

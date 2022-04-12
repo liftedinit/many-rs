@@ -22,7 +22,7 @@ reexport_module!(
     base: _0_base;
     blockchain: _1_blockchain;
     ledger: _2_ledger + _4_ledger_transactions + _6_ledger_commands;
-    kvstore: _3_kvstore + _5_kvstore_commands;
+    kvstore: _3_kvstore + _7_kvstore_commands;
     r#async: _8_async;
     abci_backend: _1000_abci_backend;
     abci_frontend: _1001_abci_frontend;
