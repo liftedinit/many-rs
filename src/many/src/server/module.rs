@@ -5,24 +5,27 @@ use async_trait::async_trait;
 use std::fmt::Debug;
 
 macro_rules! reexport_module {
-    ( $( $name: ident = $rename: ident; )* ) => {
+    ( $( $rename: ident: $name: ident $(+ $more: ident)*; )* ) => {
         $(
             mod $name;
+            $(mod $more;)*
+
             pub mod $rename {
                 pub use super::$name::*;
+                $(pub use super::$more::*;)*
             }
         )*
     };
 }
 
 reexport_module!(
-    _0_base = base;
-    _1_blockchain = blockchain;
-    _2_ledger = ledger;
-    _3_kvstore = kvstore;
-    _4_ledger_transactions = ledger_transactions;
-    _1000_abci_backend = abci_backend;
-    _1001_abci_frontend = abci_frontend;
+    base: _0_base;
+    blockchain: _1_blockchain;
+    ledger: _2_ledger + _4_ledger_transactions + _6_ledger_commands;
+    kvstore: _3_kvstore + _5_kvstore_commands;
+    r#async: _8_async;
+    abci_backend: _1000_abci_backend;
+    abci_frontend: _1001_abci_frontend;
 );
 
 #[derive(Clone, Debug)]
