@@ -365,11 +365,11 @@ impl InnerIdentity {
     }
 
     pub fn from_str(value: &str) -> Result<Self, ManyError> {
-        if !value.starts_with('o') {
+        if !value.starts_with('m') {
             return Err(ManyError::invalid_identity_prefix(value[0..0].to_string()));
         }
 
-        if &value[1..] == "aa" {
+        if &value[1..] == "aa" || &value[1..] == "aaaa" {
             Ok(Self::anonymous())
         } else {
             let data = &value[..value.len() - 2][1..];
@@ -459,7 +459,7 @@ impl std::fmt::Display for InnerIdentity {
         let crc = crc.get_crc().to_be_bytes();
         write!(
             f,
-            "o{}{}",
+            "m{}{}",
             base32::encode(base32::Alphabet::RFC4648 { padding: false }, &data)
                 .to_ascii_lowercase(),
             base32::encode(base32::Alphabet::RFC4648 { padding: false }, &crc)

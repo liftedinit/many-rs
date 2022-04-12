@@ -106,7 +106,7 @@ many_error! {
      -100: InvalidIdentity as invalid_identity()
             => "Identity is invalid (does not follow the protocol).",
      -101: InvalidIdentityPrefix as invalid_identity_prefix(actual)
-            => "Identity string did not start with the right prefix. Expected 'o', was '{actual}'.",
+            => "Identity string did not start with the right prefix. Expected 'm', was '{actual}'.",
      -102: InvalidIdentityKind as invalid_identity_kind(actual)
             => r#"Identity kind "{actual}" was not recognized."#,
 
