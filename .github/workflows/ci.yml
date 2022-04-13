@@ -37,6 +37,11 @@ jobs:
         with:
           command: clippy
           args: --release --all-targets --all-features -- -D warnings
+      - name: Install grcov
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: grcov
       - name: Perform build (--release)
         uses: actions-rs/cargo@v1
         with:
@@ -57,11 +62,6 @@ jobs:
         run: |
           echo $PWD
           find .
-      - name: Install grcov
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: grcov
       - name: grcov
         shell: bash
         run: |
@@ -70,6 +70,6 @@ jobs:
         uses: zgosalvez/github-actions-report-lcov@v1
         with:
           coverage-files: coverage/report.lcov
-          minimum-coverage: 90
-          artifact-name: code-coverage-report
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          artifact-name: code-coverage-report
+#          minimum-coverage: 90
