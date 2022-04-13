@@ -365,11 +365,11 @@ impl InnerIdentity {
     }
 
     pub fn from_str(value: &str) -> Result<Self, ManyError> {
-        if !value.starts_with('o') {
+        if !value.starts_with('m') {
             return Err(ManyError::invalid_identity_prefix(value[0..0].to_string()));
         }
 
-        if &value[1..] == "aa" {
+        if &value[1..] == "aa" || &value[1..] == "aaaa" {
             Ok(Self::anonymous())
         } else {
             let data = &value[..value.len() - 2][1..];
@@ -459,7 +459,7 @@ impl std::fmt::Display for InnerIdentity {
         let crc = crc.get_crc().to_be_bytes();
         write!(
             f,
-            "o{}{}",
+            "m{}{}",
             base32::encode(base32::Alphabet::RFC4648 { padding: false }, &data)
                 .to_ascii_lowercase(),
             base32::encode(base32::Alphabet::RFC4648 { padding: false }, &crc)
@@ -611,7 +611,7 @@ pub mod tests {
 
     #[test]
     fn textual_format_1() {
-        let a = Identity::from_str("oahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys").unwrap();
+        let a = Identity::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys").unwrap();
         let b = Identity::from_bytes(
             &hex::decode("01c8aead03f915f128f0fa7ff696c656eaa93db87bd9aa73df693acb22").unwrap(),
         )
@@ -623,7 +623,7 @@ pub mod tests {
     #[test]
     fn textual_format_2() {
         let a =
-            Identity::from_str("oqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap();
+            Identity::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap();
         let b = Identity::from_bytes(
             &hex::decode("804a101d521d810211a0c6346ba89bd1cc1f821c03b969ff9d5c8b2f59000001")
                 .unwrap(),
@@ -635,7 +635,7 @@ pub mod tests {
 
     #[test]
     fn subresource_1() {
-        let a = Identity::from_str("oahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys")
+        let a = Identity::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys")
             .unwrap()
             .with_subresource_id(1);
         let b = Identity::from_bytes(
@@ -671,7 +671,7 @@ pub mod tests {
         let id = CoseKeyIdentity::from_pem(pem).unwrap();
         assert_eq!(
             id.identity,
-            "oaffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
+            "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
         );
     }
 }
