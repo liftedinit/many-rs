@@ -48,7 +48,7 @@ jobs:
           PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
           SOFTHSM2_CONF: /tmp/softhsm2.conf
           RUSTFLAGS: "-C instrument-coverage"
-          LLVM_PROFILE_FILE: "$PWD/coverage/lcov-%p-%m.profraw"
+          LLVM_PROFILE_FILE: "coverage/lcov-%p-%m.profraw"
         with:
           command: test
           args: --all-targets --all-features
