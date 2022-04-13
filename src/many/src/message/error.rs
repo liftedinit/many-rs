@@ -71,8 +71,12 @@ macro_rules! many_error {
                             $( (stringify!($arg).to_string(), $arg) ),*
                         ]),
                     };
-                    tracing::trace!("{}", s);
-                    tracing::trace!("Backtrace:\n{:?}", backtrace::Backtrace::new());
+
+                    #[cfg(feature = "trace_error_creation")] {
+                        tracing::trace!("{}", s);
+                        tracing::trace!("Backtrace:\n{:?}", backtrace::Backtrace::new());
+                    }
+
                     s
                 }
             )?)*
