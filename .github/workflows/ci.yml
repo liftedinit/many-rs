@@ -26,7 +26,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          components: clippy, rustfmt
+          components: clippy, rustfmt, llvm-tools-preview
       - name: Check code formatting
         uses: actions-rs/cargo@v1
         with:
@@ -47,7 +47,16 @@ jobs:
         env:
           PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
           SOFTHSM2_CONF: /tmp/softhsm2.conf
+          RUSTFLAGS: "-C instrument-coverage"
+          LLVM_PROFILE_FILE: "$PWD/coverage/lcov-%p-%m.profraw"
         with:
           command: test
           args: --all-targets --all-features
 
+      - name: Report code coverage
+        uses: zgosalvez/github-actions-report-lcov@v1
+        with:
+          coverage-files: coverage/lcov-*
+          minimum-coverage: 90
+          artifact-name: code-coverage-report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
