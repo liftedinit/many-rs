@@ -2,16 +2,10 @@ use crate::{define_attribute_many_error, Identity, ManyError};
 use many_macros::many_module;
 
 mod balance;
-mod burn;
 mod info;
-mod mint;
-mod send;
 
 pub use balance::*;
-pub use burn::*;
 pub use info::*;
-pub use mint::*;
-pub use send::*;
 
 define_attribute_many_error!(
     attribute 2 => {
@@ -28,7 +22,4 @@ define_attribute_many_error!(
 pub trait LedgerModuleBackend: Send {
     fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturns, ManyError>;
     fn balance(&self, sender: &Identity, args: BalanceArgs) -> Result<BalanceReturns, ManyError>;
-    fn mint(&mut self, sender: &Identity, args: MintArgs) -> Result<(), ManyError>;
-    fn burn(&mut self, sender: &Identity, args: BurnArgs) -> Result<(), ManyError>;
-    fn send(&mut self, sender: &Identity, args: SendArgs) -> Result<(), ManyError>;
 }

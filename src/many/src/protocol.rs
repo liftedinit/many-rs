@@ -6,6 +6,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 
 pub mod attributes;
+pub use attributes::AttributeSet;
 
 pub type AttributeId = u32;
 
