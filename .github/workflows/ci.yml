@@ -61,14 +61,8 @@ jobs:
         shell: bash
         run: |
           ./target/bin/grcov src --binary-path target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./coverage/report.lcov
-      - name: Report code coverage
-        uses: zgosalvez/github-actions-report-lcov@v1
-        with:
-          coverage-files: coverage/report.lcov
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          artifact-name: code-coverage-report
       - name: Code Coverage Report (romeovs)
-        uses: l-1-labs/lcov-reporter-action@fba33148a1db18781ae2d2259125058902138c22
+        uses: l-1-labs/lcov-reporter-action@42bb0ed0a6ad2c356b0cddb541cc6114f93ae6dc
         with:
           lcov-file: ./coverage/report.lcov
           title: Code Coverage Report
