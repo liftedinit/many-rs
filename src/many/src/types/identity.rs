@@ -84,7 +84,6 @@ impl Identity {
         self.0.to_byte_array()
     }
 
-    // TODO: Write a test for this. It was broken
     pub fn matches_key(&self, key: Option<&CoseKey>) -> bool {
         if self.is_anonymous() {
             key.is_none()
@@ -681,5 +680,16 @@ pub mod tests {
             id.identity,
             "mafdewutfd6c3killp3nhz3aqi36uv4mrbemvaggiy7axb2qoc"
         );
+    }
+
+    #[test]
+    fn matches_key() {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n\
+                         -----END PRIVATE KEY-----";
+
+        let id = CoseKeyIdentity::from_pem(pem).unwrap();
+
+        assert!(id.identity.matches_key(id.key.as_ref()));
     }
 }
