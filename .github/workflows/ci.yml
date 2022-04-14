@@ -65,7 +65,7 @@ jobs:
       - name: grcov
         shell: bash
         run: |
-          grcov . --binary-path target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./coverage/report.lcov
+          grcov . --binary-path target/debug/ -s src -t lcov --branch --ignore-not-existing -o ./coverage/report.lcov
       - name: Report code coverage
         uses: zgosalvez/github-actions-report-lcov@v1
         with:
