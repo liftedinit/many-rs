@@ -1,7 +1,7 @@
 use crate::transport::{HandlerExecutorAdapter, LowLevelManyRequestHandler, ManyRequestHandler};
 use crate::types::identity::cose::CoseKeyIdentity;
 use anyhow::anyhow;
-use minicose::CoseSign1;
+use coset::{CborSerializable, CoseSign1};
 use std::fmt::Debug;
 use std::io::Cursor;
 use std::net::ToSocketAddrs;
@@ -30,7 +30,7 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
         match request.body_length() {
             Some(x) if x > READ_BUFFER_LEN => {
                 // This is a transport error, and as such an HTTP error.
-                return Response::empty(500).with_data(Cursor::new(vec![]), Some(0));
+                return Response::empty(500u16).with_data(Cursor::new(vec![]), Some(0));
             }
             _ => {}
         }
@@ -43,11 +43,11 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
         tracing::debug!("request  len={}", bytes.len());
         tracing::trace!("request  {}", hex::encode(bytes));
 
-        let envelope = match CoseSign1::from_bytes(bytes) {
+        let envelope = match CoseSign1::from_slice(bytes) {
             Ok(cs) => cs,
             Err(e) => {
                 tracing::debug!(r#"error description="{}""#, e.to_string());
-                return Response::empty(500).with_data(Cursor::new(vec![]), Some(0));
+                return Response::empty(500u16).with_data(Cursor::new(vec![]), Some(0));
             }
         };
 
@@ -55,11 +55,11 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
             .executor
             .execute(envelope)
             .await
-            .and_then(|r| r.to_bytes().map_err(|e| e.to_string()));
+            .and_then(|r| r.to_vec().map_err(|e| e.to_string()));
         let bytes = match response {
             Ok(bytes) => bytes,
             Err(_e) => {
-                return Response::empty(500).with_data(Cursor::new(vec![]), Some(0));
+                return Response::empty(500u16).with_data(Cursor::new(vec![]), Some(0));
             }
         };
         tracing::debug!("response len={}", bytes.len());

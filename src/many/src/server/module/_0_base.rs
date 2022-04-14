@@ -1,13 +1,14 @@
 use crate::cbor::CborAny;
+use crate::cose_helpers::public_key;
 use crate::protocol::attributes::AttributeSet;
 use crate::types::VecOrSingle;
 use crate::{Identity, ManyError};
+use coset::{CoseKey, CborSerializable};
 use derive_builder::Builder;
 use many_macros::many_module;
 use minicbor::data::Type;
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
-use minicose::CoseKey;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Debug, Decode, Encode)]
@@ -54,7 +55,7 @@ impl Encode for Status {
 
         if let Some(ref pk) = self.public_key {
             e.u8(2)?
-                .bytes(&pk.to_public_key().unwrap().to_bytes().unwrap())?;
+                .bytes(&public_key(pk).unwrap().to_vec().unwrap())?;
         }
 
         e.u8(3)?
@@ -95,7 +96,7 @@ impl<'b> Decode<'b> for Status {
                         1 => builder.name(d.decode()?),
                         2 => {
                             let bytes = d.bytes()?;
-                            let key: CoseKey = CoseKey::from_bytes(bytes).map_err(|_e| {
+                            let key: CoseKey = CoseKey::from_slice(bytes).map_err(|_e| {
                                 minicbor::decode::Error::Message("Invalid cose key.")
                             })?;
                             builder.public_key(key)

@@ -1,3 +1,4 @@
+use coset::{CborSerializable, CoseSign1};
 use many::message::{
     decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
     RequestMessageBuilder, ResponseMessage,
@@ -6,7 +7,6 @@ use many::server::module::base::Status;
 use many::types::identity::CoseKeyIdentity;
 use many::{Identity, ManyError};
 use minicbor::Encode;
-use minicose::CoseSign1;
 use reqwest::{IntoUrl, Url};
 use std::fmt::Formatter;
 
@@ -38,7 +38,7 @@ impl ManyClient {
 
     pub fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<CoseSign1, ManyError> {
         let bytes = message
-            .to_bytes()
+            .to_vec()
             .map_err(|_| ManyError::internal_server_error())?;
 
         let client = reqwest::blocking::Client::new();
@@ -50,7 +50,7 @@ impl ManyClient {
         let body = response.bytes().unwrap();
         let bytes = body.to_vec();
         tracing::debug!("reply\n{}", hex::encode(&bytes));
-        CoseSign1::from_bytes(&bytes).map_err(|e| ManyError::deserialization_error(e.to_string()))
+        CoseSign1::from_slice(&bytes).map_err(|e| ManyError::deserialization_error(e.to_string()))
     }
 
     pub fn send_message(&self, message: RequestMessage) -> Result<ResponseMessage, ManyError> {

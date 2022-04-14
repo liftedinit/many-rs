@@ -1,4 +1,5 @@
 use clap::{ArgGroup, Parser};
+use coset::CborSerializable;
 use many::hsm::{HSMMechanismType, HSMSessionType, HSMUserType, HSM};
 use many::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
 use many::server::module::ledger;
@@ -297,7 +298,7 @@ fn main() {
                     .unwrap();
 
                 let cose = encode_cose_sign1_from_request(message, &key).unwrap();
-                let bytes = cose.to_bytes().unwrap();
+                let bytes = cose.to_vec().unwrap();
                 if o.hex {
                     println!("{}", hex::encode(&bytes));
                 } else if o.base64 {
