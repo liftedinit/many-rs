@@ -50,7 +50,8 @@ impl ManyClient {
         let body = response.bytes().unwrap();
         let bytes = body.to_vec();
         tracing::debug!("reply\n{}", hex::encode(&bytes));
-        CoseSign1::from_tagged_slice(&bytes).map_err(|e| ManyError::deserialization_error(e.to_string()))
+        CoseSign1::from_tagged_slice(&bytes)
+            .map_err(|e| ManyError::deserialization_error(e.to_string()))
     }
 
     pub fn send_message(&self, message: RequestMessage) -> Result<ResponseMessage, ManyError> {
