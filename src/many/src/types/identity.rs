@@ -585,6 +585,24 @@ pub mod tests {
         Identity::from_bytes(&bytes).unwrap()
     }
 
+    fn eddsa_identity() -> CoseKeyIdentity {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n\
+                         -----END PRIVATE KEY-----";
+
+        CoseKeyIdentity::from_pem(pem).unwrap()
+    }
+
+    fn ecdsa_identity() -> CoseKeyIdentity {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgNsLo2hVPeUZEOPCw\n\
+                         lLQbhLpwjUbt9BHXKCFMY0i+Wm6hRANCAATyM3MzaNX4ELK6bzqgNC/ODvGOUd60\n\
+                         7A4yltVQLNKUxtTywYy2MIPV8ls1BlUp40zYmQfxCL3VANvZ62ofaMPv\n\
+                         -----END PRIVATE KEY-----";
+
+        CoseKeyIdentity::from_pem(pem).unwrap()
+    }
+
     #[test]
     fn can_read_anonymous() {
         let a = Identity::anonymous();
@@ -656,11 +674,7 @@ pub mod tests {
 
     #[test]
     fn from_pem_eddsa() {
-        let pem = "-----BEGIN PRIVATE KEY-----\n\
-                         MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n\
-                         -----END PRIVATE KEY-----";
-
-        let id = CoseKeyIdentity::from_pem(pem).unwrap();
+        let id = eddsa_identity();
         assert_eq!(
             id.identity,
             "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
@@ -669,13 +683,7 @@ pub mod tests {
 
     #[test]
     fn from_pem_ecdsa() {
-        let pem = "-----BEGIN PRIVATE KEY-----\n\
-                         MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgNsLo2hVPeUZEOPCw\n\
-                         lLQbhLpwjUbt9BHXKCFMY0i+Wm6hRANCAATyM3MzaNX4ELK6bzqgNC/ODvGOUd60\n\
-                         7A4yltVQLNKUxtTywYy2MIPV8ls1BlUp40zYmQfxCL3VANvZ62ofaMPv\n\
-                         -----END PRIVATE KEY-----";
-
-        let id = CoseKeyIdentity::from_pem(pem).unwrap();
+        let id = ecdsa_identity();
         assert_eq!(
             id.identity,
             "mafdewutfd6c3killp3nhz3aqi36uv4mrbemvaggiy7axb2qoc"
@@ -684,12 +692,7 @@ pub mod tests {
 
     #[test]
     fn matches_key() {
-        let pem = "-----BEGIN PRIVATE KEY-----\n\
-                         MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n\
-                         -----END PRIVATE KEY-----";
-
-        let id = CoseKeyIdentity::from_pem(pem).unwrap();
-
+        let id = eddsa_identity();
         assert!(id.identity.matches_key(id.key.as_ref()));
     }
 }
