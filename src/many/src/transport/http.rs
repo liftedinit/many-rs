@@ -1,7 +1,7 @@
 use crate::transport::{HandlerExecutorAdapter, LowLevelManyRequestHandler, ManyRequestHandler};
 use crate::types::identity::cose::CoseKeyIdentity;
 use anyhow::anyhow;
-use coset::{CborSerializable, CoseSign1};
+use coset::{CoseSign1, TaggedCborSerializable};
 use std::fmt::Debug;
 use std::io::Cursor;
 use std::net::ToSocketAddrs;
@@ -43,7 +43,7 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
         tracing::debug!("request  len={}", bytes.len());
         tracing::trace!("request  {}", hex::encode(bytes));
 
-        let envelope = match CoseSign1::from_slice(bytes) {
+        let envelope = match CoseSign1::from_tagged_slice(bytes) {
             Ok(cs) => cs,
             Err(e) => {
                 tracing::debug!(r#"error description="{}""#, e.to_string());
@@ -55,7 +55,7 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
             .executor
             .execute(envelope)
             .await
-            .and_then(|r| r.to_vec().map_err(|e| e.to_string()));
+            .and_then(|r| r.to_tagged_vec().map_err(|e| e.to_string()));
         let bytes = match response {
             Ok(bytes) => bytes,
             Err(_e) => {
