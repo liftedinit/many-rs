@@ -41,7 +41,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: grcov -- --force
+          args: --force grcov
       - name: Perform build (--release)
         uses: actions-rs/cargo@v1
         with:
