@@ -43,6 +43,7 @@ jobs:
           command: install
           args: grcov
       - name: Perform build (--release)
+        if: always()
         uses: actions-rs/cargo@v1
         with:
           command: build
