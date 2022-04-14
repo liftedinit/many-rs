@@ -22,7 +22,7 @@ pub fn public_key(key: &CoseKey) -> Result<CoseKey, String> {
                     )]),
                     params: vec![
                         (
-                            Label::Int(coset::iana::Ec2KeyParameter::Crv as i64),
+                            Label::Int(coset::iana::OkpKeyParameter::Crv as i64),
                             Value::from(coset::iana::EllipticCurve::Ed25519 as u64),
                         ),
                         (

@@ -134,7 +134,7 @@ impl CoseKeyIdentity {
                 ]),
                 params: vec![
                     (
-                        Label::Int(coset::iana::Ec2KeyParameter::Crv as i64),
+                        Label::Int(coset::iana::OkpKeyParameter::Crv as i64),
                         Value::from(coset::iana::EllipticCurve::Ed25519 as u64),
                     ),
                     (
@@ -142,7 +142,7 @@ impl CoseKeyIdentity {
                         Value::Bytes(keypair.public.to_bytes().to_vec()),
                     ),
                     (
-                        Label::Int(coset::iana::Ec2KeyParameter::D as i64),
+                        Label::Int(coset::iana::OkpKeyParameter::D as i64),
                         Value::Bytes(keypair.secret.to_bytes().to_vec()),
                     ),
                 ],
