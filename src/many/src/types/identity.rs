@@ -566,7 +566,7 @@ mod serde {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::types::identity::CoseKeyIdentity;
+    use crate::types::identity::cose::tests::{ecdsa_256_identity, eddsa_identity};
     use crate::Identity;
     use std::str::FromStr;
 
@@ -583,24 +583,6 @@ pub mod tests {
             (seed >> 24) as u8, (seed >> 16) as u8, (seed >> 8) as u8, (seed & 0xFF) as u8
         ];
         Identity::from_bytes(&bytes).unwrap()
-    }
-
-    fn eddsa_identity() -> CoseKeyIdentity {
-        let pem = "-----BEGIN PRIVATE KEY-----\n\
-                         MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n\
-                         -----END PRIVATE KEY-----";
-
-        CoseKeyIdentity::from_pem(pem).unwrap()
-    }
-
-    fn ecdsa_identity() -> CoseKeyIdentity {
-        let pem = "-----BEGIN PRIVATE KEY-----\n\
-                         MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgNsLo2hVPeUZEOPCw\n\
-                         lLQbhLpwjUbt9BHXKCFMY0i+Wm6hRANCAATyM3MzaNX4ELK6bzqgNC/ODvGOUd60\n\
-                         7A4yltVQLNKUxtTywYy2MIPV8ls1BlUp40zYmQfxCL3VANvZ62ofaMPv\n\
-                         -----END PRIVATE KEY-----";
-
-        CoseKeyIdentity::from_pem(pem).unwrap()
     }
 
     #[test]
@@ -683,7 +665,7 @@ pub mod tests {
 
     #[test]
     fn from_pem_ecdsa() {
-        let id = ecdsa_identity();
+        let id = ecdsa_256_identity();
         assert_eq!(
             id.identity,
             "mafdewutfd6c3killp3nhz3aqi36uv4mrbemvaggiy7axb2qoc"

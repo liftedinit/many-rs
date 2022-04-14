@@ -363,3 +363,71 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    // MSG == FOOBAR
+    const MSG: &[u8] = &[70, 79, 79, 66, 65, 82];
+
+    pub fn eddsa_identity() -> CoseKeyIdentity {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n\
+                         -----END PRIVATE KEY-----";
+
+        CoseKeyIdentity::from_pem(pem).unwrap()
+    }
+
+    pub fn ecdsa_256_identity() -> CoseKeyIdentity {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgNsLo2hVPeUZEOPCw\n\
+                         lLQbhLpwjUbt9BHXKCFMY0i+Wm6hRANCAATyM3MzaNX4ELK6bzqgNC/ODvGOUd60\n\
+                         7A4yltVQLNKUxtTywYy2MIPV8ls1BlUp40zYmQfxCL3VANvZ62ofaMPv\n\
+                         -----END PRIVATE KEY-----";
+
+        CoseKeyIdentity::from_pem(pem).unwrap()
+    }
+
+    #[test]
+    fn ecdsa_256_sign_verify() -> Result<(), Error> {
+        let id = ecdsa_256_identity();
+
+        let signature = id.sign(MSG);
+        id.verify(MSG, &signature)
+    }
+
+    #[test]
+    fn eddsa_256_sign_verify() -> Result<(), Error> {
+        let id = eddsa_identity();
+
+        let signature = id.sign(MSG);
+        id.verify(MSG, &signature)
+    }
+
+    #[test]
+    #[should_panic]
+    fn fail_ecdsa_512() {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIB2zGGfgHhqK9J8Eug\n\
+                         Sb5pnwnRA3OZ5Ks4eXEJJOeqeZu+8vYZbNuK9IY78JcmAI+syc3at1eVPtcAtTUr\n\
+                         qSTAkIehgYkDgYYABABVfJDnPyVOY0N1shZaB5kBPM6JcEb3BZRT8MR4qBp0zXwM\n\
+                         pyh7pdD9wxqsCYQVxl9FbiJSQZXzZTwmXsmTzO8X5AAS52WLB+7Ch+ddQW5UEqj6\n\
+                         Tptw8tbMJhJlD4IH7SDevF+gNetMicMQ1fIFyfCbaK0xxVoLwKJvtp7MIV46IZMC\n\
+                         aA==\n\
+                         -----END PRIVATE KEY-----";
+        CoseKeyIdentity::from_pem(pem).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn fail_ecdsa_384() {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDAo/RAjCOzB1SklJw3K\n\
+                         ASQqyjtuVQv7hruJgoy7EotHqD7kFS8c9dyOuoaNyx0V9HChZANiAAQil9Mt9nV4\n\
+                         LDxECgIOQvJJd3UcP1d2rTcBY8XMQDl51gLCvCp9c3v1tz9I/hRCEQcH/d96mNHn\n\
+                         SigsOU15Tt1NMHHgrucDBMeDrMZ+uUIDdZbfpvvh0gCtvmvvH5FLs/Y=\n\
+                         -----END PRIVATE KEY-----";
+        CoseKeyIdentity::from_pem(pem).unwrap();
+    }
+}
