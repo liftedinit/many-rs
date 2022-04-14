@@ -41,7 +41,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --force grcov
+          args: grcov --root target/
       - name: Perform build (--release)
         uses: actions-rs/cargo@v1
         with:
@@ -60,15 +60,17 @@ jobs:
       - name: grcov
         shell: bash
         run: |
-          grcov src --binary-path target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./coverage/report.lcov
-      - name: Code Coverage Report (romeovs)
-        uses: romeovs/lcov-reporter-action@v0.3.1
-        with:
-          lcov-file: coverage/report.lcov
+          ./target/bin/grcov src --binary-path target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./coverage/report.lcov
       - name: Report code coverage
         uses: zgosalvez/github-actions-report-lcov@v1
         with:
           coverage-files: coverage/report.lcov
           github-token: ${{ secrets.GITHUB_TOKEN }}
           artifact-name: code-coverage-report
-#          minimum-coverage: 90
+      - name: Code Coverage Report (romeovs)
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: ./coverage/report.lcov
+          title: Code Coverage Report
+          filter-changed-files: true
+          delete-old-comments: true
