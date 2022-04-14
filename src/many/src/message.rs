@@ -2,8 +2,9 @@ pub mod error;
 pub mod request;
 pub mod response;
 
+use coset::cbor::value::Value;
 use coset::iana::Algorithm;
-use coset::AsCborValue;
+use coset::CborSerializable;
 use coset::CoseKeySet;
 use coset::CoseSign1;
 use coset::CoseSign1Builder;
@@ -91,7 +92,7 @@ fn encode_cose_sign1_from_payload(
 
         protected = protected.text_value(
             "keyset".to_string(),
-            keyset.to_cbor_value().map_err(|e| e.to_string())?,
+            Value::Bytes(keyset.to_vec().map_err(|e| e.to_string())?),
         );
     }
 
@@ -150,7 +151,12 @@ impl CoseSign1RequestMessage {
             .find(|(k, _)| k == &Label::Text("keyset".to_string()))?
             .1
             .clone();
-        CoseKeySet::from_cbor_value(keyset).ok()
+
+        if let Value::Bytes(ref bytes) = keyset {
+            CoseKeySet::from_slice(bytes).ok()
+        } else {
+            None
+        }
     }
 
     pub fn get_public_key_for_identity(&self, id: &Identity) -> Option<CoseKeyIdentity> {
