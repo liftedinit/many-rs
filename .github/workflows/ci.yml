@@ -68,7 +68,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           artifact-name: code-coverage-report
       - name: Code Coverage Report (romeovs)
-        uses: romeovs/lcov-reporter-action@v0.3.1
+        uses: romeovs/lcov-reporter-action@v0.2.19
         with:
           lcov-file: ./coverage/report.lcov
           title: Code Coverage Report
