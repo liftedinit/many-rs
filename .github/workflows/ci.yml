@@ -61,7 +61,7 @@ jobs:
         shell: bash
         run: |
           ./target/bin/grcov src --binary-path target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./coverage/report.lcov
-      - name: Code Coverage Report (romeovs)
+      - name: Code Coverage Report
         uses: l-1-labs/lcov-reporter-action@42bb0ed0a6ad2c356b0cddb541cc6114f93ae6dc
         with:
           lcov-file: ./coverage/report.lcov
