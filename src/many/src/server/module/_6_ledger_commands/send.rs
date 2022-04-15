@@ -2,7 +2,7 @@ use crate::types::ledger;
 use crate::Identity;
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Debug, Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct SendArgs {
     #[n(0)]

@@ -1,8 +1,9 @@
+use crate::cose_helpers::public_key;
 use crate::message::ManyError;
+use coset::{CborSerializable, CoseKey};
 use minicbor::data::Type;
 use minicbor::encode::Write;
 use minicbor::{Decode, Decoder, Encode, Encoder};
-use minicose::CoseKey;
 use serde::Deserialize;
 use sha3::digest::generic_array::typenum::Unsigned;
 use sha3::{Digest, Sha3_224};
@@ -32,12 +33,12 @@ impl Identity {
     }
 
     pub fn public_key(key: &CoseKey) -> Self {
-        let pk = Sha3_224::digest(&key.to_public_key().unwrap().to_bytes_stable().unwrap());
+        let pk = Sha3_224::digest(&public_key(key).unwrap().to_vec().unwrap());
         Self(InnerIdentity::public_key(pk.into()))
     }
 
     pub fn subresource(key: &CoseKey, subid: u32) -> Self {
-        let pk = Sha3_224::digest(&key.to_public_key().unwrap().to_bytes_stable().unwrap());
+        let pk = Sha3_224::digest(&public_key(key).unwrap().to_vec().unwrap());
         Self(InnerIdentity::subresource(pk.into(), subid))
     }
 
@@ -88,12 +89,12 @@ impl Identity {
             key.is_none()
         } else if self.is_public_key() || self.is_subresource() {
             if let Some(cose_key) = key {
-                let key_hash: [u8; SHA_OUTPUT_SIZE] =
-                    Sha3_224::digest(&cose_key.to_public_key().unwrap().to_bytes_stable().unwrap())
-                        .into();
+                let key_hash: PublicKeyHash =
+                    Sha3_224::digest(&public_key(cose_key).unwrap().to_vec().unwrap()).into();
 
                 self.0
-                    .bytes
+                    .hash()
+                    .unwrap() // TODO: CAN THIS FAIL?
                     .iter()
                     .zip(key_hash.iter())
                     .all(|(a, b)| a == b)
@@ -365,11 +366,11 @@ impl InnerIdentity {
     }
 
     pub fn from_str(value: &str) -> Result<Self, ManyError> {
-        if !value.starts_with('o') {
+        if !value.starts_with('m') {
             return Err(ManyError::invalid_identity_prefix(value[0..0].to_string()));
         }
 
-        if &value[1..] == "aa" {
+        if &value[1..] == "aa" || &value[1..] == "aaaa" {
             Ok(Self::anonymous())
         } else {
             let data = &value[..value.len() - 2][1..];
@@ -459,7 +460,7 @@ impl std::fmt::Display for InnerIdentity {
         let crc = crc.get_crc().to_be_bytes();
         write!(
             f,
-            "o{}{}",
+            "m{}{}",
             base32::encode(base32::Alphabet::RFC4648 { padding: false }, &data)
                 .to_ascii_lowercase(),
             base32::encode(base32::Alphabet::RFC4648 { padding: false }, &crc)
@@ -565,7 +566,7 @@ mod serde {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::types::identity::CoseKeyIdentity;
+    use crate::types::identity::cose::tests::{ecdsa_256_identity, eddsa_identity};
     use crate::Identity;
     use std::str::FromStr;
 
@@ -611,7 +612,7 @@ pub mod tests {
 
     #[test]
     fn textual_format_1() {
-        let a = Identity::from_str("oahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys").unwrap();
+        let a = Identity::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys").unwrap();
         let b = Identity::from_bytes(
             &hex::decode("01c8aead03f915f128f0fa7ff696c656eaa93db87bd9aa73df693acb22").unwrap(),
         )
@@ -623,7 +624,7 @@ pub mod tests {
     #[test]
     fn textual_format_2() {
         let a =
-            Identity::from_str("oqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap();
+            Identity::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap();
         let b = Identity::from_bytes(
             &hex::decode("804a101d521d810211a0c6346ba89bd1cc1f821c03b969ff9d5c8b2f59000001")
                 .unwrap(),
@@ -635,7 +636,7 @@ pub mod tests {
 
     #[test]
     fn subresource_1() {
-        let a = Identity::from_str("oahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys")
+        let a = Identity::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys")
             .unwrap()
             .with_subresource_id(1);
         let b = Identity::from_bytes(
@@ -654,24 +655,26 @@ pub mod tests {
     }
 
     #[test]
-    fn from_pem() {
-        let pem = concat!(
-            "-----",
-            "BEGIN ",
-            "PRIVATE ",
-            "KEY",
-            "-----\n",
-            "MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n",
-            "-----",
-            "END ",
-            "PRIVATE ",
-            "KEY-----"
-        );
-
-        let id = CoseKeyIdentity::from_pem(pem).unwrap();
+    fn from_pem_eddsa() {
+        let id = eddsa_identity();
         assert_eq!(
             id.identity,
-            "oaffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
+            "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
         );
+    }
+
+    #[test]
+    fn from_pem_ecdsa() {
+        let id = ecdsa_256_identity();
+        assert_eq!(
+            id.identity,
+            "mafdewutfd6c3killp3nhz3aqi36uv4mrbemvaggiy7axb2qoc"
+        );
+    }
+
+    #[test]
+    fn matches_key() {
+        let id = eddsa_identity();
+        assert!(id.identity.matches_key(id.key.as_ref()));
     }
 }

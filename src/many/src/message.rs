@@ -2,18 +2,23 @@ pub mod error;
 pub mod request;
 pub mod response;
 
+use coset::cbor::value::Value;
+use coset::iana::Algorithm;
+use coset::CborSerializable;
+use coset::CoseKeySet;
+use coset::CoseSign1;
+use coset::CoseSign1Builder;
+use coset::HeaderBuilder;
+use coset::Label;
 pub use error::ManyError;
 pub use request::RequestMessage;
 pub use request::RequestMessageBuilder;
 pub use response::ResponseMessage;
 pub use response::ResponseMessageBuilder;
 
+use crate::cose_helpers::public_key;
 use crate::types::identity::cose::{CoseKeyIdentity, CoseKeyIdentitySignature};
 use crate::Identity;
-use minicose::exports::ciborium::value::Value;
-use minicose::{
-    Algorithm, CoseKeySet, CoseSign1, CoseSign1Builder, HeadersFields, ProtectedHeaders,
-};
 use signature::{Signature, Signer, Verifier};
 use tracing::error;
 
@@ -74,39 +79,40 @@ fn encode_cose_sign1_from_payload(
     payload: Vec<u8>,
     cose_key: &CoseKeyIdentity,
 ) -> Result<CoseSign1, String> {
-    let mut protected: ProtectedHeaders = ProtectedHeaders::default();
-
-    protected
-        .set(HeadersFields::Alg as i128, Algorithm::EDDSA as i128)
-        .set(HeadersFields::Kid as i128, cose_key.identity.to_vec());
+    let mut protected = HeaderBuilder::new()
+        .algorithm(Algorithm::EdDSA)
+        .key_id(cose_key.identity.to_vec());
 
     // Add the keyset to the headers.
     if let Some(key) = cose_key.key.as_ref() {
         let mut keyset = CoseKeySet::default();
-        let mut key_public = key.to_public_key()?;
-        key_public.kid = Some(cose_key.identity.to_vec());
-        keyset.insert(key_public);
+        let mut key_public = public_key(key)?;
+        key_public.key_id = cose_key.identity.to_vec();
+        keyset.0.push(key_public);
 
-        let ks_bytes = keyset.to_bytes().map_err(|e| e).unwrap();
-        protected.set("keyset".to_string(), ks_bytes);
+        protected = protected.text_value(
+            "keyset".to_string(),
+            Value::Bytes(keyset.to_vec().map_err(|e| e.to_string())?),
+        );
     }
 
-    let mut cose: CoseSign1 = CoseSign1Builder::default()
+    let protected = protected.build();
+
+    let mut cose_builder = CoseSign1Builder::default()
         .protected(protected)
-        .payload(payload)
-        .build()
-        .unwrap();
+        .payload(payload);
 
     if cose_key.key.is_some() {
-        cose.sign_with(|bytes| {
-            cose_key
-                .try_sign(bytes)
-                .map(|v| v.as_bytes().to_vec())
-                .map_err(|e| e.to_string())
-        })
-        .map_err(|e| e.to_string())?;
+        cose_builder = cose_builder
+            .try_create_signature(b"", |msg| {
+                cose_key
+                    .try_sign(msg)
+                    .map(|v| v.as_bytes().to_vec())
+                    .map_err(|e| e.to_string())
+            })
+            .map_err(|e| e)?;
     }
-    Ok(cose)
+    Ok(cose_builder.build())
 }
 
 pub fn encode_cose_sign1_from_response(
@@ -136,10 +142,18 @@ pub(crate) struct CoseSign1RequestMessage {
 
 impl CoseSign1RequestMessage {
     pub fn get_keyset(&self) -> Option<CoseKeySet> {
-        let keyset = self.sign1.protected.get("keyset".to_string())?;
+        let keyset = self
+            .sign1
+            .protected
+            .header
+            .rest
+            .iter()
+            .find(|(k, _)| k == &Label::Text("keyset".to_string()))?
+            .1
+            .clone();
 
         if let Value::Bytes(ref bytes) = keyset {
-            CoseKeySet::from_bytes(bytes).ok()
+            CoseKeySet::from_slice(bytes).ok()
         } else {
             None
         }
@@ -151,8 +165,12 @@ impl CoseSign1RequestMessage {
             return None;
         }
 
-        // Find the key_bytes.
-        let cose_key = self.get_keyset()?.get_kid(&id.to_vec()).cloned()?;
+        let cose_key = self
+            .get_keyset()?
+            .0
+            .into_iter()
+            .find(|key| id.matches_key(Some(key)))?; // TODO: We might want to optimize this for lookup?
+
         // The hsm: false parameter is not important here. We always perform
         // signature verification on the CPU server-side
         let key = CoseKeyIdentity::from_key(cose_key, false).ok()?;
@@ -164,8 +182,8 @@ impl CoseSign1RequestMessage {
     }
 
     pub fn verify(&self) -> Result<Identity, String> {
-        if let Some(kid) = self.sign1.protected.kid() {
-            if let Ok(id) = Identity::from_bytes(kid) {
+        if !self.sign1.protected.header.key_id.is_empty() {
+            if let Ok(id) = Identity::from_bytes(&self.sign1.protected.header.key_id) {
                 if id.is_anonymous() {
                     return Ok(id);
                 }
@@ -174,37 +192,21 @@ impl CoseSign1RequestMessage {
                     .ok_or_else(|| "Could not find a public key in the envelope".to_string())
                     .and_then(|key| {
                         self.sign1
-                            .verify_with(|content, sig| {
+                            .verify_signature(b"", |sig, content| {
                                 let sig = CoseKeyIdentitySignature::from_bytes(sig).unwrap();
-                                let result = key.verify(content, &sig);
-                                match result {
-                                    Ok(()) => true,
-                                    Err(e) => {
-                                        error!("Error from verify: {}", e);
-                                        false
-                                    }
-                                }
+                                key.verify(content, &sig)
                             })
-                            .map_err(|e| e.to_string())
-                    })
-                    .and_then(|valid| {
-                        if !valid {
-                            Err("Envelope does not verify.".to_string())
-                        } else {
-                            Ok(id)
-                        }
+                            .map_err(|e| e.to_string())?;
+                        Ok(id)
                     })
             } else {
                 Err("Invalid (not a MANY identity) key ID".to_string())
             }
         } else {
-            if let Some(s) = &self.sign1.signature {
-                if s.is_empty() {
-                    return Ok(Identity::anonymous());
-                }
-            } else if self.sign1.signature.is_none() {
+            if self.sign1.signature.is_empty() {
                 return Ok(Identity::anonymous());
             }
+
             Err("Missing key ID".to_string())
         }
     }

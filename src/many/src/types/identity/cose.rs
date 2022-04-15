@@ -1,13 +1,15 @@
+use crate::cose_helpers::public_key;
 use crate::hsm::{HSMMechanism, HSMMechanismType, HSM};
 use crate::Identity;
+use coset::cbor::value::Value;
+use coset::iana::{self, Ec2KeyParameter, EnumI64, OkpKeyParameter};
+use coset::{Algorithm, CoseKey, KeyOperation, KeyType, Label};
 use ed25519_dalek::PublicKey;
-use minicose::{
-    Algorithm, CoseKey, EcDsaCoseKey, EcDsaCoseKeyBuilder, Ed25519CoseKey, Ed25519CoseKeyBuilder,
-};
 use p256::pkcs8::FromPrivateKey;
 use pkcs8::der::Document;
 use sha2::Digest;
 use signature::{Error, Signature, Signer, Verifier};
+use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
 use std::fmt::{Debug, Formatter};
 use tracing::{error, trace};
@@ -41,7 +43,7 @@ impl Signature for CoseKeyIdentitySignature {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CoseKeyIdentity {
     pub identity: Identity,
     pub key: Option<CoseKey>,
@@ -86,12 +88,23 @@ impl CoseKeyIdentity {
         trace!("Creating NIST P-256 SEC1 encoded point");
         let points = p256::EncodedPoint::from_bytes(raw_points).map_err(|e| e.to_string())?;
 
-        let cose_key: CoseKey = EcDsaCoseKeyBuilder::default()
-            .x(points.x().unwrap().to_vec())
-            .y(points.y().unwrap().to_vec())
-            .build()
-            .expect("Unable to build EcDsaCoseKey")
-            .into();
+        let cose_key = CoseKey {
+            kty: KeyType::Assigned(coset::iana::KeyType::EC2),
+            alg: Some(Algorithm::Assigned(coset::iana::Algorithm::ES256)),
+            key_ops: BTreeSet::from([KeyOperation::Assigned(coset::iana::KeyOperation::Verify)]),
+            params: vec![
+                (
+                    Label::Int(coset::iana::Ec2KeyParameter::X as i64),
+                    Value::Bytes(points.x().unwrap().to_vec()),
+                ),
+                (
+                    Label::Int(coset::iana::Ec2KeyParameter::Y as i64),
+                    Value::Bytes(points.y().unwrap().to_vec()),
+                ),
+            ],
+            ..Default::default()
+        };
+
         Self::from_key(cose_key, true)
     }
 
@@ -111,12 +124,30 @@ impl CoseKeyIdentity {
             };
             let keypair = ed25519_dalek::Keypair::from_bytes(&keypair.to_bytes()).unwrap();
 
-            let cose_key: CoseKey = Ed25519CoseKeyBuilder::default()
-                .x(keypair.public.to_bytes().to_vec())
-                .d(keypair.secret.to_bytes().to_vec())
-                .build()
-                .unwrap()
-                .into();
+            // The CoseKeyBuilder is too limited to be used here
+            let cose_key = CoseKey {
+                kty: KeyType::Assigned(coset::iana::KeyType::OKP),
+                alg: Some(Algorithm::Assigned(coset::iana::Algorithm::EdDSA)),
+                key_ops: BTreeSet::from([
+                    KeyOperation::Assigned(coset::iana::KeyOperation::Sign),
+                    KeyOperation::Assigned(coset::iana::KeyOperation::Verify),
+                ]),
+                params: vec![
+                    (
+                        Label::Int(coset::iana::OkpKeyParameter::Crv as i64),
+                        Value::from(coset::iana::EllipticCurve::Ed25519 as u64),
+                    ),
+                    (
+                        Label::Int(coset::iana::OkpKeyParameter::X as i64),
+                        Value::Bytes(keypair.public.to_bytes().to_vec()),
+                    ),
+                    (
+                        Label::Int(coset::iana::OkpKeyParameter::D as i64),
+                        Value::Bytes(keypair.secret.to_bytes().to_vec()),
+                    ),
+                ],
+                ..Default::default()
+            };
 
             Self::from_key(cose_key, false)
         } else if decoded.algorithm.oid == pkcs8::ObjectIdentifier::new("1.2.840.10045.2.1") {
@@ -124,13 +155,31 @@ impl CoseKeyIdentity {
             let sk = p256::SecretKey::from_pkcs8_pem(pem).unwrap();
             let pk = sk.public_key();
             let points: p256::EncodedPoint = pk.into();
-            let cose_key: CoseKey = EcDsaCoseKeyBuilder::default()
-                .x(points.x().unwrap().to_vec())
-                .y(points.y().unwrap().to_vec())
-                .d(sk.to_bytes().to_vec())
-                .build()
-                .unwrap()
-                .into();
+
+            // The CoseKeyBuilder is too limited to be used here
+            let cose_key = CoseKey {
+                kty: KeyType::Assigned(coset::iana::KeyType::EC2),
+                alg: Some(Algorithm::Assigned(coset::iana::Algorithm::ES256)),
+                key_ops: BTreeSet::from([
+                    KeyOperation::Assigned(coset::iana::KeyOperation::Sign),
+                    KeyOperation::Assigned(coset::iana::KeyOperation::Verify),
+                ]),
+                params: vec![
+                    (
+                        Label::Int(coset::iana::Ec2KeyParameter::X as i64),
+                        Value::Bytes(points.x().unwrap().to_vec()),
+                    ),
+                    (
+                        Label::Int(coset::iana::Ec2KeyParameter::Y as i64),
+                        Value::Bytes(points.y().unwrap().to_vec()),
+                    ),
+                    (
+                        Label::Int(coset::iana::Ec2KeyParameter::D as i64),
+                        Value::Bytes(sk.to_bytes().to_vec()),
+                    ),
+                ],
+                ..Default::default()
+            };
 
             Self::from_key(cose_key, false)
         } else {
@@ -139,7 +188,7 @@ impl CoseKeyIdentity {
     }
 
     pub fn public_key(&self) -> Option<CoseKey> {
-        self.key.as_ref()?.to_public_key().ok()
+        public_key(self.key.as_ref()?).ok()
     }
 }
 
@@ -170,18 +219,23 @@ impl Verifier<CoseKeyIdentitySignature> for CoseKeyIdentity {
     fn verify(&self, msg: &[u8], signature: &CoseKeyIdentitySignature) -> Result<(), Error> {
         if let Some(cose_key) = self.key.as_ref() {
             match cose_key.alg {
-                Algorithm::None => Err(Error::new()),
-                Algorithm::ECDSA => {
-                    let key = EcDsaCoseKey::try_from(cose_key.clone()).map_err(|e| {
-                        error!("Deserializing ECDSA key failed: {}", e);
-                        Error::new()
-                    })?;
-                    let (x, y) = (key.x.ok_or_else(Error::new)?, key.y.ok_or_else(Error::new)?);
-                    let points = p256::EncodedPoint::from_affine_coordinates(
-                        x.as_slice().into(),
-                        y.as_slice().into(),
-                        false,
-                    );
+                None => Err(Error::new()),
+                Some(Algorithm::Assigned(coset::iana::Algorithm::ES256)) => {
+                    let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
+                    let x = params
+                        .get(&Label::Int(Ec2KeyParameter::X.to_i64()))
+                        .ok_or_else(Error::new)?
+                        .as_bytes()
+                        .ok_or_else(Error::new)?
+                        .as_slice();
+                    let y = params
+                        .get(&Label::Int(Ec2KeyParameter::Y.to_i64()))
+                        .ok_or_else(Error::new)?
+                        .as_bytes()
+                        .ok_or_else(Error::new)?
+                        .as_slice();
+                    let points =
+                        p256::EncodedPoint::from_affine_coordinates(x.into(), y.into(), false);
 
                     let verify_key =
                         p256::ecdsa::VerifyingKey::from_encoded_point(&points).unwrap();
@@ -191,14 +245,16 @@ impl Verifier<CoseKeyIdentitySignature> for CoseKeyIdentity {
                         Error::new()
                     })
                 }
-                Algorithm::EDDSA => {
-                    let key = Ed25519CoseKey::try_from(cose_key.clone()).map_err(|e| {
-                        error!("Deserializing Ed25519 key failed: {}", e);
-                        Error::new()
-                    })?;
-                    let x = key.x.ok_or_else(Error::new)?;
+                Some(Algorithm::Assigned(coset::iana::Algorithm::EdDSA)) => {
+                    let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
+                    let x = params
+                        .get(&Label::Int(OkpKeyParameter::X.to_i64()))
+                        .ok_or_else(Error::new)?;
 
-                    let public_key = ed25519_dalek::PublicKey::from_bytes(&x).map_err(|e| {
+                    let public_key = ed25519_dalek::PublicKey::from_bytes(
+                        x.as_bytes().ok_or_else(Error::new)?.as_slice(),
+                    )
+                    .map_err(|e| {
                         error!("Public key does not deserialize: {}", e);
                         Error::new()
                     })?;
@@ -209,6 +265,8 @@ impl Verifier<CoseKeyIdentitySignature> for CoseKeyIdentity {
                             Error::new()
                         })
                 }
+                // TODO: Raise a "Algorithm not supported" error
+                _ => Err(Error::new()),
             }
         } else {
             Err(Error::new())
@@ -220,8 +278,8 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
     fn try_sign(&self, msg: &[u8]) -> Result<CoseKeyIdentitySignature, Error> {
         if let Some(cose_key) = self.key.as_ref() {
             match cose_key.alg {
-                Algorithm::None => Err(Error::new()),
-                Algorithm::ECDSA => {
+                None => Err(Error::new()),
+                Some(Algorithm::Assigned(coset::iana::Algorithm::ES256)) => {
                     if self.hsm {
                         let hsm = HSM::get_instance().map_err(|e| {
                             error!("HSM mutex poisoned {}", e);
@@ -248,37 +306,128 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
 
                         CoseKeyIdentitySignature::from_bytes(signature.as_ref())
                     } else {
-                        let key =
-                            EcDsaCoseKey::try_from(cose_key.clone()).map_err(|_| Error::new())?;
-                        if !key.can_sign() {
+                        if !cose_key
+                            .key_ops
+                            .contains(&KeyOperation::Assigned(iana::KeyOperation::Sign))
+                        {
                             return Err(Error::new());
                         }
 
-                        let d = key.d.ok_or_else(Error::new)?;
+                        let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
+                        let d = params
+                            .get(&Label::Int(Ec2KeyParameter::D.to_i64()))
+                            .ok_or_else(Error::new)?
+                            .as_bytes()
+                            .ok_or_else(Error::new)?
+                            .as_slice();
+
                         let secret_key =
-                            p256::SecretKey::from_bytes(&d).map_err(|_| Error::new())?;
+                            p256::SecretKey::from_bytes(d).map_err(|_| Error::new())?;
                         let signing_key: p256::ecdsa::SigningKey = secret_key.into();
 
                         let signature: p256::ecdsa::Signature = signing_key.sign(msg);
                         CoseKeyIdentitySignature::from_bytes(signature.as_ref())
                     }
                 }
-                Algorithm::EDDSA => {
-                    let key =
-                        Ed25519CoseKey::try_from(cose_key.clone()).map_err(|_| Error::new())?;
-                    if !key.can_sign() {
+                Some(Algorithm::Assigned(coset::iana::Algorithm::EdDSA)) => {
+                    if !cose_key
+                        .key_ops
+                        .contains(&KeyOperation::Assigned(iana::KeyOperation::Sign))
+                    {
                         return Err(Error::new());
                     }
-                    let (x, d) = (key.x.ok_or_else(Error::new)?, key.d.ok_or_else(Error::new)?);
+                    let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
+                    let x = params
+                        .get(&Label::Int(OkpKeyParameter::X.to_i64()))
+                        .ok_or_else(Error::new)?
+                        .as_bytes()
+                        .ok_or_else(Error::new)?
+                        .as_slice();
+                    let d = params
+                        .get(&Label::Int(OkpKeyParameter::D.to_i64()))
+                        .ok_or_else(Error::new)?
+                        .as_bytes()
+                        .ok_or_else(Error::new)?
+                        .as_slice();
 
                     let kp = ed25519_dalek::Keypair::from_bytes(&vec![d, x].concat())
                         .map_err(Error::from_source)?;
                     let s = kp.sign(msg);
                     CoseKeyIdentitySignature::from_bytes(&s.to_bytes())
                 }
+                // TODO: Raise a "Algorithm not supported" error
+                _ => Err(Error::new()),
             }
         } else {
             Err(Error::new())
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    // MSG == FOOBAR
+    const MSG: &[u8] = &[70, 79, 79, 66, 65, 82];
+
+    pub fn eddsa_identity() -> CoseKeyIdentity {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n\
+                         -----END PRIVATE KEY-----";
+
+        CoseKeyIdentity::from_pem(pem).unwrap()
+    }
+
+    pub fn ecdsa_256_identity() -> CoseKeyIdentity {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgNsLo2hVPeUZEOPCw\n\
+                         lLQbhLpwjUbt9BHXKCFMY0i+Wm6hRANCAATyM3MzaNX4ELK6bzqgNC/ODvGOUd60\n\
+                         7A4yltVQLNKUxtTywYy2MIPV8ls1BlUp40zYmQfxCL3VANvZ62ofaMPv\n\
+                         -----END PRIVATE KEY-----";
+
+        CoseKeyIdentity::from_pem(pem).unwrap()
+    }
+
+    #[test]
+    fn ecdsa_256_sign_verify() -> Result<(), Error> {
+        let id = ecdsa_256_identity();
+
+        let signature = id.sign(MSG);
+        id.verify(MSG, &signature)
+    }
+
+    #[test]
+    fn eddsa_256_sign_verify() -> Result<(), Error> {
+        let id = eddsa_identity();
+
+        let signature = id.sign(MSG);
+        id.verify(MSG, &signature)
+    }
+
+    #[test]
+    #[should_panic]
+    fn fail_ecdsa_512() {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIB2zGGfgHhqK9J8Eug\n\
+                         Sb5pnwnRA3OZ5Ks4eXEJJOeqeZu+8vYZbNuK9IY78JcmAI+syc3at1eVPtcAtTUr\n\
+                         qSTAkIehgYkDgYYABABVfJDnPyVOY0N1shZaB5kBPM6JcEb3BZRT8MR4qBp0zXwM\n\
+                         pyh7pdD9wxqsCYQVxl9FbiJSQZXzZTwmXsmTzO8X5AAS52WLB+7Ch+ddQW5UEqj6\n\
+                         Tptw8tbMJhJlD4IH7SDevF+gNetMicMQ1fIFyfCbaK0xxVoLwKJvtp7MIV46IZMC\n\
+                         aA==\n\
+                         -----END PRIVATE KEY-----";
+        CoseKeyIdentity::from_pem(pem).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn fail_ecdsa_384() {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDAo/RAjCOzB1SklJw3K\n\
+                         ASQqyjtuVQv7hruJgoy7EotHqD7kFS8c9dyOuoaNyx0V9HChZANiAAQil9Mt9nV4\n\
+                         LDxECgIOQvJJd3UcP1d2rTcBY8XMQDl51gLCvCp9c3v1tz9I/hRCEQcH/d96mNHn\n\
+                         SigsOU15Tt1NMHHgrucDBMeDrMZ+uUIDdZbfpvvh0gCtvmvvH5FLs/Y=\n\
+                         -----END PRIVATE KEY-----";
+        CoseKeyIdentity::from_pem(pem).unwrap();
     }
 }

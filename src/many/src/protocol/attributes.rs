@@ -4,60 +4,6 @@ use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeSet;
 
-pub mod response {
-    use crate::cbor::CborAny;
-    use crate::protocol::attributes::{AttributeSet, FromAttributeSet};
-    use crate::protocol::Attribute;
-    use crate::ManyError;
-
-    pub const ASYNC: Attribute = Attribute::id(1);
-
-    pub struct AsyncAttribute {
-        pub token: Vec<u8>,
-    }
-
-    impl AsyncAttribute {
-        pub fn new(token: Vec<u8>) -> Self {
-            Self { token }
-        }
-    }
-
-    impl From<AsyncAttribute> for Attribute {
-        fn from(a: AsyncAttribute) -> Attribute {
-            ASYNC.with_argument(CborAny::Bytes(a.token))
-        }
-    }
-
-    impl TryFrom<Attribute> for AsyncAttribute {
-        type Error = ManyError;
-
-        fn try_from(value: Attribute) -> Result<Self, Self::Error> {
-            if value.id != ASYNC.id {
-                return Err(ManyError::invalid_attribute_id(value.id.to_string()));
-            }
-
-            let arguments = value.into_arguments();
-            if arguments.len() != 1 {
-                Err(ManyError::invalid_attribute_arguments())
-            } else {
-                match arguments.into_iter().next() {
-                    Some(CborAny::Bytes(token)) => Ok(Self { token }),
-                    _ => Err(ManyError::invalid_attribute_arguments()),
-                }
-            }
-        }
-    }
-
-    impl FromAttributeSet for AsyncAttribute {
-        fn from_set(set: &AttributeSet) -> Result<Self, ManyError> {
-            match set.get_attribute(ASYNC.id) {
-                Some(attr) => AsyncAttribute::try_from(attr.clone()),
-                None => Err(ManyError::attribute_not_found(ASYNC.id.to_string())),
-            }
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq)]
 pub struct AttributeSet(BTreeSet<Attribute>);
 
@@ -86,8 +32,8 @@ impl AttributeSet {
         self.0.iter().find(|a| id == a.id)
     }
 
-    pub fn get<T: FromAttributeSet>(&self) -> Result<T, ManyError> {
-        FromAttributeSet::from_set(self)
+    pub fn get<T: TryFromAttributeSet>(&self) -> Result<T, ManyError> {
+        TryFromAttributeSet::try_from_set(self)
     }
 
     pub fn iter(&self) -> std::collections::btree_set::Iter<Attribute> {
@@ -95,8 +41,8 @@ impl AttributeSet {
     }
 }
 
-pub trait FromAttributeSet: Sized {
-    fn from_set(set: &AttributeSet) -> Result<Self, ManyError>;
+pub trait TryFromAttributeSet: Sized {
+    fn try_from_set(set: &AttributeSet) -> Result<Self, ManyError>;
 }
 
 impl IntoIterator for AttributeSet {

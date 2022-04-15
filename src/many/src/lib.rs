@@ -1,4 +1,5 @@
 pub mod cbor;
+pub mod cose_helpers;
 pub mod hsm;
 pub mod message;
 pub mod protocol;
