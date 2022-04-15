@@ -36,7 +36,6 @@ jobs:
       ${{ github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - run: echo ${{ needs.info.outputs.pullRequestNumber }}
       - name: 'Download artifact'
         uses: actions/github-script@v3.1.0
         with:
@@ -59,7 +58,7 @@ jobs:
             fs.writeFileSync('${{github.workspace}}/code-coverage.zip', Buffer.from(download.data));
       - run: unzip code-coverage.zip
       - name: Code Coverage Report
-        uses: l-1-labs/lcov-reporter-action@819e51c28ca1e350ba9da316096bdcde80f4964c
+        uses: l-1-labs/lcov-reporter-action@9eb0596da1f5739fb4da25a3254dff93005503da
         with:
           lcov-file: ./coverage/report.lcov
           title: Code Coverage Report
