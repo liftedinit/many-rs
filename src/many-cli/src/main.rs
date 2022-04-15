@@ -248,9 +248,7 @@ fn main() {
                     CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap()
                 })
             } else {
-                // Clap should prevent reaching this code but I'm leaving it
-                // here to make sure we don't break anything during refactoring
-                panic!("Either --pem or (--module, --slot, --keyid) must be present.");
+                CoseKeyIdentity::anonymous()
             };
 
             let from_identity = key.identity;
