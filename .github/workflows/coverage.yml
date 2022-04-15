@@ -58,7 +58,7 @@ jobs:
             fs.writeFileSync('${{github.workspace}}/code-coverage.zip', Buffer.from(download.data));
       - run: unzip code-coverage.zip
       - name: Code Coverage Report
-        uses: l-1-labs/lcov-reporter-action@f78a5808f13a70a7e11986ace6c73f133360f726
+        uses: l-1-labs/lcov-reporter-action@5486b3cc46991bed4573a1c9c546060095900673
         with:
           lcov-file: ./coverage/report.lcov
           title: Code Coverage Report
