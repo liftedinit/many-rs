@@ -1,8 +1,9 @@
+use crate::cose_helpers::public_key;
 use crate::message::ManyError;
+use coset::{CborSerializable, CoseKey};
 use minicbor::data::Type;
 use minicbor::encode::Write;
 use minicbor::{Decode, Decoder, Encode, Encoder};
-use minicose::CoseKey;
 use serde::Deserialize;
 use sha3::digest::generic_array::typenum::Unsigned;
 use sha3::{Digest, Sha3_224};
@@ -32,12 +33,12 @@ impl Identity {
     }
 
     pub fn public_key(key: &CoseKey) -> Self {
-        let pk = Sha3_224::digest(&key.to_public_key().unwrap().to_bytes_stable().unwrap());
+        let pk = Sha3_224::digest(&public_key(key).unwrap().to_vec().unwrap());
         Self(InnerIdentity::public_key(pk.into()))
     }
 
     pub fn subresource(key: &CoseKey, subid: u32) -> Self {
-        let pk = Sha3_224::digest(&key.to_public_key().unwrap().to_bytes_stable().unwrap());
+        let pk = Sha3_224::digest(&public_key(key).unwrap().to_vec().unwrap());
         Self(InnerIdentity::subresource(pk.into(), subid))
     }
 
@@ -88,12 +89,12 @@ impl Identity {
             key.is_none()
         } else if self.is_public_key() || self.is_subresource() {
             if let Some(cose_key) = key {
-                let key_hash: [u8; SHA_OUTPUT_SIZE] =
-                    Sha3_224::digest(&cose_key.to_public_key().unwrap().to_bytes_stable().unwrap())
-                        .into();
+                let key_hash: PublicKeyHash =
+                    Sha3_224::digest(&public_key(cose_key).unwrap().to_vec().unwrap()).into();
 
                 self.0
-                    .bytes
+                    .hash()
+                    .unwrap() // TODO: CAN THIS FAIL?
                     .iter()
                     .zip(key_hash.iter())
                     .all(|(a, b)| a == b)
@@ -565,7 +566,7 @@ mod serde {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::types::identity::CoseKeyIdentity;
+    use crate::types::identity::cose::tests::{ecdsa_256_identity, eddsa_identity};
     use crate::Identity;
     use std::str::FromStr;
 
@@ -654,24 +655,26 @@ pub mod tests {
     }
 
     #[test]
-    fn from_pem() {
-        let pem = concat!(
-            "-----",
-            "BEGIN ",
-            "PRIVATE ",
-            "KEY",
-            "-----\n",
-            "MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n",
-            "-----",
-            "END ",
-            "PRIVATE ",
-            "KEY-----"
-        );
-
-        let id = CoseKeyIdentity::from_pem(pem).unwrap();
+    fn from_pem_eddsa() {
+        let id = eddsa_identity();
         assert_eq!(
             id.identity,
             "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
         );
+    }
+
+    #[test]
+    fn from_pem_ecdsa() {
+        let id = ecdsa_256_identity();
+        assert_eq!(
+            id.identity,
+            "mafdewutfd6c3killp3nhz3aqi36uv4mrbemvaggiy7axb2qoc"
+        );
+    }
+
+    #[test]
+    fn matches_key() {
+        let id = eddsa_identity();
+        assert!(id.identity.matches_key(id.key.as_ref()));
     }
 }

@@ -5,7 +5,7 @@ use crate::transport::LowLevelManyRequestHandler;
 use crate::types::identity::cose::CoseKeyIdentity;
 use crate::ManyError;
 use async_trait::async_trait;
-use minicose::CoseSign1;
+use coset::CoseSign1;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
