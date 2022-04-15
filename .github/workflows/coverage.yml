@@ -57,19 +57,6 @@ jobs:
             var fs = require('fs');
             fs.writeFileSync('${{github.workspace}}/code-coverage.zip', Buffer.from(download.data));
       - run: unzip code-coverage.zip
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: llvm-tools-preview
-      - name: Install grcov
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: grcov --root target/
-      - name: grcov
-        shell: bash
-        run: |
-          ./target/bin/grcov src --binary-path target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./coverage/report.lcov
       - name: Code Coverage Report
         uses: l-1-labs/lcov-reporter-action@69756d52cca21c5271e165b24f0dd6192b9fbe52
         with:
