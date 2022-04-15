@@ -1,7 +1,8 @@
 name: CI
 on:
   - push
-  - pull_request_target
+  - pull_request
+#  - pull_request_target
 jobs:
   build_and_test:
     name: many-rs build and tests
@@ -37,11 +38,6 @@ jobs:
         with:
           command: clippy
           args: --release --all-targets --all-features -- -D warnings
-      - name: Install grcov
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: grcov --root target/
       - name: Perform build (--release)
         uses: actions-rs/cargo@v1
         with:
@@ -57,12 +53,30 @@ jobs:
         with:
           command: test
           args: --all-targets --all-features
+      - uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage
+          path: "**/lcov-*.profraw"
+          retention-days: 7
+  code_coverage:
+    name: Code Coverage
+#    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    needs: build_and_test
+    steps:
+      - name: Install grcov
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: grcov --root target/
+      - uses: actions/download-artifact@v3
+        with:
+          name: code-coverage
       - name: grcov
         shell: bash
         run: |
           ./target/bin/grcov src --binary-path target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./coverage/report.lcov
       - name: Code Coverage Report
-        if: github.event_name == 'pull_request'
         uses: l-1-labs/lcov-reporter-action@42bb0ed0a6ad2c356b0cddb541cc6114f93ae6dc
         with:
           lcov-file: ./coverage/report.lcov
