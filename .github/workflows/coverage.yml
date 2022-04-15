@@ -57,6 +57,10 @@ jobs:
             var fs = require('fs');
             fs.writeFileSync('${{github.workspace}}/code-coverage.zip', Buffer.from(download.data));
       - run: unzip code-coverage.zip
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: llvm-tools-preview
       - name: Install grcov
         uses: actions-rs/cargo@v1
         with:
