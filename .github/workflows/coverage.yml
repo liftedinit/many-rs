@@ -41,9 +41,6 @@ jobs:
         with:
           command: install
           args: grcov --root target/
-      - uses: actions/download-artifact@v3
-        with:
-          name: code-coverage
       - name: grcov
         shell: bash
         run: |
