@@ -1,7 +1,5 @@
 name: Code Coverage Update
 
-# read-write repo token
-# access to secrets
 on:
   workflow_run:
     workflows: ["Build And Test"]
