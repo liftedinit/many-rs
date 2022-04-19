@@ -1,15 +1,15 @@
-use crate::cose_helpers::public_key;
+use crate::cose_helpers::{ecdsa_cose_key, eddsa_cose_key, public_key};
 use crate::hsm::{HSMMechanism, HSMMechanismType, HSM};
 use crate::Identity;
 use coset::cbor::value::Value;
 use coset::iana::{self, Ec2KeyParameter, EnumI64, OkpKeyParameter};
-use coset::{Algorithm, CoseKey, KeyOperation, KeyType, Label};
+use coset::{Algorithm, CoseKey, KeyOperation, Label};
 use ed25519_dalek::PublicKey;
 use p256::pkcs8::FromPrivateKey;
 use pkcs8::der::Document;
 use sha2::Digest;
 use signature::{Error, Signature, Signer, Verifier};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::fmt::{Debug, Formatter};
 use tracing::{error, trace};
@@ -88,23 +88,13 @@ impl CoseKeyIdentity {
         trace!("Creating NIST P-256 SEC1 encoded point");
         let points = p256::EncodedPoint::from_bytes(raw_points).map_err(|e| e.to_string())?;
 
-        let cose_key = CoseKey {
-            kty: KeyType::Assigned(coset::iana::KeyType::EC2),
-            alg: Some(Algorithm::Assigned(coset::iana::Algorithm::ES256)),
-            key_ops: BTreeSet::from([KeyOperation::Assigned(coset::iana::KeyOperation::Verify)]),
-            params: vec![
-                (
-                    Label::Int(coset::iana::Ec2KeyParameter::X as i64),
-                    Value::Bytes(points.x().unwrap().to_vec()),
-                ),
-                (
-                    Label::Int(coset::iana::Ec2KeyParameter::Y as i64),
-                    Value::Bytes(points.y().unwrap().to_vec()),
-                ),
-            ],
-            ..Default::default()
-        };
-
+        let cose_key = ecdsa_cose_key(
+            (
+                Some(Value::Bytes(points.x().unwrap().to_vec())),
+                Some(Value::Bytes(points.y().unwrap().to_vec())),
+            ),
+            None,
+        );
         Self::from_key(cose_key, true)
     }
 
@@ -124,31 +114,10 @@ impl CoseKeyIdentity {
             };
             let keypair = ed25519_dalek::Keypair::from_bytes(&keypair.to_bytes()).unwrap();
 
-            // The CoseKeyBuilder is too limited to be used here
-            let cose_key = CoseKey {
-                kty: KeyType::Assigned(coset::iana::KeyType::OKP),
-                alg: Some(Algorithm::Assigned(coset::iana::Algorithm::EdDSA)),
-                key_ops: BTreeSet::from([
-                    KeyOperation::Assigned(coset::iana::KeyOperation::Sign),
-                    KeyOperation::Assigned(coset::iana::KeyOperation::Verify),
-                ]),
-                params: vec![
-                    (
-                        Label::Int(coset::iana::OkpKeyParameter::Crv as i64),
-                        Value::from(coset::iana::EllipticCurve::Ed25519 as u64),
-                    ),
-                    (
-                        Label::Int(coset::iana::OkpKeyParameter::X as i64),
-                        Value::Bytes(keypair.public.to_bytes().to_vec()),
-                    ),
-                    (
-                        Label::Int(coset::iana::OkpKeyParameter::D as i64),
-                        Value::Bytes(keypair.secret.to_bytes().to_vec()),
-                    ),
-                ],
-                ..Default::default()
-            };
-
+            let cose_key = eddsa_cose_key(
+                Some(Value::Bytes(keypair.public.to_bytes().to_vec())),
+                Some(Value::Bytes(keypair.secret.to_bytes().to_vec())),
+            );
             Self::from_key(cose_key, false)
         } else if decoded.algorithm.oid == pkcs8::ObjectIdentifier::new("1.2.840.10045.2.1") {
             // ECDSA
@@ -156,31 +125,13 @@ impl CoseKeyIdentity {
             let pk = sk.public_key();
             let points: p256::EncodedPoint = pk.into();
 
-            // The CoseKeyBuilder is too limited to be used here
-            let cose_key = CoseKey {
-                kty: KeyType::Assigned(coset::iana::KeyType::EC2),
-                alg: Some(Algorithm::Assigned(coset::iana::Algorithm::ES256)),
-                key_ops: BTreeSet::from([
-                    KeyOperation::Assigned(coset::iana::KeyOperation::Sign),
-                    KeyOperation::Assigned(coset::iana::KeyOperation::Verify),
-                ]),
-                params: vec![
-                    (
-                        Label::Int(coset::iana::Ec2KeyParameter::X as i64),
-                        Value::Bytes(points.x().unwrap().to_vec()),
-                    ),
-                    (
-                        Label::Int(coset::iana::Ec2KeyParameter::Y as i64),
-                        Value::Bytes(points.y().unwrap().to_vec()),
-                    ),
-                    (
-                        Label::Int(coset::iana::Ec2KeyParameter::D as i64),
-                        Value::Bytes(sk.to_bytes().to_vec()),
-                    ),
-                ],
-                ..Default::default()
-            };
-
+            let cose_key = ecdsa_cose_key(
+                (
+                    Some(Value::Bytes(points.x().unwrap().to_vec())),
+                    Some(Value::Bytes(points.y().unwrap().to_vec())),
+                ),
+                Some(Value::Bytes(sk.to_bytes().to_vec())),
+            );
             Self::from_key(cose_key, false)
         } else {
             return Err(format!("Unknown algorithm OID: {}", decoded.algorithm.oid));
@@ -366,10 +317,25 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
 
 #[cfg(test)]
 pub mod tests {
+    use ed25519_dalek::Keypair;
+    use rand_07::rngs::OsRng;
+
     use super::*;
 
     // MSG == FOOBAR
     const MSG: &[u8] = &[70, 79, 79, 66, 65, 82];
+
+    pub fn generate_random_eddsa_identity() -> CoseKeyIdentity {
+        let mut csprng = OsRng {};
+        let keypair: Keypair = Keypair::generate(&mut csprng);
+
+        let cose_key = eddsa_cose_key(
+            Some(Value::Bytes(keypair.public.to_bytes().to_vec())),
+            Some(Value::Bytes(keypair.secret.to_bytes().to_vec())),
+        );
+
+        CoseKeyIdentity::from_key(cose_key, false).unwrap()
+    }
 
     pub fn eddsa_identity() -> CoseKeyIdentity {
         let pem = "-----BEGIN PRIVATE KEY-----\n\
