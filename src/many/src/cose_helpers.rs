@@ -55,22 +55,13 @@ pub fn ecdsa_cose_key((x, y): (Option<Value>, Option<Value>), d: Option<Value>) 
     let mut key_ops: BTreeSet<KeyOperation> = BTreeSet::new();
 
     if let (Some(x), Some(y)) = (x, y) {
-        params.push((
-            Label::Int(coset::iana::Ec2KeyParameter::X as i64),
-            x,
-        ));
-        params.push((
-            Label::Int(coset::iana::Ec2KeyParameter::Y as i64),
-            y,
-        ));
+        params.push((Label::Int(coset::iana::Ec2KeyParameter::X as i64), x));
+        params.push((Label::Int(coset::iana::Ec2KeyParameter::Y as i64), y));
         key_ops.insert(KeyOperation::Assigned(coset::iana::KeyOperation::Verify));
     }
 
     if let Some(d) = d {
-        params.push((
-            Label::Int(coset::iana::Ec2KeyParameter::D as i64),
-            d,
-        ));
+        params.push((Label::Int(coset::iana::Ec2KeyParameter::D as i64), d));
         key_ops.insert(KeyOperation::Assigned(coset::iana::KeyOperation::Sign));
     }
 
