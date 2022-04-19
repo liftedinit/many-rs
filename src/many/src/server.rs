@@ -285,3 +285,45 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use coset::cbor::de::from_reader;
+    use coset::cbor::value::Value;
+
+    use super::*;
+    use crate::message::{
+        decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
+        RequestMessageBuilder,
+    };
+    use crate::types::identity::cose::tests::generate_random_eddsa_identity;
+
+    #[tokio::test]
+    async fn simple_status() {
+        let name = "Test";
+        let id = generate_random_eddsa_identity();
+        let server = ManyServer::simple(name, id.clone(), Some("1".to_string()));
+
+        // Test status() using a message instead of a direct call
+        //
+        // This will test other ManyServer methods as well
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .version(1)
+            .from(id.identity)
+            .to(id.identity)
+            .method("status".to_string())
+            .data("null".as_bytes().to_vec())
+            .build()
+            .unwrap();
+
+        let envelope = encode_cose_sign1_from_request(request.clone(), &id).unwrap();
+        let response = server.execute(envelope).await.unwrap();
+        let response_message = decode_response_from_cose_sign1(response, None).unwrap();
+
+        let data: BTreeMap<u8, Value> =
+            from_reader(response_message.data.unwrap().as_slice()).unwrap();
+        let response_name = data.get(&1).unwrap();
+
+        assert_eq!(response_name, &Value::Text(name.to_string()));
+    }
+}
