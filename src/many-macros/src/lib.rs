@@ -37,7 +37,6 @@ impl Endpoint {
         let name = func.to_string();
         let is_async = signature.asyncness.is_some();
 
-        let is_mut;
         let mut has_sender = false;
         let arg_type: Option<Box<Type>>;
         let mut ret_type: Option<Box<Type>> = None;
@@ -49,14 +48,14 @@ impl Endpoint {
                 signature.span(),
             )
         })?;
-        if let FnArg::Receiver(r) = receiver {
-            is_mut = r.mutability.is_some();
+        let is_mut = if let FnArg::Receiver(r) = receiver {
+            r.mutability.is_some()
         } else {
             return Err((
                 "Function in trait must have a receiver".to_string(),
                 receiver.span(),
             ));
-        }
+        };
 
         let maybe_identity = inputs.next();
         let maybe_argument = inputs.next();
