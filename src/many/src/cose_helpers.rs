@@ -57,11 +57,11 @@ pub fn ecdsa_cose_key((x, y): (Option<Value>, Option<Value>), d: Option<Value>) 
     if let (Some(x), Some(y)) = (x, y) {
         params.push((
             Label::Int(coset::iana::Ec2KeyParameter::X as i64),
-            x.clone(),
+            x,
         ));
         params.push((
             Label::Int(coset::iana::Ec2KeyParameter::Y as i64),
-            y.clone(),
+            y,
         ));
         key_ops.insert(KeyOperation::Assigned(coset::iana::KeyOperation::Verify));
     }
@@ -69,7 +69,7 @@ pub fn ecdsa_cose_key((x, y): (Option<Value>, Option<Value>), d: Option<Value>) 
     if let Some(d) = d {
         params.push((
             Label::Int(coset::iana::Ec2KeyParameter::D as i64),
-            d.clone(),
+            d,
         ));
         key_ops.insert(KeyOperation::Assigned(coset::iana::KeyOperation::Sign));
     }
