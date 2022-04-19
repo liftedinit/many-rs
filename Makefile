@@ -10,5 +10,5 @@ target/bin/grcov:
 .PHONY: code-coverage
 code-coverage: target/bin/grcov
 	RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="coverage/lcov-%p-%m.profraw" cargo test
-	target/bin/grcov  . --binary-path target/debug/ -s src -t html --branch --ignore-not-existing -o ./coverage/
-	target/bin/grcov  . --binary-path target/debug/ -s src -t lcov --branch --ignore-not-existing -o ./coverage/lcov.info
+	target/bin/grcov src --binary-path target/debug/ -s . -t html --branch --ignore-not-existing -o ./coverage/
+	target/bin/grcov src --binary-path target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./coverage/lcov.info
