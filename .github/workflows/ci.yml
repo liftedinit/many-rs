@@ -57,10 +57,7 @@ jobs:
         with:
           command: install
           args: grcov --root target/
-      - name: grcov
-        shell: bash
-        run: |
-          ./target/bin/grcov src --binary-path target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o ./coverage/report.lcov
+      - run: make coverage/report.lcov
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
