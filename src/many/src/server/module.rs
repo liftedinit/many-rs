@@ -2,6 +2,8 @@ use crate::message::{RequestMessage, ResponseMessage};
 use crate::protocol::Attribute;
 use crate::ManyError;
 use async_trait::async_trait;
+use minicbor::encode::{Error, Write};
+use minicbor::{Decoder, Encoder};
 use std::fmt::Debug;
 
 macro_rules! reexport_module {
@@ -28,6 +30,25 @@ reexport_module!(
     abci_backend: _1000_abci_backend;
     abci_frontend: _1001_abci_frontend;
 );
+
+#[derive(Debug)]
+pub struct EmptyReturn;
+
+impl minicbor::Encode for EmptyReturn {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+        // We encode nothing as an empty map so it's a value.
+        e.map(0)?;
+        Ok(())
+    }
+}
+
+impl<'b> minicbor::Decode<'b> for EmptyReturn {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+        // Nothing to do. Skip a value if there's one.
+        d.skip()?;
+        Ok(Self)
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct ManyModuleInfo {
@@ -62,7 +83,7 @@ pub(crate) mod testutils {
     use crate::{ManyError, ManyModule};
 
     pub fn call_module(
-        module: impl ManyModule,
+        module: &'_ impl ManyModule,
         endpoint: impl ToString,
         payload: impl AsRef<str>,
     ) -> Result<Vec<u8>, ManyError> {

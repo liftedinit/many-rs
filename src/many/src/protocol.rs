@@ -72,7 +72,7 @@ impl Attribute {
 
 impl PartialEq for Attribute {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
+        self.id == other.id && self.arguments.eq(&other.arguments)
     }
 }
 

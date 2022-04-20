@@ -117,6 +117,16 @@ impl Identity {
             false
         }
     }
+
+    /// Check that another identity matches this one, ignoring any subresouce IDs.
+    pub fn matches(&self, other: &Identity) -> bool {
+        if self.is_anonymous() {
+            other.is_anonymous()
+        } else {
+            // Extract public key hash of both.
+            self.0.hash() == other.0.hash()
+        }
+    }
 }
 
 #[cfg(feature = "raw")]
