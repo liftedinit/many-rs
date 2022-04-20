@@ -142,3 +142,53 @@ impl<'d> Decode<'d> for Attribute {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    proptest::proptest! {
+        #[test]
+        fn attribute(seedu32: u32, seedi64: i64) {
+            let att = Attribute::id(seedu32);
+            assert_eq!(att.id, seedu32);
+            assert_eq!(att.arguments, None);
+            assert_eq!(att.arguments(), None);
+
+
+            let arguments = vec![CborAny::Bytes(vec![0; 8])];
+            let att = Attribute::new(seedu32, arguments.clone());
+            assert_eq!(att.id, seedu32);
+            assert_eq!(att.arguments, Some(arguments));
+
+            let arguments = vec![CborAny::Int(seedi64)];
+            let att = att.with_arguments(arguments.clone());
+            assert_eq!(att.id, seedu32);
+            assert_eq!(att.arguments, Some(arguments));
+
+            let argument = CborAny::String("Foobar".to_string());
+            let att = Attribute::id(seedu32);
+            let att = att.with_argument(argument.clone());
+            assert_eq!(att.id, seedu32);
+            assert_eq!(att.arguments, Some(vec![argument.clone()]));
+            let att = att.with_argument(argument.clone());
+            assert_eq!(att.arguments, Some(vec![argument.clone(), argument.clone()]));
+
+            let arguments = att.clone().into_arguments();
+            assert_eq!(arguments, vec![argument.clone(), argument.clone()]);
+            assert_eq!(att.arguments(), Some(&vec![argument.clone(), argument]));
+
+            assert_eq!(att, att);
+
+            let att = Attribute::id(0);
+            let att2 = Attribute::id(1);
+            assert_eq!(att.cmp(&att2), Ordering::Less);
+            assert_eq!(att.partial_cmp(&att2), Some(Ordering::Less));
+
+            let att = Attribute::new(seedu32, vec![CborAny::Int(seedi64)]);
+            let att_cbor_enc = minicbor::to_vec(&att).unwrap();
+            let att_cbor_dec: Attribute = minicbor::decode(&att_cbor_enc).unwrap();
+            assert_eq!(att_cbor_dec, att);
+        }
+    }
+}
