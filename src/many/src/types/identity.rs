@@ -37,9 +37,13 @@ impl Identity {
         Self(InnerIdentity::public_key(pk.into()))
     }
 
-    pub fn subresource(key: &CoseKey, subid: u32) -> Self {
-        let pk = Sha3_224::digest(&public_key(key).unwrap().to_vec().unwrap());
-        Self(InnerIdentity::subresource(pk.into(), subid))
+    pub fn subresource(key: &CoseKey, subid: u32) -> Result<Self, ManyError> {
+        if subid >= 0x80000000 {
+            Err(ManyError::invalid_identity_subid())
+        } else {
+            let pk = Sha3_224::digest(&public_key(key).unwrap().to_vec().unwrap());
+            Ok(Self(InnerIdentity::subresource_unchecked(pk.into(), subid)))
+        }
     }
 
     pub const fn is_anonymous(&self) -> bool {
@@ -56,9 +60,17 @@ impl Identity {
         self.0.subresource_id()
     }
 
-    pub const fn with_subresource_id(&self, subid: u32) -> Self {
+    pub fn with_subresource_id(&self, subid: u32) -> Result<Self, ManyError> {
+        if subid >= 0x80000000 {
+            Err(ManyError::invalid_identity_subid())
+        } else {
+            Ok(self.with_subresource_id_unchecked(subid))
+        }
+    }
+
+    pub const fn with_subresource_id_unchecked(&self, subid: u32) -> Self {
         if let Some(h) = self.0.hash() {
-            Self(InnerIdentity::subresource(h, subid))
+            Self(InnerIdentity::subresource_unchecked(h, subid))
         } else {
             Self::anonymous()
         }
@@ -120,7 +132,7 @@ impl Identity {
     /// id. The hash isn't validated, but the subid is.
     #[inline(always)]
     pub fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
-        Self(InnerIdentity::subresource(hash, subid))
+        Self(InnerIdentity::subresource_unchecked(hash, subid))
     }
 }
 
@@ -316,7 +328,7 @@ impl InnerIdentity {
         Self { bytes }
     }
 
-    pub const fn subresource(hash: [u8; SHA_OUTPUT_SIZE], id: u32) -> Self {
+    pub(crate) const fn subresource_unchecked(hash: [u8; SHA_OUTPUT_SIZE], id: u32) -> Self {
         // Get a public key and add the resource id.
         let mut bytes = Self::public_key(hash).bytes;
         bytes[0] = 0x80 + ((id & 0x7F000000) >> 24) as u8;
@@ -358,7 +370,7 @@ impl InnerIdentity {
                     hash.copy_from_slice(&bytes[1..29]);
                     subid[0] = hi;
                     subid[1..].copy_from_slice(&bytes[29..32]);
-                    Ok(Self::subresource(hash, u32::from_be_bytes(subid)))
+                    Ok(Self::subresource_unchecked(hash, u32::from_be_bytes(subid)))
                 }
             }
             x => Err(ManyError::invalid_identity_kind(x.to_string())),
@@ -638,7 +650,8 @@ pub mod tests {
     fn subresource_1() {
         let a = Identity::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys")
             .unwrap()
-            .with_subresource_id(1);
+            .with_subresource_id(1)
+            .unwrap();
         let b = Identity::from_bytes(
             &hex::decode("80c8aead03f915f128f0fa7ff696c656eaa93db87bd9aa73df693acb22000001")
                 .unwrap(),
@@ -651,7 +664,23 @@ pub mod tests {
         .unwrap();
 
         assert_eq!(a, b);
-        assert_eq!(b.with_subresource_id(2), c);
+        assert_eq!(b.with_subresource_id(2).unwrap(), c);
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn subresource_id_fuzzy(subid: u32) {
+            let a = Identity::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys")
+                .unwrap()
+                .with_subresource_id(subid);
+
+            if let Ok(id) = a {
+                let b = Identity::from_str(&id.to_string());
+                assert_eq!(a, b);
+            } else {
+                assert_eq!(subid.leading_zeros(), 0);
+            }
+        }
     }
 
     #[test]

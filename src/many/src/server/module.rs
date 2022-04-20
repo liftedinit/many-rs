@@ -24,6 +24,7 @@ reexport_module!(
     ledger: _2_ledger + _4_ledger_transactions + _6_ledger_commands;
     kvstore: _3_kvstore + _7_kvstore_commands;
     r#async: _8_async;
+    account: _9_account;
     abci_backend: _1000_abci_backend;
     abci_frontend: _1001_abci_frontend;
 );
@@ -53,4 +54,24 @@ pub trait ManyModule: Sync + Send + Debug {
 
     /// Execute a message and returns its response.
     async fn execute(&self, message: RequestMessage) -> Result<ResponseMessage, ManyError>;
+}
+
+#[cfg(test)]
+pub(crate) mod testutils {
+    use crate::message::RequestMessage;
+    use crate::{ManyError, ManyModule};
+
+    pub fn call_module(
+        module: impl ManyModule,
+        endpoint: impl ToString,
+        payload: impl AsRef<str>,
+    ) -> Result<Vec<u8>, ManyError> {
+        let message = RequestMessage::default()
+            .with_method(endpoint.to_string())
+            .with_data(cbor_diag::parse_diag(payload).unwrap().to_bytes());
+
+        module.validate(&message)?;
+        let response = smol::block_on(async { module.execute(message).await })?;
+        response.data
+    }
 }

@@ -24,18 +24,19 @@ impl Attribute {
         }
     }
 
-    pub const fn new(id: AttributeId, arguments: Vec<CborAny>) -> Self {
+    pub fn new(id: AttributeId, arguments: Vec<CborAny>) -> Self {
         Self {
             id,
-            arguments: Some(arguments),
+            arguments: if arguments.is_empty() {
+                None
+            } else {
+                Some(arguments)
+            },
         }
     }
 
     pub fn with_arguments(&self, arguments: Vec<CborAny>) -> Self {
-        Self {
-            arguments: Some(arguments),
-            ..self.clone()
-        }
+        Self::new(self.id, arguments)
     }
 
     pub fn with_argument(&self, argument: CborAny) -> Self {

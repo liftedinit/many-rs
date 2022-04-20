@@ -13,7 +13,6 @@ async-trait = "0.1.51"
 backtrace = { version = "0.3", optional = true }
 base32 = "0.4.0"
 base64 = "0.13.0"
-cbor-diag = "0.1.8"
 coset = "0.3"
 crc-any = "2.4.0"
 cryptoki = { version = "0.3", features = ["generate-bindings"] }
@@ -49,6 +48,11 @@ thiserror = "1.0.29"
 tracing = "0.1.29"
 tokio = { version = "1.12.0", features = [ "full" ] }
 tiny_http = "0.9.0"
+
+[dev-dependencies]
+cbor-diag = "0.1.8"
+proptest = "1.0.0"
+smol = "1.2.5"
 
 [features]
 default = []

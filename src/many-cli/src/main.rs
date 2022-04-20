@@ -171,7 +171,9 @@ fn main() {
                 match Identity::try_from(data.as_slice()) {
                     Ok(mut i) => {
                         if let Some(subid) = o.subid {
-                            i = i.with_subresource_id(subid);
+                            i = i
+                                .with_subresource_id(subid)
+                                .expect("Invalid subresource id");
                         }
                         println!("{}", i)
                     }
@@ -182,14 +184,18 @@ fn main() {
                 }
             } else if let Ok(mut i) = Identity::try_from(o.arg.clone()) {
                 if let Some(subid) = o.subid {
-                    i = i.with_subresource_id(subid);
+                    i = i
+                        .with_subresource_id(subid)
+                        .expect("Invalid subresource id");
                 }
                 println!("{}", hex::encode(&i.to_vec()));
             } else if let Ok(pem_content) = std::fs::read_to_string(&o.arg) {
                 // Create the identity from the public key hash.
                 let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().identity;
                 if let Some(subid) = o.subid {
-                    i = i.with_subresource_id(subid);
+                    i = i
+                        .with_subresource_id(subid)
+                        .expect("Invalid subresource id");
                 }
 
                 println!("{}", i);
@@ -216,7 +222,9 @@ fn main() {
                 .identity;
 
             if let Some(subid) = o.subid {
-                id = id.with_subresource_id(subid);
+                id = id
+                    .with_subresource_id(subid)
+                    .expect("Invalid subresource id");
             }
 
             println!("{}", id);
