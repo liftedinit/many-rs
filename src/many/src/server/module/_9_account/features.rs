@@ -138,7 +138,7 @@ mod tests {
             fn try_create(f: &Feature) -> Result<Self, ManyError> {
                 match f.arguments().map(|a| a.as_slice()) {
                     Some(&[CborAny::Int(123)]) => Ok(Self),
-                    _ => Err(ManyError::unknown(format!("ERROR"))),
+                    _ => Err(ManyError::unknown("ERROR".to_string())),
                 }
             }
         }

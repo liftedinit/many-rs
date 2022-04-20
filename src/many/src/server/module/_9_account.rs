@@ -305,7 +305,7 @@ mod module_tests {
             _sender: &Identity,
             args: ListRolesArgs,
         ) -> Result<ListRolesReturn, ManyError> {
-            let account = self
+            let _ = self
                 .0
                 .get(&args.account)
                 .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
@@ -317,40 +317,40 @@ mod module_tests {
 
         fn get_roles(
             &self,
-            sender: &Identity,
-            args: GetRolesArgs,
+            _sender: &Identity,
+            _args: GetRolesArgs,
         ) -> Result<GetRolesReturn, ManyError> {
             todo!()
         }
 
         fn add_roles(
             &self,
-            sender: &Identity,
-            args: AddRolesArgs,
+            _sender: &Identity,
+            _args: AddRolesArgs,
         ) -> Result<EmptyReturn, ManyError> {
             todo!()
         }
 
         fn remove_roles(
             &self,
-            sender: &Identity,
-            args: RemoveRolesArgs,
+            _sender: &Identity,
+            _args: RemoveRolesArgs,
         ) -> Result<EmptyReturn, ManyError> {
             todo!()
         }
 
-        fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError> {
+        fn info(&self, _sender: &Identity, _args: InfoArgs) -> Result<InfoReturn, ManyError> {
             todo!()
         }
 
-        fn delete(&self, sender: &Identity, args: DeleteArgs) -> Result<EmptyReturn, ManyError> {
+        fn delete(&self, _sender: &Identity, _args: DeleteArgs) -> Result<EmptyReturn, ManyError> {
             todo!()
         }
 
         fn add_features(
             &self,
-            sender: &Identity,
-            args: AddFeaturesArgs,
+            _sender: &Identity,
+            _args: AddFeaturesArgs,
         ) -> Result<EmptyReturn, ManyError> {
             todo!()
         }
