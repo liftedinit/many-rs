@@ -314,6 +314,46 @@ mod module_tests {
                 roles: vec!["owner".to_string(), "other-role".to_string()],
             })
         }
+
+        fn get_roles(
+            &self,
+            sender: &Identity,
+            args: GetRolesArgs,
+        ) -> Result<GetRolesReturn, ManyError> {
+            todo!()
+        }
+
+        fn add_roles(
+            &self,
+            sender: &Identity,
+            args: AddRolesArgs,
+        ) -> Result<EmptyReturn, ManyError> {
+            todo!()
+        }
+
+        fn remove_roles(
+            &self,
+            sender: &Identity,
+            args: RemoveRolesArgs,
+        ) -> Result<EmptyReturn, ManyError> {
+            todo!()
+        }
+
+        fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError> {
+            todo!()
+        }
+
+        fn delete(&self, sender: &Identity, args: DeleteArgs) -> Result<EmptyReturn, ManyError> {
+            todo!()
+        }
+
+        fn add_features(
+            &self,
+            sender: &Identity,
+            args: AddFeaturesArgs,
+        ) -> Result<EmptyReturn, ManyError> {
+            todo!()
+        }
     }
 
     #[test]
