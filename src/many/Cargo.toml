@@ -50,6 +50,9 @@ tracing = "0.1.29"
 tokio = { version = "1.12.0", features = [ "full" ] }
 tiny_http = "0.9.0"
 
+[dev-dependencies]
+rand-07 = { package = "rand", version = "0.7"}  # Version compatible with ed25519-dalek
+
 [features]
 default = []
 client = []
