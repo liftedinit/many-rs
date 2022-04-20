@@ -1,7 +1,6 @@
 use crate::cose_helpers::{ecdsa_cose_key, eddsa_cose_key, public_key};
 use crate::hsm::{HSMMechanism, HSMMechanismType, HSM};
 use crate::Identity;
-use coset::cbor::value::Value;
 use coset::iana::{self, Ec2KeyParameter, EnumI64, OkpKeyParameter};
 use coset::{Algorithm, CoseKey, KeyOperation, Label};
 use ed25519_dalek::PublicKey;
@@ -89,10 +88,7 @@ impl CoseKeyIdentity {
         let points = p256::EncodedPoint::from_bytes(raw_points).map_err(|e| e.to_string())?;
 
         let cose_key = ecdsa_cose_key(
-            (
-                Some(Value::Bytes(points.x().unwrap().to_vec())),
-                Some(Value::Bytes(points.y().unwrap().to_vec())),
-            ),
+            (points.x().unwrap().to_vec(), points.y().unwrap().to_vec()),
             None,
         );
         Self::from_key(cose_key, true)
@@ -115,8 +111,8 @@ impl CoseKeyIdentity {
             let keypair = ed25519_dalek::Keypair::from_bytes(&keypair.to_bytes()).unwrap();
 
             let cose_key = eddsa_cose_key(
-                Some(Value::Bytes(keypair.public.to_bytes().to_vec())),
-                Some(Value::Bytes(keypair.secret.to_bytes().to_vec())),
+                keypair.public.to_bytes().to_vec(),
+                Some(keypair.secret.to_bytes().to_vec()),
             );
             Self::from_key(cose_key, false)
         } else if decoded.algorithm.oid == pkcs8::ObjectIdentifier::new("1.2.840.10045.2.1") {
@@ -126,11 +122,8 @@ impl CoseKeyIdentity {
             let points: p256::EncodedPoint = pk.into();
 
             let cose_key = ecdsa_cose_key(
-                (
-                    Some(Value::Bytes(points.x().unwrap().to_vec())),
-                    Some(Value::Bytes(points.y().unwrap().to_vec())),
-                ),
-                Some(Value::Bytes(sk.to_bytes().to_vec())),
+                (points.x().unwrap().to_vec(), points.y().unwrap().to_vec()),
+                Some(sk.to_bytes().to_vec()),
             );
             Self::from_key(cose_key, false)
         } else {
@@ -330,8 +323,8 @@ pub mod tests {
         let keypair: Keypair = Keypair::generate(&mut csprng);
 
         let cose_key = eddsa_cose_key(
-            Some(Value::Bytes(keypair.public.to_bytes().to_vec())),
-            Some(Value::Bytes(keypair.secret.to_bytes().to_vec())),
+            keypair.public.to_bytes().to_vec(),
+            Some(keypair.secret.to_bytes().to_vec()),
         );
 
         CoseKeyIdentity::from_key(cose_key, false).unwrap()
