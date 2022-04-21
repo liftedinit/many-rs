@@ -58,7 +58,7 @@ impl Feature {
 /// # use many::server::module::account::features::*;
 /// let mut feature_set = FeatureSet::default();
 /// feature_set.insert(Feature::with_id(0));
-/// feature_set.insert(Feature::with_id(1).with_arguments(vec![CborAny::Int(123)]));
+/// feature_set.insert(Feature::with_id(1).with_argument(CborAny::Int(123)));
 ///
 /// assert!(feature_set.get_feature(0).is_some());
 /// assert!(feature_set.get_feature(1).is_some());

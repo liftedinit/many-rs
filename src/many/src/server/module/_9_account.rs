@@ -79,7 +79,7 @@ impl AccountMap {
 /// A generic Account type. This is useful as utility for managing accounts in your backend.
 #[derive(Clone, Debug)]
 pub struct Account {
-    name: String,
+    name: Option<String>,
     roles: BTreeMap<Identity, BTreeSet<String>>,
     features: features::FeatureSet,
 }
@@ -87,23 +87,26 @@ pub struct Account {
 impl Account {
     pub fn create(args: CreateArgs) -> Self {
         Self {
-            name: args.description.unwrap_or_default(),
+            name: args.description,
             roles: args.roles.unwrap_or_default(),
             features: args.features,
         }
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn name(&self) -> Option<&String> {
+        self.name.as_ref()
     }
+
     pub fn roles(&self) -> &BTreeMap<Identity, BTreeSet<String>> {
         &self.roles
     }
+
     pub fn has_role<Role: AsRef<str>>(&self, id: &Identity, role: Role) -> bool {
         self.roles
             .get(id)
             .map_or(false, |v| v.contains(role.as_ref()))
     }
+
     pub fn feature<F: features::TryCreateFeature>(&self) -> Option<F> {
         self.features.get::<F>().ok()
     }
@@ -201,7 +204,7 @@ pub struct InfoArgs {
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]
-    name: String,
+    name: Option<String>,
 
     #[n(1)]
     roles: BTreeMap<Identity, BTreeSet<String>>,
@@ -224,32 +227,52 @@ pub struct AddFeaturesArgs {
     pub account: Identity,
 
     #[n(1)]
+    roles: Option<BTreeMap<Identity, BTreeSet<String>>>,
+
+    #[n(2)]
     pub features: features::FeatureSet,
 }
 
 #[many_module(name = AccountModule, id = 9, namespace = account, many_crate = crate)]
 pub trait AccountModuleBackend: Send {
+    /// Create an account.
     fn create(&mut self, sender: &Identity, args: CreateArgs) -> Result<CreateReturn, ManyError>;
+
+    /// Set the name/description of an account.
     fn set_description(
         &mut self,
         sender: &Identity,
         args: SetDescriptionArgs,
     ) -> Result<EmptyReturn, ManyError>;
+
+    /// List all the roles supported by an account.
     fn list_roles(
         &self,
         sender: &Identity,
         args: ListRolesArgs,
     ) -> Result<ListRolesReturn, ManyError>;
+
+    /// Get roles associated with an identity for an account.
     fn get_roles(&self, sender: &Identity, args: GetRolesArgs)
         -> Result<GetRolesReturn, ManyError>;
+
+    /// Add roles to identities for an account.
     fn add_roles(&self, sender: &Identity, args: AddRolesArgs) -> Result<EmptyReturn, ManyError>;
+
+    /// Remove roles from an identity for an account.
     fn remove_roles(
         &self,
         sender: &Identity,
         args: RemoveRolesArgs,
     ) -> Result<EmptyReturn, ManyError>;
+
+    /// Returns the information related to an account.
     fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError>;
+
+    /// Delete an account.
     fn delete(&self, sender: &Identity, args: DeleteArgs) -> Result<EmptyReturn, ManyError>;
+
+    /// Add additional features to an account.
     fn add_features(
         &self,
         sender: &Identity,
@@ -296,7 +319,7 @@ mod module_tests {
                 .get_mut(&args.id)
                 .ok_or_else(|| errors::unknown_account(args.id.to_string()))?;
 
-            account.name = args.description;
+            account.name = Some(args.description);
             Ok(EmptyReturn)
         }
 
