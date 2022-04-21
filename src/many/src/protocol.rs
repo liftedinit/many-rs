@@ -146,6 +146,7 @@ mod tests {
             let attr2: Attribute = minicbor::decode(&cbor).unwrap();
             assert_eq!(attr, attr2);
 
+            #[allow(clippy::unusual_byte_groupings)]
             const HIGH_3_BITS_MASK: u8 = 0b111_00000;
             if attr.arguments.is_empty() {
                 // Make sure the CBOR type is an unsigned int
