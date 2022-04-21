@@ -21,6 +21,7 @@ pub type PublicKeyHash = [u8; SHA_OUTPUT_SIZE];
 /// An identity in the TBD-Verse. This could be a server, network, user, DAO, automated
 /// process, etc.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[must_use]
 pub struct Identity(InnerIdentity);
 
 impl Identity {
@@ -266,6 +267,7 @@ impl AsRef<[u8; MAX_IDENTITY_BYTE_LEN]> for Identity {
 
 #[derive(Copy, Clone, Eq, Debug, Ord, PartialOrd)]
 #[non_exhaustive]
+#[must_use]
 struct InnerIdentity {
     bytes: [u8; MAX_IDENTITY_BYTE_LEN],
 }
