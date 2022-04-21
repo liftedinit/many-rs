@@ -38,15 +38,15 @@ impl Feature {
         Self(Attribute::new(id, arguments))
     }
 
-    pub fn with_arguments(&self, arguments: Vec<CborAny>) -> Self {
-        Self(self.0.with_arguments(arguments))
-    }
-
     pub const fn id(&self) -> FeatureId {
         self.0.id
     }
 
-    pub fn arguments(&self) -> Option<&Vec<CborAny>> {
+    pub fn with_argument(&self, argument: CborAny) -> Self {
+        Self(self.0.with_argument(argument))
+    }
+
+    pub fn arguments(&self) -> &Vec<CborAny> {
         self.0.arguments()
     }
 }
@@ -130,14 +130,14 @@ mod tests {
     fn features() {
         let mut set = FeatureSet::default();
         set.insert(Feature::with_id(0));
-        set.insert(Feature::with_id(5).with_arguments(vec![CborAny::Int(1)]));
+        set.insert(Feature::with_id(5).with_argument(CborAny::Int(1)));
 
         struct SomeFeature;
         impl TryCreateFeature for SomeFeature {
             const ID: FeatureId = 1;
             fn try_create(f: &Feature) -> Result<Self, ManyError> {
-                match f.arguments().map(|a| a.as_slice()) {
-                    Some(&[CborAny::Int(123)]) => Ok(Self),
+                match f.arguments().as_slice() {
+                    &[CborAny::Int(123)] => Ok(Self),
                     _ => Err(ManyError::unknown("ERROR".to_string())),
                 }
             }
@@ -149,19 +149,19 @@ mod tests {
         assert!(set.get::<SomeFeature>().is_err());
 
         set.remove(1);
-        set.insert(Feature::with_id(1).with_arguments(vec![CborAny::Int(2)]));
+        set.insert(Feature::with_id(1).with_argument(CborAny::Int(2)));
         assert!(set.get::<SomeFeature>().is_err());
 
         set.remove(1);
-        set.insert(Feature::with_id(1).with_arguments(vec![CborAny::Int(123)]));
+        set.insert(Feature::with_id(1).with_argument(CborAny::Int(123)));
         assert!(set.get::<SomeFeature>().is_ok());
 
         assert_eq!(
             Vec::from_iter(set.iter()).as_slice(),
             &[
                 &Feature::with_id(0),
-                &Feature::with_id(1).with_arguments(vec![CborAny::Int(123)]),
-                &Feature::with_id(5).with_arguments(vec![CborAny::Int(1)]),
+                &Feature::with_id(1).with_argument(CborAny::Int(123)),
+                &Feature::with_id(5).with_argument(CborAny::Int(1)),
             ]
         );
     }

@@ -91,3 +91,28 @@ impl<'d> Decode<'d> for CborAny {
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::CborAny;
+    use proptest::prelude::*;
+
+    /// Generate arbitraty CborAny value.
+    ///
+    /// Recursive structures depth, size and branch size are limited
+    pub fn arb_cbor() -> impl Strategy<Value = CborAny> {
+        let leaf = prop_oneof![
+            any::<bool>().prop_map(CborAny::Bool),
+            any::<i64>().prop_map(CborAny::Int),
+            ".*".prop_map(CborAny::String),
+            proptest::collection::vec(any::<u8>(), 0..50).prop_map(CborAny::Bytes),
+        ];
+
+        leaf.prop_recursive(4, 256, 10, |inner| {
+            prop_oneof![
+                proptest::collection::vec(inner.clone(), 0..10).prop_map(CborAny::Array),
+                proptest::collection::btree_map(inner.clone(), inner, 0..10).prop_map(CborAny::Map),
+            ]
+        })
+    }
+}

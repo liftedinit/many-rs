@@ -3,70 +3,46 @@ use minicbor::data::Type;
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use std::cmp::Ordering;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
 pub mod attributes;
 pub use attributes::AttributeSet;
 
 pub type AttributeId = u32;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Attribute {
     pub id: AttributeId,
-    pub arguments: Option<Vec<CborAny>>,
+    pub arguments: Vec<CborAny>,
 }
 
 impl Attribute {
     pub const fn id(id: AttributeId) -> Self {
         Self {
             id,
-            arguments: None,
+            arguments: vec![],
         }
     }
 
-    pub fn new(id: AttributeId, arguments: Vec<CborAny>) -> Self {
-        Self {
-            id,
-            arguments: if arguments.is_empty() {
-                None
-            } else {
-                Some(arguments)
-            },
-        }
-    }
-
-    pub fn with_arguments(&self, arguments: Vec<CborAny>) -> Self {
-        Self::new(self.id, arguments)
+    pub const fn new(id: AttributeId, arguments: Vec<CborAny>) -> Self {
+        Self { id, arguments }
     }
 
     pub fn with_argument(&self, argument: CborAny) -> Self {
-        let mut arguments = self.arguments.as_ref().cloned().unwrap_or_default();
+        let mut arguments = self.arguments.clone();
         arguments.push(argument);
         Self {
-            arguments: Some(arguments),
             id: self.id,
+            arguments,
         }
     }
 
     pub fn into_arguments(self) -> Vec<CborAny> {
-        if let Some(a) = self.arguments {
-            a
-        } else {
-            vec![]
-        }
+        self.arguments
     }
 
-    pub fn arguments(&self) -> Option<&Vec<CborAny>> {
-        match &self.arguments {
-            Some(arguments) => {
-                if arguments.is_empty() {
-                    None
-                } else {
-                    Some(arguments)
-                }
-            }
-            None => None,
-        }
+    pub fn arguments(&self) -> &Vec<CborAny> {
+        &self.arguments
     }
 }
 
@@ -90,29 +66,16 @@ impl Ord for Attribute {
     }
 }
 
-impl Debug for Attribute {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if let Some(ref arguments) = self.arguments() {
-            f.debug_struct("Attribute")
-                .field("id", &self.id)
-                .field("arguments", &arguments)
-                .finish()
-        } else {
-            f.write_fmt(format_args!("Attribute({})", self.id))
-        }
-    }
-}
-
 impl Encode for Attribute {
     fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
-        if let Some(arguments) = self.arguments() {
-            e.array(1 + arguments.len() as u64)?;
+        if self.arguments.is_empty() {
             e.u32(self.id as u32)?;
-            for a in arguments {
+        } else {
+            e.array(1 + self.arguments.len() as u64)?;
+            e.u32(self.id as u32)?;
+            for a in &self.arguments {
                 e.encode(a)?;
             }
-        } else {
-            e.u32(self.id as u32)?;
         }
 
         Ok(())
@@ -130,9 +93,9 @@ impl<'d> Decode<'d> for Attribute {
                     .ok_or(minicbor::decode::Error::Message("Invalid empty attribute."))?;
 
                 match id {
-                    CborAny::Int(i) if i <= &(u32::MAX as i64) => Ok(Self {
+                    CborAny::Int(i) if i <= &i64::from(u32::MAX) => Ok(Self {
                         id: *i as u32,
-                        arguments: Some(arguments.to_vec()),
+                        arguments: arguments.to_vec(),
                     }),
                     _ => Err(minicbor::decode::Error::Message(
                         "Expected an attribute ID.",
@@ -140,6 +103,103 @@ impl<'d> Decode<'d> for Attribute {
                 }
             }
             _ => Ok(Self::id(d.u32()? as u32)),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cbor::tests::arb_cbor;
+    use proptest::prelude::*;
+
+    prop_compose! {
+        /// Generate an arbitrary Attribute argument vector of size [0, 10[
+        fn arb_args()(args in prop::collection::vec(arb_cbor(), 0..10)) -> Vec<CborAny> {
+            args
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitrary Attribute ID
+        fn arb_id()(id in any::<u32>()) -> u32 {
+            id
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitraty Attribute
+        fn arb_attr()(id in arb_id(), arguments in arb_args()) -> Attribute {
+            Attribute { id, arguments }
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn encode_decode(attr in arb_attr()) {
+            let cbor = minicbor::to_vec(attr.clone()).unwrap();
+            let attr2: Attribute = minicbor::decode(&cbor).unwrap();
+            assert_eq!(attr, attr2);
+
+            #[allow(clippy::unusual_byte_groupings)]
+            const HIGH_3_BITS_MASK: u8 = 0b111_00000;
+            if attr.arguments.is_empty() {
+                // Make sure the CBOR type is an unsigned int
+                assert_eq!(cbor[0] & HIGH_3_BITS_MASK, 0b00000000);
+            } else {
+                // Make sure the CBOR type is an array
+                assert_eq!(cbor[0] & HIGH_3_BITS_MASK, 0b10000000);
+            }
+        }
+
+        #[test]
+        fn id(id in arb_id()) {
+            let attr = Attribute::id(id);
+            assert_eq!(attr.id, id);
+            assert_eq!(attr.arguments, vec![]);
+        }
+
+        #[test]
+        fn with_argument(id in arb_id(), argument in arb_cbor()) {
+            let attr = Attribute::id(id);
+            assert_eq!(attr.arguments, vec![]);
+            let attr = attr.with_argument(argument.clone());
+            assert_eq!(attr.arguments, vec![argument]);
+        }
+
+        #[test]
+        fn into_arguments(id in arb_id(), arguments in arb_args()) {
+            let mut attr = Attribute::id(id);
+            assert_eq!(attr.clone().into_arguments(), vec![]);
+            for arg in arguments.clone().into_iter() {
+                attr = attr.with_argument(arg);
+            }
+            let args = attr.into_arguments();
+            assert_eq!(args, arguments);
+        }
+
+        #[test]
+        fn arguments(id in arb_id(), arguments in arb_args()) {
+            let mut attr = Attribute::id(id);
+            assert_eq!(attr.arguments, vec![]);
+            for arg in arguments.clone().into_iter() {
+                attr = attr.with_argument(arg);
+            }
+            assert_eq!(attr.arguments(), &arguments);
+        }
+
+        #[test]
+        fn ord(id1 in arb_id(), id2 in arb_id()) {
+            let mut v = vec![id1, id2];
+            v.sort_unstable();
+            let (attr1, attr2) = (Attribute::id(v[0]), Attribute::id(v[1]));
+            assert_eq!(attr1.cmp(&attr2), Ordering::Less);
+            assert_eq!(attr1.partial_cmp(&attr2), Some(Ordering::Less));
+        }
+
+        #[test]
+        fn debug_fmt(attr in arb_attr()) {
+            assert_eq!(format!("Attribute {{ id: {}, arguments: {:?} }}", attr.id, attr.arguments), format!("{:?}", attr));
         }
     }
 }

@@ -198,15 +198,15 @@ impl<'b> Decode<'b> for RequestMessage {
                     let t = d.tag()?;
                     if t != minicbor::data::Tag::Timestamp {
                         return Err(minicbor::decode::Error::Message("Invalid tag."));
-                    } else {
-                        let secs = d.u64()?;
-                        let timestamp = std::time::UNIX_EPOCH
-                            .checked_add(Duration::from_secs(secs))
-                            .ok_or(minicbor::decode::Error::Message(
-                                "duration value can not represent system time",
-                            ))?;
-                        builder.timestamp(timestamp)
                     }
+
+                    let secs = d.u64()?;
+                    let timestamp = std::time::UNIX_EPOCH
+                        .checked_add(Duration::from_secs(secs))
+                        .ok_or(minicbor::decode::Error::Message(
+                            "duration value can not represent system time",
+                        ))?;
+                    builder.timestamp(timestamp)
                 }
                 Some(RequestMessageCborKey::Id) => builder.id(d.u64()?),
                 Some(RequestMessageCborKey::Nonce) => builder.nonce(d.bytes()?.to_vec()),
