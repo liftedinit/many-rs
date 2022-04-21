@@ -3,14 +3,14 @@ use minicbor::data::Type;
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use std::cmp::Ordering;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
 pub mod attributes;
 pub use attributes::AttributeSet;
 
 pub type AttributeId = u32;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Attribute {
     pub id: AttributeId,
     pub arguments: Vec<CborAny>,
@@ -59,15 +59,6 @@ impl PartialOrd for Attribute {
 impl Ord for Attribute {
     fn cmp(&self, other: &Self) -> Ordering {
         self.id.cmp(&other.id)
-    }
-}
-
-impl Debug for Attribute {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Attribute")
-            .field("id", &self.id)
-            .field("arguments", &self.arguments)
-            .finish()
     }
 }
 
