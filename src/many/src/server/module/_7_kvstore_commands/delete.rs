@@ -1,3 +1,4 @@
+use crate::server::module::EmptyReturn;
 use minicbor::bytes::ByteVec;
 use minicbor::{Decode, Encode};
 
@@ -8,6 +9,4 @@ pub struct DeleteArgs {
     pub key: ByteVec,
 }
 
-#[derive(Encode, Decode)]
-#[cbor(map)]
-pub struct DeleteReturns {}
+pub type DeleteReturn = EmptyReturn;

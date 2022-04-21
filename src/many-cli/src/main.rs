@@ -1,6 +1,6 @@
 use clap::{ArgGroup, Parser};
 use coset::CborSerializable;
-use many::hsm::{HSMMechanismType, HSMSessionType, HSMUserType, HSM};
+use many::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
 use many::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
 use many::server::module::ledger;
 use many::transport::http::HttpServer;
@@ -171,7 +171,9 @@ fn main() {
                 match Identity::try_from(data.as_slice()) {
                     Ok(mut i) => {
                         if let Some(subid) = o.subid {
-                            i = i.with_subresource_id(subid);
+                            i = i
+                                .with_subresource_id(subid)
+                                .expect("Invalid subresource id");
                         }
                         println!("{}", i)
                     }
@@ -182,14 +184,18 @@ fn main() {
                 }
             } else if let Ok(mut i) = Identity::try_from(o.arg.clone()) {
                 if let Some(subid) = o.subid {
-                    i = i.with_subresource_id(subid);
+                    i = i
+                        .with_subresource_id(subid)
+                        .expect("Invalid subresource id");
                 }
                 println!("{}", hex::encode(&i.to_vec()));
             } else if let Ok(pem_content) = std::fs::read_to_string(&o.arg) {
                 // Create the identity from the public key hash.
                 let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().identity;
                 if let Some(subid) = o.subid {
-                    i = i.with_subresource_id(subid);
+                    i = i
+                        .with_subresource_id(subid)
+                        .expect("Invalid subresource id");
                 }
 
                 println!("{}", i);
@@ -202,21 +208,23 @@ fn main() {
             let keyid = hex::decode(o.keyid).expect("Failed to decode keyid to hex");
 
             {
-                let mut hsm = HSM::get_instance().expect("HSM mutex poisoned");
+                let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
                 hsm.init(o.module, keyid)
                     .expect("Failed to initialize HSM module");
 
                 // The session will stay open until the application terminates
-                hsm.open_session(o.slot, HSMSessionType::RO, None, None)
+                hsm.open_session(o.slot, HsmSessionType::RO, None, None)
                     .expect("Failed to open HSM session");
             }
 
-            let mut id = CoseKeyIdentity::from_hsm(HSMMechanismType::ECDSA)
+            let mut id = CoseKeyIdentity::from_hsm(HsmMechanismType::ECDSA)
                 .expect("Unable to create CoseKeyIdentity from HSM")
                 .identity;
 
             if let Some(subid) = o.subid {
-                id = id.with_subresource_id(subid);
+                id = id
+                    .with_subresource_id(subid)
+                    .expect("Invalid subresource id");
             }
 
             println!("{}", id);
@@ -229,18 +237,18 @@ fn main() {
                 let keyid = hex::decode(keyid).expect("Failed to decode keyid to hex");
 
                 {
-                    let mut hsm = HSM::get_instance().expect("HSM mutex poisoned");
+                    let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
                     hsm.init(module, keyid)
                         .expect("Failed to initialize HSM module");
 
                     // The session will stay open until the application terminates
-                    hsm.open_session(slot, HSMSessionType::RO, Some(HSMUserType::User), Some(pin))
+                    hsm.open_session(slot, HsmSessionType::RO, Some(HsmUserType::User), Some(pin))
                         .expect("Failed to open HSM session");
                 }
 
                 trace!("Creating CoseKeyIdentity");
                 // Only ECDSA is supported at the moment. It should be easy to add support for new EC mechanisms
-                CoseKeyIdentity::from_hsm(HSMMechanismType::ECDSA)
+                CoseKeyIdentity::from_hsm(HsmMechanismType::ECDSA)
                     .expect("Unable to create CoseKeyIdentity from HSM")
             } else if o.pem.is_some() {
                 // If `pem` is not provided, use anonymous and don't sign.

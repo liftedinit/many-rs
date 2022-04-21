@@ -14,12 +14,13 @@ pub mod ledger;
 /// numbers and rounded down.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
+#[must_use]
 pub struct Percent(pub fixed::types::U32F32);
 
 impl Percent {
     pub fn new(i: u32, fraction: u32) -> Self {
         Self(fixed::types::U32F32::from_bits(
-            (i as u64).shl(32) + (fraction as u64),
+            u64::from(i).shl(32) + u64::from(fraction),
         ))
     }
 }
@@ -38,6 +39,7 @@ impl<'b> Decode<'b> for Percent {
 }
 
 #[derive(Clone, Default, Debug)]
+#[must_use]
 pub struct VecOrSingle<T>(pub Vec<T>);
 
 impl<T> From<VecOrSingle<T>> for Vec<T> {
@@ -79,6 +81,7 @@ where
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[must_use]
 pub struct Timestamp(pub SystemTime);
 
 impl Timestamp {
@@ -139,6 +142,7 @@ impl From<Timestamp> for SystemTime {
 }
 
 #[derive(Copy, Clone)]
+#[must_use]
 pub struct CborRange<T> {
     pub start: std::ops::Bound<T>,
     pub end: std::ops::Bound<T>,
@@ -311,6 +315,7 @@ pub struct TransactionFilter {
     pub date_range: Option<CborRange<Timestamp>>,
 }
 
+#[must_use]
 pub enum SortOrder {
     Indeterminate = 0,
     Ascending = 1,
@@ -340,7 +345,7 @@ impl<'b> Decode<'b> for SortOrder {
             0 => Self::Indeterminate,
             1 => Self::Ascending,
             2 => Self::Descending,
-            x => return Err(decode::Error::UnknownVariant(x as u32)),
+            x => return Err(decode::Error::UnknownVariant(u32::from(x))),
         })
     }
 }

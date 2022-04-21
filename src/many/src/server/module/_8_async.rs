@@ -133,7 +133,9 @@ impl StatusReturn {
             (0, None) => Ok(Self::Unknown),
             (1, None) => Ok(Self::Queued),
             (2, None) => Ok(Self::Processing),
-            (3, Some(response)) => Ok(Self::Done { response: Box::new(response) }),
+            (3, Some(response)) => Ok(Self::Done {
+                response: Box::new(response),
+            }),
             (4, None) => Ok(Self::Expired),
             _ => Err(()),
         }
@@ -183,7 +185,7 @@ impl<'b> Decode<'b> for StatusReturn {
                     1 => {
                         result = Some(d.bytes()?);
                     }
-                    x => return Err(minicbor::decode::Error::UnknownVariant(x as u32)),
+                    x => return Err(minicbor::decode::Error::UnknownVariant(u32::from(x))),
                 },
 
                 _ => return Err(minicbor::decode::Error::Message("Invalid key type.")),
@@ -211,5 +213,5 @@ impl<'b> Decode<'b> for StatusReturn {
 
 #[many_module(name = AsyncModule, id = 8, namespace = async, many_crate = crate)]
 pub trait AsyncModuleBackend: Send {
-    fn status(&mut self, sender: &Identity, args: StatusArgs) -> Result<StatusReturn, ManyError>;
+    fn status(&self, sender: &Identity, args: StatusArgs) -> Result<StatusReturn, ManyError>;
 }

@@ -2,6 +2,8 @@ use crate::message::{RequestMessage, ResponseMessage};
 use crate::protocol::Attribute;
 use crate::ManyError;
 use async_trait::async_trait;
+use minicbor::encode::{Error, Write};
+use minicbor::{Decoder, Encoder};
 use std::fmt::Debug;
 
 macro_rules! reexport_module {
@@ -27,6 +29,29 @@ reexport_module!(
     abci_backend: _1000_abci_backend;
     abci_frontend: _1001_abci_frontend;
 );
+
+/// The specification says that some methods returns nothing (e.g. void or unit).
+/// Empty returns are empty semantically (unit type), but we don't want to break CBOR
+/// decoders so we use a null value instead.
+/// We expect decoders to skip the value anyway.
+#[derive(Debug)]
+pub struct EmptyReturn;
+
+impl minicbor::Encode for EmptyReturn {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+        // We encode nothing as a null so it's a value.
+        e.null()?;
+        Ok(())
+    }
+}
+
+impl<'b> minicbor::Decode<'b> for EmptyReturn {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+        // Nothing to do. Skip a value if there's one, but don't error if there's none.
+        let _ = d.skip();
+        Ok(Self)
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct ManyModuleInfo {

@@ -1,3 +1,4 @@
+// TODO: Implement a SubresourceId type. Best way here is to use num-* crates.
 use crate::cose_helpers::public_key;
 use crate::message::ManyError;
 use coset::{CborSerializable, CoseKey};
@@ -14,6 +15,9 @@ use std::str::FromStr;
 pub mod cose;
 pub use cose::CoseKeyIdentity;
 
+/// Subresource IDs are 31 bit integers.
+pub const MAX_SUBRESOURCE_ID: u32 = 0x7FFF_FFFF;
+
 const MAX_IDENTITY_BYTE_LEN: usize = 32;
 const SHA_OUTPUT_SIZE: usize = <Sha3_224 as Digest>::OutputSize::USIZE;
 pub type PublicKeyHash = [u8; SHA_OUTPUT_SIZE];
@@ -21,6 +25,7 @@ pub type PublicKeyHash = [u8; SHA_OUTPUT_SIZE];
 /// An identity in the TBD-Verse. This could be a server, network, user, DAO, automated
 /// process, etc.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[must_use]
 pub struct Identity(InnerIdentity);
 
 impl Identity {
@@ -37,9 +42,13 @@ impl Identity {
         Self(InnerIdentity::public_key(pk.into()))
     }
 
-    pub fn subresource(key: &CoseKey, subid: u32) -> Self {
-        let pk = Sha3_224::digest(&public_key(key).unwrap().to_vec().unwrap());
-        Self(InnerIdentity::subresource(pk.into(), subid))
+    pub fn subresource(key: &CoseKey, subid: u32) -> Result<Self, ManyError> {
+        if subid > MAX_SUBRESOURCE_ID {
+            Err(ManyError::invalid_identity_subid())
+        } else {
+            let pk = Sha3_224::digest(&public_key(key).unwrap().to_vec().unwrap());
+            Ok(Self(InnerIdentity::subresource_unchecked(pk.into(), subid)))
+        }
     }
 
     pub const fn is_anonymous(&self) -> bool {
@@ -56,9 +65,17 @@ impl Identity {
         self.0.subresource_id()
     }
 
-    pub const fn with_subresource_id(&self, subid: u32) -> Self {
+    pub fn with_subresource_id(&self, subid: u32) -> Result<Self, ManyError> {
+        if subid > MAX_SUBRESOURCE_ID {
+            Err(ManyError::invalid_identity_subid())
+        } else {
+            Ok(self.with_subresource_id_unchecked(subid))
+        }
+    }
+
+    pub const fn with_subresource_id_unchecked(&self, subid: u32) -> Self {
         if let Some(h) = self.0.hash() {
-            Self(InnerIdentity::subresource(h, subid))
+            Self(InnerIdentity::subresource_unchecked(h, subid))
         } else {
             Self::anonymous()
         }
@@ -80,7 +97,7 @@ impl Identity {
         self.0.to_vec()
     }
 
-    pub fn to_byte_array(&self) -> [u8; MAX_IDENTITY_BYTE_LEN] {
+    pub fn to_byte_array(self) -> [u8; MAX_IDENTITY_BYTE_LEN] {
         self.0.to_byte_array()
     }
 
@@ -105,6 +122,16 @@ impl Identity {
             false
         }
     }
+
+    /// Check that another identity matches this one, ignoring any subresouce IDs.
+    pub fn matches(&self, other: &Identity) -> bool {
+        if self.is_anonymous() {
+            other.is_anonymous()
+        } else {
+            // Extract public key hash of both.
+            self.0.hash() == other.0.hash()
+        }
+    }
 }
 
 #[cfg(feature = "raw")]
@@ -120,7 +147,7 @@ impl Identity {
     /// id. The hash isn't validated, but the subid is.
     #[inline(always)]
     pub fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
-        Self(InnerIdentity::subresource(hash, subid))
+        Self(InnerIdentity::subresource_unchecked(hash, subid))
     }
 }
 
@@ -188,9 +215,9 @@ impl<'b> Decode<'b> for Identity {
                     return Err(minicbor::decode::Error::Message(
                         "identities need to be tagged",
                     ));
-                } else {
-                    Self::try_from(d.bytes()?)
                 }
+
+                Self::try_from(d.bytes()?)
             }
         }
         .map_err(|_e| minicbor::decode::Error::Message("Could not decode identity from bytes"))
@@ -266,6 +293,7 @@ impl AsRef<[u8; MAX_IDENTITY_BYTE_LEN]> for Identity {
 
 #[derive(Copy, Clone, Eq, Debug, Ord, PartialOrd)]
 #[non_exhaustive]
+#[must_use]
 struct InnerIdentity {
     bytes: [u8; MAX_IDENTITY_BYTE_LEN],
 }
@@ -316,13 +344,13 @@ impl InnerIdentity {
         Self { bytes }
     }
 
-    pub const fn subresource(hash: [u8; SHA_OUTPUT_SIZE], id: u32) -> Self {
+    pub(crate) const fn subresource_unchecked(hash: [u8; SHA_OUTPUT_SIZE], id: u32) -> Self {
         // Get a public key and add the resource id.
         let mut bytes = Self::public_key(hash).bytes;
-        bytes[0] = 0x80 + ((id & 0x7F000000) >> 24) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 1)] = ((id & 0x00FF0000) >> 16) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 2)] = ((id & 0x0000FF00) >> 8) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 3)] = (id & 0x000000FF) as u8;
+        bytes[0] = 0x80 + ((id & 0x7F00_0000) >> 24) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 1)] = ((id & 0x00FF_0000) >> 16) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 2)] = ((id & 0x0000_FF00) >> 8) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 3)] = (id & 0x0000_00FF) as u8;
         Self { bytes }
     }
 
@@ -358,7 +386,7 @@ impl InnerIdentity {
                     hash.copy_from_slice(&bytes[1..29]);
                     subid[0] = hi;
                     subid[1..].copy_from_slice(&bytes[29..32]);
-                    Ok(Self::subresource(hash, u32::from_be_bytes(subid)))
+                    Ok(Self::subresource_unchecked(hash, u32::from_be_bytes(subid)))
                 }
             }
             x => Err(ManyError::invalid_identity_kind(x.to_string())),
@@ -638,7 +666,8 @@ pub mod tests {
     fn subresource_1() {
         let a = Identity::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys")
             .unwrap()
-            .with_subresource_id(1);
+            .with_subresource_id(1)
+            .unwrap();
         let b = Identity::from_bytes(
             &hex::decode("80c8aead03f915f128f0fa7ff696c656eaa93db87bd9aa73df693acb22000001")
                 .unwrap(),
@@ -651,7 +680,23 @@ pub mod tests {
         .unwrap();
 
         assert_eq!(a, b);
-        assert_eq!(b.with_subresource_id(2), c);
+        assert_eq!(b.with_subresource_id(2).unwrap(), c);
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn subresource_id_fuzzy(subid: u32) {
+            let a = Identity::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys")
+                .unwrap()
+                .with_subresource_id(subid);
+
+            if let Ok(id) = a {
+                let b = Identity::from_str(&id.to_string());
+                assert_eq!(a, b);
+            } else {
+                assert_eq!(subid.leading_zeros(), 0);
+            }
+        }
     }
 
     #[test]
