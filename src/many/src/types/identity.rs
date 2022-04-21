@@ -1,3 +1,4 @@
+// TODO: Implement a SubresourceId type. Best way here is to use num-* crates.
 use crate::cose_helpers::public_key;
 use crate::message::ManyError;
 use coset::{CborSerializable, CoseKey};
@@ -13,6 +14,9 @@ use std::str::FromStr;
 
 pub mod cose;
 pub use cose::CoseKeyIdentity;
+
+/// Subresource IDs are 31 bit integers.
+pub const MAX_SUBRESOURCE_ID: u32 = 0x7FFF_FFFF;
 
 const MAX_IDENTITY_BYTE_LEN: usize = 32;
 const SHA_OUTPUT_SIZE: usize = <Sha3_224 as Digest>::OutputSize::USIZE;
@@ -38,7 +42,7 @@ impl Identity {
     }
 
     pub fn subresource(key: &CoseKey, subid: u32) -> Result<Self, ManyError> {
-        if subid >= 0x80000000 {
+        if subid > MAX_SUBRESOURCE_ID {
             Err(ManyError::invalid_identity_subid())
         } else {
             let pk = Sha3_224::digest(&public_key(key).unwrap().to_vec().unwrap());
@@ -61,7 +65,7 @@ impl Identity {
     }
 
     pub fn with_subresource_id(&self, subid: u32) -> Result<Self, ManyError> {
-        if subid >= 0x80000000 {
+        if subid > MAX_SUBRESOURCE_ID {
             Err(ManyError::invalid_identity_subid())
         } else {
             Ok(self.with_subresource_id_unchecked(subid))
