@@ -1,5 +1,5 @@
 use crate::cose_helpers::{ecdsa_cose_key, eddsa_cose_key, public_key};
-use crate::hsm::{HSMMechanism, HSMMechanismType, Hsm};
+use crate::hsm::{Hsm, HsmMechanism, HsmMechanismType};
 use crate::Identity;
 use coset::iana::{self, Ec2KeyParameter, EnumI64, OkpKeyParameter};
 use coset::{Algorithm, CoseKey, KeyOperation, Label};
@@ -81,7 +81,7 @@ impl CoseKeyIdentity {
         }
     }
 
-    pub fn from_hsm(mechanism: HSMMechanismType) -> Result<Self, String> {
+    pub fn from_hsm(mechanism: HsmMechanismType) -> Result<Self, String> {
         let hsm = Hsm::get_instance().map_err(|e| e.to_string())?;
         let (raw_points, _) = hsm.ec_info(mechanism).map_err(|e| e.to_string())?;
         trace!("Creating NIST P-256 SEC1 encoded point");
@@ -237,7 +237,7 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
 
                         trace!("Singning message using HSM");
                         let msg_signature = hsm
-                            .sign(digest.as_slice(), &HSMMechanism::Ecdsa)
+                            .sign(digest.as_slice(), &HsmMechanism::Ecdsa)
                             .map_err(|e| {
                                 error!("Unable to sign message using HSM: {}", e);
                                 Error::new()

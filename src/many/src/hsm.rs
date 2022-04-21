@@ -29,13 +29,13 @@ use crate::ManyError;
 static HSM_INSTANCE: Lazy<Mutex<Hsm>> = Lazy::new(|| Mutex::new(Hsm::new()));
 
 /// Same as cryptoki::session::UserType
-pub type HSMUserType = UserType;
+pub type HsmUserType = UserType;
 
 /// Same as cryptoki::mechanism::Mechanism
-pub type HSMMechanism = Mechanism;
+pub type HsmMechanism = Mechanism;
 
 /// Same as cryptoki::mechanism::MechanismType
-pub type HSMMechanismType = MechanismType;
+pub type HsmMechanismType = MechanismType;
 
 /// HSM session type.
 pub enum HsmSessionType {
@@ -67,7 +67,7 @@ impl Hsm {
     ///
     /// Note: The NIST P-256 curve requires the user to hash the message with
     /// SHA256, and to sign the result.
-    pub fn sign(&self, msg: &[u8], mechanism: &HSMMechanism) -> Result<Vec<u8>, ManyError> {
+    pub fn sign(&self, msg: &[u8], mechanism: &HsmMechanism) -> Result<Vec<u8>, ManyError> {
         let session = self.session.as_ref().ok_or_else(|| {
             ManyError::hsm_session_error("No PKCS#11 open session found".to_string())
         })?;
@@ -119,7 +119,7 @@ impl Hsm {
         &self,
         msg: &[u8],
         signature: &[u8],
-        mechanism: &HSMMechanism,
+        mechanism: &HsmMechanism,
     ) -> Result<(), ManyError> {
         let session = self.session.as_ref().ok_or_else(|| {
             ManyError::hsm_session_error("No PKCS#11 open session found".to_string())
@@ -168,7 +168,7 @@ impl Hsm {
     /// EC_POINT is returned in raw, uncompressed form, i.e., NOT ASN.1 DER
     ///
     /// Note: Only works with EC keys
-    pub fn ec_info(&self, mechanism: HSMMechanismType) -> Result<(Vec<u8>, Vec<u8>), ManyError> {
+    pub fn ec_info(&self, mechanism: HsmMechanismType) -> Result<(Vec<u8>, Vec<u8>), ManyError> {
         let pkcs11 = self
             .pkcs11
             .as_ref()
@@ -256,7 +256,7 @@ impl Hsm {
         &mut self,
         slot: u64,
         session_type: HsmSessionType,
-        user_type: Option<HSMUserType>,
+        user_type: Option<HsmUserType>,
         pin: Option<String>,
     ) -> Result<(), ManyError> {
         let pkcs11 = self
@@ -418,7 +418,7 @@ mod tests {
         /// Generate a new keypair on the HSM
         fn generate_key_pair(
             &self,
-            mechanism: &HSMMechanism,
+            mechanism: &HsmMechanism,
             pub_template: &[HSMAttribute],
             priv_template: &[HSMAttribute],
         ) -> Result<(HSMObjectHandle, HSMObjectHandle), ManyError> {
@@ -489,7 +489,7 @@ mod tests {
         hsm.open_session(
             slot,
             HsmSessionType::RW,
-            Some(HSMUserType::So),
+            Some(HsmUserType::So),
             Some(SO_PIN.to_string()),
         )?;
         hsm.init_user_pin(USER_PIN.to_string())?;
@@ -509,7 +509,7 @@ mod tests {
         hsm.open_session(
             slot,
             HsmSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
-            Some(HSMUserType::User),
+            Some(HsmUserType::User),
             Some(USER_PIN.to_string()),
         )?;
         let (public, private) = hsm.generate_key_pair(
@@ -522,8 +522,8 @@ mod tests {
         // See https://github.com/parallaxsecond/rust-cryptoki/issues/88
         let digest = sha2::Sha256::digest(MSG);
 
-        let hsm_signature = hsm.sign(digest.as_slice(), &HSMMechanism::Ecdsa)?;
-        hsm.verify(digest.as_slice(), &hsm_signature, &HSMMechanism::Ecdsa)?;
+        let hsm_signature = hsm.sign(digest.as_slice(), &HsmMechanism::Ecdsa)?;
+        hsm.verify(digest.as_slice(), &hsm_signature, &HsmMechanism::Ecdsa)?;
 
         hsm.destroy(public)?;
         hsm.destroy(private)?;
@@ -546,7 +546,7 @@ mod tests {
         hsm.open_session(
             slot,
             HsmSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
-            Some(HSMUserType::User),
+            Some(HsmUserType::User),
             Some(USER_PIN.to_string()),
         )?;
 
@@ -559,9 +559,9 @@ mod tests {
         // See https://github.com/parallaxsecond/rust-cryptoki/issues/88
         let digest = sha2::Sha256::digest(MSG);
 
-        let hsm_signature = hsm.sign(digest.as_slice(), &HSMMechanism::Ecdsa)?;
+        let hsm_signature = hsm.sign(digest.as_slice(), &HsmMechanism::Ecdsa)?;
 
-        let (ec_points, _ec_params) = hsm.ec_info(HSMMechanismType::ECDSA)?;
+        let (ec_points, _ec_params) = hsm.ec_info(HsmMechanismType::ECDSA)?;
         let points =
             p256::EncodedPoint::from_bytes(ec_points).expect("Unable to create p256::EncodedPoint");
         let verify_key = p256::ecdsa::VerifyingKey::from_encoded_point(&points).unwrap();
