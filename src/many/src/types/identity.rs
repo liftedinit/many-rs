@@ -188,9 +188,9 @@ impl<'b> Decode<'b> for Identity {
                     return Err(minicbor::decode::Error::Message(
                         "identities need to be tagged",
                     ));
-                } else {
-                    Self::try_from(d.bytes()?)
                 }
+
+                Self::try_from(d.bytes()?)
             }
         }
         .map_err(|_e| minicbor::decode::Error::Message("Could not decode identity from bytes"))
@@ -319,10 +319,10 @@ impl InnerIdentity {
     pub const fn subresource(hash: [u8; SHA_OUTPUT_SIZE], id: u32) -> Self {
         // Get a public key and add the resource id.
         let mut bytes = Self::public_key(hash).bytes;
-        bytes[0] = 0x80 + ((id & 0x7F000000) >> 24) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 1)] = ((id & 0x00FF0000) >> 16) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 2)] = ((id & 0x0000FF00) >> 8) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 3)] = (id & 0x000000FF) as u8;
+        bytes[0] = 0x80 + ((id & 0x7F00_0000) >> 24) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 1)] = ((id & 0x00FF_0000) >> 16) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 2)] = ((id & 0x0000_FF00) >> 8) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 3)] = (id & 0x0000_00FF) as u8;
         Self { bytes }
     }
 

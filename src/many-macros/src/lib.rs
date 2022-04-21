@@ -95,11 +95,10 @@ impl Endpoint {
                     {
                         ret_type = Some(
                             args.iter()
-                                .filter_map(|x| match x {
+                                .find_map(|x| match x {
                                     GenericArgument::Type(t) => Some(Box::new(t.clone())),
                                     _ => None,
                                 })
-                                .next()
                                 .unwrap(),
                         );
                     }
@@ -127,10 +126,11 @@ impl Endpoint {
     }
 }
 
-fn many_module_impl(attr: TokenStream, item: TokenStream) -> Result<TokenStream, syn::Error> {
-    let attrs: ManyModuleAttributes = from_tokenstream(&attr)?;
+#[allow(clippy::too_many_lines)]
+fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream, syn::Error> {
+    let attrs: ManyModuleAttributes = from_tokenstream(attr)?;
     let many = Ident::new(
-        attrs.many_crate.as_ref().map_or("many", |x| x.as_str()),
+        attrs.many_crate.as_ref().map_or("many", String::as_str),
         attr.span(),
     );
 
@@ -344,7 +344,7 @@ pub fn many_module(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    many_module_impl(attr.into(), item.into())
+    many_module_impl(&attr.into(), item.into())
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }
