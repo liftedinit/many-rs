@@ -81,7 +81,7 @@ impl Identity {
         self.0.to_vec()
     }
 
-    pub fn to_byte_array(&self) -> [u8; MAX_IDENTITY_BYTE_LEN] {
+    pub fn to_byte_array(self) -> [u8; MAX_IDENTITY_BYTE_LEN] {
         self.0.to_byte_array()
     }
 

@@ -183,7 +183,7 @@ impl<'b> Decode<'b> for StatusReturn {
                     1 => {
                         result = Some(d.bytes()?);
                     }
-                    x => return Err(minicbor::decode::Error::UnknownVariant(x as u32)),
+                    x => return Err(minicbor::decode::Error::UnknownVariant(u32::from(x))),
                 },
 
                 _ => return Err(minicbor::decode::Error::Message("Invalid key type.")),

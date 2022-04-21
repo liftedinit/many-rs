@@ -1,6 +1,6 @@
 use clap::{ArgGroup, Parser};
 use coset::CborSerializable;
-use many::hsm::{HSMMechanismType, HSMSessionType, HSMUserType, HSM};
+use many::hsm::{HSMMechanismType, HSMUserType, Hsm, HsmSessionType};
 use many::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
 use many::server::module::ledger;
 use many::transport::http::HttpServer;
@@ -202,12 +202,12 @@ fn main() {
             let keyid = hex::decode(o.keyid).expect("Failed to decode keyid to hex");
 
             {
-                let mut hsm = HSM::get_instance().expect("HSM mutex poisoned");
+                let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
                 hsm.init(o.module, keyid)
                     .expect("Failed to initialize HSM module");
 
                 // The session will stay open until the application terminates
-                hsm.open_session(o.slot, HSMSessionType::RO, None, None)
+                hsm.open_session(o.slot, HsmSessionType::RO, None, None)
                     .expect("Failed to open HSM session");
             }
 
@@ -229,12 +229,12 @@ fn main() {
                 let keyid = hex::decode(keyid).expect("Failed to decode keyid to hex");
 
                 {
-                    let mut hsm = HSM::get_instance().expect("HSM mutex poisoned");
+                    let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
                     hsm.init(module, keyid)
                         .expect("Failed to initialize HSM module");
 
                     // The session will stay open until the application terminates
-                    hsm.open_session(slot, HSMSessionType::RO, Some(HSMUserType::User), Some(pin))
+                    hsm.open_session(slot, HsmSessionType::RO, Some(HSMUserType::User), Some(pin))
                         .expect("Failed to open HSM session");
                 }
 

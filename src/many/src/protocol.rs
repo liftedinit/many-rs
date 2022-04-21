@@ -129,7 +129,7 @@ impl<'d> Decode<'d> for Attribute {
                     .ok_or(minicbor::decode::Error::Message("Invalid empty attribute."))?;
 
                 match id {
-                    CborAny::Int(i) if i <= &(u32::MAX as i64) => Ok(Self {
+                    CborAny::Int(i) if i <= &i64::from(u32::MAX) => Ok(Self {
                         id: *i as u32,
                         arguments: Some(arguments.to_vec()),
                     }),

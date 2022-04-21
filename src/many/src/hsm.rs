@@ -26,7 +26,7 @@ use crate::ManyError;
 ///
 /// If one ever modify this behavior, make sure that the application/tests don't
 /// hit the Cryptoki simultaneously
-static HSM_INSTANCE: Lazy<Mutex<HSM>> = Lazy::new(|| Mutex::new(HSM::new()));
+static HSM_INSTANCE: Lazy<Mutex<Hsm>> = Lazy::new(|| Mutex::new(Hsm::new()));
 
 /// Same as cryptoki::session::UserType
 pub type HSMUserType = UserType;
@@ -38,7 +38,7 @@ pub type HSMMechanism = Mechanism;
 pub type HSMMechanismType = MechanismType;
 
 /// HSM session type.
-pub enum HSMSessionType {
+pub enum HsmSessionType {
     /// Read-only
     RO,
     /// Read-write
@@ -48,15 +48,15 @@ pub enum HSMSessionType {
 /// Holds the PKCS#11 context, the PKCS#11 session and the HSM Key ID to use to
 /// perform the cryptographic operations
 #[derive(Debug, Default)]
-pub struct HSM {
+pub struct Hsm {
     pkcs11: Option<Pkcs11>,
     session: Option<Session>,
     keyid: Option<Vec<u8>>,
 }
 
-impl HSM {
+impl Hsm {
     /// Return the HSM global instance
-    pub fn get_instance() -> Result<MutexGuard<'static, HSM>, ManyError> {
+    pub fn get_instance() -> Result<MutexGuard<'static, Hsm>, ManyError> {
         let hsm = HSM_INSTANCE
             .lock()
             .map_err(|e| ManyError::hsm_mutex_poisoned(e.to_string()))?;
@@ -255,7 +255,7 @@ impl HSM {
     pub fn open_session(
         &mut self,
         slot: u64,
-        session_type: HSMSessionType,
+        session_type: HsmSessionType,
         user_type: Option<HSMUserType>,
         pin: Option<String>,
     ) -> Result<(), ManyError> {
@@ -268,14 +268,14 @@ impl HSM {
             None => {
                 let session_flags = match session_type {
                     // Read-only PKCS#11 session
-                    HSMSessionType::RO => {
+                    HsmSessionType::RO => {
                         trace!("Creating RO session flags");
                         let mut flags = SessionFlags::new();
                         flags.set_serial_session(true);
                         flags
                     }
                     // Read-write PKCS#11 session
-                    HSMSessionType::RW => {
+                    HsmSessionType::RW => {
                         trace!("Creating RW session flags");
                         let mut flags = SessionFlags::new();
                         flags.set_serial_session(true).set_rw_session(true);
@@ -308,8 +308,8 @@ impl HSM {
     }
 
     /// Default constructor. You should not call this and use HSM_INSTANCE instead
-    fn new() -> HSM {
-        HSM {
+    fn new() -> Hsm {
+        Hsm {
             ..Default::default()
         }
     }
@@ -359,7 +359,7 @@ mod tests {
     });
 
     /// HSM methods only used for testing purposes
-    impl HSM {
+    impl Hsm {
         /// Initialize user PIN using an SO FW session
         fn init_user_pin(&self, pin: String) -> Result<(), ManyError> {
             match &self.session {
@@ -468,7 +468,7 @@ mod tests {
     ///     - Generate a new ECDSA (secp256r1) keypair
     /// - Return the slot number
     fn init() -> Result<u64, ManyError> {
-        let mut hsm = HSM::get_instance()?;
+        let mut hsm = Hsm::get_instance()?;
         let module = env::var("PKCS11_SOFTHSM2_MODULE")
             .unwrap_or_else(|_| "/usr/lib/softhsm/libsofthsm2.so".to_string());
         hsm.init(PathBuf::from(module), KEYPAIR_TEST_ID.to_vec())
@@ -488,7 +488,7 @@ mod tests {
 
         hsm.open_session(
             slot,
-            HSMSessionType::RW,
+            HsmSessionType::RW,
             Some(HSMUserType::So),
             Some(SO_PIN.to_string()),
         )?;
@@ -505,10 +505,10 @@ mod tests {
     fn hsm_ecdsa_sign_verify() -> Result<(), ManyError> {
         let slot = init()?;
 
-        let mut hsm = HSM::get_instance()?;
+        let mut hsm = Hsm::get_instance()?;
         hsm.open_session(
             slot,
-            HSMSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
+            HsmSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
             Some(HSMUserType::User),
             Some(USER_PIN.to_string()),
         )?;
@@ -542,10 +542,10 @@ mod tests {
     fn hsm_ecdsa_sign_p256_verify() -> Result<(), ManyError> {
         let slot = init()?;
 
-        let mut hsm = HSM::get_instance()?;
+        let mut hsm = Hsm::get_instance()?;
         hsm.open_session(
             slot,
-            HSMSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
+            HsmSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
             Some(HSMUserType::User),
             Some(USER_PIN.to_string()),
         )?;

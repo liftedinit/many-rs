@@ -1,5 +1,5 @@
 use crate::cose_helpers::{ecdsa_cose_key, eddsa_cose_key, public_key};
-use crate::hsm::{HSMMechanism, HSMMechanismType, HSM};
+use crate::hsm::{HSMMechanism, HSMMechanismType, Hsm};
 use crate::Identity;
 use coset::iana::{self, Ec2KeyParameter, EnumI64, OkpKeyParameter};
 use coset::{Algorithm, CoseKey, KeyOperation, Label};
@@ -82,7 +82,7 @@ impl CoseKeyIdentity {
     }
 
     pub fn from_hsm(mechanism: HSMMechanismType) -> Result<Self, String> {
-        let hsm = HSM::get_instance().map_err(|e| e.to_string())?;
+        let hsm = Hsm::get_instance().map_err(|e| e.to_string())?;
         let (raw_points, _) = hsm.ec_info(mechanism).map_err(|e| e.to_string())?;
         trace!("Creating NIST P-256 SEC1 encoded point");
         let points = p256::EncodedPoint::from_bytes(raw_points).map_err(|e| e.to_string())?;
@@ -225,7 +225,7 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
                 None => Err(Error::new()),
                 Some(Algorithm::Assigned(coset::iana::Algorithm::ES256)) => {
                     if self.hsm {
-                        let hsm = HSM::get_instance().map_err(|e| {
+                        let hsm = Hsm::get_instance().map_err(|e| {
                             error!("HSM mutex poisoned {}", e);
                             Error::new()
                         })?;
