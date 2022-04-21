@@ -173,7 +173,7 @@ fn main() {
                         if let Some(subid) = o.subid {
                             i = i.with_subresource_id(subid);
                         }
-                        eprintln!("{}", i)
+                        println!("{}", i)
                     }
                     Err(e) => {
                         error!("Identity did not parse: {:?}", e.to_string());

@@ -36,7 +36,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --release --all-targets --all-features -- -D clippy::all -D clippy::pedantic
+          args: --release --all-targets --all-features -- -D clippy::all -D clippy::print_stderr
       - name: Perform build (--release)
         uses: actions-rs/cargo@v1
         with:
