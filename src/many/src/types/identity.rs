@@ -25,6 +25,7 @@ pub type PublicKeyHash = [u8; SHA_OUTPUT_SIZE];
 /// An identity in the TBD-Verse. This could be a server, network, user, DAO, automated
 /// process, etc.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[must_use]
 pub struct Identity(InnerIdentity);
 
 impl Identity {
@@ -96,7 +97,7 @@ impl Identity {
         self.0.to_vec()
     }
 
-    pub fn to_byte_array(&self) -> [u8; MAX_IDENTITY_BYTE_LEN] {
+    pub fn to_byte_array(self) -> [u8; MAX_IDENTITY_BYTE_LEN] {
         self.0.to_byte_array()
     }
 
@@ -214,9 +215,9 @@ impl<'b> Decode<'b> for Identity {
                     return Err(minicbor::decode::Error::Message(
                         "identities need to be tagged",
                     ));
-                } else {
-                    Self::try_from(d.bytes()?)
                 }
+
+                Self::try_from(d.bytes()?)
             }
         }
         .map_err(|_e| minicbor::decode::Error::Message("Could not decode identity from bytes"))
@@ -292,6 +293,7 @@ impl AsRef<[u8; MAX_IDENTITY_BYTE_LEN]> for Identity {
 
 #[derive(Copy, Clone, Eq, Debug, Ord, PartialOrd)]
 #[non_exhaustive]
+#[must_use]
 struct InnerIdentity {
     bytes: [u8; MAX_IDENTITY_BYTE_LEN],
 }
@@ -345,10 +347,10 @@ impl InnerIdentity {
     pub(crate) const fn subresource_unchecked(hash: [u8; SHA_OUTPUT_SIZE], id: u32) -> Self {
         // Get a public key and add the resource id.
         let mut bytes = Self::public_key(hash).bytes;
-        bytes[0] = 0x80 + ((id & 0x7F000000) >> 24) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 1)] = ((id & 0x00FF0000) >> 16) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 2)] = ((id & 0x0000FF00) >> 8) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 3)] = (id & 0x000000FF) as u8;
+        bytes[0] = 0x80 + ((id & 0x7F00_0000) >> 24) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 1)] = ((id & 0x00FF_0000) >> 16) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 2)] = ((id & 0x0000_FF00) >> 8) as u8;
+        bytes[(SHA_OUTPUT_SIZE + 3)] = (id & 0x0000_00FF) as u8;
         Self { bytes }
     }
 
