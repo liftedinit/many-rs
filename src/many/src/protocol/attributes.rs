@@ -1,11 +1,11 @@
 use crate::protocol::{Attribute, AttributeId};
 use crate::ManyError;
-use minicbor::encode::{Error, Write};
-use minicbor::{Decode, Decoder, Encode, Encoder};
+use minicbor::{Decode, Encode};
 use std::collections::BTreeSet;
 
-#[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq)]
-pub struct AttributeSet(BTreeSet<Attribute>);
+#[derive(Encode, Decode, Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq)]
+#[cbor(transparent)]
+pub struct AttributeSet(#[n(0)] BTreeSet<Attribute>);
 
 impl AttributeSet {
     pub fn new() -> Self {
@@ -57,21 +57,5 @@ impl IntoIterator for AttributeSet {
 impl FromIterator<Attribute> for AttributeSet {
     fn from_iter<T: IntoIterator<Item = Attribute>>(iter: T) -> Self {
         Self(BTreeSet::from_iter(iter))
-    }
-}
-
-impl Encode for AttributeSet {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
-        self.0.encode(e)
-    }
-}
-
-impl<'b> Decode<'b> for AttributeSet {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-        Ok(Self(BTreeSet::decode(d)?))
-    }
-
-    fn nil() -> Option<Self> {
-        BTreeSet::nil().map(Self)
     }
 }
