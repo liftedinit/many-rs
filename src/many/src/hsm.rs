@@ -26,19 +26,19 @@ use crate::ManyError;
 ///
 /// If one ever modify this behavior, make sure that the application/tests don't
 /// hit the Cryptoki simultaneously
-static HSM_INSTANCE: Lazy<Mutex<HSM>> = Lazy::new(|| Mutex::new(HSM::new()));
+static HSM_INSTANCE: Lazy<Mutex<Hsm>> = Lazy::new(|| Mutex::new(Hsm::new()));
 
 /// Same as cryptoki::session::UserType
-pub type HSMUserType = UserType;
+pub type HsmUserType = UserType;
 
 /// Same as cryptoki::mechanism::Mechanism
-pub type HSMMechanism = Mechanism;
+pub type HsmMechanism = Mechanism;
 
 /// Same as cryptoki::mechanism::MechanismType
-pub type HSMMechanismType = MechanismType;
+pub type HsmMechanismType = MechanismType;
 
 /// HSM session type.
-pub enum HSMSessionType {
+pub enum HsmSessionType {
     /// Read-only
     RO,
     /// Read-write
@@ -48,15 +48,15 @@ pub enum HSMSessionType {
 /// Holds the PKCS#11 context, the PKCS#11 session and the HSM Key ID to use to
 /// perform the cryptographic operations
 #[derive(Debug, Default)]
-pub struct HSM {
+pub struct Hsm {
     pkcs11: Option<Pkcs11>,
     session: Option<Session>,
     keyid: Option<Vec<u8>>,
 }
 
-impl HSM {
+impl Hsm {
     /// Return the HSM global instance
-    pub fn get_instance() -> Result<MutexGuard<'static, HSM>, ManyError> {
+    pub fn get_instance() -> Result<MutexGuard<'static, Hsm>, ManyError> {
         let hsm = HSM_INSTANCE
             .lock()
             .map_err(|e| ManyError::hsm_mutex_poisoned(e.to_string()))?;
@@ -67,7 +67,7 @@ impl HSM {
     ///
     /// Note: The NIST P-256 curve requires the user to hash the message with
     /// SHA256, and to sign the result.
-    pub fn sign(&self, msg: &[u8], mechanism: &HSMMechanism) -> Result<Vec<u8>, ManyError> {
+    pub fn sign(&self, msg: &[u8], mechanism: &HsmMechanism) -> Result<Vec<u8>, ManyError> {
         let session = self.session.as_ref().ok_or_else(|| {
             ManyError::hsm_session_error("No PKCS#11 open session found".to_string())
         })?;
@@ -119,7 +119,7 @@ impl HSM {
         &self,
         msg: &[u8],
         signature: &[u8],
-        mechanism: &HSMMechanism,
+        mechanism: &HsmMechanism,
     ) -> Result<(), ManyError> {
         let session = self.session.as_ref().ok_or_else(|| {
             ManyError::hsm_session_error("No PKCS#11 open session found".to_string())
@@ -168,7 +168,7 @@ impl HSM {
     /// EC_POINT is returned in raw, uncompressed form, i.e., NOT ASN.1 DER
     ///
     /// Note: Only works with EC keys
-    pub fn ec_info(&self, mechanism: HSMMechanismType) -> Result<(Vec<u8>, Vec<u8>), ManyError> {
+    pub fn ec_info(&self, mechanism: HsmMechanismType) -> Result<(Vec<u8>, Vec<u8>), ManyError> {
         let pkcs11 = self
             .pkcs11
             .as_ref()
@@ -255,8 +255,8 @@ impl HSM {
     pub fn open_session(
         &mut self,
         slot: u64,
-        session_type: HSMSessionType,
-        user_type: Option<HSMUserType>,
+        session_type: HsmSessionType,
+        user_type: Option<HsmUserType>,
         pin: Option<String>,
     ) -> Result<(), ManyError> {
         let pkcs11 = self
@@ -268,14 +268,14 @@ impl HSM {
             None => {
                 let session_flags = match session_type {
                     // Read-only PKCS#11 session
-                    HSMSessionType::RO => {
+                    HsmSessionType::RO => {
                         trace!("Creating RO session flags");
                         let mut flags = SessionFlags::new();
                         flags.set_serial_session(true);
                         flags
                     }
                     // Read-write PKCS#11 session
-                    HSMSessionType::RW => {
+                    HsmSessionType::RW => {
                         trace!("Creating RW session flags");
                         let mut flags = SessionFlags::new();
                         flags.set_serial_session(true).set_rw_session(true);
@@ -308,8 +308,8 @@ impl HSM {
     }
 
     /// Default constructor. You should not call this and use HSM_INSTANCE instead
-    fn new() -> HSM {
-        HSM {
+    fn new() -> Hsm {
+        Hsm {
             ..Default::default()
         }
     }
@@ -359,7 +359,7 @@ mod tests {
     });
 
     /// HSM methods only used for testing purposes
-    impl HSM {
+    impl Hsm {
         /// Initialize user PIN using an SO FW session
         fn init_user_pin(&self, pin: String) -> Result<(), ManyError> {
             match &self.session {
@@ -418,7 +418,7 @@ mod tests {
         /// Generate a new keypair on the HSM
         fn generate_key_pair(
             &self,
-            mechanism: &HSMMechanism,
+            mechanism: &HsmMechanism,
             pub_template: &[HSMAttribute],
             priv_template: &[HSMAttribute],
         ) -> Result<(HSMObjectHandle, HSMObjectHandle), ManyError> {
@@ -468,7 +468,7 @@ mod tests {
     ///     - Generate a new ECDSA (secp256r1) keypair
     /// - Return the slot number
     fn init() -> Result<u64, ManyError> {
-        let mut hsm = HSM::get_instance()?;
+        let mut hsm = Hsm::get_instance()?;
         let module = env::var("PKCS11_SOFTHSM2_MODULE")
             .unwrap_or_else(|_| "/usr/lib/softhsm/libsofthsm2.so".to_string());
         hsm.init(PathBuf::from(module), KEYPAIR_TEST_ID.to_vec())
@@ -488,8 +488,8 @@ mod tests {
 
         hsm.open_session(
             slot,
-            HSMSessionType::RW,
-            Some(HSMUserType::So),
+            HsmSessionType::RW,
+            Some(HsmUserType::So),
             Some(SO_PIN.to_string()),
         )?;
         hsm.init_user_pin(USER_PIN.to_string())?;
@@ -505,11 +505,11 @@ mod tests {
     fn hsm_ecdsa_sign_verify() -> Result<(), ManyError> {
         let slot = init()?;
 
-        let mut hsm = HSM::get_instance()?;
+        let mut hsm = Hsm::get_instance()?;
         hsm.open_session(
             slot,
-            HSMSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
-            Some(HSMUserType::User),
+            HsmSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
+            Some(HsmUserType::User),
             Some(USER_PIN.to_string()),
         )?;
         let (public, private) = hsm.generate_key_pair(
@@ -522,8 +522,8 @@ mod tests {
         // See https://github.com/parallaxsecond/rust-cryptoki/issues/88
         let digest = sha2::Sha256::digest(MSG);
 
-        let hsm_signature = hsm.sign(digest.as_slice(), &HSMMechanism::Ecdsa)?;
-        hsm.verify(digest.as_slice(), &hsm_signature, &HSMMechanism::Ecdsa)?;
+        let hsm_signature = hsm.sign(digest.as_slice(), &HsmMechanism::Ecdsa)?;
+        hsm.verify(digest.as_slice(), &hsm_signature, &HsmMechanism::Ecdsa)?;
 
         hsm.destroy(public)?;
         hsm.destroy(private)?;
@@ -542,11 +542,11 @@ mod tests {
     fn hsm_ecdsa_sign_p256_verify() -> Result<(), ManyError> {
         let slot = init()?;
 
-        let mut hsm = HSM::get_instance()?;
+        let mut hsm = Hsm::get_instance()?;
         hsm.open_session(
             slot,
-            HSMSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
-            Some(HSMUserType::User),
+            HsmSessionType::RW, // We need to open a RW session since we're destroying the keys at the end of the test
+            Some(HsmUserType::User),
             Some(USER_PIN.to_string()),
         )?;
 
@@ -559,9 +559,9 @@ mod tests {
         // See https://github.com/parallaxsecond/rust-cryptoki/issues/88
         let digest = sha2::Sha256::digest(MSG);
 
-        let hsm_signature = hsm.sign(digest.as_slice(), &HSMMechanism::Ecdsa)?;
+        let hsm_signature = hsm.sign(digest.as_slice(), &HsmMechanism::Ecdsa)?;
 
-        let (ec_points, _ec_params) = hsm.ec_info(HSMMechanismType::ECDSA)?;
+        let (ec_points, _ec_params) = hsm.ec_info(HsmMechanismType::ECDSA)?;
         let points =
             p256::EncodedPoint::from_bytes(ec_points).expect("Unable to create p256::EncodedPoint");
         let verify_key = p256::ecdsa::VerifyingKey::from_encoded_point(&points).unwrap();
