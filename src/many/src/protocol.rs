@@ -73,10 +73,14 @@ impl Debug for Attribute {
 
 impl Encode for Attribute {
     fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
-        e.array(1 + self.arguments.len() as u64)?;
-        e.u32(self.id as u32)?;
-        for a in &self.arguments {
-            e.encode(a)?;
+        if self.arguments.is_empty() {
+            e.u32(self.id as u32)?;
+        } else {
+            e.array(1 + self.arguments.len() as u64)?;
+            e.u32(self.id as u32)?;
+            for a in &self.arguments {
+                e.encode(a)?;
+            }
         }
 
         Ok(())
@@ -141,6 +145,15 @@ mod tests {
             let cbor = minicbor::to_vec(attr.clone()).unwrap();
             let attr2: Attribute = minicbor::decode(&cbor).unwrap();
             assert_eq!(attr, attr2);
+
+            const HIGH_3_BITS_MASK: u8 = 0b111_00000;
+            if attr.arguments.is_empty() {
+                // Make sure the CBOR type is an unsigned int
+                assert_eq!(cbor[0] & HIGH_3_BITS_MASK, 0b00000000);
+            } else {
+                // Make sure the CBOR type is an array
+                assert_eq!(cbor[0] & HIGH_3_BITS_MASK, 0b10000000);
+            }
         }
 
         #[test]
