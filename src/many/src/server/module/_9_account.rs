@@ -395,7 +395,7 @@ mod module_tests {
 
             assert_eq!(id, result.id);
             assert_eq!(id.subresource_id(), Some(0));
-            assert_eq!(account.name, "test");
+            assert_eq!(account.name, Some("test".to_string()));
             id
         };
         let wrong_id = id.with_subresource_id(12345).unwrap();
@@ -410,14 +410,14 @@ mod module_tests {
         assert!(call_module(
             &module,
             "account.setDescription",
-            format!(r#"{{ 0: "{}", 1: "new-name" }}"#, wrong_id),
+            format!(r#"{{ 0: "{}", 1: "new-name-2" }}"#, wrong_id),
         )
         .is_err());
 
         {
             let lock = module_impl.lock().unwrap();
             let account = lock.0.get(&id).unwrap();
-            assert_eq!(account.name, "new-name");
+            assert_eq!(account.name, Some("new-name".to_string()));
         }
 
         assert!(call_module(
