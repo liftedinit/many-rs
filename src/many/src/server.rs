@@ -19,6 +19,8 @@ impl<M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static> ManyServ
 #[derive(Debug, Clone)]
 pub struct ManyModuleList {}
 
+pub const MANYSERVER_DEFAULT_TIMEOUT: u64 = 300;
+
 #[derive(Debug, Default)]
 pub struct ManyServer {
     modules: Vec<Arc<dyn ManyModule + Send>>,
@@ -50,7 +52,7 @@ impl ManyServer {
         Arc::new(Mutex::new(Self {
             name: name.to_string(),
             identity,
-            timeout: 300,
+            timeout: MANYSERVER_DEFAULT_TIMEOUT,
             ..Default::default()
         }))
     }
@@ -297,33 +299,52 @@ mod tests {
         RequestMessageBuilder,
     };
     use crate::types::identity::cose::tests::generate_random_eddsa_identity;
+    use proptest::prelude::*;
 
-    #[tokio::test]
-    async fn simple_status() {
-        let name = "Test";
-        let id = generate_random_eddsa_identity();
-        let server = ManyServer::simple(name, id.clone(), Some("1".to_string()));
+    // Official SemVer regex
+    // See https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+    //
+    // Note: \d were replaced with [0-9], since the current regex engine matches other digits characters, such as Eastern Arabic numerals
+    //       https://stackoverflow.com/questions/6479423/does-d-in-regex-mean-a-digit/6479605#6479605
+    const SEMVER_REGEX: &str = r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?";
 
-        // Test status() using a message instead of a direct call
-        //
-        // This will test other ManyServer methods as well
-        let request: RequestMessage = RequestMessageBuilder::default()
-            .version(1)
-            .from(id.identity)
-            .to(id.identity)
-            .method("status".to_string())
-            .data("null".as_bytes().to_vec())
-            .build()
-            .unwrap();
+    /// Execute a request on a MANY server and return the response message
+    pub fn execute_request(
+        id: CoseKeyIdentity,
+        server: Arc<Mutex<ManyServer>>,
+        request: RequestMessage,
+    ) -> ResponseMessage {
+        let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
+        let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
+        decode_response_from_cose_sign1(response, None).unwrap()
+    }
 
-        let envelope = encode_cose_sign1_from_request(request.clone(), &id).unwrap();
-        let response = server.execute(envelope).await.unwrap();
-        let response_message = decode_response_from_cose_sign1(response, None).unwrap();
+    proptest! {
+        #[test]
+        fn simple_status(name in "\\PC*", version in SEMVER_REGEX) {
+            println!("\n\n{version}\n\n");
+            let id = generate_random_eddsa_identity();
+            let server = ManyServer::simple(name.clone(), id.clone(), Some(version));
 
-        let data: BTreeMap<u8, Value> =
-            from_reader(response_message.data.unwrap().as_slice()).unwrap();
-        let response_name = data.get(&1).unwrap();
+            // Test status() using a message instead of a direct call
+            //
+            // This will test other ManyServer methods as well
+            let request: RequestMessage = RequestMessageBuilder::default()
+                .version(1)
+                .from(id.identity)
+                .to(id.identity)
+                .method("status".to_string())
+                .data("null".as_bytes().to_vec())
+                .build()
+                .unwrap();
 
-        assert_eq!(response_name, &Value::Text(name.to_string()));
+            let response_message = execute_request(id, server, request);
+
+            let data: BTreeMap<u8, Value> =
+                from_reader(response_message.data.unwrap().as_slice()).unwrap();
+            let response_name = data.get(&1).unwrap();
+
+            assert_eq!(response_name, &Value::Text(name));
+        }
     }
 }
