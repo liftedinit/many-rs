@@ -10,6 +10,7 @@ impl<'de> Decode<'de> for InfoArgs {
         Ok(Self)
     }
 }
+
 impl Encode for InfoArgs {
     fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
         e.null()?.ok()
