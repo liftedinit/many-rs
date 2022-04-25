@@ -86,12 +86,8 @@ mod tests {
 
     const SERVER_VERSION: u8 = 1;
 
+    #[derive(Default)]
     struct BlockchainImpl(pub Vec<u64>);
-    impl std::default::Default for BlockchainImpl {
-        fn default() -> Self {
-            Self(vec![])
-        }
-    }
 
     impl super::BlockchainModuleBackend for BlockchainImpl {
         fn info(&self) -> Result<InfoReturns, ManyError> {
@@ -152,9 +148,9 @@ mod tests {
         /// Generate MANY server with arbitrary name composed of arbitrary non-control characters.
         fn arb_server()(name in "\\PC*") -> (CoseKeyIdentity, Arc<Mutex<ManyServer>>) {
             let id = generate_random_eddsa_identity();
-            let server = ManyServer::new(name.clone(), id.clone());
+            let server = ManyServer::new(name, id.clone());
             let blockchain_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
-            let blockchain_module = BlockchainModule::new(blockchain_impl.clone());
+            let blockchain_module = BlockchainModule::new(blockchain_impl);
 
             {
                 let mut s = server.lock().unwrap();
@@ -179,7 +175,7 @@ mod tests {
                 .build()
                 .unwrap();
 
-            let response_message = execute_request(id.clone(), server, request);
+            let response_message = execute_request(id, server, request);
 
             let bytes = response_message.to_bytes().unwrap();
             let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
@@ -206,7 +202,7 @@ mod tests {
                 .build()
                 .unwrap();
 
-            let response_message = execute_request(id.clone(), server.clone(), request);
+            let response_message = execute_request(id, server, request);
 
             let bytes = response_message.to_bytes().unwrap();
             let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
@@ -230,7 +226,7 @@ mod tests {
                 .data(data)
                 .build()
                 .unwrap();
-            let response_message = execute_request(id.clone(), server, request);
+            let response_message = execute_request(id, server, request);
 
             let bytes = response_message.to_bytes().unwrap();
             let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
@@ -253,7 +249,7 @@ mod tests {
                 .data(data)
                 .build()
                 .unwrap();
-            let response_message = execute_request(id.clone(), server, request);
+            let response_message = execute_request(id, server, request);
 
             let bytes = response_message.to_bytes().unwrap();
             let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
