@@ -25,7 +25,7 @@ pub trait LedgerModuleBackend: Send {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use minicbor::bytes::ByteVec;
     use once_cell::sync::Lazy;
@@ -49,7 +49,7 @@ mod tests {
     };
 
     const SERVER_VERSION: u8 = 1;
-    static SYMBOL: Lazy<Identity> = Lazy::new(|| {
+    pub static SYMBOL: Lazy<Identity> = Lazy::new(|| {
         Identity::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap()
     });
     const SYMBOL_NAME: &str = "FOOBAR";
