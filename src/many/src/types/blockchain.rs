@@ -106,7 +106,6 @@ pub struct Block {
 
     #[n(5)]
     pub txs: Vec<Transaction>,
-
     // TODO: How do we implement
     // (
     //     5 => [ * transaction ]
