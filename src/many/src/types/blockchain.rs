@@ -49,7 +49,7 @@ impl<'d> Decode<'d> for SingleBlockQuery {
     }
 }
 
-#[derive(Decode, Encode)]
+#[derive(Debug, Decode, Encode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct BlockIdentifier {
     #[cbor(n(0), with = "minicbor::bytes")]
@@ -96,15 +96,33 @@ pub struct Block {
     pub parent: BlockIdentifier,
 
     #[n(2)]
-    pub timestamp: Timestamp,
+    pub post_hash: Option<Vec<u8>>,
 
     #[n(3)]
-    pub txs_count: u64,
+    pub timestamp: Timestamp,
 
     #[n(4)]
+    pub txs_count: u64,
+
+    #[n(5)]
     pub txs: Vec<Transaction>,
+
+    // TODO: How do we implement
+    // (
+    //     5 => [ * transaction ]
+    //     //
+    //     6 => [ * bstr ],
+    // )
+    // #[n(6)]
+    // pub txs_hash: Vec<u8>
 }
 
+// TODO: This doesn't look right according to the spec
+// single-transaction-query =
+//     ; A transaction hash.
+//     { 0 => bstr }
+//     ; A block + transaction index.
+//     / { 1 => [ single-block-query, uint ] }
 pub enum SingleTransactionQuery {
     Hash(Vec<u8>),
 }
