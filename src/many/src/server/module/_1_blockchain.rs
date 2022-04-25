@@ -87,7 +87,7 @@ mod tests {
     const SERVER_VERSION: u8 = 1;
 
     #[derive(Default)]
-    struct BlockchainImpl(pub Vec<u64>);
+    struct BlockchainImpl;
 
     impl super::BlockchainModuleBackend for BlockchainImpl {
         fn info(&self) -> Result<InfoReturns, ManyError> {
