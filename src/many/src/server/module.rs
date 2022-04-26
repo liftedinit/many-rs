@@ -79,3 +79,35 @@ pub trait ManyModule: Sync + Send + Debug {
     /// Execute a message and returns its response.
     async fn execute(&self, message: RequestMessage) -> Result<ResponseMessage, ManyError>;
 }
+
+#[cfg(test)]
+pub(crate) mod testutils {
+    use crate::message::RequestMessage;
+    use crate::{ManyError, ManyModule};
+
+    pub fn call_module_cbor_diag(
+        module: &'_ impl ManyModule,
+        endpoint: impl ToString,
+        payload: impl AsRef<str>,
+    ) -> Result<Vec<u8>, ManyError> {
+        call_module_cbor(
+            module,
+            endpoint,
+            cbor_diag::parse_diag(payload).unwrap().to_bytes(),
+        )
+    }
+
+    pub fn call_module_cbor(
+        module: &'_ impl ManyModule,
+        endpoint: impl ToString,
+        payload: Vec<u8>,
+    ) -> Result<Vec<u8>, ManyError> {
+        let message = RequestMessage::default()
+            .with_method(endpoint.to_string())
+            .with_data(payload);
+
+        module.validate(&message)?;
+        let response = smol::block_on(async { module.execute(message).await })?;
+        response.data
+    }
+}
