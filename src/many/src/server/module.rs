@@ -84,16 +84,24 @@ pub trait ManyModule: Sync + Send + Debug {
 #[cfg(test)]
 pub(crate) mod testutils {
     use crate::message::RequestMessage;
+    use crate::types::identity::tests;
     use crate::{ManyError, ManyModule};
 
     pub fn call_module(
+        key: u32,
         module: &'_ impl ManyModule,
         endpoint: impl ToString,
         payload: impl AsRef<str>,
     ) -> Result<Vec<u8>, ManyError> {
-        let message = RequestMessage::default()
+        let mut message = RequestMessage::default()
             .with_method(endpoint.to_string())
             .with_data(cbor_diag::parse_diag(payload).unwrap().to_bytes());
+
+        message = if key > 0 {
+            message.with_from(tests::identity(key))
+        } else {
+            message
+        };
 
         module.validate(&message)?;
         let response = smol::block_on(async { module.execute(message).await })?;

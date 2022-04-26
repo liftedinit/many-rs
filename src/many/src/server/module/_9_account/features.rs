@@ -125,44 +125,55 @@ pub trait TryCreateFeature: Sized {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
 
-    #[test]
-    fn features() {
-        let mut set = FeatureSet::default();
-        set.insert(Feature::with_id(0));
-        set.insert(Feature::with_id(5).with_argument(CborAny::Int(1)));
+    proptest! {
+        #[test]
+        fn features(good_id: FeatureId, bad_id: FeatureId) {
+            prop_assume!(good_id != bad_id && good_id != 1 && bad_id != 1);
 
-        struct SomeFeature;
-        impl TryCreateFeature for SomeFeature {
-            const ID: FeatureId = 1;
-            fn try_create(f: &Feature) -> Result<Self, ManyError> {
-                match f.arguments().as_slice() {
-                    &[CborAny::Int(123)] => Ok(Self),
-                    _ => Err(ManyError::unknown("ERROR".to_string())),
+            let mut set = FeatureSet::default();
+            set.insert(Feature::with_id(good_id));
+            set.insert(Feature::with_id(1).with_argument(CborAny::Int(1)));
+
+            assert!(set.has_id(good_id));
+            assert!(!set.has_id(bad_id));
+
+            struct SomeFeature;
+            impl TryCreateFeature for SomeFeature {
+                const ID: FeatureId = 1;
+                fn try_create(f: &Feature) -> Result<Self, ManyError> {
+                    match f.arguments().as_slice() {
+                        &[CborAny::Int(123)] => Ok(Self),
+                        _ => Err(ManyError::unknown("ERROR".to_string())),
+                    }
                 }
             }
+
+            assert!(set.get::<SomeFeature>().is_err());
+            set.remove(1);
+            assert!(set.get::<SomeFeature>().is_err());
+
+            set.remove(1);
+            set.insert(Feature::with_id(1).with_argument(CborAny::Int(2)));
+            assert!(set.get::<SomeFeature>().is_err());
+
+            set.remove(1);
+            set.insert(Feature::with_id(1).with_argument(CborAny::Int(123)));
+            assert!(set.get::<SomeFeature>().is_ok());
+
+            set.insert(Feature::with_id(bad_id).with_argument(CborAny::Int(1)));
+
+            // The result of Vec::from_iter(set.iter()) will be sorted.
+            let mut array = vec![
+                Feature::with_id(good_id),
+                Feature::with_id(1).with_argument(CborAny::Int(123)),
+                Feature::with_id(bad_id).with_argument(CborAny::Int(1)),
+            ];
+            array.sort();
+
+            let slice: Vec<&Feature> = array.iter().collect();
+            assert_eq!(Vec::from_iter(set.iter()).as_slice(), slice.as_slice());
         }
-
-        assert!(set.get::<SomeFeature>().is_err());
-
-        set.insert(Feature::with_id(1));
-        assert!(set.get::<SomeFeature>().is_err());
-
-        set.remove(1);
-        set.insert(Feature::with_id(1).with_argument(CborAny::Int(2)));
-        assert!(set.get::<SomeFeature>().is_err());
-
-        set.remove(1);
-        set.insert(Feature::with_id(1).with_argument(CborAny::Int(123)));
-        assert!(set.get::<SomeFeature>().is_ok());
-
-        assert_eq!(
-            Vec::from_iter(set.iter()).as_slice(),
-            &[
-                &Feature::with_id(0),
-                &Feature::with_id(1).with_argument(CborAny::Int(123)),
-                &Feature::with_id(5).with_argument(CborAny::Int(1)),
-            ]
-        );
     }
 }

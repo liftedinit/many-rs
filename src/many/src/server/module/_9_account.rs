@@ -79,22 +79,35 @@ impl AccountMap {
 /// A generic Account type. This is useful as utility for managing accounts in your backend.
 #[derive(Clone, Debug)]
 pub struct Account {
-    name: Option<String>,
+    description: Option<String>,
     roles: BTreeMap<Identity, BTreeSet<String>>,
     features: features::FeatureSet,
 }
 
 impl Account {
-    pub fn create(args: CreateArgs) -> Self {
+    pub fn create(
+        sender: &Identity,
+        CreateArgs {
+            description,
+            roles,
+            features,
+        }: CreateArgs,
+    ) -> Self {
+        // Add the sender as owner role.
+        let mut roles = roles.unwrap_or_default();
+        roles
+            .entry(sender.clone())
+            .or_default()
+            .insert("owner".to_string());
         Self {
-            name: args.description,
-            roles: args.roles.unwrap_or_default(),
-            features: args.features,
+            description,
+            roles,
+            features,
         }
     }
 
-    pub fn name(&self) -> Option<&String> {
-        self.name.as_ref()
+    pub fn description(&self) -> Option<&String> {
+        self.description.as_ref()
     }
 
     pub fn roles(&self) -> &BTreeMap<Identity, BTreeSet<String>> {
@@ -204,7 +217,7 @@ pub struct InfoArgs {
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]
-    name: Option<String>,
+    description: Option<String>,
 
     #[n(1)]
     roles: BTreeMap<Identity, BTreeSet<String>>,
@@ -238,7 +251,7 @@ pub trait AccountModuleBackend: Send {
     /// Create an account.
     fn create(&mut self, sender: &Identity, args: CreateArgs) -> Result<CreateReturn, ManyError>;
 
-    /// Set the name/description of an account.
+    /// Set the description of an account.
     fn set_description(
         &mut self,
         sender: &Identity,
@@ -284,6 +297,7 @@ pub trait AccountModuleBackend: Send {
 mod module_tests {
     use super::*;
     use crate::server::module::testutils::call_module;
+    use crate::types::identity::tests;
     use std::sync::{Arc, Mutex};
 
     struct AccountImpl(pub AccountMap);
@@ -302,10 +316,10 @@ mod module_tests {
     impl super::AccountModuleBackend for AccountImpl {
         fn create(
             &mut self,
-            _sender: &Identity,
+            sender: &Identity,
             args: CreateArgs,
         ) -> Result<CreateReturn, ManyError> {
-            let (id, _) = self.0.insert(Account::create(args))?;
+            let (id, _) = self.0.insert(Account::create(sender, args))?;
             Ok(CreateReturn { id })
         }
 
@@ -319,7 +333,7 @@ mod module_tests {
                 .get_mut(&args.id)
                 .ok_or_else(|| errors::unknown_account(args.id.to_string()))?;
 
-            account.name = Some(args.description);
+            account.description = Some(args.description);
             Ok(EmptyReturn)
         }
 
@@ -362,8 +376,16 @@ mod module_tests {
             todo!()
         }
 
-        fn info(&self, _sender: &Identity, _args: InfoArgs) -> Result<InfoReturn, ManyError> {
-            todo!()
+        fn info(&self, _sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError> {
+            let account = self
+                .0
+                .get(&args.account)
+                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+            Ok(InfoReturn {
+                description: account.description.clone(),
+                roles: account.roles.clone(),
+                features: account.features.clone(),
+            })
         }
 
         fn delete(&self, _sender: &Identity, _args: DeleteArgs) -> Result<EmptyReturn, ManyError> {
@@ -383,9 +405,10 @@ mod module_tests {
     fn module_works() {
         let module_impl = Arc::new(Mutex::new(AccountImpl::default()));
         let module = super::AccountModule::new(module_impl.clone());
+        let id_from = tests::identity(1);
 
         let result: CreateReturn = minicbor::decode(
-            &call_module(&module, "account.create", r#"{ 0: "test", 2: [0] }"#).unwrap(),
+            &call_module(1, &module, "account.create", r#"{ 0: "test", 2: [0] }"#).unwrap(),
         )
         .unwrap();
 
@@ -395,12 +418,20 @@ mod module_tests {
 
             assert_eq!(id, result.id);
             assert_eq!(id.subresource_id(), Some(0));
-            assert_eq!(account.name, Some("test".to_string()));
+            assert_eq!(account.description, Some("test".to_string()));
+            assert!(account.roles.contains_key(&id_from));
+            assert!(account
+                .roles
+                .get_key_value(&id_from)
+                .unwrap()
+                .1
+                .contains("owner"));
             id
         };
         let wrong_id = id.with_subresource_id(12345).unwrap();
 
         call_module(
+            1,
             &module,
             "account.setDescription",
             format!(r#"{{ 0: "{}", 1: "new-name" }}"#, id),
@@ -408,6 +439,7 @@ mod module_tests {
         .unwrap();
 
         assert!(call_module(
+            1,
             &module,
             "account.setDescription",
             format!(r#"{{ 0: "{}", 1: "new-name-2" }}"#, wrong_id),
@@ -415,20 +447,33 @@ mod module_tests {
         .is_err());
 
         {
-            let lock = module_impl.lock().unwrap();
-            let account = lock.0.get(&id).unwrap();
-            assert_eq!(account.name, Some("new-name".to_string()));
+            let account: InfoReturn = minicbor::decode(
+                &call_module(0, &module, "account.info", format!(r#"{{ 0: "{}" }}"#, id)).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(account.description, Some("new-name".to_string()));
+            assert!(account.roles.contains_key(&id_from));
+            assert!(account
+                .roles
+                .get_key_value(&id_from)
+                .unwrap()
+                .1
+                .contains("owner"));
+            assert!(account.features.has_id(0));
         }
 
         assert!(call_module(
+            1,
             &module,
             "account.listRoles",
             format!(r#"{{ 0: "{}", 1: "new-name" }}"#, wrong_id),
         )
         .is_err());
+
         assert_eq!(
             minicbor::decode::<ListRolesReturn>(
                 &call_module(
+                    1,
                     &module,
                     "account.listRoles",
                     format!(r#"{{ 0: "{}", 1: "new-name" }}"#, id)
