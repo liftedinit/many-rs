@@ -66,32 +66,18 @@ pub trait BlockchainModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::BTreeMap,
-        sync::{Arc, Mutex},
-    };
-
-    use crate::{
-        message::RequestMessage,
-        message::{RequestMessageBuilder, ResponseMessage},
-        server::tests::execute_request,
-        types::identity::{cose::tests::generate_random_eddsa_identity, CoseKeyIdentity},
-        ManyServer,
-    };
-
+    use crate::server::module::testutils::call_module_cbor_diag;
     use crate::types::{blockchain::TransactionIdentifier, Timestamp};
+    use std::sync::{Arc, Mutex};
 
     use super::*;
     use proptest::prelude::*;
-
-    const SERVER_VERSION: u8 = 1;
 
     #[derive(Default)]
     struct BlockchainImpl;
 
     impl super::BlockchainModuleBackend for BlockchainImpl {
         fn info(&self) -> Result<InfoReturns, ManyError> {
-            // TODO: Fix mock
             Ok(InfoReturns {
                 latest_block: BlockIdentifier::new(vec![0u8; 8], 0),
                 app_hash: None,
@@ -100,7 +86,6 @@ mod tests {
         }
 
         fn block(&self, args: BlockArgs) -> Result<BlockReturns, ManyError> {
-            // TODO: Fix mock
             match args.query {
                 SingleBlockQuery::Hash(v) => Ok(BlockReturns {
                     block: Block {
@@ -132,7 +117,6 @@ mod tests {
         }
 
         fn transaction(&self, args: TransactionArgs) -> Result<TransactionReturns, ManyError> {
-            // TODO: Fix mock
             match args.query {
                 SingleTransactionQuery::Hash(v) => Ok(TransactionReturns {
                     txn: Transaction {
@@ -145,117 +129,80 @@ mod tests {
     }
 
     prop_compose! {
-        /// Generate MANY server with arbitrary name composed of arbitrary non-control characters.
-        fn arb_server()(name in "\\PC*") -> (CoseKeyIdentity, Arc<Mutex<ManyServer>>) {
-            let id = generate_random_eddsa_identity();
-            let server = ManyServer::new(name, id.clone());
-            let blockchain_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
-            let blockchain_module = BlockchainModule::new(blockchain_impl);
-
-            {
-                let mut s = server.lock().unwrap();
-                s.version = Some(SERVER_VERSION.to_string());
-                s.add_module(blockchain_module);
-            }
-
-            (id, server)
+        fn arb_hash()(v in proptest::collection::vec(any::<u8>(), 1..32)) -> Vec<u8> {
+            v
         }
     }
 
-    // TODO: Refactor using `call_module()` from the Account PR
+    #[test]
+    fn info() {
+        let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
+        let module = super::BlockchainModule::new(module_impl);
+
+        let info_returns: InfoReturns =
+            minicbor::decode(&call_module_cbor_diag(&module, "blockchain.info", "null").unwrap())
+                .unwrap();
+
+        assert_eq!(
+            info_returns.latest_block,
+            BlockIdentifier::new(vec![0u8; 8], 0)
+        );
+        assert_eq!(info_returns.app_hash, None);
+        assert_eq!(info_returns.retained_height, None);
+    }
+
     proptest! {
         #[test]
-        fn info((id, server) in arb_server()) {
-            let request: RequestMessage = RequestMessageBuilder::default()
-                .version(SERVER_VERSION)
-                .from(id.identity)
-                .to(id.identity)
-                .method("blockchain.info".to_string())
-                .data("null".as_bytes().to_vec())
-                .build()
-                .unwrap();
+        fn block_hash(v in arb_hash()) {
+            let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
+            let module = super::BlockchainModule::new(module_impl);
 
-            let response_message = execute_request(id, server, request);
+            let block_returns: BlockReturns = minicbor::decode(
+                &call_module_cbor_diag(
+                    &module,
+                    "blockchain.block",
+                    format!("{}{}{}", r#"{0: { 0: h'"#, hex::encode(&v), r#"'} }"#)
+                )
+                .unwrap(),
+            )
+            .unwrap();
 
-            let bytes = response_message.to_bytes().unwrap();
-            let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
-
-            let bytes = response_message.data.unwrap();
-            let info_returns: InfoReturns = minicbor::decode(&bytes).unwrap();
-
-            assert_eq!(info_returns.latest_block, BlockIdentifier::new(vec![0u8; 8], 0));
-            assert_eq!(info_returns.app_hash, None);
-            assert_eq!(info_returns.retained_height, None);
+            assert_eq!(
+                block_returns.block.id,
+                BlockIdentifier::new(v, 1)
+            );
         }
 
         #[test]
-        fn block_hash((id, server) in arb_server(), v in proptest::collection::vec(any::<u8>(), 1..32)) {
-            // Query using hash
-            let data = BTreeMap::from([(0, SingleBlockQuery::Hash(v.clone()))]);
-            let data = minicbor::to_vec(data).unwrap();
-            let request: RequestMessage = RequestMessageBuilder::default()
-                .version(SERVER_VERSION)
-                .from(id.identity)
-                .to(id.identity)
-                .method("blockchain.block".to_string())
-                .data(data)
-                .build()
-                .unwrap();
+        fn block_height(h in any::<u64>()) {
+            let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
+            let module = super::BlockchainModule::new(module_impl);
 
-            let response_message = execute_request(id, server, request);
+            let block_returns: BlockReturns = minicbor::decode(
+                &call_module_cbor_diag(&module, "blockchain.block", format!("{}{}{}", r#"{0: {1:"#, h, r#"} }"#)).unwrap(),
+            )
+            .unwrap();
 
-            let bytes = response_message.to_bytes().unwrap();
-            let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
-
-            let bytes = response_message.data.unwrap();
-            let block_returns: BlockReturns = minicbor::decode(&bytes).unwrap();
-
-            assert_eq!(block_returns.block.id, BlockIdentifier::new(v, 1));
+            assert_eq!(
+                block_returns.block.id,
+                BlockIdentifier::new(vec![1u8; 8], h)
+            );
         }
 
         #[test]
-        fn block_height((id, server) in arb_server(), h in any::<u64>()) {
-            // Query using height
-            let data = BTreeMap::from([(0, SingleBlockQuery::Height(h))]);
-            let data = minicbor::to_vec(data).unwrap();
-            let request: RequestMessage = RequestMessageBuilder::default()
-                .version(SERVER_VERSION)
-                .from(id.identity)
-                .to(id.identity)
-                .method("blockchain.block".to_string())
-                .data(data)
-                .build()
-                .unwrap();
-            let response_message = execute_request(id, server, request);
+        fn transaction(v in arb_hash()) {
+            let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
+            let module = super::BlockchainModule::new(module_impl);
 
-            let bytes = response_message.to_bytes().unwrap();
-            let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
-
-            let bytes = response_message.data.unwrap();
-            let block_returns: BlockReturns = minicbor::decode(&bytes).unwrap();
-
-            assert_eq!(block_returns.block.id, BlockIdentifier::new(vec![1u8; 8], h));
-        }
-
-        #[test]
-        fn transaction((id, server) in arb_server(), v in proptest::collection::vec(any::<u8>(), 1..32)) {
-            let data = BTreeMap::from([(0, SingleTransactionQuery::Hash(v.clone()))]);
-            let data = minicbor::to_vec(data).unwrap();
-            let request: RequestMessage = RequestMessageBuilder::default()
-                .version(SERVER_VERSION)
-                .from(id.identity)
-                .to(id.identity)
-                .method("blockchain.transaction".to_string())
-                .data(data)
-                .build()
-                .unwrap();
-            let response_message = execute_request(id, server, request);
-
-            let bytes = response_message.to_bytes().unwrap();
-            let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
-
-            let bytes = response_message.data.unwrap();
-            let transaction_returns: TransactionReturns = minicbor::decode(&bytes).unwrap();
+            let transaction_returns: TransactionReturns = minicbor::decode(
+                &call_module_cbor_diag(
+                    &module,
+                    "blockchain.transaction",
+                    format!("{}{}{}", r#"{0: { 0: h'"#, hex::encode(&v), r#"'} }"#)
+                )
+                .unwrap(),
+            )
+            .unwrap();
 
             assert_eq!(transaction_returns.txn.id.hash, v);
             assert_eq!(transaction_returns.txn.content, None);
