@@ -24,7 +24,7 @@ mod tests {
     };
 
     use crate::{
-        server::module::testutils::{call_module_cbor, call_module_cbor_diag},
+        server::module::testutils::call_module_cbor,
         types::{
             identity::cose::tests::generate_random_eddsa_identity,
             ledger::{
@@ -526,8 +526,10 @@ mod tests {
         let module_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
         let module = super::LedgerTransactionsModule::new(module_impl);
 
+        let data = TransactionsArgs;
+        let data = minicbor::to_vec(data).unwrap();
         let transactions_returns: TransactionsReturns = minicbor::decode(
-            &call_module_cbor_diag(&module, "ledger.transactions", "null").unwrap(),
+            &call_module_cbor(&module, "ledger.transactions", data).unwrap(),
         )
         .unwrap();
 
