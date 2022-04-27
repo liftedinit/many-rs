@@ -66,7 +66,7 @@ pub trait BlockchainModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use crate::server::module::testutils::call_module_cbor_diag;
+    use crate::server::module::testutils::{call_module_cbor, call_module_cbor_diag};
     use crate::types::{blockchain::TransactionIdentifier, Timestamp};
     use std::sync::{Arc, Mutex};
 
@@ -157,11 +157,16 @@ mod tests {
             let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
             let module = super::BlockchainModule::new(module_impl);
 
+            let data = BlockArgs {
+                query: SingleBlockQuery::Hash(v.clone())
+            };
+            let data = minicbor::to_vec(data).unwrap();
+
             let block_returns: BlockReturns = minicbor::decode(
-                &call_module_cbor_diag(
+                &call_module_cbor(
                     &module,
                     "blockchain.block",
-                    format!("{}{}{}", r#"{0: { 0: h'"#, hex::encode(&v), r#"'} }"#)
+                    data
                 )
                 .unwrap(),
             )
@@ -178,8 +183,13 @@ mod tests {
             let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
             let module = super::BlockchainModule::new(module_impl);
 
+            let data = BlockArgs {
+                query: SingleBlockQuery::Height(h)
+            };
+            let data = minicbor::to_vec(data).unwrap();
+
             let block_returns: BlockReturns = minicbor::decode(
-                &call_module_cbor_diag(&module, "blockchain.block", format!("{}{}{}", r#"{0: {1:"#, h, r#"} }"#)).unwrap(),
+                &call_module_cbor(&module, "blockchain.block", data).unwrap(),
             )
             .unwrap();
 
@@ -194,11 +204,16 @@ mod tests {
             let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
             let module = super::BlockchainModule::new(module_impl);
 
+            let data = TransactionArgs {
+                query: SingleTransactionQuery::Hash(v.clone())
+            };
+            let data = minicbor::to_vec(data).unwrap();
+
             let transaction_returns: TransactionReturns = minicbor::decode(
-                &call_module_cbor_diag(
+                &call_module_cbor(
                     &module,
                     "blockchain.transaction",
-                    format!("{}{}{}", r#"{0: { 0: h'"#, hex::encode(&v), r#"'} }"#)
+                    data
                 )
                 .unwrap(),
             )
