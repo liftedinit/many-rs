@@ -66,7 +66,7 @@ pub trait BlockchainModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use crate::server::module::testutils::{call_module_cbor, call_module_cbor_diag};
+    use crate::server::module::testutils::{call_module_cbor, call_module};
     use crate::types::{blockchain::TransactionIdentifier, Timestamp};
     use std::sync::{Arc, Mutex};
 
@@ -140,7 +140,7 @@ mod tests {
         let module = super::BlockchainModule::new(module_impl);
 
         let info_returns: InfoReturns =
-            minicbor::decode(&call_module_cbor_diag(&module, "blockchain.info", "null").unwrap())
+            minicbor::decode(&call_module(1, &module, "blockchain.info", "null").unwrap())
                 .unwrap();
 
         assert_eq!(
@@ -164,6 +164,7 @@ mod tests {
 
             let block_returns: BlockReturns = minicbor::decode(
                 &call_module_cbor(
+                    1,
                     &module,
                     "blockchain.block",
                     data
@@ -189,7 +190,7 @@ mod tests {
             let data = minicbor::to_vec(data).unwrap();
 
             let block_returns: BlockReturns = minicbor::decode(
-                &call_module_cbor(&module, "blockchain.block", data).unwrap(),
+                &call_module_cbor(1, &module, "blockchain.block", data).unwrap(),
             )
             .unwrap();
 
@@ -211,6 +212,7 @@ mod tests {
 
             let transaction_returns: TransactionReturns = minicbor::decode(
                 &call_module_cbor(
+                    1,
                     &module,
                     "blockchain.transaction",
                     data

@@ -598,7 +598,7 @@ pub mod tests {
     use crate::Identity;
     use std::str::FromStr;
 
-    fn identity(seed: u32) -> Identity {
+    pub fn identity(seed: u32) -> Identity {
         #[rustfmt::skip]
         let bytes = [
             1u8,
