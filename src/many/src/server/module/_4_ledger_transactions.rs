@@ -17,23 +17,23 @@ pub trait LedgerTransactionsModuleBackend: Send {
 mod tests {
     use super::*;
     use minicbor::bytes::ByteVec;
-    use proptest::prelude::*;
 
-    use std::sync::{Arc, Mutex};
-
-    use crate::{
-        message::RequestMessage,
-        message::{RequestMessageBuilder, ResponseMessage},
-        server::tests::execute_request,
-        types::{
-            identity::{cose::tests::generate_random_eddsa_identity, CoseKeyIdentity},
-            ledger::{TokenAmount, Transaction, TransactionContent, TransactionId},
-            SortOrder, Timestamp,
-        },
-        Identity, ManyServer,
+    use std::{
+        ops::Bound,
+        sync::{Arc, Mutex},
     };
 
-    const SERVER_VERSION: u8 = 1;
+    use crate::{
+        server::module::testutils::{call_module_cbor, call_module_cbor_diag},
+        types::{
+            identity::cose::tests::generate_random_eddsa_identity,
+            ledger::{
+                TokenAmount, Transaction, TransactionContent, TransactionId, TransactionKind,
+            },
+            CborRange, SortOrder, Timestamp, TransactionFilter, VecOrSingle,
+        },
+        Identity,
+    };
 
     // TODO: Use derive?
     impl Clone for TransactionContent {
@@ -99,17 +99,86 @@ mod tests {
     impl LedgerTransactionsModuleBackend for LedgerTransactionsImpl {
         fn list(&self, args: ListArgs) -> Result<ListReturns, ManyError> {
             let count = args.count.unwrap_or(100) as usize;
-            let transactions: Vec<Transaction> = match args.order {
+            let mut transactions: Vec<Transaction> = match args.order {
                 Some(SortOrder::Indeterminate) | Some(SortOrder::Ascending) | None => {
                     self.0.iter().take(count).cloned().collect()
                 }
                 Some(SortOrder::Descending) => self.0.iter().rev().take(count).cloned().collect(),
             };
 
-            // TODO: TransactionFilter
+            // TODO: This is a dumb implementation. We should use iterators.
+            let transactions = match args.filter {
+                Some(filter) => {
+                    transactions = if let Some(account) = filter.account {
+                        transactions
+                            .iter()
+                            .filter(|tx| match &tx.content {
+                                TransactionContent::Send {
+                                    from,
+                                    to: _,
+                                    symbol: _,
+                                    amount: _,
+                                } => account.0.iter().any(|id| id == from),
+                                _ => false,
+                            })
+                            .cloned()
+                            .collect()
+                    } else {
+                        transactions
+                    };
+
+                    transactions = if let Some(kind) = filter.kind {
+                        transactions
+                            .iter()
+                            .filter(|tx| kind.0.iter().any(|k| &tx.kind() == k))
+                            .cloned()
+                            .collect()
+                    } else {
+                        transactions
+                    };
+
+                    transactions = if let Some(symbol) = filter.symbol {
+                        transactions
+                            .iter()
+                            .filter(|tx| symbol.0.iter().any(|s| tx.symbol() == s))
+                            .cloned()
+                            .collect()
+                    } else {
+                        transactions
+                    };
+
+                    transactions = if let Some(id_range) = filter.id_range {
+                        transactions
+                            .iter()
+                            .filter(|tx| id_range.contains(&tx.id))
+                            .cloned()
+                            .collect()
+                    } else {
+                        transactions
+                    };
+
+                    transactions = if let Some(date_range) = filter.date_range {
+                        transactions
+                            .iter()
+                            .filter(|tx| {
+                                println!("Tx time: {:?}", &tx.time);
+                                println!("Start: {:?}", date_range.start);
+                                println!("End: {:?}", date_range.end);
+                                println!("Contain?: {}", date_range.contains(&tx.time));
+                                date_range.contains(&tx.time)})
+                            .cloned()
+                            .collect()
+                    } else {
+                        transactions
+                    };
+
+                    transactions
+                }
+                None => transactions,
+            };
 
             Ok(ListReturns {
-                nb_transactions: self.0.len() as u64,
+                nb_transactions: transactions.len() as u64,
                 transactions,
             })
         }
@@ -121,73 +190,347 @@ mod tests {
         }
     }
 
-    // TODO: Refactor using Account PR helper
-    prop_compose! {
-        fn arb_server()(name in "\\PC*") -> (CoseKeyIdentity, Arc<Mutex<ManyServer>>) {
-            let id = generate_random_eddsa_identity();
-            let server = ManyServer::new(name, id.clone());
-            let ledger_txs_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
-            let ledger_txs_module = LedgerTransactionsModule::new(ledger_txs_impl);
+    #[test]
+    fn list_ascending() {
+        let module_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
+        let module = super::LedgerTransactionsModule::new(module_impl.clone());
 
-            {
-                let mut s = server.lock().unwrap();
-                s.version = Some(SERVER_VERSION.to_string());
-                s.add_module(ledger_txs_module);
-            }
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Ascending),
+            filter: None,
+        };
+        let data = minicbor::to_vec(data).unwrap();
 
-            (id, server)
-        }
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 2);
+        assert_eq!(
+            list_returns.transactions[0].id,
+            module_impl.lock().unwrap().0[0].id
+        );
+        assert!(list_returns.transactions[0].time < module_impl.lock().unwrap().0[0].time);
+
+        // TODO: Check content
     }
 
-    proptest! {
-        #[test]
-        fn list_ascending((id, server) in arb_server()) {
-            let request: RequestMessage = RequestMessageBuilder::default()
-                .version(SERVER_VERSION)
-                .from(id.identity)
-                .to(id.identity)
-                .method("ledger.list".to_string())
-                .data(cbor_diag::parse_diag(r#"{0: 100, 1: 1}"#).unwrap().to_bytes())
-                .build()
-                .unwrap();
+    #[test]
+    fn list_descending() {
+        let module_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
+        let module = super::LedgerTransactionsModule::new(module_impl.clone());
 
-            let response_message = execute_request(id, server, request);
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Descending),
+            filter: None,
+        };
+        let data = minicbor::to_vec(data).unwrap();
 
-            let bytes = response_message.to_bytes().unwrap();
-            let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
 
-            let bytes = response_message.data.unwrap();
-            let list_returns: ListReturns = minicbor::decode(&bytes).unwrap();
+        assert_eq!(list_returns.nb_transactions, 2);
+        assert_eq!(
+            list_returns.transactions[0].id,
+            module_impl.lock().unwrap().0[1].id
+        );
+        assert!(list_returns.transactions[0].time < module_impl.lock().unwrap().0[1].time);
 
-            assert_eq!(list_returns.nb_transactions, 2);
+        // TODO: Check content
+    }
 
-            // TODO: Use direct impl instead. This is not a good workaround
-            assert_eq!(list_returns.transactions[0].id, LedgerTransactionsImpl::default().0[0].id);
-            assert!(list_returns.transactions[0].time < LedgerTransactionsImpl::default().0[0].time);
+    #[test]
+    fn list_indeterminate() {
+        let module_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
+        let module = super::LedgerTransactionsModule::new(module_impl.clone());
 
-            // TODO: Check content
-        }
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: None,
+        };
+        let data = minicbor::to_vec(data).unwrap();
 
-        #[test]
-        fn transactions((id, server) in arb_server()) {
-            let request: RequestMessage = RequestMessageBuilder::default()
-                .version(SERVER_VERSION)
-                .from(id.identity)
-                .to(id.identity)
-                .method("ledger.transactions".to_string())
-                .data("null".as_bytes().to_vec())
-                .build()
-                .unwrap();
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
 
-            let response_message = execute_request(id, server, request);
+        assert_eq!(list_returns.nb_transactions, 2);
+        assert_eq!(
+            list_returns.transactions[0].id,
+            module_impl.lock().unwrap().0[0].id
+        );
+        assert!(list_returns.transactions[0].time < module_impl.lock().unwrap().0[0].time);
 
-            let bytes = response_message.to_bytes().unwrap();
-            let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
+        // TODO: Check content
+    }
 
-            let bytes = response_message.data.unwrap();
-            let transactions_returns: TransactionsReturns = minicbor::decode(&bytes).unwrap();
+    #[test]
+    fn list_filter_account() {
+        let module_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
+        let module = super::LedgerTransactionsModule::new(module_impl);
 
-            assert_eq!(transactions_returns.nb_transactions, 2);
-        }
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                account: Some(VecOrSingle::from(vec![Identity::anonymous()])),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 2);
+
+        let id = generate_random_eddsa_identity();
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                account: Some(VecOrSingle::from(vec![id.identity])),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 0);
+    }
+
+    #[test]
+    fn list_filter_kind() {
+        let module_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
+        let module = super::LedgerTransactionsModule::new(module_impl);
+
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                kind: Some(VecOrSingle::from(vec![TransactionKind::Send])),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 2);
+
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                kind: Some(VecOrSingle::from(vec![TransactionKind::Burn])),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 0);
+    }
+
+    #[test]
+    fn list_filter_symbol() {
+        let module_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
+        let module = super::LedgerTransactionsModule::new(module_impl);
+
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                symbol: Some(VecOrSingle::from(vec!["FOOBAR".to_string()])),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 1);
+
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                symbol: Some(VecOrSingle::from(vec![
+                    "FOOBAR".to_string(),
+                    "BARFOO".to_string(),
+                ])),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 2);
+    }
+
+    #[test]
+    fn list_filter_id_range() {
+        let module_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
+        let module = super::LedgerTransactionsModule::new(module_impl);
+
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                id_range: Some(CborRange {
+                    start: Bound::Included(TransactionId::from(vec![1, 1, 1, 1])),
+                    end: Bound::Included(TransactionId::from(vec![2, 2, 2, 2])),
+                }),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 2);
+        
+
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::default()),
+            filter: Some(TransactionFilter {
+                id_range: Some(CborRange {
+                    start: Bound::Included(TransactionId::from(vec![1, 1, 1, 1])),
+                    end: Bound::Excluded(TransactionId::from(vec![2, 2, 2, 2])),
+                }),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 1);
+        
+
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                id_range: Some(CborRange {
+                    start: Bound::Excluded(TransactionId::from(vec![1, 1, 1, 1])),
+                    end: Bound::Unbounded,
+                }),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 1);
+
+
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                id_range: Some(CborRange {
+                    start: Bound::Unbounded,
+                    end: Bound::Excluded(TransactionId::from(vec![2, 2, 2, 2])),
+                }),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 1);
+
+
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                id_range: Some(CborRange::default()),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 2);
+    }
+
+    #[test]
+    fn list_filter_date_range() {
+        let module_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
+        let module = super::LedgerTransactionsModule::new(module_impl);
+
+        // TODO: The following test fails because MANY doesn't handle fractional
+        // seconds properly We need to use floating-point values instead of
+        // unsigned integer in Timestamp CBOR encoding/decoding
+        //
+        // let data = ListArgs {
+        //     count: Some(100),
+        //     order: Some(SortOrder::Indeterminate),
+        //     filter: Some(TransactionFilter {
+        //         date_range: Some(CborRange {
+        //             start: Bound::Included(Timestamp::new(0).unwrap()),
+        //             end: Bound::Included(Timestamp::now()),
+        //         }),
+        //         ..Default::default()
+        //     }),
+        // };
+        // let data = minicbor::to_vec(data).unwrap();
+
+        // let list_returns: ListReturns =
+        //     minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        // assert_eq!(list_returns.nb_transactions, 2);
+
+
+        let data = ListArgs {
+            count: Some(100),
+            order: Some(SortOrder::Indeterminate),
+            filter: Some(TransactionFilter {
+                date_range: Some(CborRange {
+                    start: Bound::Included(Timestamp::new(0).unwrap()),
+                    end: Bound::Included(Timestamp::new(1).unwrap()),
+                }),
+                ..Default::default()
+            }),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module_cbor(&module, "ledger.list", data).unwrap()).unwrap();
+
+        assert_eq!(list_returns.nb_transactions, 0);
+    }
+
+    #[test]
+    fn transactions() {
+        let module_impl = Arc::new(Mutex::new(LedgerTransactionsImpl::default()));
+        let module = super::LedgerTransactionsModule::new(module_impl);
+
+        let transactions_returns: TransactionsReturns = minicbor::decode(
+            &call_module_cbor_diag(&module, "ledger.transactions", "null").unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(transactions_returns.nb_transactions, 2);
     }
 }
