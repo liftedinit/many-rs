@@ -82,6 +82,11 @@ impl RequestMessage {
         self
     }
 
+    pub fn with_from(mut self, id: Identity) -> Self {
+        self.from = Some(id);
+        self
+    }
+
     pub fn to_bytes(&self) -> Result<Vec<u8>, String> {
         minicbor::to_vec(self).map_err(|e| format!("{}", e))
     }
