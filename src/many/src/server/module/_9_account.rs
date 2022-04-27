@@ -96,7 +96,7 @@ impl Account {
         // Add the sender as owner role.
         let mut roles = roles.unwrap_or_default();
         roles
-            .entry(sender.clone())
+            .entry(*sender)
             .or_default()
             .insert("owner".to_string());
         Self {
