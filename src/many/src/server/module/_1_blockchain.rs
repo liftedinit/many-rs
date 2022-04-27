@@ -41,7 +41,6 @@ pub struct BlockReturns {
     pub block: Block,
 }
 
-
 #[derive(Encode, Decode)]
 #[cbor(map)]
 pub struct TransactionArgs {
@@ -55,7 +54,6 @@ pub struct TransactionReturns {
     #[n(0)]
     pub txn: Transaction,
 }
-
 
 #[many_module(name = BlockchainModule, id = 1, namespace = blockchain, many_crate = crate)]
 pub trait BlockchainModuleBackend: Send {
