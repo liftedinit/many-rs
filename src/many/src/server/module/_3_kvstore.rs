@@ -22,7 +22,7 @@ mod tests {
         sync::{Arc, Mutex},
     };
 
-    use crate::server::module::testutils::{call_module_cbor, call_module_cbor_diag};
+    use crate::server::module::testutils::call_module_cbor;
 
     struct KvStoreImpl(pub BTreeMap<ByteVec, ByteVec>);
     impl std::default::Default for KvStoreImpl {
@@ -61,9 +61,10 @@ mod tests {
         let module_impl = Arc::new(Mutex::new(KvStoreImpl::default()));
         let module = super::KvStoreModule::new(module_impl);
 
+        let data = InfoArgs;
+        let data = minicbor::to_vec(data).unwrap();
         let info_returns: InfoReturns =
-            minicbor::decode(&call_module_cbor_diag(&module, "kvstore.info", "null").unwrap())
-                .unwrap();
+            minicbor::decode(&call_module_cbor(&module, "kvstore.info", data).unwrap()).unwrap();
 
         assert_eq!(info_returns.hash, ByteVec::from(vec![1u8; 8]));
     }
@@ -73,8 +74,9 @@ mod tests {
         let module_impl = Arc::new(Mutex::new(KvStoreImpl::default()));
         let module = super::KvStoreModule::new(module_impl);
 
-        let mut data = BTreeMap::new();
-        data.insert(0, ByteVec::from(vec![1, 3, 5, 7]));
+        let data = GetArgs {
+            key: ByteVec::from(vec![1, 3, 5, 7])
+        };
         let data = minicbor::to_vec(data).unwrap();
 
         let get_returns: GetReturns =

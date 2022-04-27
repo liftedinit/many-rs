@@ -37,8 +37,10 @@ mod tests {
     };
 
     use crate::{
-        server::module::testutils::{call_module_cbor, call_module_cbor_diag},
-        types::{identity::cose::tests::generate_random_eddsa_identity, ledger::TokenAmount},
+        server::module::testutils::call_module_cbor,
+        types::{
+            identity::cose::tests::generate_random_eddsa_identity, ledger::TokenAmount, VecOrSingle,
+        },
     };
 
     pub static SYMBOL: Lazy<Identity> = Lazy::new(|| {
@@ -74,9 +76,10 @@ mod tests {
         let module_impl = Arc::new(Mutex::new(LedgerImpl::default()));
         let module = super::LedgerModule::new(module_impl);
 
+        let data = InfoArgs;
+        let data = minicbor::to_vec(data).unwrap();
         let info_returns: InfoReturns =
-            minicbor::decode(&call_module_cbor_diag(&module, "ledger.info", "null").unwrap())
-                .unwrap();
+            minicbor::decode(&call_module_cbor(&module, "ledger.info", data).unwrap()).unwrap();
 
         assert_eq!(info_returns.symbols[0], *SYMBOL);
         assert_eq!(info_returns.hash, ByteVec::from(vec![1u8; 8]));
@@ -92,7 +95,10 @@ mod tests {
         let module = super::LedgerModule::new(module_impl);
         let id = generate_random_eddsa_identity();
 
-        let data = BTreeMap::from([(0, id.identity), (1, *SYMBOL)]);
+        let data = BalanceArgs {
+            account: Some(id.identity),
+            symbols: Some(VecOrSingle::from(vec![*SYMBOL])),
+        };
         let data = minicbor::to_vec(data).unwrap();
         let balance_returns: BalanceReturns =
             minicbor::decode(&call_module_cbor(&module, "ledger.balance", data).unwrap()).unwrap();
