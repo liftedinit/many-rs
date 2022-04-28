@@ -1,6 +1,7 @@
 use crate::cbor::CborAny;
 use crate::cose_helpers::public_key;
 use crate::protocol::attributes::AttributeSet;
+use crate::server::module::EmptyReturn;
 use crate::{Identity, ManyError};
 use coset::{CborSerializable, CoseKey};
 use derive_builder::Builder;
@@ -9,6 +10,9 @@ use minicbor::data::Type;
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
+
+#[cfg(test)]
+use mockall::{automock, predicate::*};
 
 #[derive(Clone, Debug, Decode, Encode)]
 #[cbor(transparent)]
@@ -130,128 +134,99 @@ impl<'b> Decode<'b> for Status {
 }
 
 #[many_module(name = BaseModule, id = 0, many_crate = crate)]
+#[cfg_attr(test, automock)]
 pub trait BaseModuleBackend: Send {
     fn endpoints(&self) -> Result<Endpoints, ManyError>;
-    fn heartbeat(&self) -> Result<(), ManyError> {
-        Ok(())
+    fn heartbeat(&self) -> Result<EmptyReturn, ManyError> {
+        Ok(EmptyReturn)
     }
     fn status(&self) -> Result<Status, ManyError>;
 }
 
-// TODO: Refactor those with `call_method()` from the Account PR
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, Mutex};
 
-    use super::{BaseModule, Status};
     use crate::{
-        message::{RequestMessage, RequestMessageBuilder, ResponseMessage},
-        server::{module::ManyModuleInfo, tests::execute_request, MANYSERVER_DEFAULT_TIMEOUT},
-        types::identity::{cose::tests::generate_random_eddsa_identity, CoseKeyIdentity},
-        ManyModule, ManyServer,
+        protocol::Attribute, server::module::testutils::call_module,
+        types::identity::cose::tests::generate_random_eddsa_identity,
     };
-    use proptest::prelude::*;
 
-    const SERVER_VERSION: u8 = 1;
+    use super::*;
+    #[test]
+    fn status() {
+        let id = generate_random_eddsa_identity();
+        let mut mock = MockBaseModuleBackend::new();
+        let status = Status {
+            version: 1,
+            name: "Foobar".to_string(),
+            public_key: id.public_key(),
+            identity: id.identity,
+            attributes: AttributeSet::from_iter(
+                [Attribute {
+                    id: 0,
+                    arguments: vec![],
+                }]
+                .into_iter(),
+            ),
+            server_version: Some("1.0.0".to_string()),
+            timeout: Some(300),
+            extras: BTreeMap::new(),
+        };
+        mock.expect_status()
+            .times(1)
+            .return_const(Ok(status.clone()));
+        let module = super::BaseModule::new(Arc::new(Mutex::new(mock)));
+        let results: Status =
+            minicbor::decode(&call_module(1, &module, "status", "null").unwrap()).unwrap();
 
-    prop_compose! {
-        /// Generate MANY server with arbitrary name composed of arbitrary non-control characters.
-        fn arb_server()(name in "\\PC*") -> (CoseKeyIdentity, Arc<Mutex<ManyServer>>, String, ManyModuleInfo) {
-            let id = generate_random_eddsa_identity();
-            let server = ManyServer::new(name.clone(), id.clone());
-            let base_module = BaseModule::new(server.clone());
-            let module_info = base_module.info().clone();
+        assert_eq!(status.version, results.version);
+        assert_eq!(status.name, results.name);
+        assert_eq!(status.public_key, results.public_key);
+        assert_eq!(status.identity, results.identity);
+        assert_eq!(status.attributes, results.attributes);
+        assert_eq!(status.server_version, results.server_version);
+        assert_eq!(status.timeout, results.timeout);
 
-            {
-                let mut s = server.lock().unwrap();
-                s.version = Some(SERVER_VERSION.to_string());
-                s.add_module(base_module);
-            }
-
-            (id, server, name, module_info)
-        }
+        let results = Status::from_bytes(&status.to_bytes().unwrap()).unwrap();
+        assert_eq!(status.version, results.version);
+        assert_eq!(status.name, results.name);
+        assert_eq!(status.public_key, results.public_key);
+        assert_eq!(status.identity, results.identity);
+        assert_eq!(status.attributes, results.attributes);
+        assert_eq!(status.server_version, results.server_version);
+        assert_eq!(status.timeout, results.timeout);
     }
 
-    proptest! {
-        #[test]
-        fn status((id, server, name, module_info) in arb_server()) {
-            let request: RequestMessage = RequestMessageBuilder::default()
-                .version(SERVER_VERSION)
-                .from(id.identity)
-                .to(id.identity)
-                .method("status".to_string())
-                .data("null".as_bytes().to_vec())
-                .build()
-                .unwrap();
+    #[test]
+    fn endpoints() {
+        let mut mock = MockBaseModuleBackend::new();
+        let endpoints = Endpoints(BTreeSet::from_iter(
+            [
+                "status".to_string(),
+                "endpoints".to_string(),
+                "heartbeat".to_string(),
+            ]
+            .into_iter(),
+        ));
+        mock.expect_endpoints()
+            .times(1)
+            .return_const(Ok(endpoints.clone()));
+        let module = super::BaseModule::new(Arc::new(Mutex::new(mock)));
+        let results: Endpoints =
+            minicbor::decode(&call_module(1, &module, "endpoints", "null").unwrap()).unwrap();
 
-            let response_message = execute_request(id.clone(), server, request);
+        assert_eq!(endpoints.0, results.0);
+    }
 
-            let bytes = response_message.to_bytes().unwrap();
-            let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
-
-            let bytes = response_message.data.unwrap();
-            let status: Status = minicbor::decode(&bytes).unwrap();
-
-            assert_eq!(status.version, SERVER_VERSION);
-            assert_eq!(status.name, name);
-            assert_eq!(status.public_key, id.public_key());
-            assert_eq!(status.identity, id.identity);
-            assert!(status.attributes.has_id(module_info.attribute.id));
-            assert_eq!(status.server_version, Some(SERVER_VERSION.to_string()));
-            assert_eq!(status.timeout, Some(MANYSERVER_DEFAULT_TIMEOUT));
-
-            let status_bytes = status.to_bytes().unwrap();
-            assert_eq!(status_bytes, bytes);
-
-            let status_2 = Status::from_bytes(&status_bytes).unwrap();
-            assert_eq!(status.version, status_2.version);
-            assert_eq!(status.name, status_2.name);
-            assert_eq!(status.public_key, status_2.public_key);
-            assert_eq!(status.identity, status_2.identity);
-            assert!(status_2.attributes.has_id(module_info.attribute.id));
-            assert_eq!(status.server_version, status_2.server_version);
-            assert_eq!(status.timeout, status_2.timeout);
-        }
-
-        #[test]
-        fn endpoints((id, server, _, module_info) in arb_server()) {
-            let request: RequestMessage = RequestMessageBuilder::default()
-                .version(SERVER_VERSION)
-                .from(id.identity)
-                .to(id.identity)
-                .method("endpoints".to_string())
-                .data("null".as_bytes().to_vec())
-                .build()
-                .unwrap();
-
-            let response_message = execute_request(id, server, request);
-
-            let bytes = response_message.to_bytes().unwrap();
-            let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
-
-            let bytes = response_message.data.unwrap();
-            let endpoints: Vec<String> = minicbor::decode(&bytes).unwrap();
-
-            assert_eq!(module_info.endpoints, endpoints);
-        }
-
-        #[test]
-        fn heartbeat((id, server, _, _) in arb_server()) {
-            let request: RequestMessage = RequestMessageBuilder::default()
-                .version(SERVER_VERSION)
-                .from(id.identity)
-                .to(id.identity)
-                .method("heartbeat".to_string())
-                .data("null".as_bytes().to_vec())
-                .build()
-                .unwrap();
-
-            let response_message = execute_request(id, server, request);
-
-            let bytes = response_message.to_bytes().unwrap();
-            let response_message: ResponseMessage = minicbor::decode(&bytes).unwrap();
-
-            assert!(response_message.data.is_ok());
-        }
+    #[test]
+    fn heartbeat() {
+        let mut mock = MockBaseModuleBackend::new();
+        mock.expect_heartbeat()
+            .times(1)
+            .returning(|| Ok(EmptyReturn));
+        let module = super::BaseModule::new(Arc::new(Mutex::new(mock)));
+        let _: EmptyReturn =
+            minicbor::decode(&call_module(1, &module, "heartbeat", "null").unwrap()).unwrap();
     }
 }
