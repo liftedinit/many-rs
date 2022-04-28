@@ -5,6 +5,9 @@ use crate::{define_attribute_many_error, ManyError};
 use many_macros::many_module;
 use minicbor::{Decode, Encode};
 
+#[cfg(test)]
+use mockall::{automock, predicate::*};
+
 define_attribute_many_error!(
     attribute 1 => {
         1: pub fn height_out_of_bound(height, min, max)
@@ -58,6 +61,7 @@ pub struct TransactionReturns {
 }
 
 #[many_module(name = BlockchainModule, id = 1, namespace = blockchain, many_crate = crate)]
+#[cfg_attr(test, automock)]
 pub trait BlockchainModuleBackend: Send {
     fn info(&self) -> Result<InfoReturns, ManyError>;
     fn block(&self, args: BlockArgs) -> Result<BlockReturns, ManyError>;
@@ -66,32 +70,53 @@ pub trait BlockchainModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use crate::server::module::testutils::{call_module_cbor, call_module_cbor_diag};
-    use crate::types::{blockchain::TransactionIdentifier, Timestamp};
     use std::sync::{Arc, Mutex};
 
+    use crate::{
+        server::module::testutils::{call_module, call_module_cbor},
+        types::{blockchain::TransactionIdentifier, Timestamp},
+    };
+
     use super::*;
-    use proptest::prelude::*;
-
-    #[derive(Default)]
-    struct BlockchainImpl;
-
-    impl super::BlockchainModuleBackend for BlockchainImpl {
-        fn info(&self) -> Result<InfoReturns, ManyError> {
+    #[test]
+    fn info() {
+        let mut mock = MockBlockchainModuleBackend::new();
+        mock.expect_info().times(1).returning(|| {
             Ok(InfoReturns {
-                latest_block: BlockIdentifier::new(vec![0u8; 8], 0),
-                app_hash: None,
-                retained_height: None,
+                latest_block: {
+                    BlockIdentifier {
+                        hash: vec![0u8; 8],
+                        height: 0,
+                    }
+                },
+                app_hash: Some(vec![2u8; 8]),
+                retained_height: Some(2),
             })
-        }
+        });
+        let module = super::BlockchainModule::new(Arc::new(Mutex::new(mock)));
 
-        fn block(&self, args: BlockArgs) -> Result<BlockReturns, ManyError> {
-            match args.query {
+        let info_returns: InfoReturns =
+            minicbor::decode(&call_module(1, &module, "blockchain.info", "null").unwrap()).unwrap();
+
+        assert_eq!(
+            info_returns.latest_block,
+            BlockIdentifier::new(vec![0u8; 8], 0)
+        );
+        assert_eq!(info_returns.app_hash, Some(vec![2u8; 8]));
+        assert_eq!(info_returns.retained_height, Some(2));
+    }
+
+    #[test]
+    fn block_hash() {
+        let mut mock = MockBlockchainModuleBackend::new();
+        mock.expect_block()
+            .times(2)
+            .returning(|args| match args.query {
                 SingleBlockQuery::Hash(v) => Ok(BlockReturns {
                     block: Block {
                         id: BlockIdentifier::new(v, 1),
                         parent: BlockIdentifier::genesis(),
-                        post_hash: None,
+                        post_hash: Some(vec![4u8; 8]),
                         timestamp: Timestamp::now(),
                         txs_count: 1,
                         txs: vec![Transaction {
@@ -102,9 +127,9 @@ mod tests {
                 }),
                 SingleBlockQuery::Height(h) => Ok(BlockReturns {
                     block: Block {
-                        id: BlockIdentifier::new(vec![1u8; 8], h),
+                        id: BlockIdentifier::new(vec![3u8; 8], h),
                         parent: BlockIdentifier::genesis(),
-                        post_hash: None,
+                        post_hash: Some(vec![4u8; 8]),
                         timestamp: Timestamp::now(),
                         txs_count: 1,
                         txs: vec![Transaction {
@@ -113,114 +138,64 @@ mod tests {
                         }],
                     },
                 }),
-            }
-        }
+            });
+        let module = super::BlockchainModule::new(Arc::new(Mutex::new(mock)));
 
-        fn transaction(&self, args: TransactionArgs) -> Result<TransactionReturns, ManyError> {
-            match args.query {
+        let data = BlockArgs {
+            query: SingleBlockQuery::Hash(vec![5u8; 8]),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let block_returns: BlockReturns =
+            minicbor::decode(&call_module_cbor(1, &module, "blockchain.block", data).unwrap())
+                .unwrap();
+
+        assert_eq!(
+            block_returns.block.id,
+            BlockIdentifier::new(vec![5u8; 8], 1)
+        );
+
+        let data = BlockArgs {
+            query: SingleBlockQuery::Height(3),
+        };
+        let data = minicbor::to_vec(data).unwrap();
+
+        let block_returns: BlockReturns =
+            minicbor::decode(&call_module_cbor(1, &module, "blockchain.block", data).unwrap())
+                .unwrap();
+
+        assert_eq!(
+            block_returns.block.id,
+            BlockIdentifier::new(vec![3u8; 8], 3)
+        );
+    }
+
+    #[test]
+    fn transaction() {
+        let mut mock = MockBlockchainModuleBackend::new();
+        mock.expect_transaction()
+            .times(1)
+            .returning(|args| match args.query {
                 SingleTransactionQuery::Hash(v) => Ok(TransactionReturns {
                     txn: Transaction {
                         id: TransactionIdentifier { hash: v },
                         content: None,
                     },
                 }),
-            }
-        }
-    }
+            });
+        let module = super::BlockchainModule::new(Arc::new(Mutex::new(mock)));
 
-    prop_compose! {
-        fn arb_hash()(v in proptest::collection::vec(any::<u8>(), 1..32)) -> Vec<u8> {
-            v
-        }
-    }
+        let data = TransactionArgs {
+            query: SingleTransactionQuery::Hash(vec![6u8; 8]),
+        };
+        let data = minicbor::to_vec(data).unwrap();
 
-    #[test]
-    fn info() {
-        let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
-        let module = super::BlockchainModule::new(module_impl);
+        let transaction_returns: TransactionReturns = minicbor::decode(
+            &call_module_cbor(1, &module, "blockchain.transaction", data).unwrap(),
+        )
+        .unwrap();
 
-        let info_returns: InfoReturns =
-            minicbor::decode(&call_module_cbor_diag(&module, "blockchain.info", "null").unwrap())
-                .unwrap();
-
-        assert_eq!(
-            info_returns.latest_block,
-            BlockIdentifier::new(vec![0u8; 8], 0)
-        );
-        assert_eq!(info_returns.app_hash, None);
-        assert_eq!(info_returns.retained_height, None);
-    }
-
-    proptest! {
-        #[test]
-        fn block_hash(v in arb_hash()) {
-            let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
-            let module = super::BlockchainModule::new(module_impl);
-
-            let data = BlockArgs {
-                query: SingleBlockQuery::Hash(v.clone())
-            };
-            let data = minicbor::to_vec(data).unwrap();
-
-            let block_returns: BlockReturns = minicbor::decode(
-                &call_module_cbor(
-                    &module,
-                    "blockchain.block",
-                    data
-                )
-                .unwrap(),
-            )
-            .unwrap();
-
-            assert_eq!(
-                block_returns.block.id,
-                BlockIdentifier::new(v, 1)
-            );
-        }
-
-        #[test]
-        fn block_height(h in any::<u64>()) {
-            let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
-            let module = super::BlockchainModule::new(module_impl);
-
-            let data = BlockArgs {
-                query: SingleBlockQuery::Height(h)
-            };
-            let data = minicbor::to_vec(data).unwrap();
-
-            let block_returns: BlockReturns = minicbor::decode(
-                &call_module_cbor(&module, "blockchain.block", data).unwrap(),
-            )
-            .unwrap();
-
-            assert_eq!(
-                block_returns.block.id,
-                BlockIdentifier::new(vec![1u8; 8], h)
-            );
-        }
-
-        #[test]
-        fn transaction(v in arb_hash()) {
-            let module_impl = Arc::new(Mutex::new(BlockchainImpl::default()));
-            let module = super::BlockchainModule::new(module_impl);
-
-            let data = TransactionArgs {
-                query: SingleTransactionQuery::Hash(v.clone())
-            };
-            let data = minicbor::to_vec(data).unwrap();
-
-            let transaction_returns: TransactionReturns = minicbor::decode(
-                &call_module_cbor(
-                    &module,
-                    "blockchain.transaction",
-                    data
-                )
-                .unwrap(),
-            )
-            .unwrap();
-
-            assert_eq!(transaction_returns.txn.id.hash, v);
-            assert_eq!(transaction_returns.txn.content, None);
-        }
+        assert_eq!(transaction_returns.txn.id.hash, vec![6u8; 8]);
+        assert_eq!(transaction_returns.txn.content, None);
     }
 }

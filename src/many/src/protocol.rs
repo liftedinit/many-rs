@@ -24,6 +24,10 @@ impl Attribute {
         }
     }
 
+    pub const fn new(id: AttributeId, arguments: Vec<CborAny>) -> Self {
+        Self { id, arguments }
+    }
+
     pub fn with_argument(&self, argument: CborAny) -> Self {
         let mut arguments = self.arguments.clone();
         arguments.push(argument);
