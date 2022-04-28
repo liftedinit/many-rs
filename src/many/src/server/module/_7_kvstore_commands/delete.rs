@@ -9,4 +9,4 @@ pub struct DeleteArgs {
     pub key: ByteVec,
 }
 
-pub type DeleteReturns = EmptyReturn;
+pub type DeleteReturn = EmptyReturn;
