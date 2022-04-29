@@ -2,6 +2,8 @@ pub mod error;
 pub mod request;
 pub mod response;
 
+use std::collections::BTreeMap;
+
 use coset::cbor::value::Value;
 use coset::iana::Algorithm;
 use coset::CborSerializable;
@@ -15,6 +17,7 @@ pub use request::RequestMessage;
 pub use request::RequestMessageBuilder;
 pub use response::ResponseMessage;
 pub use response::ResponseMessageBuilder;
+use sha2::Digest;
 
 use crate::cose_helpers::public_key;
 use crate::types::identity::cose::{CoseKeyIdentity, CoseKeyIdentitySignature};
@@ -182,32 +185,74 @@ impl CoseSign1RequestMessage {
     }
 
     pub fn verify(&self) -> Result<Identity, String> {
-        if !self.sign1.protected.header.key_id.is_empty() {
-            if let Ok(id) = Identity::from_bytes(&self.sign1.protected.header.key_id) {
-                if id.is_anonymous() {
-                    return Ok(id);
+        let unprotected = BTreeMap::from_iter(self.sign1.unprotected.rest.clone().into_iter());
+        if unprotected.contains_key(&Label::Text("webauthn".to_string())) {
+            tracing::trace!("We got a WebAuthn request!");
+            let client_data = unprotected
+                .get(&Label::Text("clientData".to_string()))
+                .unwrap()
+                .as_text()
+                .unwrap();
+            let client_data_json = json::parse(client_data).unwrap();
+            let client_data_sha256 = sha2::Sha256::digest(client_data);
+            let auth_data = unprotected
+                .get(&Label::Text("authData".to_string()))
+                .unwrap();
+            let signature = unprotected
+                .get(&Label::Text("signature".to_string()))
+                .unwrap();
+
+            let mut msg = auth_data.as_bytes().unwrap().clone();
+            msg.extend(client_data_sha256);
+            // msg.extend(vec![1]); // Verification should be invalid
+
+            if !self.sign1.protected.header.key_id.is_empty() {
+                if let Ok(id) = Identity::from_bytes(&self.sign1.protected.header.key_id) {
+                    if id.is_anonymous() {
+                        return Ok(id);
+                    }
+
+                    let key = self.get_public_key_for_identity(&id).unwrap();
+                    let res = key.verify(
+                        &msg,
+                        &CoseKeyIdentitySignature::from_bytes(signature.as_bytes().unwrap())
+                            .unwrap(),
+                    );
+                    tracing::info!("Signature status: {}", res.is_ok());
+
+                    return Ok(id)
+                }
+            }
+
+            Err("Invalid!".to_string())
+        } else {
+            if !self.sign1.protected.header.key_id.is_empty() {
+                if let Ok(id) = Identity::from_bytes(&self.sign1.protected.header.key_id) {
+                    if id.is_anonymous() {
+                        return Ok(id);
+                    }
+
+                    self.get_public_key_for_identity(&id)
+                        .ok_or_else(|| "Could not find a public key in the envelope".to_string())
+                        .and_then(|key| {
+                            self.sign1
+                                .verify_signature(b"", |sig, content| {
+                                    let sig = CoseKeyIdentitySignature::from_bytes(sig).unwrap();
+                                    key.verify(content, &sig)
+                                })
+                                .map_err(|e| e.to_string())?;
+                            Ok(id)
+                        })
+                } else {
+                    Err("Invalid (not a MANY identity) key ID".to_string())
+                }
+            } else {
+                if self.sign1.signature.is_empty() {
+                    return Ok(Identity::anonymous());
                 }
 
-                self.get_public_key_for_identity(&id)
-                    .ok_or_else(|| "Could not find a public key in the envelope".to_string())
-                    .and_then(|key| {
-                        self.sign1
-                            .verify_signature(b"", |sig, content| {
-                                let sig = CoseKeyIdentitySignature::from_bytes(sig).unwrap();
-                                key.verify(content, &sig)
-                            })
-                            .map_err(|e| e.to_string())?;
-                        Ok(id)
-                    })
-            } else {
-                Err("Invalid (not a MANY identity) key ID".to_string())
+                Err("Missing key ID".to_string())
             }
-        } else {
-            if self.sign1.signature.is_empty() {
-                return Ok(Identity::anonymous());
-            }
-
-            Err("Missing key ID".to_string())
         }
     }
 }
