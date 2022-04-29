@@ -17,6 +17,7 @@ pub use request::RequestMessage;
 pub use request::RequestMessageBuilder;
 pub use response::ResponseMessage;
 pub use response::ResponseMessageBuilder;
+use serde::Deserialize;
 use sha2::Digest;
 
 use crate::cose_helpers::public_key;
@@ -143,6 +144,14 @@ pub(crate) struct CoseSign1RequestMessage {
     pub sign1: CoseSign1,
 }
 
+#[derive(Deserialize)]
+struct ClientData {
+    challenge: String,
+    #[allow(dead_code)]
+    origin: String,
+    r#type: String,
+}
+
 impl CoseSign1RequestMessage {
     pub fn get_keyset(&self) -> Option<CoseKeySet> {
         let keyset = self
@@ -184,75 +193,102 @@ impl CoseSign1RequestMessage {
         }
     }
 
+    fn _verify_webauthn(
+        &self,
+        unprotected: BTreeMap<Label, Value>,
+        key: CoseKeyIdentity,
+    ) -> Result<(), String> {
+        tracing::trace!("We got a WebAuthn request");
+        tracing::trace!("Getting `clientData` from unprotected header");
+        let client_data = unprotected
+            .get(&Label::Text("clientData".to_string()))
+            .ok_or("`clientData` entry missing from unprotected header")?
+            .as_text()
+            .ok_or("`clientData` entry is not Text")?;
+        let client_data_json: ClientData =
+            serde_json::from_str(client_data).map_err(|e| e.to_string())?;
+
+        if client_data_json.r#type != "webauthn.get" {
+            return Err("request type != webauthn.get".to_string());
+        }
+
+        tracing::trace!("Getting `authData` from unprotected header");
+        let auth_data = unprotected
+            .get(&Label::Text("authData".to_string()))
+            .ok_or("`authData` entry missing from unprotected header")?
+            .as_bytes()
+            .ok_or("`authData` entry is not Bytes")?;
+
+        tracing::trace!("Getting `signature` from unprotected header");
+        let signature = unprotected
+            .get(&Label::Text("signature".to_string()))
+            .ok_or("`signature` entry missing from unprotected header")?
+            .as_bytes()
+            .ok_or("`signature` entry is not Bytes")?;
+
+        let payload = self.sign1.payload.as_ref().unwrap();
+
+        let payload_sha512 = sha2::Sha512::digest(payload);
+        let payload_sha512_base64url =
+            base64::encode_config(payload_sha512, base64::URL_SAFE_NO_PAD);
+
+        tracing::trace!("Verifying `challenge`");
+        if payload_sha512_base64url != client_data_json.challenge {
+            return Err("`challenge` doesn't match".to_string());
+        }
+
+        tracing::trace!("Concatenating `authData` and sha256(`clientData`)");
+        let mut msg = auth_data.clone();
+        msg.extend(sha2::Sha256::digest(client_data));
+
+        tracing::trace!("Verifying WebAuthn signature");
+        key.verify(
+            &msg,
+            &CoseKeyIdentitySignature::from_bytes(signature).unwrap(),
+        )
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    fn _verify(&self, key: CoseKeyIdentity) -> Result<(), String> {
+        self.sign1
+            .verify_signature(b"", |sig, content| {
+                let sig = CoseKeyIdentitySignature::from_bytes(sig).unwrap();
+                key.verify(content, &sig)
+            })
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
     pub fn verify(&self) -> Result<Identity, String> {
-        let unprotected = BTreeMap::from_iter(self.sign1.unprotected.rest.clone().into_iter());
-        if unprotected.contains_key(&Label::Text("webauthn".to_string())) {
-            tracing::trace!("We got a WebAuthn request!");
-            let client_data = unprotected
-                .get(&Label::Text("clientData".to_string()))
-                .unwrap()
-                .as_text()
-                .unwrap();
-            let client_data_json = json::parse(client_data).unwrap();
-            let client_data_sha256 = sha2::Sha256::digest(client_data);
-            let auth_data = unprotected
-                .get(&Label::Text("authData".to_string()))
-                .unwrap();
-            let signature = unprotected
-                .get(&Label::Text("signature".to_string()))
-                .unwrap();
-
-            let mut msg = auth_data.as_bytes().unwrap().clone();
-            msg.extend(client_data_sha256);
-            // msg.extend(vec![1]); // Verification should be invalid
-
-            if !self.sign1.protected.header.key_id.is_empty() {
-                if let Ok(id) = Identity::from_bytes(&self.sign1.protected.header.key_id) {
-                    if id.is_anonymous() {
-                        return Ok(id);
-                    }
-
-                    let key = self.get_public_key_for_identity(&id).unwrap();
-                    let res = key.verify(
-                        &msg,
-                        &CoseKeyIdentitySignature::from_bytes(signature.as_bytes().unwrap())
-                            .unwrap(),
-                    );
-                    tracing::info!("Signature status: {}", res.is_ok());
-
-                    return Ok(id)
+        if !self.sign1.protected.header.key_id.is_empty() {
+            if let Ok(id) = Identity::from_bytes(&self.sign1.protected.header.key_id) {
+                if id.is_anonymous() {
+                    return Ok(id);
                 }
-            }
 
-            Err("Invalid!".to_string())
-        } else {
-            if !self.sign1.protected.header.key_id.is_empty() {
-                if let Ok(id) = Identity::from_bytes(&self.sign1.protected.header.key_id) {
-                    if id.is_anonymous() {
-                        return Ok(id);
-                    }
-
-                    self.get_public_key_for_identity(&id)
-                        .ok_or_else(|| "Could not find a public key in the envelope".to_string())
-                        .and_then(|key| {
-                            self.sign1
-                                .verify_signature(b"", |sig, content| {
-                                    let sig = CoseKeyIdentitySignature::from_bytes(sig).unwrap();
-                                    key.verify(content, &sig)
-                                })
-                                .map_err(|e| e.to_string())?;
-                            Ok(id)
-                        })
+                let key = self
+                    .get_public_key_for_identity(&id)
+                    .ok_or_else(|| "Could not find a public key in the envelope".to_string())?;
+                let unprotected =
+                    BTreeMap::from_iter(self.sign1.unprotected.rest.clone().into_iter());
+                if unprotected.contains_key(&Label::Text("webauthn".to_string())) {
+                    self._verify_webauthn(unprotected, key)?;
                 } else {
-                    Err("Invalid (not a MANY identity) key ID".to_string())
+                    self._verify(key)?;
                 }
+                Ok(id)
             } else {
-                if self.sign1.signature.is_empty() {
-                    return Ok(Identity::anonymous());
-                }
-
-                Err("Missing key ID".to_string())
+                Err("Invalid (not a MANY identity) key ID".to_string())
             }
+        } else {
+            if self.sign1.signature.is_empty() {
+                return Ok(Identity::anonymous());
+            }
+
+            Err("Missing key ID".to_string())
         }
     }
 }
