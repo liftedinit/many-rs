@@ -181,9 +181,9 @@ impl Verifier<CoseKeyIdentitySignature> for CoseKeyIdentity {
                     let points =
                         p256::EncodedPoint::from_affine_coordinates(x.into(), y.into(), false);
 
-                    let verify_key =
-                        p256::ecdsa::VerifyingKey::from_encoded_point(&points).unwrap();
-                    let signature = p256::ecdsa::Signature::from_bytes(&signature.bytes).unwrap();
+                    let verify_key = p256::ecdsa::VerifyingKey::from_encoded_point(&points)?;
+                    let signature = p256::ecdsa::Signature::from_der(&signature.bytes)
+                        .or_else(|_| p256::ecdsa::Signature::from_bytes(&signature.bytes))?;
                     verify_key.verify(msg, &signature).map_err(|e| {
                         error!("Key verify failed: {}", e);
                         Error::new()
