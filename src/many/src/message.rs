@@ -188,6 +188,7 @@ impl CoseSign1RequestMessage {
     /// Perform WebAuthn request verification
     ///
     /// This is non-standard COSE
+    /// See https://webauthn.guide/#webauthn-api
     fn _verify_webauthn(
         &self,
         unprotected: BTreeMap<Label, Value>,
