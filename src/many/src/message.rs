@@ -193,6 +193,9 @@ impl CoseSign1RequestMessage {
         }
     }
 
+    /// Perform WebAuthn request verification
+    /// 
+    /// This is non-standard COSE
     fn _verify_webauthn(
         &self,
         unprotected: BTreeMap<Label, Value>,
@@ -226,7 +229,11 @@ impl CoseSign1RequestMessage {
             .as_bytes()
             .ok_or("`signature` entry is not Bytes")?;
 
-        let payload = self.sign1.payload.as_ref().unwrap();
+        let payload = self
+            .sign1
+            .payload
+            .as_ref()
+            .ok_or("`payload` entry missing but required")?;
 
         let payload_sha512 = sha2::Sha512::digest(payload);
         let payload_sha512_base64url =
@@ -241,16 +248,21 @@ impl CoseSign1RequestMessage {
         let mut msg = auth_data.clone();
         msg.extend(sha2::Sha256::digest(client_data));
 
+        let cose_sig =
+            CoseKeyIdentitySignature::from_bytes(signature).map_err(|e| e.to_string())?;
+
         tracing::trace!("Verifying WebAuthn signature");
         key.verify(
             &msg,
-            &CoseKeyIdentitySignature::from_bytes(signature).unwrap(),
+            &cose_sig,
         )
         .map_err(|e| e.to_string())?;
 
+        tracing::trace!("WebAuthn verifications succedded");
         Ok(())
     }
 
+    /// Perform standard COSE verification
     fn _verify(&self, key: CoseKeyIdentity) -> Result<(), String> {
         self.sign1
             .verify_signature(b"", |sig, content| {
