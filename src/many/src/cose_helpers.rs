@@ -53,6 +53,10 @@ pub fn eddsa_cose_key(x: Vec<u8>, d: Option<Vec<u8>>) -> CoseKey {
 pub fn ecdsa_cose_key((x, y): (Vec<u8>, Vec<u8>), d: Option<Vec<u8>>) -> CoseKey {
     let mut params: Vec<(Label, Value)> = Vec::from([
         (
+            Label::Int(coset::iana::Ec2KeyParameter::Crv as i64),
+            Value::from(coset::iana::EllipticCurve::P_256 as u64),
+        ),
+        (
             Label::Int(coset::iana::Ec2KeyParameter::X as i64),
             Value::Bytes(x),
         ),
