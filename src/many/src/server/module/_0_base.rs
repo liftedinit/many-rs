@@ -18,6 +18,9 @@ use mockall::{automock, predicate::*};
 #[cbor(transparent)]
 pub struct Endpoints(#[n(0)] pub BTreeSet<String>);
 
+// TODO: Move this in it's own file, like other modules
+pub type HeartbeatReturn = EmptyReturn;
+
 #[derive(Clone, Debug, Builder)]
 pub struct Status {
     pub version: u8,
@@ -137,8 +140,8 @@ impl<'b> Decode<'b> for Status {
 #[cfg_attr(test, automock)]
 pub trait BaseModuleBackend: Send {
     fn endpoints(&self) -> Result<Endpoints, ManyError>;
-    fn heartbeat(&self) -> Result<EmptyReturn, ManyError> {
-        Ok(EmptyReturn)
+    fn heartbeat(&self) -> Result<HeartbeatReturn, ManyError> {
+        Ok(HeartbeatReturn {})
     }
     fn status(&self) -> Result<Status, ManyError>;
 }
@@ -224,9 +227,9 @@ mod tests {
         let mut mock = MockBaseModuleBackend::new();
         mock.expect_heartbeat()
             .times(1)
-            .returning(|| Ok(EmptyReturn));
+            .returning(|| Ok(HeartbeatReturn {}));
         let module = super::BaseModule::new(Arc::new(Mutex::new(mock)));
-        let _: EmptyReturn =
+        let _: HeartbeatReturn =
             minicbor::decode(&call_module(1, &module, "heartbeat", "null").unwrap()).unwrap();
     }
 }
