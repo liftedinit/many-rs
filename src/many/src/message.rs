@@ -144,14 +144,6 @@ pub(crate) struct CoseSign1RequestMessage {
     pub sign1: CoseSign1,
 }
 
-#[derive(Deserialize)]
-struct ClientData {
-    challenge: String,
-    #[allow(dead_code)]
-    origin: String,
-    r#type: String,
-}
-
 impl CoseSign1RequestMessage {
     pub fn get_keyset(&self) -> Option<CoseKeySet> {
         let keyset = self
@@ -201,6 +193,14 @@ impl CoseSign1RequestMessage {
         unprotected: BTreeMap<Label, Value>,
         key: CoseKeyIdentity,
     ) -> Result<(), String> {
+        #[derive(Deserialize)]
+        struct ClientData {
+            challenge: String,
+            #[allow(dead_code)]
+            origin: String,
+            r#type: String,
+        }
+
         tracing::trace!("We got a WebAuthn request");
         tracing::trace!("Getting `clientData` from unprotected header");
         let client_data = unprotected
