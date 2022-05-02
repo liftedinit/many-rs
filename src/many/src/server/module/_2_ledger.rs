@@ -79,7 +79,7 @@ mod tests {
         let data = InfoArgs;
         let data = minicbor::to_vec(data).unwrap();
         let info_returns: InfoReturns =
-            minicbor::decode(&call_module_cbor(&module, "ledger.info", data).unwrap()).unwrap();
+            minicbor::decode(&call_module_cbor(1, &module, "ledger.info", data).unwrap()).unwrap();
 
         assert_eq!(info_returns.symbols[0], *SYMBOL);
         assert_eq!(info_returns.hash, ByteVec::from(vec![1u8; 8]));
@@ -101,7 +101,7 @@ mod tests {
         };
         let data = minicbor::to_vec(data).unwrap();
         let balance_returns: BalanceReturns =
-            minicbor::decode(&call_module_cbor(&module, "ledger.balance", data).unwrap()).unwrap();
+            minicbor::decode(&call_module_cbor(1, &module, "ledger.balance", data).unwrap()).unwrap();
 
         assert_eq!(
             balance_returns.balances,
