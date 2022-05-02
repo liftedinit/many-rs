@@ -327,8 +327,6 @@ impl From<TransactionId> for Vec<u8> {
 #[repr(u8)]
 pub enum TransactionKind {
     Send = 0,
-    Mint,
-    Burn,
 }
 
 impl Encode for TransactionKind {
@@ -342,8 +340,6 @@ impl<'b> Decode<'b> for TransactionKind {
     fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
         Ok(match d.u8()? {
             0 => Self::Send,
-            1 => Self::Mint,
-            2 => Self::Burn,
             _ => {
                 return Err(minicbor::decode::Error::Message("Invalid TransactionKind."));
             }
@@ -385,63 +381,21 @@ impl Transaction {
         }
     }
 
-    pub fn mint(
-        id: TransactionId,
-        time: SystemTime,
-        account: Identity,
-        symbol: String,
-        amount: TokenAmount,
-    ) -> Self {
-        Transaction {
-            id,
-            time: time.into(),
-            content: TransactionContent::Mint {
-                account,
-                symbol,
-                amount,
-            },
-        }
-    }
-
-    pub fn burn(
-        id: TransactionId,
-        time: SystemTime,
-        account: Identity,
-        symbol: String,
-        amount: TokenAmount,
-    ) -> Self {
-        Transaction {
-            id,
-            time: time.into(),
-            content: TransactionContent::Burn {
-                account,
-                symbol,
-                amount,
-            },
-        }
-    }
-
     pub fn kind(&self) -> TransactionKind {
         match self.content {
             TransactionContent::Send { .. } => TransactionKind::Send,
-            TransactionContent::Mint { .. } => TransactionKind::Mint,
-            TransactionContent::Burn { .. } => TransactionKind::Burn,
         }
     }
 
     pub fn symbol(&self) -> &String {
         match &self.content {
             TransactionContent::Send { symbol, .. } => symbol,
-            TransactionContent::Mint { symbol, .. } => symbol,
-            TransactionContent::Burn { symbol, .. } => symbol,
         }
     }
 
     pub fn is_about(&self, id: &Identity) -> bool {
         match &self.content {
             TransactionContent::Send { from, to, .. } => id == from || id == to,
-            TransactionContent::Mint { account, .. } => id == account,
-            TransactionContent::Burn { account, .. } => id == account,
         }
     }
 }
@@ -450,16 +404,6 @@ pub enum TransactionContent {
     Send {
         from: Identity,
         to: Identity,
-        symbol: String,
-        amount: TokenAmount,
-    },
-    Mint {
-        account: Identity,
-        symbol: String,
-        amount: TokenAmount,
-    },
-    Burn {
-        account: Identity,
         symbol: String,
         amount: TokenAmount,
     },
@@ -481,28 +425,6 @@ impl Encode for TransactionContent {
                     .encode(symbol)?
                     .encode(amount)?;
             }
-            TransactionContent::Mint {
-                account,
-                symbol,
-                amount,
-            } => {
-                e.array(4)?
-                    .u8(TransactionKind::Mint as u8)?
-                    .encode(account)?
-                    .encode(symbol)?
-                    .encode(amount)?;
-            }
-            TransactionContent::Burn {
-                account,
-                symbol,
-                amount,
-            } => {
-                e.array(4)?
-                    .u8(TransactionKind::Burn as u8)?
-                    .encode(account)?
-                    .encode(symbol)?
-                    .encode(amount)?;
-            }
         }
         Ok(())
     }
@@ -518,24 +440,6 @@ impl<'b> Decode<'b> for TransactionContent {
                 TransactionContent::Send {
                     from: d.decode()?,
                     to: d.decode()?,
-                    symbol: d.decode()?,
-                    amount: d.decode()?,
-                }
-            }
-            1 => {
-                // TransactionKind::Mint
-                len = len.map(|x| x - 4);
-                TransactionContent::Mint {
-                    account: d.decode()?,
-                    symbol: d.decode()?,
-                    amount: d.decode()?,
-                }
-            }
-            2 => {
-                // TransactionKind::Burn
-                len = len.map(|x| x - 4);
-                TransactionContent::Burn {
-                    account: d.decode()?,
                     symbol: d.decode()?,
                     amount: d.decode()?,
                 }
