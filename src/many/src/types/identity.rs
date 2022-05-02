@@ -713,7 +713,7 @@ pub mod tests {
         let id = ecdsa_256_identity();
         assert_eq!(
             id.identity,
-            "mafdewutfd6c3killp3nhz3aqi36uv4mrbemvaggiy7axb2qoc"
+            "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf"
         );
     }
 
