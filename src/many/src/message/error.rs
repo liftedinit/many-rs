@@ -105,7 +105,14 @@ many_error! {
        -9: InvalidAttribtueId as invalid_attribute_id(id) => "Unexpected attribute ID: {id}.",
       -10: InvalidAttributeArguments as invalid_attribute_arguments()
             => "Attribute does not have the right arguments.",
-      -11: AttributeNotFound as attribute_not_found(id) => "Expected attribute {id} not found.",
+      -11: AttributeNotFound as attribute_not_found(id) 
+            => "Expected attribute {id} not found.",
+      -12: SnapshotNotFound as snapshot_not_found(id) 
+            => "Could not compress snapshot, snapshot not found.",
+      -13: SnapshotError as snapshot_creation_error(id) 
+            => "Could not create snapshot.",
+      -14: SnapshotDirError as snapshot_dir_error(id) 
+            => "Error locating snapshot directory.",
 
      -100: InvalidIdentity as invalid_identity()
             => "Identity is invalid (does not follow the protocol).",
