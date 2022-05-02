@@ -1,6 +1,9 @@
 use crate::{define_attribute_many_error, Identity, ManyError};
 use many_macros::many_module;
 
+#[cfg(test)]
+use mockall::{automock, predicate::*};
+
 mod balance;
 mod info;
 
@@ -19,6 +22,7 @@ define_attribute_many_error!(
 );
 
 #[many_module(name = LedgerModule, id = 2, namespace = ledger, many_crate = crate)]
+#[cfg_attr(test, automock)]
 pub trait LedgerModuleBackend: Send {
     fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturns, ManyError>;
     fn balance(&self, sender: &Identity, args: BalanceArgs) -> Result<BalanceReturns, ManyError>;
@@ -26,63 +30,44 @@ pub trait LedgerModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use minicbor::bytes::ByteVec;
-    use once_cell::sync::Lazy;
-
     use std::{
         collections::BTreeMap,
         str::FromStr,
         sync::{Arc, Mutex},
     };
 
+    use minicbor::bytes::ByteVec;
+    use once_cell::sync::Lazy;
+
     use crate::{
-        server::module::testutils::call_module_cbor,
-        types::{
-            identity::cose::tests::generate_random_eddsa_identity, ledger::TokenAmount, VecOrSingle,
-        },
+        server::module::testutils::{call_module, call_module_cbor},
+        types::{ledger::TokenAmount, VecOrSingle},
     };
+
+    use super::*;
 
     static SYMBOL: Lazy<Identity> = Lazy::new(|| {
         Identity::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap()
     });
     const SYMBOL_NAME: &str = "FOOBAR";
 
-    #[derive(Default)]
-    struct LedgerImpl;
-
-    impl super::LedgerModuleBackend for LedgerImpl {
-        fn info(&self, _sender: &Identity, _args: InfoArgs) -> Result<InfoReturns, ManyError> {
-            Ok(InfoReturns {
-                symbols: vec![*SYMBOL],
-                hash: ByteVec::from(vec![1u8; 8]),
-                local_names: BTreeMap::from([(*SYMBOL, SYMBOL_NAME.to_string())]),
-            })
-        }
-
-        fn balance(
-            &self,
-            _sender: &Identity,
-            _args: BalanceArgs,
-        ) -> Result<BalanceReturns, ManyError> {
-            Ok(BalanceReturns {
-                balances: BTreeMap::from([(*SYMBOL, TokenAmount::zero())]),
-            })
-        }
-    }
-
     #[test]
     fn info() {
-        let module_impl = Arc::new(Mutex::new(LedgerImpl::default()));
-        let module = super::LedgerModule::new(module_impl);
+        let mut mock = MockLedgerModuleBackend::new();
+        mock.expect_info().times(1).returning(|_id, _args| {
+            Ok(InfoReturns {
+                symbols: vec![*SYMBOL],
+                hash: ByteVec::from(vec![10u8; 8]),
+                local_names: BTreeMap::from([(*SYMBOL, SYMBOL_NAME.to_string())]),
+            })
+        });
+        let module = super::LedgerModule::new(Arc::new(Mutex::new(mock)));
 
-        let data = InfoArgs;
-        let data = minicbor::to_vec(data).unwrap();
         let info_returns: InfoReturns =
-            minicbor::decode(&call_module_cbor(1, &module, "ledger.info", data).unwrap()).unwrap();
+            minicbor::decode(&call_module(1, &module, "ledger.info", "null").unwrap()).unwrap();
 
         assert_eq!(info_returns.symbols[0], *SYMBOL);
-        assert_eq!(info_returns.hash, ByteVec::from(vec![1u8; 8]));
+        assert_eq!(info_returns.hash, ByteVec::from(vec![10u8; 8]));
         assert_eq!(
             info_returns.local_names.get(&*SYMBOL).unwrap(),
             &SYMBOL_NAME.to_string()
@@ -91,21 +76,32 @@ mod tests {
 
     #[test]
     fn balance() {
-        let module_impl = Arc::new(Mutex::new(LedgerImpl::default()));
-        let module = super::LedgerModule::new(module_impl);
-        let id = generate_random_eddsa_identity();
+        let mut mock = MockLedgerModuleBackend::new();
+
+        mock.expect_balance().times(1).returning(|_id, args| {
+            Ok(BalanceReturns {
+                balances: BTreeMap::from([(args.symbols.unwrap().0[0], TokenAmount::from(123u16))]),
+            })
+        });
+        let module = super::LedgerModule::new(Arc::new(Mutex::new(mock)));
 
         let data = BalanceArgs {
-            account: Some(id.identity),
+            account: None,
             symbols: Some(VecOrSingle::from(vec![*SYMBOL])),
         };
-        let data = minicbor::to_vec(data).unwrap();
-        let balance_returns: BalanceReturns =
-            minicbor::decode(&call_module_cbor(1, &module, "ledger.balance", data).unwrap()).unwrap();
-
+        let balance_returns: BalanceReturns = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "ledger.balance",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
         assert_eq!(
             balance_returns.balances,
-            BTreeMap::from([(*SYMBOL, TokenAmount::zero())])
+            BTreeMap::from([(*SYMBOL, TokenAmount::from(123u16))])
         );
     }
 }
