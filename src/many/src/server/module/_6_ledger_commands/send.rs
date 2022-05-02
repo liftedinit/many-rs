@@ -1,4 +1,4 @@
-use crate::types::ledger;
+use crate::{types::ledger, server::module::EmptyReturn};
 use crate::Identity;
 use minicbor::{Decode, Encode};
 
@@ -17,3 +17,5 @@ pub struct SendArgs {
     #[n(3)]
     pub symbol: ledger::Symbol,
 }
+
+pub type SendReturn = EmptyReturn;
