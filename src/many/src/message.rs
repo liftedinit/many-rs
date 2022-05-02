@@ -194,7 +194,7 @@ impl CoseSign1RequestMessage {
     }
 
     /// Perform WebAuthn request verification
-    /// 
+    ///
     /// This is non-standard COSE
     fn _verify_webauthn(
         &self,
@@ -252,11 +252,7 @@ impl CoseSign1RequestMessage {
             CoseKeyIdentitySignature::from_bytes(signature).map_err(|e| e.to_string())?;
 
         tracing::trace!("Verifying WebAuthn signature");
-        key.verify(
-            &msg,
-            &cose_sig,
-        )
-        .map_err(|e| e.to_string())?;
+        key.verify(&msg, &cose_sig).map_err(|e| e.to_string())?;
 
         tracing::trace!("WebAuthn verifications succedded");
         Ok(())
