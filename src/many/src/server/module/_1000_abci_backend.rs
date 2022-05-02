@@ -51,6 +51,13 @@ pub struct AbciCommitInfo {
     pub hash: ByteVec,
 }
 
+#[derive(Encode, Decode)]
+#[cbor(map)]
+pub struct AbciSnapshots {
+    #[n(0)]
+    pub path: Option<String>,
+}
+
 /// A module that adapt a MANY application to an ABCI-MANY bridge.
 /// This module takes a backend (another module) which ALSO implements the ModuleBackend
 /// trait, and exposes the `abci.info` and `abci.init` endpoints.
@@ -81,4 +88,7 @@ pub trait ManyAbciModuleBackend: std::fmt::Debug + Send + Sync {
 
     /// Called after a block. The app should take this call and serialize its state.
     fn commit(&mut self) -> Result<AbciCommitInfo, ManyError>;
+
+    /// Called to list all available snapshots.
+    fn list_snapshots(&mut self) -> Result<AbciSnapshots, ManyError>;
 }
