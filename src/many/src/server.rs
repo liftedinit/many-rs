@@ -290,41 +290,37 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 
 #[cfg(test)]
 mod tests {
-    use coset::cbor::de::from_reader;
-    use coset::cbor::value::Value;
+    use semver::{BuildMetadata, Prerelease, Version};
 
     use super::*;
+    use crate::cose_helpers::public_key;
     use crate::message::{
         decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
         RequestMessageBuilder,
     };
+    use crate::server::module::base::Status;
     use crate::types::identity::cose::tests::generate_random_eddsa_identity;
     use proptest::prelude::*;
 
-    // Official SemVer regex
-    // See https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
-    //
-    // Note: \d were replaced with [0-9], since the current regex engine matches other digits characters, such as Eastern Arabic numerals
-    //       https://stackoverflow.com/questions/6479423/does-d-in-regex-mean-a-digit/6479605#6479605
-    const SEMVER_REGEX: &str = r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?";
+    const ALPHA_NUM_DASH_REGEX: &str = "[a-zA-Z0-9-]";
 
-    /// Execute a request on a MANY server and return the response message
-    pub fn execute_request(
-        id: CoseKeyIdentity,
-        server: Arc<Mutex<ManyServer>>,
-        request: RequestMessage,
-    ) -> ResponseMessage {
-        let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
-        let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
-        decode_response_from_cose_sign1(response, None).unwrap()
+    prop_compose! {
+        fn arb_semver()((major, minor, patch) in (any::<u64>(), any::<u64>(), any::<u64>()), pre in ALPHA_NUM_DASH_REGEX, build in ALPHA_NUM_DASH_REGEX) -> Version {
+            Version {
+                major,
+                minor,
+                patch,
+                pre: Prerelease::new(&pre).unwrap(),
+                build: BuildMetadata::new(&build).unwrap(),
+            }
+        }
     }
 
     proptest! {
         #[test]
-        fn simple_status(name in "\\PC*", version in SEMVER_REGEX) {
-            println!("\n\n{version}\n\n");
+        fn simple_status(name in "\\PC*", version in arb_semver()) {
             let id = generate_random_eddsa_identity();
-            let server = ManyServer::simple(name.clone(), id.clone(), Some(version));
+            let server = ManyServer::simple(name.clone(), id.clone(), Some(version.to_string()));
 
             // Test status() using a message instead of a direct call
             //
@@ -338,13 +334,20 @@ mod tests {
                 .build()
                 .unwrap();
 
-            let response_message = execute_request(id, server, request);
+            let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
+            let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
+            let response_message = decode_response_from_cose_sign1(response, None).unwrap();
 
-            let data: BTreeMap<u8, Value> =
-                from_reader(response_message.data.unwrap().as_slice()).unwrap();
-            let response_name = data.get(&1).unwrap();
+            let status: Status = minicbor::decode(&response_message.data.unwrap()).unwrap();
 
-            assert_eq!(response_name, &Value::Text(name));
+            assert_eq!(status.version, 1);
+            assert_eq!(status.name, name);
+            assert_eq!(status.public_key, Some(public_key(&id.key.unwrap()).unwrap()));
+            assert_eq!(status.identity, id.identity);
+            assert!(status.attributes.has_id(0));
+            assert_eq!(status.server_version, Some(version.to_string()));
+            assert_eq!(status.timeout, Some(MANYSERVER_DEFAULT_TIMEOUT));
+            assert_eq!(status.extras, BTreeMap::new());
         }
     }
 }
