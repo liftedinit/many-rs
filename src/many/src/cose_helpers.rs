@@ -12,10 +12,16 @@ use std::collections::{BTreeMap, BTreeSet};
 /// * `x` - Public key
 /// * `d` - Private key
 pub fn eddsa_cose_key(x: Vec<u8>, d: Option<Vec<u8>>) -> CoseKey {
-    let mut params: Vec<(Label, Value)> = Vec::from([(
-        Label::Int(coset::iana::OkpKeyParameter::X as i64),
-        Value::Bytes(x),
-    )]);
+    let mut params: Vec<(Label, Value)> = Vec::from([
+        (
+            Label::Int(coset::iana::OkpKeyParameter::Crv as i64),
+            Value::from(coset::iana::EllipticCurve::Ed25519 as u64),
+        ),
+        (
+            Label::Int(coset::iana::OkpKeyParameter::X as i64),
+            Value::Bytes(x),
+        ),
+    ]);
     let mut key_ops: BTreeSet<KeyOperation> =
         BTreeSet::from([KeyOperation::Assigned(coset::iana::KeyOperation::Verify)]);
 
@@ -32,14 +38,7 @@ pub fn eddsa_cose_key(x: Vec<u8>, d: Option<Vec<u8>>) -> CoseKey {
         kty: KeyType::Assigned(coset::iana::KeyType::OKP),
         alg: Some(Algorithm::Assigned(coset::iana::Algorithm::EdDSA)),
         key_ops,
-        params: [
-            vec![(
-                Label::Int(coset::iana::OkpKeyParameter::Crv as i64),
-                Value::from(coset::iana::EllipticCurve::Ed25519 as u64),
-            )],
-            params,
-        ]
-        .concat(),
+        params,
         ..Default::default()
     }
 }
