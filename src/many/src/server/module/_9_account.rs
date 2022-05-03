@@ -5,93 +5,17 @@ use many_macros::many_module;
 use minicbor::{Decode, Encode};
 use std::collections::{BTreeMap, BTreeSet};
 
+#[cfg(test)]
+use mockall::{automock, predicate::*};
+
 pub mod errors;
 pub mod features;
 
-/// An iterator that iterates over accounts. The keys will be identities, and not just
-/// subresource IDs.
-#[derive(Clone)]
-pub struct AccountMapIterator<'map>(
-    Identity,
-    std::collections::btree_map::Iter<'map, u32, Account>,
-);
-
-impl std::fmt::Debug for AccountMapIterator<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_list().entries(self.clone()).finish()
-    }
-}
-
-impl<'it> Iterator for AccountMapIterator<'it> {
-    type Item = (Identity, &'it Account);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.1
-            .next()
-            .map(|(k, v)| (self.0.with_subresource_id_unchecked(*k), v))
-    }
-}
-
-/// A map of Subresource IDs to account. It should have a non-anonymous identity as the identity,
-/// and the inner map will contains subresource identities as keys.
-pub struct AccountMap {
-    id: Identity,
-    inner: BTreeMap<u32, Account>,
-}
-
-impl AccountMap {
-    pub fn new(id: Identity) -> Self {
-        Self {
-            id,
-            inner: Default::default(),
-        }
-    }
-
-    pub fn get(&self, identity: &Identity) -> Option<&Account> {
-        if identity.matches(&self.id) {
-            if let Some(subid) = identity.subresource_id() {
-                return self.inner.get(&subid);
-            }
-        }
-        None
-    }
-
-    pub fn get_mut(&mut self, identity: &Identity) -> Option<&mut Account> {
-        if identity.matches(&self.id) {
-            if let Some(subid) = identity.subresource_id() {
-                return self.inner.get_mut(&subid);
-            }
-        }
-        None
-    }
-
-    pub fn insert(&mut self, account: Account) -> Result<(Identity, Option<Account>), ManyError> {
-        let subid = self.inner.keys().last().map_or(0, |x| x + 1);
-        let id = self.id.with_subresource_id(subid)?;
-        Ok((id, self.inner.insert(subid, account)))
-    }
-
-    pub fn remove(&mut self, identity: &Identity) -> Option<Account> {
-        if identity.matches(&self.id) {
-            if let Some(subid) = identity.subresource_id() {
-                return self.inner.remove(&subid);
-            }
-        }
-        None
-    }
-
-    pub fn has_role<R: AsRef<str>>(&self, account: &Identity, id: &Identity, role: R) -> bool {
-        if let Some(account) = self.get(account) {
-            account.has_role(id, role)
-        } else {
-            false
-        }
-    }
-
-    pub fn iter(&self) -> AccountMapIterator {
-        AccountMapIterator(self.id, self.inner.iter())
-    }
-}
+pub type SetDescriptionReturn = EmptyReturn;
+pub type AddRolesReturn = EmptyReturn;
+pub type RemoveRolesReturn = EmptyReturn;
+pub type DeleteReturn = EmptyReturn;
+pub type AddFeaturesReturn = EmptyReturn;
 
 /// A generic Account type. This is useful as utility for managing accounts in your backend.
 #[derive(Clone, Debug)]
@@ -142,7 +66,7 @@ impl Account {
     }
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct CreateArgs {
     #[n(0)]
@@ -162,7 +86,7 @@ pub struct CreateReturn {
     pub id: Identity,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct SetDescriptionArgs {
     #[n(0)]
@@ -172,7 +96,7 @@ pub struct SetDescriptionArgs {
     pub description: String,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct ListRolesArgs {
     #[n(0)]
@@ -186,7 +110,7 @@ pub struct ListRolesReturn {
     roles: BTreeSet<String>,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct GetRolesArgs {
     #[n(0)]
@@ -203,7 +127,7 @@ pub struct GetRolesReturn {
     roles: BTreeMap<Identity, BTreeSet<String>>,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct AddRolesArgs {
     #[n(0)]
@@ -213,7 +137,7 @@ pub struct AddRolesArgs {
     pub roles: BTreeMap<Identity, BTreeSet<String>>,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct RemoveRolesArgs {
     #[n(0)]
@@ -223,7 +147,7 @@ pub struct RemoveRolesArgs {
     pub roles: BTreeMap<Identity, BTreeSet<String>>,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct InfoArgs {
     #[n(0)]
@@ -243,14 +167,14 @@ pub struct InfoReturn {
     features: features::FeatureSet,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct DeleteArgs {
     #[n(0)]
     pub account: Identity,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct AddFeaturesArgs {
     #[n(0)]
@@ -264,6 +188,7 @@ pub struct AddFeaturesArgs {
 }
 
 #[many_module(name = AccountModule, id = 9, namespace = account, many_crate = crate)]
+#[cfg_attr(test, automock)]
 pub trait AccountModuleBackend: Send {
     /// Create an account.
     fn create(&mut self, sender: &Identity, args: CreateArgs) -> Result<CreateReturn, ManyError>;
@@ -273,7 +198,7 @@ pub trait AccountModuleBackend: Send {
         &mut self,
         sender: &Identity,
         args: SetDescriptionArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<SetDescriptionReturn, ManyError>;
 
     /// List all the roles supported by an account.
     fn list_roles(
@@ -291,273 +216,375 @@ pub trait AccountModuleBackend: Send {
         &mut self,
         sender: &Identity,
         args: AddRolesArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<AddRolesReturn, ManyError>;
 
     /// Remove roles from an identity for an account.
     fn remove_roles(
         &mut self,
         sender: &Identity,
         args: RemoveRolesArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<RemoveRolesReturn, ManyError>;
 
     /// Returns the information related to an account.
     fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError>;
 
     /// Delete an account.
-    fn delete(&mut self, sender: &Identity, args: DeleteArgs) -> Result<EmptyReturn, ManyError>;
+    fn delete(&mut self, sender: &Identity, args: DeleteArgs) -> Result<DeleteReturn, ManyError>;
 
     /// Add additional features to an account.
     fn add_features(
         &mut self,
         sender: &Identity,
         args: AddFeaturesArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<AddFeaturesReturn, ManyError>;
 }
 
 #[cfg(test)]
 mod module_tests {
-    use super::*;
-    use crate::server::module::testutils::call_module;
-    use crate::types::identity::tests;
+    use mockall::predicate;
+
+    use crate::{
+        cbor::CborAny,
+        server::module::{
+            account::features::{FeatureId, TryCreateFeature},
+            testutils::call_module_cbor,
+        },
+        types::identity::tests,
+    };
+
+    use super::{
+        features::{Feature, FeatureSet},
+        *,
+    };
     use std::sync::{Arc, Mutex};
 
-    struct AccountImpl(pub AccountMap);
-    impl std::default::Default for AccountImpl {
-        fn default() -> Self {
-            Self(AccountMap::new(
-                Identity::from_bytes(
-                    &hex::decode("0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D")
-                        .unwrap(),
-                )
-                .unwrap(),
-            ))
-        }
-    }
-
-    impl super::AccountModuleBackend for AccountImpl {
-        fn create(
-            &mut self,
-            sender: &Identity,
-            args: CreateArgs,
-        ) -> Result<CreateReturn, ManyError> {
-            let (id, _) = self.0.insert(Account::create(sender, args))?;
-            Ok(CreateReturn { id })
-        }
-
-        fn set_description(
-            &mut self,
-            _sender: &Identity,
-            args: SetDescriptionArgs,
-        ) -> Result<EmptyReturn, ManyError> {
-            let mut account = self
-                .0
-                .get_mut(&args.id)
-                .ok_or_else(|| errors::unknown_account(args.id.to_string()))?;
-
-            account.description = Some(args.description);
-            Ok(EmptyReturn)
-        }
-
-        fn list_roles(
-            &self,
-            _sender: &Identity,
-            args: ListRolesArgs,
-        ) -> Result<ListRolesReturn, ManyError> {
-            let _ = self
-                .0
-                .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
-
-            Ok(ListRolesReturn {
-                roles: BTreeSet::from_iter(
-                    vec!["owner".to_string(), "other-role".to_string()].into_iter(),
-                ),
-            })
-        }
-
-        fn get_roles(
-            &self,
-            _sender: &Identity,
-            args: GetRolesArgs,
-        ) -> Result<GetRolesReturn, ManyError> {
-            let account = self
-                .0
-                .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
-
-            Ok(GetRolesReturn {
-                roles: account.roles.clone(),
-            })
-        }
-
-        fn add_roles(
-            &mut self,
-            _sender: &Identity,
-            args: AddRolesArgs,
-        ) -> Result<EmptyReturn, ManyError> {
-            let account = self
-                .0
-                .get_mut(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
-
-            for (k, mut v) in args.roles {
-                let roles = account.roles.entry(k).or_default();
-                roles.append(&mut v);
-            }
-            Ok(EmptyReturn)
-        }
-
-        fn remove_roles(
-            &mut self,
-            _sender: &Identity,
-            args: RemoveRolesArgs,
-        ) -> Result<EmptyReturn, ManyError> {
-            let account = self
-                .0
-                .get_mut(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
-
-            for (k, v) in args.roles {
-                let roles = account.roles.entry(k).or_default();
-                for role in v {
-                    roles.remove(&role);
-                }
-            }
-            Ok(EmptyReturn)
-        }
-
-        fn info(&self, _sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError> {
-            let account = self
-                .0
-                .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
-            Ok(InfoReturn {
-                description: account.description.clone(),
-                roles: account.roles.clone(),
-                features: account.features.clone(),
-            })
-        }
-
-        fn delete(
-            &mut self,
-            sender: &Identity,
-            args: DeleteArgs,
-        ) -> Result<EmptyReturn, ManyError> {
-            if self.0.has_role(&args.account, sender, "owner") {
-                self.0.remove(&args.account).map_or_else(
-                    || Err(errors::unknown_account(args.account.to_string())),
-                    |_| Ok(EmptyReturn),
-                )
-            } else {
-                Err(errors::user_needs_role("owner".to_string()))
-            }
-        }
-
-        fn add_features(
-            &mut self,
-            _sender: &Identity,
-            _args: AddFeaturesArgs,
-        ) -> Result<EmptyReturn, ManyError> {
-            todo!()
-        }
-    }
-
-    // TODO: split this to get easier to maintain tests.
     #[test]
-    fn module_works() {
-        let module_impl = Arc::new(Mutex::new(AccountImpl::default()));
-        let module = super::AccountModule::new(module_impl.clone());
-        let id_from = tests::identity(1);
+    fn create() {
+        let mut features = FeatureSet::default();
+        features.insert(Feature::with_id(1));
 
-        let result: CreateReturn = minicbor::decode(
-            &call_module(1, &module, "account.create", r#"{ 0: "test", 2: [0] }"#).unwrap(),
-        )
-        .unwrap();
-
-        let id = {
-            let lock = module_impl.lock().unwrap();
-            let (id, account) = lock.0.iter().next().unwrap();
-
-            assert_eq!(id, result.id);
-            assert_eq!(id.subresource_id(), Some(0));
-            assert_eq!(account.description, Some("test".to_string()));
-            assert!(account.roles.contains_key(&id_from));
-            assert!(account
-                .roles
-                .get_key_value(&id_from)
-                .unwrap()
-                .1
-                .contains("owner"));
-            id
+        let data = CreateArgs {
+            description: Some("Foobar".to_string()),
+            roles: None,
+            features,
         };
-        let wrong_id = id.with_subresource_id(12345).unwrap();
 
-        call_module(
-            1,
-            &module,
-            "account.setDescription",
-            format!(r#"{{ 0: "{}", 1: "new-name" }}"#, id),
+        let mut mock = MockAccountModuleBackend::new();
+        mock.expect_create()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .return_const(Ok(CreateReturn {
+                id: Identity::anonymous(),
+            }));
+        let module = super::AccountModule::new(Arc::new(Mutex::new(mock)));
+
+        let create_return: CreateReturn = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "account.create",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
         )
         .unwrap();
 
-        assert!(call_module(
-            1,
-            &module,
-            "account.setDescription",
-            format!(r#"{{ 0: "{}", 1: "new-name-2" }}"#, wrong_id),
-        )
-        .is_err());
+        assert_eq!(create_return.id, Identity::anonymous());
+    }
 
-        {
-            let account: InfoReturn = minicbor::decode(
-                &call_module(0, &module, "account.info", format!(r#"{{ 0: "{}" }}"#, id)).unwrap(),
+    #[test]
+    fn set_description() {
+        let data = SetDescriptionArgs {
+            id: Identity::anonymous(),
+            description: "Foobar".to_string(),
+        };
+
+        let mut mock = MockAccountModuleBackend::new();
+        mock.expect_set_description()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
             )
-            .unwrap();
-            assert_eq!(account.description, Some("new-name".to_string()));
-            assert!(account.roles.contains_key(&id_from));
-            assert!(account
-                .roles
-                .get_key_value(&id_from)
-                .unwrap()
-                .1
-                .contains("owner"));
-            assert!(account.features.has_id(0));
-        }
+            .times(1)
+            .return_const(Ok(SetDescriptionReturn {}));
+        let module = super::AccountModule::new(Arc::new(Mutex::new(mock)));
 
-        assert!(call_module(
-            1,
-            &module,
-            "account.listRoles",
-            format!(r#"{{ 0: "{}", 1: "new-name" }}"#, wrong_id),
+        let _: SetDescriptionReturn = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "account.setDescription",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
         )
-        .is_err());
+        .unwrap();
+    }
+
+    #[test]
+    fn list_roles() {
+        let data = ListRolesArgs {
+            account: tests::identity(1),
+        };
+        let mut mock = MockAccountModuleBackend::new();
+        mock.expect_list_roles()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .return_const(Ok(ListRolesReturn {
+                roles: BTreeSet::from(["owner".to_string()]),
+            }));
+        let module = super::AccountModule::new(Arc::new(Mutex::new(mock)));
+
+        let list_roles_return: ListRolesReturn = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "account.listRoles",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
 
         assert_eq!(
-            minicbor::decode::<ListRolesReturn>(
-                &call_module(
-                    1,
-                    &module,
-                    "account.listRoles",
-                    format!(r#"{{ 0: "{}", 1: "new-name" }}"#, id)
-                )
-                .unwrap()
-            )
-            .unwrap()
-            .roles,
-            BTreeSet::from_iter(vec!["owner".to_string(), "other-role".to_string()].into_iter()),
+            list_roles_return.roles,
+            BTreeSet::from(["owner".to_string()])
         );
+    }
 
-        let _ = call_module(
-            1,
-            &module,
-            "account.delete",
-            format!(r#"{{ 0: "{}" }}"#, id),
+    #[test]
+    fn get_roles() {
+        let data = GetRolesArgs {
+            account: tests::identity(1),
+            identities: VecOrSingle(vec![Identity::anonymous()]),
+        };
+        let mut mock = MockAccountModuleBackend::new();
+        mock.expect_get_roles()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .return_const(Ok(GetRolesReturn {
+                roles: BTreeMap::from([(
+                    Identity::anonymous(),
+                    BTreeSet::from(["owner".to_string()]),
+                )]),
+            }));
+        let module = super::AccountModule::new(Arc::new(Mutex::new(mock)));
+
+        let get_roles_return: GetRolesReturn = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "account.getRoles",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
         )
         .unwrap();
 
-        {
-            let lock = module_impl.lock().unwrap();
-            assert!(lock.0.inner.is_empty());
+        assert_eq!(
+            get_roles_return.roles,
+            BTreeMap::from([(Identity::anonymous(), BTreeSet::from(["owner".to_string()]),)])
+        );
+    }
+
+    #[test]
+    fn add_roles() {
+        let data = AddRolesArgs {
+            account: tests::identity(1),
+            roles: BTreeMap::from([(tests::identity(2), BTreeSet::from(["foobar".to_string()]))]),
+        };
+        let mut mock = MockAccountModuleBackend::new();
+        mock.expect_add_roles()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .return_const(Ok(AddRolesReturn {}));
+        let module = super::AccountModule::new(Arc::new(Mutex::new(mock)));
+
+        let _: AddRolesReturn = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "account.addRoles",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn remove_roles() {
+        let data = RemoveRolesArgs {
+            account: tests::identity(1),
+            roles: BTreeMap::from([(tests::identity(2), BTreeSet::from(["foobar".to_string()]))]),
+        };
+        let mut mock = MockAccountModuleBackend::new();
+        mock.expect_remove_roles()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .return_const(Ok(RemoveRolesReturn {}));
+        let module = super::AccountModule::new(Arc::new(Mutex::new(mock)));
+
+        let _: RemoveRolesReturn = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "account.removeRoles",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn info() {
+        let mut features = FeatureSet::default();
+        features.insert(Feature::with_id(1));
+
+        let data = InfoArgs {
+            account: tests::identity(1),
+        };
+        let mut mock = MockAccountModuleBackend::new();
+        mock.expect_info()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .return_const(Ok(InfoReturn {
+                description: Some("Foobar".to_string()),
+                roles: BTreeMap::from([(tests::identity(2), BTreeSet::from(["foo".to_string()]))]),
+                features: features.clone(),
+            }));
+        let module = super::AccountModule::new(Arc::new(Mutex::new(mock)));
+
+        let info_return: InfoReturn = minicbor::decode(
+            &call_module_cbor(1, &module, "account.info", minicbor::to_vec(data).unwrap()).unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(info_return.description, Some("Foobar".to_string()));
+        assert_eq!(
+            info_return.roles,
+            BTreeMap::from([(tests::identity(2), BTreeSet::from(["foo".to_string()]))])
+        );
+        assert_eq!(info_return.features, features);
+    }
+
+    #[test]
+    fn delete() {
+        let data = DeleteArgs {
+            account: tests::identity(1),
+        };
+        let mut mock = MockAccountModuleBackend::new();
+        mock.expect_delete()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .return_const(Ok(DeleteReturn {}));
+        let module = super::AccountModule::new(Arc::new(Mutex::new(mock)));
+
+        let _: DeleteReturn = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "account.delete",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn add_features() {
+        let mut features = FeatureSet::default();
+        features.insert(Feature::with_id(1));
+
+        let data = AddFeaturesArgs {
+            account: tests::identity(1),
+            roles: Some(BTreeMap::from([(
+                tests::identity(2),
+                BTreeSet::from(["foobar".to_string()]),
+            )])),
+            features: features.clone(),
+        };
+        let mut mock = MockAccountModuleBackend::new();
+        mock.expect_add_features()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .return_const(Ok(AddFeaturesReturn {}));
+        let module = super::AccountModule::new(Arc::new(Mutex::new(mock)));
+
+        let _: AddFeaturesReturn = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "account.addFeatures",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn account() {
+        let id = tests::identity(1);
+        let mut features = FeatureSet::default();
+        features.insert(Feature::with_id(1));
+
+        let args = CreateArgs {
+            description: Some("Foobar".to_string()),
+            roles: Some(BTreeMap::from([(
+                tests::identity(2),
+                BTreeSet::from(["foobar".to_string()]),
+            )])),
+            features,
+        };
+        let account = Account::create(&id, args);
+
+        assert_eq!(account.description(), Some(&"Foobar".to_string()));
+        assert_eq!(
+            account.roles(),
+            &BTreeMap::from([
+                (id, BTreeSet::from(["owner".to_string()])),
+                (tests::identity(2), BTreeSet::from(["foobar".to_string()]),)
+            ])
+        );
+        assert!(account.has_role(&id, "owner"));
+
+        struct SomeFeature;
+        impl TryCreateFeature for SomeFeature {
+            const ID: FeatureId = 1;
+            fn try_create(f: &Feature) -> Result<Self, ManyError> {
+                match f.arguments().as_slice() {
+                    &[CborAny::Int(123)] => Ok(Self),
+                    _ => Err(ManyError::unknown("ERROR".to_string())),
+                }
+            }
         }
+        assert!(account.feature::<SomeFeature>().is_none());
     }
 }
