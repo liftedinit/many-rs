@@ -5,6 +5,9 @@ use minicbor::data::Type;
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 
+#[cfg(test)]
+use mockall::{automock, predicate::*};
+
 /// An AsyncToken which is returned when the server does not have an immediate
 /// response.
 #[derive(Clone)]
@@ -212,6 +215,97 @@ impl<'b> Decode<'b> for StatusReturn {
 }
 
 #[many_module(name = AsyncModule, id = 8, namespace = async, many_crate = crate)]
+#[cfg_attr(test, automock)]
 pub trait AsyncModuleBackend: Send {
     fn status(&self, sender: &Identity, args: StatusArgs) -> Result<StatusReturn, ManyError>;
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+    use std::sync::{Arc, Mutex};
+
+    use crate::cbor::CborAny;
+    use crate::protocol::attributes::TryFromAttributeSet;
+    use crate::protocol::{AttributeSet, Attribute};
+    use crate::server::module::_8_async::attributes::ASYNC;
+    use crate::{server::module::testutils::call_module_cbor};
+
+    use super::*;
+    use super::attributes::AsyncAttribute;
+
+    fn arb_status() -> impl Strategy<Value = StatusReturn> {
+        prop_oneof![
+            Just(StatusReturn::Unknown),
+            Just(StatusReturn::Queued),
+            Just(StatusReturn::Processing),
+            Just(StatusReturn::Done {
+                response: Box::new(CoseSign1::default())
+            }),
+            Just(StatusReturn::Expired),
+        ]
+        .boxed()
+    }
+
+    proptest! {
+        #[test]
+        fn status(status in arb_status()) {
+            let mut mock = MockAsyncModuleBackend::new();
+            mock.expect_status()
+                .times(1)
+                .return_const(Ok(status.clone()));
+            let module = super::AsyncModule::new(Arc::new(Mutex::new(mock)));
+
+            let data = StatusArgs {
+                token: AsyncToken::from(vec![11, 12, 13])
+            };
+            let status_return: StatusReturn = minicbor::decode(
+                &call_module_cbor(1, &module, "async.status", minicbor::to_vec(data).unwrap()).unwrap(),
+            )
+            .unwrap();
+
+            assert_eq!(status_return.variant(), status.variant());
+        }
+    }
+
+    #[test]
+    fn async_attr() {
+        let v = vec![1, 2, 3, 4];
+        let args = vec![CborAny::Bytes(v.clone())];
+
+        // Valid async attr - new
+        let token = AsyncToken::from(v);
+        let async_attr = AsyncAttribute::new(token.clone());
+        assert_eq!(async_attr.token.as_ref(), token.as_ref());
+
+        // Valid attribute from async attribute
+        let attr = Attribute::from(async_attr);
+        assert_eq!(attr.id, ASYNC.id);
+        assert_eq!(attr.arguments, args);
+
+        // Valid async attr - try_from
+        let attr = Attribute::new(1, args);
+        let async_attr = AsyncAttribute::try_from(attr.clone()).unwrap();
+        assert_eq!(async_attr.token.as_ref(), token.as_ref());
+
+        // Valid async attr - try_from_set
+        let attr_set = AttributeSet::from_iter(vec![attr].into_iter());
+        let async_attr = AsyncAttribute::try_from_set(&attr_set).unwrap();
+        assert_eq!(async_attr.token.as_ref(), token.as_ref());
+
+        // Invalid async attr - try_from - invalid id
+        let invalid_attr = Attribute::id(123);
+        let async_attr = AsyncAttribute::try_from(invalid_attr.clone());
+        assert!(async_attr.is_err());
+
+        // Invalid async attr - try_from_set
+        let attr_set = AttributeSet::from_iter(vec![invalid_attr].into_iter());
+        let async_attr = AsyncAttribute::try_from_set(&attr_set);
+        assert!(async_attr.is_err());
+
+        // Invalid async attr - try_from - invalid arguments
+        let invalid_attr = Attribute::id(1);
+        let async_attr = AsyncAttribute::try_from(invalid_attr);
+        assert!(async_attr.is_err());
+    }
 }
