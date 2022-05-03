@@ -4,6 +4,8 @@ use crate::ManyError;
 use minicbor::{Decode, Encode};
 use std::collections::BTreeSet;
 
+pub mod multisig;
+
 /// See feature `_0_account_ledger`.
 pub mod ledger {
     use super::{Feature, FeatureId, TryCreateFeature};

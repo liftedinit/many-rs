@@ -357,7 +357,7 @@ pub struct Transaction {
     pub time: Timestamp,
 
     #[n(2)]
-    pub content: TransactionContent,
+    pub content: TransactionInfo,
 }
 
 impl Transaction {
@@ -372,7 +372,7 @@ impl Transaction {
         Transaction {
             id,
             time: time.into(),
-            content: TransactionContent::Send {
+            content: TransactionInfo::Send {
                 from,
                 to,
                 symbol,
@@ -383,24 +383,25 @@ impl Transaction {
 
     pub fn kind(&self) -> TransactionKind {
         match self.content {
-            TransactionContent::Send { .. } => TransactionKind::Send,
+            TransactionInfo::Send { .. } => TransactionKind::Send,
         }
     }
 
     pub fn symbol(&self) -> &String {
         match &self.content {
-            TransactionContent::Send { symbol, .. } => symbol,
+            TransactionInfo::Send { symbol, .. } => symbol,
         }
     }
 
     pub fn is_about(&self, id: &Identity) -> bool {
         match &self.content {
-            TransactionContent::Send { from, to, .. } => id == from || id == to,
+            TransactionInfo::Send { from, to, .. } => id == from || id == to,
         }
     }
 }
 
-pub enum TransactionContent {
+#[derive(Clone)]
+pub enum TransactionInfo {
     Send {
         from: Identity,
         to: Identity,
@@ -409,10 +410,10 @@ pub enum TransactionContent {
     },
 }
 
-impl Encode for TransactionContent {
+impl Encode for TransactionInfo {
     fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
         match self {
-            TransactionContent::Send {
+            TransactionInfo::Send {
                 from,
                 to,
                 symbol,
@@ -430,14 +431,14 @@ impl Encode for TransactionContent {
     }
 }
 
-impl<'b> Decode<'b> for TransactionContent {
+impl<'b> Decode<'b> for TransactionInfo {
     fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
         let mut len = d.array()?;
         let content = match d.u8()? {
             0 => {
                 // TransactionKind::Send
                 len = len.map(|x| x - 5);
-                TransactionContent::Send {
+                TransactionInfo::Send {
                     from: d.decode()?,
                     to: d.decode()?,
                     symbol: d.decode()?,

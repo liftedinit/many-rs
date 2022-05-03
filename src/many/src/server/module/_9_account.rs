@@ -352,7 +352,7 @@ mod module_tests {
             let mut account = self
                 .0
                 .get_mut(&args.id)
-                .ok_or_else(|| errors::unknown_account(args.id.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.id))?;
 
             account.description = Some(args.description);
             Ok(EmptyReturn)
@@ -366,7 +366,7 @@ mod module_tests {
             let _ = self
                 .0
                 .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
 
             Ok(ListRolesReturn {
                 roles: BTreeSet::from_iter(
@@ -383,7 +383,7 @@ mod module_tests {
             let account = self
                 .0
                 .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
 
             Ok(GetRolesReturn {
                 roles: account.roles.clone(),
@@ -398,7 +398,7 @@ mod module_tests {
             let account = self
                 .0
                 .get_mut(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
 
             for (k, mut v) in args.roles {
                 let roles = account.roles.entry(k).or_default();
@@ -415,7 +415,7 @@ mod module_tests {
             let account = self
                 .0
                 .get_mut(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
 
             for (k, v) in args.roles {
                 let roles = account.roles.entry(k).or_default();
@@ -430,7 +430,7 @@ mod module_tests {
             let account = self
                 .0
                 .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
             Ok(InfoReturn {
                 description: account.description.clone(),
                 roles: account.roles.clone(),
@@ -445,11 +445,11 @@ mod module_tests {
         ) -> Result<EmptyReturn, ManyError> {
             if self.0.has_role(&args.account, sender, "owner") {
                 self.0.remove(&args.account).map_or_else(
-                    || Err(errors::unknown_account(args.account.to_string())),
+                    || Err(errors::unknown_account(args.account)),
                     |_| Ok(EmptyReturn),
                 )
             } else {
-                Err(errors::user_needs_role("owner".to_string()))
+                Err(errors::user_needs_role("owner"))
             }
         }
 

@@ -12,7 +12,7 @@ use syn::{
 
 #[derive(Deserialize)]
 struct ManyModuleAttributes {
-    pub id: u32,
+    pub id: Option<u32>,
     pub name: Option<String>,
     pub namespace: Option<String>,
     pub many_crate: Option<String>,
@@ -157,7 +157,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
 
     let vis = trait_.vis.clone();
 
-    let attr_id = attrs.id;
+    let attr_id = attrs.id.iter();
     let attr_name =
         inflections::Inflect::to_constant_case(format!("{}Attribute", struct_name).as_str());
     let attr_ident = Ident::new(&attr_name, attr.span());
@@ -284,8 +284,14 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         }
     };
 
+    let attribute = if attrs.id.is_some() {
+        quote! { Some(#attr_ident) }
+    } else {
+        quote! { None }
+    };
+
     Ok(quote! {
-        #vis const #attr_ident:  #many ::protocol::Attribute =  #many ::protocol::Attribute::id(#attr_id);
+        #( #vis const #attr_ident:  #many ::protocol::Attribute =  #many ::protocol::Attribute::id(#attr_id); )*
 
         #vis struct #info_ident;
         impl std::ops::Deref for #info_ident {
@@ -299,7 +305,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
                 unsafe {
                     ONCE.call_once(|| VALUE = Box::into_raw(Box::new(ManyModuleInfo {
                         name: #struct_name .to_string(),
-                        attribute: #attr_ident,
+                        attribute: #attribute,
                         endpoints: vec![ #( #endpoint_strings .to_string() ),* ],
                     })));
                     &*VALUE

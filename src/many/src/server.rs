@@ -74,14 +74,18 @@ impl ManyServer {
             ..
         } = info;
 
-        let id = attribute.id;
-
-        if let Some(m) = self.modules.iter().find(|m| m.info().attribute.id == id) {
-            panic!(
-                "Module {} already implements attribute {}.",
-                m.info().name,
-                id
-            );
+        if let Some(Attribute { id, .. }) = attribute {
+            if let Some(m) = self
+                .modules
+                .iter()
+                .find(|m| m.info().attribute.as_ref().map(|x| x.id) == Some(*id))
+            {
+                panic!(
+                    "Module {} already implements attribute {}.",
+                    m.info().name,
+                    id
+                );
+            }
         }
 
         for e in endpoints {
@@ -164,7 +168,7 @@ impl base::BaseModuleBackend for ManyServer {
         let mut attributes: BTreeSet<Attribute> = self
             .modules
             .iter()
-            .map(|m| m.info().attribute.clone())
+            .filter_map(|m| m.info().attribute.clone())
             .collect();
 
         let mut builder = base::StatusBuilder::default();

@@ -74,7 +74,7 @@ pub mod attributes {
 
         fn try_from(value: Attribute) -> Result<Self, Self::Error> {
             if value.id != ASYNC.id {
-                return Err(ManyError::invalid_attribute_id(value.id.to_string()));
+                return Err(ManyError::invalid_attribute_id(value.id));
             }
 
             let arguments = value.into_arguments();

@@ -59,8 +59,8 @@ pub struct ManyModuleInfo {
     /// Returns the name of this module, for logs and metering.
     pub name: String,
 
-    /// Returns a list of all attributes supported by this module.
-    pub attribute: Attribute,
+    /// Returns the attribute supported by this module, if available.
+    pub attribute: Option<Attribute>,
 
     /// The endpoints that this module exports.
     pub endpoints: Vec<String>,
