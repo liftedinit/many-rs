@@ -49,7 +49,6 @@ impl Status {
     }
 }
 
-// TODO: MISSING ENTRIES!!
 impl Encode for Status {
     fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
         #[rustfmt::skip]
