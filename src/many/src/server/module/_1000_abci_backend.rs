@@ -3,6 +3,7 @@ use many_macros::many_module;
 use minicbor::bytes::ByteVec;
 use minicbor::{Decode, Encode};
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 #[derive(Debug, Encode, Decode)]
 #[cbor(map)]
@@ -51,11 +52,24 @@ pub struct AbciCommitInfo {
     pub hash: ByteVec,
 }
 
+#[derive(Encode, Decode, Debug)]
+#[cbor(map)]
+pub struct Snapshot {
+    #[n(0)]
+    pub path: PathBuf,
+    #[n(1)]
+    pub height: u64,
+    #[n(2)]
+    pub hash: Vec<u8>,
+ //   #[n(3)]
+ //   pub chunks: u64,
+}
+
 #[derive(Encode, Decode)]
 #[cbor(map)]
-pub struct AbciSnapshots {
+pub struct AbciListSnapshot {
     #[n(0)]
-    pub path: Option<String>,
+    pub all_snapshots: Vec<Snapshot>,
 }
 
 /// A module that adapt a MANY application to an ABCI-MANY bridge.
@@ -90,5 +104,5 @@ pub trait ManyAbciModuleBackend: std::fmt::Debug + Send + Sync {
     fn commit(&mut self) -> Result<AbciCommitInfo, ManyError>;
 
     /// Called to list all available snapshots.
-    fn list_snapshots(&mut self) -> Result<AbciSnapshots, ManyError>;
+    fn list_snapshots(&mut self) -> Result<AbciListSnapshot, ManyError>;
 }

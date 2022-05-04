@@ -105,14 +105,8 @@ many_error! {
        -9: InvalidAttribtueId as invalid_attribute_id(id) => "Unexpected attribute ID: {id}.",
       -10: InvalidAttributeArguments as invalid_attribute_arguments()
             => "Attribute does not have the right arguments.",
-      -11: AttributeNotFound as attribute_not_found(id) 
+      -11: AttributeNotFound as attribute_not_found(id)
             => "Expected attribute {id} not found.",
-      -12: SnapshotNotFound as snapshot_not_found(id) 
-            => "Could not compress snapshot, snapshot not found.",
-      -13: SnapshotError as snapshot_creation_error(id) 
-            => "Could not create snapshot.",
-      -14: SnapshotDirError as snapshot_dir_error(id) 
-            => "Error locating snapshot directory.",
 
      -100: InvalidIdentity as invalid_identity()
             => "Identity is invalid (does not follow the protocol).",
@@ -160,6 +154,12 @@ many_error! {
             => "The message's timestamp is out of the accepted range of the server.",
     -1006: RequiredFieldMissing as required_field_missing(field)
             => "Field is required but missing: '{field}'.",
+    -1007: SnapshotNotFound as snapshot_not_found(id)
+            => "Could not compress snapshot, snapshot not found.",
+    -1008: SnapshotError as snapshot_creation_error(id)
+            => "Could not create snapshot.",
+    -1009: SnapshotDirError as snapshot_dir_error(id)
+            => "Error locating snapshot directory.",
 
     // -2000 - -2999 is for server errors.
     -2000: InternalServerError as internal_server_error()
