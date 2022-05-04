@@ -19,8 +19,7 @@ define_attribute_many_error!(
     }
 );
 
-#[derive(Encode, Decode)]
-#[cfg_attr(test, derive(Clone))]
+#[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct InfoReturns {
     #[n(0)]
@@ -33,30 +32,30 @@ pub struct InfoReturns {
     pub retained_height: Option<u64>,
 }
 
-#[derive(Encode, Decode)]
-#[cfg_attr(test, derive(Clone, Debug, PartialEq))]
+#[derive(Clone, Encode, Decode)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[cbor(map)]
 pub struct BlockArgs {
     #[n(0)]
     pub query: SingleBlockQuery,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct BlockReturns {
     #[n(0)]
     pub block: Block,
 }
 
-#[derive(Encode, Decode)]
-#[cfg_attr(test, derive(Clone, Debug, PartialEq))]
+#[derive(Clone, Encode, Decode)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[cbor(map)]
 pub struct TransactionArgs {
     #[n(0)]
     pub query: SingleTransactionQuery,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct TransactionReturns {
     #[n(0)]
@@ -73,16 +72,14 @@ pub trait BlockchainModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::sync::{Arc, Mutex};
-
     use mockall::predicate;
-
     use crate::{
         server::module::testutils::{call_module, call_module_cbor},
         types::{blockchain::TransactionIdentifier, Timestamp},
     };
 
-    use super::*;
     #[test]
     fn info() {
         let mut mock = MockBlockchainModuleBackend::new();

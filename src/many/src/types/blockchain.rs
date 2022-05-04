@@ -2,7 +2,8 @@ use crate::types::Timestamp;
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 
-#[cfg_attr(test, derive(Clone, Debug, PartialEq))]
+#[derive(Clone)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub enum SingleBlockQuery {
     Hash(Vec<u8>),
     Height(u64),
@@ -50,8 +51,8 @@ impl<'d> Decode<'d> for SingleBlockQuery {
     }
 }
 
-#[derive(Debug, Decode, Encode, Eq, PartialEq)]
-#[cfg_attr(test, derive(Clone))]
+#[derive(Clone, Decode, Encode)]
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 #[cbor(map)]
 pub struct BlockIdentifier {
     #[cbor(n(0), with = "minicbor::bytes")]
@@ -71,14 +72,14 @@ impl BlockIdentifier {
     }
 }
 
-#[derive(Decode, Encode)]
+#[derive(Clone, Decode, Encode)]
 #[cbor(map)]
 pub struct TransactionIdentifier {
     #[cbor(n(0), with = "minicbor::bytes")]
     pub hash: Vec<u8>,
 }
 
-#[derive(Decode, Encode)]
+#[derive(Clone, Decode, Encode)]
 #[cbor(map)]
 pub struct Transaction {
     #[n(0)]
@@ -88,7 +89,7 @@ pub struct Transaction {
     pub content: Option<Vec<u8>>,
 }
 
-#[derive(Decode, Encode)]
+#[derive(Clone, Decode, Encode)]
 #[cbor(map)]
 pub struct Block {
     #[n(0)]
@@ -116,7 +117,8 @@ pub struct Block {
 //     { 0 => bstr }
 //     ; A block + transaction index.
 //     / { 1 => [ single-block-query, uint ] }
-#[cfg_attr(test, derive(Clone, Debug, PartialEq))]
+#[derive(Clone)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub enum SingleTransactionQuery {
     Hash(Vec<u8>),
 }
