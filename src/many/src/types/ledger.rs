@@ -326,12 +326,14 @@ impl From<TransactionId> for Vec<u8> {
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u8)]
 pub enum TransactionKind {
-    Send = 0,
+    Send,
 }
 
 impl Encode for TransactionKind {
     fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
-        e.u8(*self as u8)?;
+        match self {
+            TransactionKind::Send => e.u8(0),
+        }?;
         Ok(())
     }
 }
@@ -366,7 +368,7 @@ impl Transaction {
         time: SystemTime,
         from: Identity,
         to: Identity,
-        symbol: String,
+        symbol: Symbol,
         amount: TokenAmount,
     ) -> Self {
         Transaction {
@@ -387,7 +389,7 @@ impl Transaction {
         }
     }
 
-    pub fn symbol(&self) -> &String {
+    pub fn symbol(&self) -> &Identity {
         match &self.content {
             TransactionInfo::Send { symbol, .. } => symbol,
         }
@@ -401,11 +403,12 @@ impl Transaction {
 }
 
 #[derive(Clone)]
+#[non_exhaustive]
 pub enum TransactionInfo {
     Send {
         from: Identity,
         to: Identity,
-        symbol: String,
+        symbol: Symbol,
         amount: TokenAmount,
     },
 }
@@ -419,11 +422,16 @@ impl Encode for TransactionInfo {
                 symbol,
                 amount,
             } => {
-                e.array(5)?
-                    .u8(TransactionKind::Send as u8)?
+                e.map(5)?
+                    .u8(0)?
+                    .encode(TransactionKind::Send)?
+                    .u8(1)?
                     .encode(from)?
+                    .u8(2)?
                     .encode(to)?
+                    .u8(3)?
                     .encode(symbol)?
+                    .u8(4)?
                     .encode(amount)?;
             }
         }

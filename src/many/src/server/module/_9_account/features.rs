@@ -10,6 +10,7 @@ pub mod multisig;
 pub mod ledger {
     use super::{Feature, FeatureId, TryCreateFeature};
     use crate::ManyError;
+    use std::collections::BTreeSet;
 
     pub struct AccountLedger;
 
@@ -18,6 +19,16 @@ pub mod ledger {
 
         fn try_create(_: &Feature) -> Result<Self, ManyError> {
             Ok(Self)
+        }
+    }
+
+    impl super::FeatureInfo for AccountLedger {
+        fn as_feature(&self) -> Feature {
+            Feature::with_id(Self::ID)
+        }
+
+        fn roles() -> BTreeSet<String> {
+            BTreeSet::from(["canLedgerTransact".to_string()])
         }
     }
 }
@@ -112,6 +123,13 @@ impl FeatureSet {
         )
     }
 
+    pub fn info<T: TryCreateFeature + FeatureInfo>(&self) -> Result<T, ManyError> {
+        self.get_feature(T::ID).map_or_else(
+            || Err(ManyError::attribute_not_found(format!("{}", T::ID))),
+            |f| T::try_create(f),
+        )
+    }
+
     /// Creates an iterator to traverse all features.
     pub fn iter(&self) -> impl Iterator<Item = &Feature> {
         self.0.iter()
@@ -122,6 +140,11 @@ pub trait TryCreateFeature: Sized {
     const ID: FeatureId;
 
     fn try_create(feature: &Feature) -> Result<Self, ManyError>;
+}
+
+pub trait FeatureInfo {
+    fn as_feature(&self) -> Feature;
+    fn roles() -> BTreeSet<String>;
 }
 
 #[cfg(test)]

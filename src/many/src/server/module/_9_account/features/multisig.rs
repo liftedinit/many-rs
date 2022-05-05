@@ -8,9 +8,20 @@ use crate::{Identity, ManyError};
 use many_macros::many_module;
 use minicbor::bytes::ByteVec;
 use minicbor::{Decode, Encode};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
-#[derive(Encode, Decode)]
+pub mod errors {
+    use crate::define_attribute_many_error;
+    define_attribute_many_error!(
+        attribute 9 => {
+            100: pub fn transaction_cannot_be_found() => "The transaction cannot be found.",
+            101: pub fn user_cannot_approve_transaction() => "The user is not in the list of approvers.",
+            102: pub fn transaction_type_unsupported() => "This transaction is not supported.",
+        }
+    );
+}
+
+#[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct MultisigAccountFeatureArg {
     #[n(0)]
@@ -64,22 +75,49 @@ impl TryCreateFeature for MultisigAccountFeature {
     }
 }
 
+impl super::FeatureInfo for MultisigAccountFeature {
+    fn as_feature(&self) -> Feature {
+        let mut map = BTreeMap::<CborAny, CborAny>::new();
+        if let Some(threshold) = self.arg.threshold {
+            map.insert(CborAny::Int(0), CborAny::Int(threshold as i64));
+        }
+        if let Some(timeout_in_secs) = self.arg.timeout_in_secs {
+            map.insert(CborAny::Int(1), CborAny::Int(timeout_in_secs as i64));
+        }
+        if let Some(execute_automatically) = self.arg.execute_automatically {
+            map.insert(CborAny::Int(2), CborAny::Bool(execute_automatically));
+        }
+
+        Feature::with_id(Self::ID).with_argument(CborAny::Map(map))
+    }
+
+    fn roles() -> BTreeSet<String> {
+        BTreeSet::from([
+            "canMultisigSubmit".to_string(),
+            "canMultisigApprove".to_string(),
+        ])
+    }
+}
+
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct SubmitTransactionArg {
     #[n(0)]
-    pub memo: Option<String>,
+    pub account: Option<Identity>,
 
     #[n(1)]
-    pub transaction: TransactionInfo,
+    pub memo: Option<String>,
 
     #[n(2)]
-    pub threshold: Option<u64>,
+    pub transaction: TransactionInfo,
 
     #[n(3)]
-    pub timeout_in_secs: Option<u64>,
+    pub threshold: Option<u64>,
 
     #[n(4)]
+    pub timeout_in_secs: Option<u64>,
+
+    #[n(5)]
     pub execute_automatically: Option<bool>,
 }
 
@@ -101,7 +139,7 @@ pub struct InfoArg {
 #[cbor(map)]
 pub struct ApproverInfo {
     #[n(0)]
-    approved: bool,
+    pub approved: bool,
 }
 
 #[derive(Clone, Encode, Decode)]
@@ -111,18 +149,21 @@ pub struct InfoReturn {
     pub memo: Option<String>,
 
     #[n(1)]
-    pub transaction: TransactionInfo,
+    pub submitter: Identity,
 
     #[n(2)]
-    pub approvers: BTreeMap<Identity, ApproverInfo>,
+    pub transaction: TransactionInfo,
 
     #[n(3)]
-    pub threshold: Option<u64>,
+    pub approvers: BTreeMap<Identity, ApproverInfo>,
 
     #[n(4)]
-    pub execute_automatically: Option<bool>,
+    pub threshold: u64,
 
     #[n(5)]
+    pub execute_automatically: bool,
+
+    #[n(6)]
     pub timeout: Timestamp,
 }
 

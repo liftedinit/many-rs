@@ -47,6 +47,10 @@ impl AccountMap {
         }
     }
 
+    pub fn contains(&self, identity: &Identity) -> bool {
+        self.get(identity).is_some()
+    }
+
     pub fn get(&self, identity: &Identity) -> Option<&Account> {
         if identity.matches(&self.id) {
             if let Some(subid) = identity.subresource_id() {
@@ -94,11 +98,17 @@ impl AccountMap {
 }
 
 /// A generic Account type. This is useful as utility for managing accounts in your backend.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Encode, Decode)]
+#[cbor(map)]
 pub struct Account {
-    description: Option<String>,
-    roles: BTreeMap<Identity, BTreeSet<String>>,
-    features: features::FeatureSet,
+    #[n(0)]
+    pub description: Option<String>,
+
+    #[n(1)]
+    pub roles: BTreeMap<Identity, BTreeSet<String>>,
+
+    #[n(2)]
+    pub features: features::FeatureSet,
 }
 
 impl Account {
@@ -123,10 +133,13 @@ impl Account {
         }
     }
 
-    pub fn description(&self) -> Option<&String> {
-        self.description.as_ref()
+    pub fn set_description(&mut self, desc: Option<impl ToString>) {
+        self.description = desc.map(|d| d.to_string());
     }
 
+    pub fn features(&self) -> &features::FeatureSet {
+        &self.features
+    }
     pub fn roles(&self) -> &BTreeMap<Identity, BTreeSet<String>> {
         &self.roles
     }
@@ -135,6 +148,18 @@ impl Account {
         self.roles
             .get(id)
             .map_or(false, |v| v.contains(role.as_ref()))
+    }
+    pub fn add_role<Role: ToString>(&mut self, id: &Identity, role: Role) -> bool {
+        self.roles.entry(*id).or_default().insert(role.to_string())
+    }
+    pub fn remove_role<Role: AsRef<str>>(&mut self, id: &Identity, role: Role) -> bool {
+        self.roles
+            .get_mut(id)
+            .map_or(false, |v| v.remove(role.as_ref()))
+    }
+
+    pub fn get_roles(&self, id: &Identity) -> BTreeSet<String> {
+        self.roles.get(id).cloned().unwrap_or_default()
     }
 
     pub fn feature<F: features::TryCreateFeature>(&self) -> Option<F> {
@@ -166,7 +191,7 @@ pub struct CreateReturn {
 #[cbor(map)]
 pub struct SetDescriptionArgs {
     #[n(0)]
-    pub id: Identity,
+    pub account: Identity,
 
     #[n(1)]
     pub description: String,
@@ -183,7 +208,7 @@ pub struct ListRolesArgs {
 #[cbor(map)]
 pub struct ListRolesReturn {
     #[n(0)]
-    roles: BTreeSet<String>,
+    pub roles: BTreeSet<String>,
 }
 
 #[derive(Clone, Encode, Decode)]
@@ -200,7 +225,7 @@ pub struct GetRolesArgs {
 #[cbor(map)]
 pub struct GetRolesReturn {
     #[n(0)]
-    roles: BTreeMap<Identity, BTreeSet<String>>,
+    pub roles: BTreeMap<Identity, BTreeSet<String>>,
 }
 
 #[derive(Clone, Encode, Decode)]
@@ -234,13 +259,13 @@ pub struct InfoArgs {
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]
-    description: Option<String>,
+    pub description: Option<String>,
 
     #[n(1)]
-    roles: BTreeMap<Identity, BTreeSet<String>>,
+    pub roles: BTreeMap<Identity, BTreeSet<String>>,
 
     #[n(2)]
-    features: features::FeatureSet,
+    pub features: features::FeatureSet,
 }
 
 #[derive(Clone, Encode, Decode)]
@@ -257,7 +282,7 @@ pub struct AddFeaturesArgs {
     pub account: Identity,
 
     #[n(1)]
-    roles: Option<BTreeMap<Identity, BTreeSet<String>>>,
+    pub roles: Option<BTreeMap<Identity, BTreeSet<String>>>,
 
     #[n(2)]
     pub features: features::FeatureSet,
@@ -351,7 +376,7 @@ mod module_tests {
         ) -> Result<EmptyReturn, ManyError> {
             let mut account = self
                 .0
-                .get_mut(&args.id)
+                .get_mut(&args.account)
                 .ok_or_else(|| errors::unknown_account(args.id))?;
 
             account.description = Some(args.description);
