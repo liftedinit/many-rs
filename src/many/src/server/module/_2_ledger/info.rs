@@ -1,23 +1,12 @@
+use crate::server::module::EmptyArg;
 use crate::types::ledger;
 use minicbor::bytes::ByteVec;
-use minicbor::encode::{Error, Write};
-use minicbor::{decode, Decode, Decoder, Encode, Encoder};
+use minicbor::{Decode, Encode};
 use std::collections::BTreeMap;
 
-pub struct InfoArgs;
-impl<'de> Decode<'de> for InfoArgs {
-    fn decode(_d: &mut Decoder<'de>) -> Result<Self, decode::Error> {
-        Ok(Self)
-    }
-}
+pub type InfoArgs = EmptyArg;
 
-impl Encode for InfoArgs {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
-        e.null()?.ok()
-    }
-}
-
-#[derive(Decode, Encode)]
+#[derive(Clone, Decode, Encode)]
 #[cbor(map)]
 pub struct InfoReturns {
     #[n(0)]

@@ -54,6 +54,26 @@ impl<'b> minicbor::Decode<'b> for EmptyReturn {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct EmptyArg;
+
+impl minicbor::Encode for EmptyArg {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+        // We encode nothing as a null so it's a value.
+        e.null()?;
+        Ok(())
+    }
+}
+
+impl<'b> minicbor::Decode<'b> for EmptyArg {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+        // Nothing to do. Skip a value if there's one, but don't error if there's none.
+        let _ = d.skip();
+        Ok(Self)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ManyModuleInfo {
     /// Returns the name of this module, for logs and metering.
