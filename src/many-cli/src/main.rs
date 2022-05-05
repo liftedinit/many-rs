@@ -342,7 +342,7 @@ fn main() {
 
             let info: ledger::InfoReturns = minicbor::decode(
                 &client
-                    .call("ledger.info", ledger::InfoArgs)
+                    .call("ledger.info", ledger::InfoArgs {})
                     .unwrap()
                     .data
                     .expect("An error happened during the call to ledger.info"),
