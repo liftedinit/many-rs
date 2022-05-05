@@ -54,6 +54,26 @@ impl<'b> minicbor::Decode<'b> for EmptyReturn {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct EmptyArg;
+
+impl minicbor::Encode for EmptyArg {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+        // We encode nothing as a null so it's a value.
+        e.null()?;
+        Ok(())
+    }
+}
+
+impl<'b> minicbor::Decode<'b> for EmptyArg {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+        // Nothing to do. Skip a value if there's one, but don't error if there's none.
+        let _ = d.skip();
+        Ok(Self)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ManyModuleInfo {
     /// Returns the name of this module, for logs and metering.
@@ -93,9 +113,23 @@ pub(crate) mod testutils {
         endpoint: impl ToString,
         payload: impl AsRef<str>,
     ) -> Result<Vec<u8>, ManyError> {
+        call_module_cbor(
+            key,
+            module,
+            endpoint,
+            cbor_diag::parse_diag(payload).unwrap().to_bytes(),
+        )
+    }
+
+    pub fn call_module_cbor(
+        key: u32,
+        module: &'_ impl ManyModule,
+        endpoint: impl ToString,
+        payload: Vec<u8>,
+    ) -> Result<Vec<u8>, ManyError> {
         let mut message = RequestMessage::default()
             .with_method(endpoint.to_string())
-            .with_data(cbor_diag::parse_diag(payload).unwrap().to_bytes());
+            .with_data(payload);
 
         message = if key > 0 {
             message.with_from(tests::identity(key))
