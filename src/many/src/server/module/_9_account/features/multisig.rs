@@ -17,6 +17,7 @@ pub mod errors {
             100: pub fn transaction_cannot_be_found() => "The transaction cannot be found.",
             101: pub fn user_cannot_approve_transaction() => "The user is not in the list of approvers.",
             102: pub fn transaction_type_unsupported() => "This transaction is not supported.",
+            103: pub fn cannot_execute_transaction() => "This transaction cannot be executed yet.",
         }
     );
 }
@@ -204,19 +205,22 @@ pub trait AccountMultisigModuleBackend: Send {
     ) -> Result<SubmitTransactionReturn, ManyError>;
     fn multisig_info(&self, sender: &Identity, args: InfoArg) -> Result<InfoReturn, ManyError>;
     fn multisig_approve(
-        &self,
+        &mut self,
         sender: &Identity,
         args: ApproveArg,
     ) -> Result<EmptyReturn, ManyError>;
-    fn multisig_revoke(&self, sender: &Identity, args: RevokeArg)
-        -> Result<EmptyReturn, ManyError>;
+    fn multisig_revoke(
+        &mut self,
+        sender: &Identity,
+        args: RevokeArg,
+    ) -> Result<EmptyReturn, ManyError>;
     fn multisig_execute(
-        &self,
+        &mut self,
         sender: &Identity,
         args: ExecuteArg,
     ) -> Result<ResponseMessage, ManyError>;
     fn multisig_withdraw(
-        &self,
+        &mut self,
         sender: &Identity,
         args: WithdrawArg,
     ) -> Result<EmptyReturn, ManyError>;

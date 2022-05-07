@@ -40,6 +40,7 @@ impl<'b> Decode<'b> for Percent {
 }
 
 #[derive(Clone, Default, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 #[must_use]
 pub struct VecOrSingle<T>(pub Vec<T>);
 

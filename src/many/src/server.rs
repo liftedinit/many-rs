@@ -19,6 +19,8 @@ impl<M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static> ManyServ
 #[derive(Debug, Clone)]
 pub struct ManyModuleList {}
 
+pub const MANYSERVER_DEFAULT_TIMEOUT: u64 = 300;
+
 #[derive(Debug, Default)]
 pub struct ManyServer {
     modules: Vec<Arc<dyn ManyModule + Send>>,
@@ -50,7 +52,7 @@ impl ManyServer {
         Arc::new(Mutex::new(Self {
             name: name.to_string(),
             identity,
-            timeout: 300,
+            timeout: MANYSERVER_DEFAULT_TIMEOUT,
             ..Default::default()
         }))
     }
@@ -292,42 +294,64 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 
 #[cfg(test)]
 mod tests {
-    use coset::cbor::de::from_reader;
-    use coset::cbor::value::Value;
+    use semver::{BuildMetadata, Prerelease, Version};
 
     use super::*;
+    use crate::cose_helpers::public_key;
     use crate::message::{
         decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
         RequestMessageBuilder,
     };
+    use crate::server::module::base::Status;
     use crate::types::identity::cose::tests::generate_random_eddsa_identity;
+    use proptest::prelude::*;
 
-    #[tokio::test]
-    async fn simple_status() {
-        let name = "Test";
-        let id = generate_random_eddsa_identity();
-        let server = ManyServer::simple(name, id.clone(), Some("1".to_string()));
+    const ALPHA_NUM_DASH_REGEX: &str = "[a-zA-Z0-9-]";
 
-        // Test status() using a message instead of a direct call
-        //
-        // This will test other ManyServer methods as well
-        let request: RequestMessage = RequestMessageBuilder::default()
-            .version(1)
-            .from(id.identity)
-            .to(id.identity)
-            .method("status".to_string())
-            .data("null".as_bytes().to_vec())
-            .build()
-            .unwrap();
+    prop_compose! {
+        fn arb_semver()((major, minor, patch) in (any::<u64>(), any::<u64>(), any::<u64>()), pre in ALPHA_NUM_DASH_REGEX, build in ALPHA_NUM_DASH_REGEX) -> Version {
+            Version {
+                major,
+                minor,
+                patch,
+                pre: Prerelease::new(&pre).unwrap(),
+                build: BuildMetadata::new(&build).unwrap(),
+            }
+        }
+    }
 
-        let envelope = encode_cose_sign1_from_request(request.clone(), &id).unwrap();
-        let response = server.execute(envelope).await.unwrap();
-        let response_message = decode_response_from_cose_sign1(response, None).unwrap();
+    proptest! {
+        #[test]
+        fn simple_status(name in "\\PC*", version in arb_semver()) {
+            let id = generate_random_eddsa_identity();
+            let server = ManyServer::simple(name.clone(), id.clone(), Some(version.to_string()));
 
-        let data: BTreeMap<u8, Value> =
-            from_reader(response_message.data.unwrap().as_slice()).unwrap();
-        let response_name = data.get(&1).unwrap();
+            // Test status() using a message instead of a direct call
+            //
+            // This will test other ManyServer methods as well
+            let request: RequestMessage = RequestMessageBuilder::default()
+                .version(1)
+                .from(id.identity)
+                .to(id.identity)
+                .method("status".to_string())
+                .data("null".as_bytes().to_vec())
+                .build()
+                .unwrap();
 
-        assert_eq!(response_name, &Value::Text(name.to_string()));
+            let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
+            let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
+            let response_message = decode_response_from_cose_sign1(response, None).unwrap();
+
+            let status: Status = minicbor::decode(&response_message.data.unwrap()).unwrap();
+
+            assert_eq!(status.version, 1);
+            assert_eq!(status.name, name);
+            assert_eq!(status.public_key, Some(public_key(&id.key.unwrap()).unwrap()));
+            assert_eq!(status.identity, id.identity);
+            assert!(status.attributes.has_id(0));
+            assert_eq!(status.server_version, Some(version.to_string()));
+            assert_eq!(status.timeout, Some(MANYSERVER_DEFAULT_TIMEOUT));
+            assert_eq!(status.extras, BTreeMap::new());
+        }
     }
 }
