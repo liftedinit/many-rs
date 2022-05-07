@@ -5,7 +5,11 @@ use coset::{CoseSign1, TaggedCborSerializable};
 use std::fmt::Debug;
 use std::io::Cursor;
 use std::net::ToSocketAddrs;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
 use tiny_http::{Request, Response};
+use tracing::info;
 
 /// Maximum of 2MB per HTTP request.
 const READ_BUFFER_LEN: usize = 1024 * 1024 * 2;
@@ -13,6 +17,7 @@ const READ_BUFFER_LEN: usize = 1024 * 1024 * 2;
 #[derive(Debug)]
 pub struct HttpServer<E: LowLevelManyRequestHandler> {
     executor: E,
+    term_signal: Arc<AtomicBool>,
 }
 
 impl<H: ManyRequestHandler> HttpServer<HandlerExecutorAdapter<H>> {
@@ -23,7 +28,10 @@ impl<H: ManyRequestHandler> HttpServer<HandlerExecutorAdapter<H>> {
 
 impl<E: LowLevelManyRequestHandler> HttpServer<E> {
     pub fn new(executor: E) -> Self {
-        Self { executor }
+        Self {
+            executor,
+            term_signal: Arc::new(AtomicBool::new(false)),
+        }
     }
 
     async fn handle_request(&self, request: &mut Request) -> Response<std::io::Cursor<Vec<u8>>> {
@@ -68,19 +76,33 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
         Response::from_data(bytes)
     }
 
+    /// Returns a mutable reference to an atomic bool. Set the bool to true to kill
+    /// the server.
+    pub fn term_signal(&mut self) -> Arc<AtomicBool> {
+        Arc::clone(&self.term_signal)
+    }
+
     pub fn bind<A: ToSocketAddrs>(&self, addr: A) -> Result<(), anyhow::Error> {
         let server = tiny_http::Server::http(addr).map_err(|e| anyhow!("{}", e))?;
 
         let runtime = tokio::runtime::Runtime::new().unwrap();
 
-        for mut request in server.incoming_requests() {
-            runtime.block_on(async {
-                let response = self.handle_request(&mut request).await;
+        loop {
+            if let Some(mut request) = server.recv_timeout(Duration::from_millis(100))? {
+                runtime.block_on(async {
+                    let response = self.handle_request(&mut request).await;
 
-                // If there's a transport error (e.g. connection closed) on the response itself,
-                // we don't actually care and just continue waiting for the next request.
-                let _ = request.respond(response);
-            });
+                    // If there's a transport error (e.g. connection closed) on the response itself,
+                    // we don't actually care and just continue waiting for the next request.
+                    let _ = request.respond(response);
+                });
+            }
+
+            // Check for the term signal and break out.
+            if self.term_signal.load(Ordering::Relaxed) {
+                info!("Server shutting down gracefully...");
+                break;
+            }
         }
 
         Ok(())
