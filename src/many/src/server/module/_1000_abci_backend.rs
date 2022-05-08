@@ -87,6 +87,12 @@ impl Snapshots {
 
 }
 
+impl Default for Snapshots {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Encode, Decode)]
 #[cbor(map)]
 pub struct AbciListSnapshot {
