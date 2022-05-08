@@ -3,7 +3,7 @@ use many_macros::many_module;
 use minicbor::bytes::ByteVec;
 use minicbor::{Decode, Encode};
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+
 
 #[derive(Debug, Encode, Decode)]
 #[cbor(map)]
@@ -52,64 +52,77 @@ pub struct AbciCommitInfo {
     pub hash: ByteVec,
 }
 
-#[derive(Encode, Decode, Debug)]
+#[derive(Encode, Decode, Debug, Clone)]
 #[cbor(map)]
-pub struct Snapshot {
+pub struct Snapshots {
     #[n(0)]
-    pub path: PathBuf,
-    #[n(1)]
     pub height: u64,
+
+    #[n(1)]
+    pub format: u32,
+
     #[n(2)]
+    pub chunks: u32,
+    
+    /// Number of chunks in the snapshot
+    #[n(3)]
     pub hash: Vec<u8>,
- //   #[n(3)]
- //   pub chunks: u64,
+
+    /// Metadata of the snapshot is a SHA256 hash
+    #[n(4)]
+    pub metadata: Vec<u8>,
 }
 
-impl Snapshot {
-    pub fn new(path: PathBuf, height: u64, hash: Vec<u8>) -> Self {
-        Snapshot {
-            path,
-            height,
-            hash,
+
+impl Snapshots {
+    pub fn new() -> Self {
+        Snapshots {
+            height: 0,
+            format: 1,
+            chunks: 0,
+            hash: vec![],
+            metadata: vec![],
         }
     }
 
-    pub fn path(&self) -> &PathBuf {
-        &self.path
-    }
-
-    pub fn height(&self) -> u64 {
-        self.height
-    }
-
-    pub fn hash(&self) -> &Vec<u8> {
-        &self.hash
-    }
-
-    pub fn get_snap(&self) -> Result<Snapshot, ManyError> {
-        Ok(Snapshot {
-            path: self.path.clone(),
-            height: self.height,
-            hash: self.hash.clone(),
-        })
-    }
 }
 
 #[derive(Encode, Decode)]
 #[cbor(map)]
 pub struct AbciListSnapshot {
     #[n(0)]
-    pub all_snapshots: Vec<Snapshot>,
+    pub snapshots: Vec<Snapshots>,
+}
+
+impl AbciListSnapshot {
+    pub fn new(snapshots: Vec<Snapshots>) -> Self {
+        AbciListSnapshot {
+            snapshots,
+        }
+    }  
 }
 
 #[derive(Encode, Decode)]
 #[cbor(map)]
 pub struct AbciOfferSnapshot {
     #[n(0)]
-    pub snapshot: Option<Snapshot>,
+    pub snapshot: Option<Snapshots>,
 
     #[n(1)]
     pub app_hash: ByteVec,
+}
+
+#[derive(Encode, Decode)]
+#[cbor(map)]
+pub struct AbciLoadSnapshotChunk {
+    #[n(0)]
+    pub height: u64,
+
+    #[n(1)]
+    pub format: u32,
+
+    #[n(2)]
+    pub chunk: u32,
 }
 
 
@@ -148,4 +161,6 @@ pub trait ManyAbciModuleBackend: std::fmt::Debug + Send + Sync {
     fn list_snapshots(&mut self) -> Result<AbciListSnapshot, ManyError>;
 
     fn offer_snapshot(&mut self, _req: AbciOfferSnapshot) -> Result<(), ManyError>;
+
+    fn load_snapshot_chunk(&mut self, _req: AbciLoadSnapshotChunk) -> Result<(), ManyError>;
 }
