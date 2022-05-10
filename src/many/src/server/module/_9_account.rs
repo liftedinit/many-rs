@@ -377,7 +377,7 @@ mod module_tests {
             let mut account = self
                 .0
                 .get_mut(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.id))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
 
             account.description = Some(args.description);
             Ok(EmptyReturn)
