@@ -13,6 +13,8 @@ use coset::CoseSign1Builder;
 use coset::HeaderBuilder;
 use coset::Label;
 pub use error::ManyError;
+use minicbor::Decode;
+use minicbor::Decoder;
 pub use request::RequestMessage;
 pub use request::RequestMessageBuilder;
 pub use response::ResponseMessage;
@@ -212,6 +214,7 @@ impl CoseSign1RequestMessage {
         let client_data_json: ClientData =
             serde_json::from_str(client_data).map_err(|e| e.to_string())?;
 
+        tracing::trace!("Verifying the webauthn request type");
         if client_data_json.r#type != "webauthn.get" {
             return Err("request type != webauthn.get".to_string());
         }
@@ -230,32 +233,56 @@ impl CoseSign1RequestMessage {
             .as_bytes()
             .ok_or("`signature` entry is not Bytes")?;
 
+        tracing::trace!("Getting payload");
         let payload = self
             .sign1
             .payload
             .as_ref()
             .ok_or("`payload` entry missing but required")?;
 
+        tracing::trace!("Retrieving real payload from tagged data");
+        let mut decoder = Decoder::new(payload);
+        let _ = decoder.tag().map_err(|e| e.to_string())?;
+        let payload = decoder.bytes().map_err(|e| e.to_string())?;
         let payload_sha512 = sha2::Sha512::digest(payload);
-        let payload_sha512_base64url =
-            base64::encode_config(payload_sha512, base64::URL_SAFE_NO_PAD);
+        let payload_sha512_base64url = base64::encode(payload_sha512);
 
-        tracing::trace!("Verifying `challenge`");
-        if payload_sha512_base64url != client_data_json.challenge {
-            return Err("`challenge` doesn't match".to_string());
+        #[derive(Clone, Decode)]
+        #[cbor(map)]
+        struct Challenge {
+            #[cbor(n(0), with = "minicbor::bytes")]
+            protected_header: Vec<u8>,
+
+            #[n(1)]
+            request_message_sha: String,
+        }
+        tracing::trace!("Decoding `challenge`");
+        let challenge = base64::decode_config(&client_data_json.challenge, base64::URL_SAFE_NO_PAD)
+            .map_err(|e| e.to_string())?;
+        let challenge: Challenge = minicbor::decode(&challenge).map_err(|e| e.to_string())?;
+        tracing::trace!("Verifying `challenge` SHA against payload");
+        if payload_sha512_base64url != challenge.request_message_sha {
+            return Err("`challenge` SHA doesn't match".to_string());
+        }
+
+        tracing::trace!("Decoding ProtectedHeader");
+        let protected_header =
+            coset::ProtectedHeader::from_cbor_bstr(Value::Bytes(challenge.protected_header))
+                .map_err(|e| e.to_string())?;
+        tracing::trace!("Verifying protected header against `challenge`");
+        if self.sign1.protected != protected_header {
+            return Err("Protected header doesn't match `challenge`".to_string());
         }
 
         tracing::trace!("Concatenating `authData` and sha256(`clientData`)");
         let mut msg = auth_data.clone();
         msg.extend(sha2::Sha256::digest(client_data));
-
         let cose_sig =
             CoseKeyIdentitySignature::from_bytes(signature).map_err(|e| e.to_string())?;
-
         tracing::trace!("Verifying WebAuthn signature");
         key.verify(&msg, &cose_sig).map_err(|e| e.to_string())?;
 
-        tracing::trace!("WebAuthn verifications succedded");
+        tracing::trace!("WebAuthn verifications succedded!");
         Ok(())
     }
 
