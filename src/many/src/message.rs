@@ -30,9 +30,9 @@ use signature::{Signature, Signer, Verifier};
 
 pub fn decode_request_from_cose_sign1(sign1: CoseSign1) -> Result<RequestMessage, ManyError> {
     let request = CoseSign1RequestMessage { sign1 };
-    let from_id = request.verify().map_err(|e| {
-        ManyError::could_not_verify_signature(e)
-    })?;
+    let from_id = request
+        .verify()
+        .map_err(ManyError::could_not_verify_signature)?;
 
     let payload = request
         .sign1
