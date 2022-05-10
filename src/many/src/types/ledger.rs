@@ -441,27 +441,46 @@ impl Encode for TransactionInfo {
 
 impl<'b> Decode<'b> for TransactionInfo {
     fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-        let mut len = d.array()?;
-        let content = match d.u8()? {
-            0 => {
-                // TransactionKind::Send
-                len = len.map(|x| x - 5);
-                TransactionInfo::Send {
-                    from: d.decode()?,
-                    to: d.decode()?,
-                    symbol: d.decode()?,
-                    amount: d.decode()?,
-                }
-            }
-            _ => return Err(minicbor::decode::Error::Message("Invalid TransactionKind")),
-        };
+        let _len = d
+            .map()?
+            .ok_or_else(|| minicbor::decode::Error::Message("Invalid transaction type."))?;
 
-        match len {
-            Some(0) => Ok(content),
-            None if d.datatype()? == minicbor::data::Type::Break => Ok(content),
-            _ => Err(minicbor::decode::Error::Message(
-                "Invalid TransactionContent array.",
-            )),
+        if d.u8()? != 0 {
+            return Err(minicbor::decode::Error::Message("Invalid TransactionKind"));
+        }
+        match d.u8()? {
+            // TransactionKind::Send
+            0 => {
+                let from: Identity = if d.u8()? == 1 {
+                    d.decode()
+                } else {
+                    Err(minicbor::decode::Error::Message("Invalid From field."))
+                }?;
+                let to: Identity = if d.u8()? == 2 {
+                    d.decode()
+                } else {
+                    Err(minicbor::decode::Error::Message("Invalid To field."))
+                }?;
+                let symbol: Symbol = if d.u8()? == 3 {
+                    d.decode()
+                } else {
+                    Err(minicbor::decode::Error::Message("Invalid Symbol field."))
+                }?;
+                let amount: TokenAmount = if d.u8()? == 4 {
+                    d.decode()
+                } else {
+                    Err(minicbor::decode::Error::Message("Invalid Amount field."))
+                }?;
+
+                Ok(Self::Send {
+                    from,
+                    to,
+                    symbol,
+                    amount,
+                })
+            }
+
+            _ => Err(minicbor::decode::Error::Message("Invalid TransactionKind")),
         }
     }
 }

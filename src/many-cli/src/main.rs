@@ -6,6 +6,7 @@ use many::message::{
 };
 use many::server::module::ledger;
 use many::server::module::r#async::attributes::AsyncAttribute;
+use many::server::module::r#async::{StatusArgs, StatusReturn};
 use many::transport::http::HttpServer;
 use many::types::identity::CoseKeyIdentity;
 use many::{Identity, ManyServer};
@@ -14,9 +15,9 @@ use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
+use std::time::Duration;
 use tracing::{error, info, level_filters::LevelFilter, trace};
 use url::Url;
-use many::server::module::async::StatusReturn;
 
 #[derive(Parser)]
 struct Opts {
@@ -160,41 +161,52 @@ struct GetTokenIdOpt {
 fn show_response(
     response: ResponseMessage,
     client: ManyClient,
-) -> Result<(), dyn std::error::Error> {
+    r#async: bool,
+) -> Result<(), anyhow::Error> {
     let ResponseMessage {
         data, attributes, ..
     } = response;
 
-    match data {
-        Ok(payload) => {
-            if payload.is_empty() {
-                let attr = attributes.get::<AsyncAttribute>().unwrap();
-                info!("Async token: {}", hex::encode(&attr.token));
+    let payload = data?;
+    if payload.is_empty() {
+        let attr = attributes.get::<AsyncAttribute>().unwrap();
+        info!("Async token: {}", hex::encode(&attr.token));
 
-                if !r#async {
-                    eprint!("Waiting.");
+        if !r#async {
+            eprint!("Waiting.");
 
-                    // TODO: improve on this by using duration and thread and watchdog.
-                    let mut num_loops = 30;  // ~30 seconds.
-                    // Wait for the server by pinging it every second.
-                    while  num_loops > 0{
-                    let response = client.call("async.status", ())?;
-                        let status: StatusReturn = minicbor::decode(&response.data?)?;
-                        match status {
-                            StatusReturn::Done { response } => {}
-                            StatusReturn::Expired => {}
-                        }
+            // TODO: improve on this by using duration and thread and watchdog.
+            // Wait for the server for ~60 seconds by pinging it every second.
+            for _ in 0..60 {
+                let response = client.call(
+                    "async.status",
+                    StatusArgs {
+                        token: attr.token.clone().into(),
+                    },
+                )?;
+                let status: StatusReturn = minicbor::decode(&response.data?)?;
+                match status {
+                    StatusReturn::Done { response } => {
+                        eprintln!(".");
+                        return show_response(*response, client, r#async);
+                    }
+                    StatusReturn::Expired => {
+                        eprintln!(".");
+                        info!("Async token expired before we could check it.");
+                        return Ok(());
+                    }
+                    _ => {
+                        eprint!(".");
+                        std::thread::sleep(Duration::from_secs(1));
                     }
                 }
-            } else {
-                println!(
-                    "{}",
-                    cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
-                );
             }
-            std::process::exit(0);
         }
-        Err(err) => Err(err)
+    } else {
+        println!(
+            "{}",
+            cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
+        );
     }
 
     Ok(())
@@ -207,11 +219,11 @@ fn message(
     method: String,
     data: Vec<u8>,
     r#async: bool,
-) -> Result<(), dyn std::error::Error + std::fmt::Display> {
-    let client = ManyClient::new(s, to, key)?;
+) -> Result<(), anyhow::Error> {
+    let client = ManyClient::new(s, to, key).unwrap();
     let response = client.call_raw(method, &data)?;
 
-    show_response(response, client)
+    show_response(response, client, r#async)
 }
 
 fn main() {
@@ -334,19 +346,17 @@ fn main() {
                 .map_or(vec![], |d| cbor_diag::parse_diag(&d).unwrap().to_bytes());
 
             if let Some(s) = o.server {
-                match message(s, to_identity, key, o.method, data) {
-                    Ok(()) => {},
+                match message(s, to_identity, key, o.method, data, o.r#async) {
+                    Ok(()) => {}
                     Err(err) => {
-                        {
-                            error!(
-                "Error returned by server:\n|  {}\n",
-                err.to_string()
-                    .split('\n')
-                    .collect::<Vec<&str>>()
-                    .join("\n|  ")
-            );
-                            std::process::exit(1);
-                        }
+                        error!(
+                            "Error returned by server:\n|  {}\n",
+                            err.to_string()
+                                .split('\n')
+                                .collect::<Vec<&str>>()
+                                .join("\n|  ")
+                        );
+                        std::process::exit(1);
                     }
                 }
             } else {

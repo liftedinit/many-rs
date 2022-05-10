@@ -202,7 +202,9 @@ impl<'b> Decode<'b> for StatusReturn {
                 .map_err(minicbor::decode::Error::Message)?,
             match result {
                 Some(result) => Some(ResponseMessage::from_bytes(result).map_err(|_| {
-                    minicbor::decode::Error::Message("Invalid result type, expected CoseSign1.")
+                    minicbor::decode::Error::Message(
+                        "Invalid result type, expected ResponseMessage.",
+                    )
                 })?),
                 _ => None,
             },
