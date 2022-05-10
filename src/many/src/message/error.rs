@@ -143,8 +143,8 @@ many_error! {
             => r#"Invalid method name: "{method}"."#,
     -1001: InvalidFromIdentity as invalid_from_identity()
             => "The identity of the from field is invalid or unexpected.",
-    -1002: CouldNotVerifySignature as could_not_verify_signature()
-            => "Signature does not match the public key.",
+    -1002: CouldNotVerifySignature as could_not_verify_signature(details)
+            => "Could not verify the signature: {details}.",
     -1003: UnknownDestination as unknown_destination(to, this)
             => "Unknown destination for message.\nThis is \"{this}\", message was for \"{to}\".",
     -1004: EmptyEnvelope as empty_envelope()

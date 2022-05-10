@@ -27,13 +27,11 @@ use crate::server::ALLOWED_URLS;
 use crate::types::identity::cose::{CoseKeyIdentity, CoseKeyIdentitySignature};
 use crate::Identity;
 use signature::{Signature, Signer, Verifier};
-use tracing::error;
 
 pub fn decode_request_from_cose_sign1(sign1: CoseSign1) -> Result<RequestMessage, ManyError> {
     let request = CoseSign1RequestMessage { sign1 };
     let from_id = request.verify().map_err(|e| {
-        error!("e {}", e);
-        ManyError::could_not_verify_signature()
+        ManyError::could_not_verify_signature(e)
     })?;
 
     let payload = request
