@@ -14,7 +14,6 @@ use coset::HeaderBuilder;
 use coset::Label;
 pub use error::ManyError;
 use minicbor::Decode;
-use minicbor::Decoder;
 pub use request::RequestMessage;
 pub use request::RequestMessageBuilder;
 pub use response::ResponseMessage;
@@ -240,10 +239,6 @@ impl CoseSign1RequestMessage {
             .as_ref()
             .ok_or("`payload` entry missing but required")?;
 
-        tracing::trace!("Retrieving real payload from tagged data");
-        let mut decoder = Decoder::new(payload);
-        let _ = decoder.tag().map_err(|e| e.to_string())?;
-        let payload = decoder.bytes().map_err(|e| e.to_string())?;
         let payload_sha512 = sha2::Sha512::digest(payload);
         let payload_sha512_base64url = base64::encode(payload_sha512);
 
