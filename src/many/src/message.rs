@@ -22,6 +22,8 @@ use serde::Deserialize;
 use sha2::Digest;
 
 use crate::cose_helpers::public_key;
+use crate::server::ManyUrl;
+use crate::server::ALLOWED_URLS;
 use crate::types::identity::cose::{CoseKeyIdentity, CoseKeyIdentitySignature};
 use crate::Identity;
 use signature::{Signature, Signer, Verifier};
@@ -216,6 +218,19 @@ impl CoseSign1RequestMessage {
         tracing::trace!("Verifying the webauthn request type");
         if client_data_json.r#type != "webauthn.get" {
             return Err("request type != webauthn.get".to_string());
+        }
+
+        tracing::trace!("Verifying origin");
+        {
+            let origin = ManyUrl::parse(&client_data_json.origin).map_err(|e| e.to_string())?;
+            let urls = ALLOWED_URLS
+                .get()
+                .ok_or("ALLOWED_URLS was not initialized")?;
+            if let Some(urls) = urls {
+                if !urls.contains(&origin) {
+                    return Err("Origin not allowed".to_string());
+                }
+            }
         }
 
         tracing::trace!("Getting `authData` from unprotected header");

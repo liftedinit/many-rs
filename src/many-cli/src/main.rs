@@ -323,6 +323,7 @@ fn main() {
                 "many-server",
                 key,
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
+                None,
             );
             HttpServer::new(many).bind(o.addr).unwrap();
         }
