@@ -1,5 +1,5 @@
+use crate::message::ResponseMessage;
 use crate::{Identity, ManyError};
-use coset::{CborSerializable, CoseSign1};
 use many_macros::many_module;
 use minicbor::data::Type;
 use minicbor::encode::{Error, Write};
@@ -113,7 +113,7 @@ pub enum StatusReturn {
     Unknown,
     Queued,
     Processing,
-    Done { response: Box<CoseSign1> },
+    Done { response: Box<ResponseMessage> },
     Expired,
 }
 
@@ -128,8 +128,8 @@ impl StatusReturn {
         }
     }
 
-    fn from_key(key: u8, response: Option<CoseSign1>) -> Result<Self, ()> {
-        match (key, response) {
+    fn from_kind(kind: u8, response: Option<ResponseMessage>) -> Result<Self, ()> {
+        match (kind, response) {
             (0, None) => Ok(Self::Unknown),
             (1, None) => Ok(Self::Queued),
             (2, None) => Ok(Self::Processing),
@@ -149,7 +149,7 @@ impl Encode for StatusReturn {
             e.u8(1)?.bytes(
                 response
                     .clone()
-                    .to_vec()
+                    .to_bytes()
                     .map_err(|_err| Error::Message("Response could not be encoded."))?
                     .as_ref(),
             )?
@@ -197,11 +197,11 @@ impl<'b> Decode<'b> for StatusReturn {
             }
         }
 
-        Self::from_key(
+        Self::from_kind(
             key.map_or(Err("Invalid variant."), Ok)
                 .map_err(minicbor::decode::Error::Message)?,
             match result {
-                Some(result) => Some(CoseSign1::from_slice(result).map_err(|_| {
+                Some(result) => Some(ResponseMessage::from_bytes(result).map_err(|_| {
                     minicbor::decode::Error::Message("Invalid result type, expected CoseSign1.")
                 })?),
                 _ => None,
