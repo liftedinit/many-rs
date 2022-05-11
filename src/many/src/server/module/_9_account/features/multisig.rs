@@ -136,7 +136,7 @@ pub struct InfoArg {
     pub token: ByteVec,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Default, Encode, Decode)]
 #[cbor(map)]
 pub struct ApproverInfo {
     #[n(0)]
@@ -175,12 +175,16 @@ pub struct ApproveArg {
     pub token: ByteVec,
 }
 
+pub type ApproveReturn = EmptyReturn;
+
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct RevokeArg {
     #[n(0)]
     pub token: ByteVec,
 }
+
+pub type RevokeReturn = EmptyReturn;
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
@@ -196,6 +200,8 @@ pub struct WithdrawArg {
     pub token: ByteVec,
 }
 
+pub type WithdrawReturn = EmptyReturn;
+
 #[many_module(name = AccountMultisigModule, namespace = account, many_crate = crate)]
 pub trait AccountMultisigModuleBackend: Send {
     fn multisig_submit_transaction(
@@ -208,12 +214,12 @@ pub trait AccountMultisigModuleBackend: Send {
         &mut self,
         sender: &Identity,
         args: ApproveArg,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<ApproveReturn, ManyError>;
     fn multisig_revoke(
         &mut self,
         sender: &Identity,
         args: RevokeArg,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<RevokeReturn, ManyError>;
     fn multisig_execute(
         &mut self,
         sender: &Identity,
@@ -223,5 +229,5 @@ pub trait AccountMultisigModuleBackend: Send {
         &mut self,
         sender: &Identity,
         args: WithdrawArg,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<WithdrawReturn, ManyError>;
 }
