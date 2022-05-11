@@ -7,12 +7,12 @@ use crate::{Identity};
 #[cbor(map)]
 pub struct GetArgs {
     #[n(0)]
-    words: Vec<String>,
+    pub words: Vec<String>,
 }
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct GetReturns {
     #[n(0)]
-    identity: Identity
+    pub identity: Identity
 }

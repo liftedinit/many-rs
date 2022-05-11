@@ -6,10 +6,10 @@ use crate::{Identity, server::module::EmptyReturn};
 #[cbor(map)]
 pub struct StoreArgs {
     #[n(0)]
-    words: Vec<String>,
+    pub words: Vec<String>,
 
     #[n(1)]
-    identity: Identity,
+    pub identity: Identity,
 }
 
 pub type StoreReturn = EmptyReturn;
