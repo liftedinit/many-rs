@@ -198,7 +198,6 @@ impl CoseSign1RequestMessage {
         #[derive(Deserialize)]
         struct ClientData {
             challenge: String,
-            #[allow(dead_code)]
             origin: String,
             r#type: String,
         }
