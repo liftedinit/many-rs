@@ -28,6 +28,9 @@ use crate::types::identity::cose::{CoseKeyIdentity, CoseKeyIdentitySignature};
 use crate::Identity;
 use signature::{Signature, Signer, Verifier};
 
+#[cfg(test)]
+use serde::Serialize;
+
 pub fn decode_request_from_cose_sign1(sign1: CoseSign1) -> Result<RequestMessage, ManyError> {
     let request = CoseSign1RequestMessage { sign1 };
     let from_id = request
@@ -145,6 +148,15 @@ pub(crate) struct CoseSign1RequestMessage {
     pub sign1: CoseSign1,
 }
 
+/// WebAuthn ClientData
+#[derive(Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
+struct ClientData {
+    challenge: String,
+    origin: String,
+    r#type: String,
+}
+
 impl CoseSign1RequestMessage {
     pub fn get_keyset(&self) -> Option<CoseKeySet> {
         let keyset = self
@@ -195,13 +207,6 @@ impl CoseSign1RequestMessage {
         unprotected: BTreeMap<Label, Value>,
         key: CoseKeyIdentity,
     ) -> Result<(), String> {
-        #[derive(Deserialize)]
-        struct ClientData {
-            challenge: String,
-            origin: String,
-            r#type: String,
-        }
-
         tracing::trace!("We got a WebAuthn request");
         tracing::trace!("Getting `clientData` from unprotected header");
         let client_data = unprotected
@@ -333,5 +338,186 @@ impl CoseSign1RequestMessage {
 
             Err("Missing key ID".to_string())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use once_cell::sync::Lazy;
+
+    static ENVELOPE: Lazy<CoseSign1> = Lazy::new(|| {
+        let cbor = concat!(
+            "84589da3012604581d0103db2d266f53339c00571f6c8813d027c7a308ba291a5",
+            "b31228cde7e666b6579736574587181a7010202581d0103db2d266f53339c0057",
+            "1f6c8813d027c7a308ba291a5b31228cde7e03260481022001215820738cc5654",
+            "74defb6af2e7b385461380433cf5663a54eb715ec9e9e04bf295f69225820b709",
+            "ed3d1ec57f367f2deb490ff1bdf50992659a4bdfb97e0610a5093786bad1a4686",
+            "175746844617461582549960de5880e8c687434170f6476605b8fe4aeb9a28632",
+            "c7995cf3ba831d976301000000cf68776562617574686ef5697369676e6174757",
+            "2655847304502202d4564f676c44de08d2b81b9d0050e94d2ebd90cf6fb7ee104",
+            "013b7965c22616022100e7667d72af46315e258f34600bc13ac1c11efb4be4565",
+            "fb50eb742bc96202db36a636c69656e74446174617901c87b226368616c6c656e",
+            "6765223a226f6742596e614d424a675259485145443279306d62314d7a6e41425",
+            "8483279494539416e78364d4975696b61577a45696a4e352d5a6d746c65584e6c",
+            "644668786761634241674a59485145443279306d62314d7a6e414258483279494",
+            "539416e78364d4975696b61577a45696a4e352d41795945675149674153465949",
+            "484f4d7857564854652d32727935374f4652684f41517a7a315a6a70553633466",
+            "579656e67535f4b563970496c676774776e7450523746667a5a5f4c65744a445f",
+            "473939516d535a5a704c33376c2d4268436c43546547757445426546683463314",
+            "64661484a614e566446565752484d7a517756334e36574652365a33705a4f586c",
+            "7a557a46704d55357a6245785462303559526c4e32626b6c3154565a4f5657743",
+            "24d466b7653475177576a526c4d574a4e6146427a556d59796132397a51326435",
+            "57585a6c4d6b4e6b65464a4355543039222c22636c69656e74457874656e73696",
+            "f6e73223a7b7d2c2268617368416c676f726974686d223a225348412d32353622",
+            "2c226f726967696e223a2268747470733a2f2f6c6f63616c686f73743a3330303",
+            "0222c2274797065223a22776562617574686e2e676574227d584fd92711a40001",
+            "0178326d61656235776c6a676e356a74686861616b3470777a636174326174347",
+            "06979697869757275777a72656b676e3437717334036b6c65646765722e696e66",
+            "6f05c11a627bfe9140"
+        );
+        CoseSign1::from_slice(&hex::decode(cbor).unwrap()).unwrap()
+    });
+
+    fn init_urls() {
+        ALLOWED_URLS.with(|f| {
+            f.get_or_init(|| Some(vec![ManyUrl::parse("https://localhost:3000").unwrap()]));
+        });
+    }
+
+    fn tamper_uh_rest(uh_rest: &mut [(Label, Value)], field: String, value: Value) {
+        let pos = uh_rest
+            .iter()
+            .position(|(k, _)| k == &Label::Text(field.clone()))
+            .unwrap();
+        if let Some((_, v)) = uh_rest.get_mut(pos) {
+            *v = value;
+        }
+    }
+
+    fn get_client_data_json(uh_rest: &[(Label, Value)]) -> ClientData {
+        let client_data = uh_rest
+            .iter()
+            .find(|(k, _)| k == &Label::Text("clientData".to_string()))
+            .unwrap()
+            .1
+            .as_text()
+            .unwrap();
+        serde_json::from_str(client_data).unwrap()
+    }
+
+    #[test]
+    fn webauthn_ok() {
+        init_urls();
+        let request = CoseSign1RequestMessage {
+            sign1: ENVELOPE.clone(),
+        };
+        assert!(request.verify().is_ok());
+    }
+
+    #[test]
+    fn webauthn_tamper_signature() {
+        init_urls();
+        let mut envelope = ENVELOPE.clone();
+        tamper_uh_rest(
+            &mut envelope.unprotected.rest,
+            "signature".to_string(),
+            Value::Bytes(vec![1, 2, 3]),
+        );
+        let request = CoseSign1RequestMessage { sign1: envelope };
+        assert!(request.verify().is_err());
+    }
+
+    #[test]
+    fn webauthn_tamper_authdata() {
+        init_urls();
+        let mut envelope = ENVELOPE.clone();
+        tamper_uh_rest(
+            &mut envelope.unprotected.rest,
+            "authData".to_string(),
+            Value::Bytes(vec![1, 2, 3]),
+        );
+        let request = CoseSign1RequestMessage { sign1: envelope };
+        assert!(request.verify().is_err());
+    }
+
+    #[test]
+    fn webauthn_tamper_clientdata() {
+        init_urls();
+        let mut envelope = ENVELOPE.clone();
+        tamper_uh_rest(
+            &mut envelope.unprotected.rest,
+            "clientData".to_string(),
+            Value::Text("Foobar".to_string()),
+        );
+        let request = CoseSign1RequestMessage { sign1: envelope };
+        assert!(request.verify().is_err());
+    }
+
+    #[test]
+    fn webauthn_tamper_challenge() {
+        init_urls();
+        let mut envelope = ENVELOPE.clone();
+        let mut client_data_json: ClientData = get_client_data_json(&envelope.unprotected.rest);
+        client_data_json.challenge = client_data_json.challenge[1..].to_string();
+        tamper_uh_rest(
+            &mut envelope.unprotected.rest,
+            "clientData".to_string(),
+            Value::Text(serde_json::to_string(&client_data_json).unwrap()),
+        );
+        let request = CoseSign1RequestMessage { sign1: envelope };
+        assert!(request.verify().is_err());
+    }
+
+    #[test]
+    fn webauthn_tamper_type() {
+        init_urls();
+        let mut envelope = ENVELOPE.clone();
+        let mut client_data_json: ClientData = get_client_data_json(&envelope.unprotected.rest);
+        client_data_json.r#type = "foobar".to_string();
+        tamper_uh_rest(
+            &mut envelope.unprotected.rest,
+            "clientData".to_string(),
+            Value::Text(serde_json::to_string(&client_data_json).unwrap()),
+        );
+        let request = CoseSign1RequestMessage { sign1: envelope };
+        assert!(request.verify().is_err());
+    }
+
+    #[test]
+    fn webauthn_tamper_origin() {
+        init_urls();
+        let mut envelope = ENVELOPE.clone();
+        let mut client_data_json: ClientData = get_client_data_json(&envelope.unprotected.rest);
+        client_data_json.origin = "https://test.com".to_string();
+        tamper_uh_rest(
+            &mut envelope.unprotected.rest,
+            "clientData".to_string(),
+            Value::Text(serde_json::to_string(&client_data_json).unwrap()),
+        );
+        let request = CoseSign1RequestMessage { sign1: envelope };
+        assert!(request.verify().is_err());
+    }
+
+    #[test]
+    fn webauthn_tamper_payload() {
+        init_urls();
+        let mut envelope = ENVELOPE.clone();
+        envelope.payload = Some(vec![1, 2, 3]);
+        let request = CoseSign1RequestMessage { sign1: envelope };
+        assert!(request.verify().is_err());
+    }
+
+    #[test]
+    fn webauthn_tamper_protected_header() {
+        init_urls();
+        let mut envelope = ENVELOPE.clone();
+        envelope
+            .protected
+            .header
+            .rest
+            .insert(0, (Label::Text("Foo".to_string()), Value::Bool(true)));
+        let request = CoseSign1RequestMessage { sign1: envelope };
+        assert!(request.verify().is_err());
     }
 }
