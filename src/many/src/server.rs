@@ -6,7 +6,7 @@ use crate::types::identity::cose::CoseKeyIdentity;
 use crate::ManyError;
 use async_trait::async_trait;
 use coset::CoseSign1;
-use once_cell::sync::OnceCell;
+use once_cell::unsync::OnceCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
@@ -24,9 +24,11 @@ pub struct ManyModuleList {}
 
 pub const MANYSERVER_DEFAULT_TIMEOUT: u64 = 300;
 
-/// List of allowed URLs to communicate with the server
-/// WebAuthn-only
-pub static ALLOWED_URLS: OnceCell<Option<Vec<ManyUrl>>> = OnceCell::new();
+thread_local! {
+    /// List of allowed URLs to communicate with the server
+    /// WebAuthn-only
+    pub static ALLOWED_URLS: OnceCell<Option<Vec<ManyUrl>>> = OnceCell::new();
+}
 
 #[derive(Debug, Default)]
 pub struct ManyServer {
@@ -61,7 +63,9 @@ impl ManyServer {
         identity: CoseKeyIdentity,
         allow: Option<Vec<ManyUrl>>,
     ) -> Arc<Mutex<Self>> {
-        ALLOWED_URLS.get_or_init(|| allow);
+        ALLOWED_URLS.with(|urls| {
+            urls.get_or_init(|| allow);
+        });
         Arc::new(Mutex::new(Self {
             name: name.to_string(),
             identity,

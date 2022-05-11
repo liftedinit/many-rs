@@ -220,14 +220,14 @@ impl CoseSign1RequestMessage {
         tracing::trace!("Verifying origin");
         {
             let origin = ManyUrl::parse(&client_data_json.origin).map_err(|e| e.to_string())?;
-            let urls = ALLOWED_URLS
-                .get()
-                .ok_or("ALLOWED_URLS was not initialized")?;
-            if let Some(urls) = urls {
-                if !urls.contains(&origin) {
-                    return Err("Origin not allowed".to_string());
+            ALLOWED_URLS.with(|urls| {
+                if let Some(urls) = urls.get().ok_or("ALLOWED_URLS was not initialized")? {
+                    if !urls.contains(&origin) {
+                        return Err("Origin not allowed".to_string());
+                    }
                 }
-            }
+                Ok(())
+            })?;
         }
 
         tracing::trace!("Getting `authData` from unprotected header");
