@@ -346,6 +346,7 @@ mod tests {
     use super::*;
     use once_cell::sync::Lazy;
 
+    // A real CBOR WebAuthn CoseSign1 request
     static ENVELOPE: Lazy<CoseSign1> = Lazy::new(|| {
         let cbor = concat!(
             "84589da3012604581d0103db2d266f53339c00571f6c8813d027c7a308ba291a5",
@@ -379,145 +380,216 @@ mod tests {
         CoseSign1::from_slice(&hex::decode(cbor).unwrap()).unwrap()
     });
 
-    fn init_urls() {
+    fn setup() {
         ALLOWED_URLS.with(|f| {
             f.get_or_init(|| Some(vec![ManyUrl::parse("https://localhost:3000").unwrap()]));
         });
     }
 
-    fn tamper_uh_rest(uh_rest: &mut [(Label, Value)], field: String, value: Value) {
-        let pos = uh_rest
-            .iter()
-            .position(|(k, _)| k == &Label::Text(field.clone()))
-            .unwrap();
-        if let Some((_, v)) = uh_rest.get_mut(pos) {
-            *v = value;
-        }
+    enum UnprotectedHeaderFieldType {
+        Rest { field: String, value: Value },
+
+        // Special use-case to modify the ClientData JSON directly
+        ClientData(ClientDataFieldType),
     }
 
-    fn get_client_data_json(uh_rest: &[(Label, Value)]) -> ClientData {
-        let client_data = uh_rest
-            .iter()
-            .find(|(k, _)| k == &Label::Text("clientData".to_string()))
-            .unwrap()
-            .1
-            .as_text()
-            .unwrap();
-        serde_json::from_str(client_data).unwrap()
+    enum ClientDataFieldType {
+        Challenge,
+        Origin(String),
+        Type(String),
+    }
+
+    enum Cose1FieldType {
+        Protected { field: String, value: Value },
+        Unprotected(UnprotectedHeaderFieldType),
+        Payload(Vec<u8>),
+    }
+
+    fn get_tampered_request(field_type: Cose1FieldType) -> CoseSign1RequestMessage {
+        let mut envelope = ENVELOPE.clone();
+        match field_type {
+            // Simply insert a new value in the `rest` field of the ProtectedHeader
+            Cose1FieldType::Protected { field, value } => {
+                envelope
+                    .protected
+                    .header
+                    .rest
+                    .insert(0, (Label::Text(field), value));
+            }
+            Cose1FieldType::Unprotected(field_type) => match field_type {
+                // Find the matching Label in the rest field and change its value
+                UnprotectedHeaderFieldType::Rest { field, value } => {
+                    let pos = envelope
+                        .unprotected
+                        .rest
+                        .iter()
+                        .position(|(k, _)| k == &Label::Text(field.clone()))
+                        .unwrap();
+                    if let Some((_, v)) = envelope.unprotected.rest.get_mut(pos) {
+                        *v = value;
+                    }
+                }
+                // Find the `clientData` entry in the `rest` field, parse the
+                // JSON, change the given attribute, and change the `clientData`
+                // entry with the modified version
+                UnprotectedHeaderFieldType::ClientData(field_type) => {
+                    let client_data = envelope
+                        .unprotected
+                        .rest
+                        .iter()
+                        .find(|(k, _)| k == &Label::Text("clientData".to_string()))
+                        .unwrap()
+                        .1
+                        .as_text()
+                        .unwrap();
+                    let mut client_data_json: ClientData =
+                        serde_json::from_str(client_data).unwrap();
+                    match field_type {
+                        ClientDataFieldType::Challenge => {
+                            client_data_json.challenge =
+                                client_data_json.challenge[1..].to_string();
+                        }
+                        ClientDataFieldType::Origin(value) => {
+                            client_data_json.origin = value;
+                        }
+                        ClientDataFieldType::Type(value) => {
+                            client_data_json.r#type = value;
+                        }
+                    }
+                    return get_tampered_request(Cose1FieldType::Unprotected(
+                        UnprotectedHeaderFieldType::Rest {
+                            field: "clientData".to_string(),
+                            value: Value::Text(serde_json::to_string(&client_data_json).unwrap()),
+                        },
+                    ));
+                }
+            },
+            Cose1FieldType::Payload(value) => {
+                envelope.payload = Some(value);
+            }
+        }
+        CoseSign1RequestMessage { sign1: envelope }
+    }
+
+    fn run_test<T>(test: T)
+    where
+        T: FnOnce() + std::panic::UnwindSafe,
+    {
+        setup();
+
+        let result = std::panic::catch_unwind(test);
+
+        assert!(result.is_ok())
     }
 
     #[test]
     fn webauthn_ok() {
-        init_urls();
-        let request = CoseSign1RequestMessage {
-            sign1: ENVELOPE.clone(),
-        };
-        assert!(request.verify().is_ok());
+        run_test(|| {
+            assert!(CoseSign1RequestMessage {
+                sign1: ENVELOPE.clone()
+            }
+            .verify()
+            .is_ok())
+        });
     }
 
     #[test]
     fn webauthn_tamper_signature() {
-        init_urls();
-        let mut envelope = ENVELOPE.clone();
-        tamper_uh_rest(
-            &mut envelope.unprotected.rest,
-            "signature".to_string(),
-            Value::Bytes(vec![1, 2, 3]),
-        );
-        let request = CoseSign1RequestMessage { sign1: envelope };
-        assert!(request.verify().is_err());
+        run_test(|| {
+            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+                UnprotectedHeaderFieldType::Rest {
+                    field: "signature".to_string(),
+                    value: Value::Bytes(vec![1, 2, 3])
+                }
+            ))
+            .verify()
+            .is_err());
+        });
     }
 
     #[test]
     fn webauthn_tamper_authdata() {
-        init_urls();
-        let mut envelope = ENVELOPE.clone();
-        tamper_uh_rest(
-            &mut envelope.unprotected.rest,
-            "authData".to_string(),
-            Value::Bytes(vec![1, 2, 3]),
-        );
-        let request = CoseSign1RequestMessage { sign1: envelope };
-        assert!(request.verify().is_err());
+        run_test(|| {
+            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+                UnprotectedHeaderFieldType::Rest {
+                    field: "authData".to_string(),
+                    value: Value::Bytes(vec![1, 2, 3])
+                }
+            ))
+            .verify()
+            .is_err());
+        });
     }
 
     #[test]
     fn webauthn_tamper_clientdata() {
-        init_urls();
-        let mut envelope = ENVELOPE.clone();
-        tamper_uh_rest(
-            &mut envelope.unprotected.rest,
-            "clientData".to_string(),
-            Value::Text("Foobar".to_string()),
-        );
-        let request = CoseSign1RequestMessage { sign1: envelope };
-        assert!(request.verify().is_err());
+        run_test(|| {
+            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+                UnprotectedHeaderFieldType::Rest {
+                    field: "clientData".to_string(),
+                    value: Value::Text("Foobar".to_string())
+                }
+            ))
+            .verify()
+            .is_err());
+        });
     }
 
     #[test]
     fn webauthn_tamper_challenge() {
-        init_urls();
-        let mut envelope = ENVELOPE.clone();
-        let mut client_data_json: ClientData = get_client_data_json(&envelope.unprotected.rest);
-        client_data_json.challenge = client_data_json.challenge[1..].to_string();
-        tamper_uh_rest(
-            &mut envelope.unprotected.rest,
-            "clientData".to_string(),
-            Value::Text(serde_json::to_string(&client_data_json).unwrap()),
-        );
-        let request = CoseSign1RequestMessage { sign1: envelope };
-        assert!(request.verify().is_err());
+        run_test(|| {
+            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+                UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Challenge)
+            ))
+            .verify()
+            .is_err());
+        });
     }
 
     #[test]
     fn webauthn_tamper_type() {
-        init_urls();
-        let mut envelope = ENVELOPE.clone();
-        let mut client_data_json: ClientData = get_client_data_json(&envelope.unprotected.rest);
-        client_data_json.r#type = "foobar".to_string();
-        tamper_uh_rest(
-            &mut envelope.unprotected.rest,
-            "clientData".to_string(),
-            Value::Text(serde_json::to_string(&client_data_json).unwrap()),
-        );
-        let request = CoseSign1RequestMessage { sign1: envelope };
-        assert!(request.verify().is_err());
+        run_test(|| {
+            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+                UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Type(
+                    "Foobar".to_string()
+                ))
+            ))
+            .verify()
+            .is_err());
+        });
     }
 
     #[test]
     fn webauthn_tamper_origin() {
-        init_urls();
-        let mut envelope = ENVELOPE.clone();
-        let mut client_data_json: ClientData = get_client_data_json(&envelope.unprotected.rest);
-        client_data_json.origin = "https://test.com".to_string();
-        tamper_uh_rest(
-            &mut envelope.unprotected.rest,
-            "clientData".to_string(),
-            Value::Text(serde_json::to_string(&client_data_json).unwrap()),
-        );
-        let request = CoseSign1RequestMessage { sign1: envelope };
-        assert!(request.verify().is_err());
+        run_test(|| {
+            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+                UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Origin(
+                    "https://test.com".to_string()
+                ))
+            ))
+            .verify()
+            .is_err());
+        });
     }
 
     #[test]
     fn webauthn_tamper_payload() {
-        init_urls();
-        let mut envelope = ENVELOPE.clone();
-        envelope.payload = Some(vec![1, 2, 3]);
-        let request = CoseSign1RequestMessage { sign1: envelope };
-        assert!(request.verify().is_err());
+        run_test(|| {
+            assert!(get_tampered_request(Cose1FieldType::Payload(vec![1, 2, 3]))
+                .verify()
+                .is_err());
+        });
     }
 
     #[test]
     fn webauthn_tamper_protected_header() {
-        init_urls();
-        let mut envelope = ENVELOPE.clone();
-        envelope
-            .protected
-            .header
-            .rest
-            .insert(0, (Label::Text("Foo".to_string()), Value::Bool(true)));
-        let request = CoseSign1RequestMessage { sign1: envelope };
-        assert!(request.verify().is_err());
+        run_test(|| {
+            assert!(get_tampered_request(Cose1FieldType::Protected {
+                field: "Foobar".to_string(),
+                value: Value::Bool(true)
+            })
+            .verify()
+            .is_err());
+        });
     }
 }
