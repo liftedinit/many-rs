@@ -172,8 +172,20 @@ fn show_response(
         let attr = attributes.get::<AsyncAttribute>().unwrap();
         info!("Async token: {}", hex::encode(&attr.token));
 
+        // Allow eprint/ln for showing the progress bar, when we're interactive.
+        #[allow(clippy::print_stderr)]
+        fn progress(str: &str, done: bool) {
+            if atty::is(atty::Stream::Stderr) {
+                if done {
+                    eprintln!("{}", str);
+                } else {
+                    eprint!("{}", str);
+                }
+            }
+        }
+
         if !r#async {
-            eprint!("Waiting.");
+            progress("Waiting.", false);
 
             // TODO: improve on this by using duration and thread and watchdog.
             // Wait for the server for ~60 seconds by pinging it every second.
@@ -181,22 +193,22 @@ fn show_response(
                 let response = client.call(
                     "async.status",
                     StatusArgs {
-                        token: attr.token.clone().into(),
+                        token: attr.token.clone(),
                     },
                 )?;
                 let status: StatusReturn = minicbor::decode(&response.data?)?;
                 match status {
                     StatusReturn::Done { response } => {
-                        eprintln!(".");
+                        progress(".", true);
                         return show_response(*response, client, r#async);
                     }
                     StatusReturn::Expired => {
-                        eprintln!(".");
+                        progress(".", true);
                         info!("Async token expired before we could check it.");
                         return Ok(());
                     }
                     _ => {
-                        eprint!(".");
+                        progress(".", false);
                         std::thread::sleep(Duration::from_secs(1));
                     }
                 }
@@ -389,6 +401,7 @@ fn main() {
                 "many-server",
                 key,
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
+                None,
             );
             HttpServer::new(many).bind(o.addr).unwrap();
         }

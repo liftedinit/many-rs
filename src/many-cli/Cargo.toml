@@ -11,6 +11,7 @@ path = "src/main.rs"
 many = { path = "../many" }
 many-client = { path = "../many-client" }
 anyhow = "1.0.57"
+atty = "0.2.14"
 base64 = "0.13.0"
 cbor-diag = "0.1.8"
 clap = { version = "3.0.0-rc.9", features = [ "derive" ] }

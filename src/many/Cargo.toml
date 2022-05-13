@@ -22,6 +22,7 @@ ed25519 = { version = "1.2.0", features = [ "std" ] }
 ed25519-dalek = { version = "1.0.1", features = [ "std" ] }
 fixed = "1.11.0"
 hex = "0.4.3"
+json = "0.12"
 lazy_static = "1.4.0"
 minicbor = { version = "0.12.0", features = ["derive", "half", "std"] }
 num-derive = "0.3.3"
@@ -39,6 +40,7 @@ reqwest = { version = "0.11.5", features = ["blocking"] }
 ring = "0.16"
 ring-compat = "0.3.2"
 serde = { version = "1.0.130" }
+serde_json = "1.0"
 sha2 = "0.10"
 sha3 = "0.9.1"
 simple_asn1 = "0.5.4"
