@@ -441,9 +441,9 @@ impl Encode for TransactionInfo {
 
 impl<'b> Decode<'b> for TransactionInfo {
     fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-        let _len = d
-            .map()?
-            .ok_or_else(|| minicbor::decode::Error::Message("Invalid transaction type."))?;
+        let _len = d.map()?.ok_or(minicbor::decode::Error::Message(
+            "Invalid transaction type.",
+        ))?;
 
         if d.u8()? != 0 {
             return Err(minicbor::decode::Error::Message("Invalid TransactionKind"));

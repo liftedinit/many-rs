@@ -57,9 +57,7 @@ pub struct Hsm {
 impl Hsm {
     /// Return the HSM global instance
     pub fn get_instance() -> Result<MutexGuard<'static, Hsm>, ManyError> {
-        let hsm = HSM_INSTANCE
-            .lock()
-            .map_err(|e| ManyError::hsm_mutex_poisoned(e))?;
+        let hsm = HSM_INSTANCE.lock().map_err(ManyError::hsm_mutex_poisoned)?;
         Ok(hsm)
     }
 
