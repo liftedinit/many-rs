@@ -2,7 +2,7 @@ use crate::cbor::CborAny;
 use crate::message::ResponseMessage;
 use crate::server::module::account::features::{Feature, FeatureId, TryCreateFeature};
 use crate::server::module::EmptyReturn;
-use crate::types::ledger::TransactionInfo;
+use crate::types::ledger::{TokenAmount, TransactionInfo};
 use crate::types::Timestamp;
 use crate::{Identity, ManyError};
 use many_macros::many_module;
@@ -22,7 +22,7 @@ pub mod errors {
     );
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Default, Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct MultisigAccountFeatureArg {
     #[n(0)]
@@ -35,8 +35,27 @@ pub struct MultisigAccountFeatureArg {
     pub execute_automatically: Option<bool>,
 }
 
+#[derive(Default)]
 pub struct MultisigAccountFeature {
     pub arg: MultisigAccountFeatureArg,
+}
+
+impl MultisigAccountFeature {
+    pub fn create(
+        threshold: Option<u64>,
+        timeout_in_secs: Option<u64>,
+        execute_automatically: Option<bool>,
+    ) -> Self {
+        Self::from_arg(MultisigAccountFeatureArg {
+            threshold,
+            timeout_in_secs,
+            execute_automatically,
+        })
+    }
+
+    pub fn from_arg(arg: MultisigAccountFeatureArg) -> Self {
+        Self { arg }
+    }
 }
 
 impl TryCreateFeature for MultisigAccountFeature {
@@ -107,7 +126,7 @@ pub struct SubmitTransactionArg {
     pub account: Option<Identity>,
 
     #[n(1)]
-    pub memo: Option<String>,
+    pub memo: Option<ByteVec>,
 
     #[n(2)]
     pub transaction: TransactionInfo,
@@ -120,6 +139,24 @@ pub struct SubmitTransactionArg {
 
     #[n(5)]
     pub execute_automatically: Option<bool>,
+}
+
+impl SubmitTransactionArg {
+    pub fn send(from: Identity, to: Identity, symbol: Identity, amount: TokenAmount) -> Self {
+        Self {
+            account: Some(from),
+            memo: None,
+            transaction: TransactionInfo::Send {
+                from,
+                to,
+                symbol,
+                amount,
+            },
+            threshold: None,
+            timeout_in_secs: None,
+            execute_automatically: None,
+        }
+    }
 }
 
 #[derive(Clone, Encode, Decode)]
@@ -136,7 +173,7 @@ pub struct InfoArg {
     pub token: ByteVec,
 }
 
-#[derive(Clone, Default, Encode, Decode)]
+#[derive(Clone, Debug, Default, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct ApproverInfo {
     #[n(0)]
@@ -147,7 +184,7 @@ pub struct ApproverInfo {
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]
-    pub memo: Option<String>,
+    pub memo: Option<ByteVec>,
 
     #[n(1)]
     pub submitter: Identity,

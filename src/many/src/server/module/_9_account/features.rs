@@ -82,6 +82,10 @@ impl Feature {
 pub struct FeatureSet(#[n(0)] BTreeSet<Feature>);
 
 impl FeatureSet {
+    pub fn empty() -> Self {
+        Self(BTreeSet::new())
+    }
+
     /// Returns true if the set is empty.
     ///
     /// ```
@@ -96,7 +100,7 @@ impl FeatureSet {
     }
 
     pub fn insert(&mut self, attr: Feature) -> bool {
-        self.0.insert(attr)
+        self.0.replace(attr).is_some()
     }
 
     pub fn remove(&mut self, id: FeatureId) -> bool {
@@ -133,6 +137,12 @@ impl FeatureSet {
     /// Creates an iterator to traverse all features.
     pub fn iter(&self) -> impl Iterator<Item = &Feature> {
         self.0.iter()
+    }
+}
+
+impl FromIterator<Feature> for FeatureSet {
+    fn from_iter<I: IntoIterator<Item = Feature>>(iter: I) -> FeatureSet {
+        Self(BTreeSet::from_iter(iter))
     }
 }
 
