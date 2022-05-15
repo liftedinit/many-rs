@@ -639,7 +639,8 @@ macro_rules! decode_struct {
         (move |mut len: u64, d: &mut Decoder| {
             $( let mut $name : Option< $type > = None; )*
 
-            while len != 0 {
+            // len also includes the index 0 which is treated outside this macro.
+            while len > 1 {
                 match d.u32()? {
                     $( $idx => $name = Some(d.decode()?), )*
 
