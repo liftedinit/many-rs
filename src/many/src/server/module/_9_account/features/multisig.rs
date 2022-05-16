@@ -187,10 +187,10 @@ pub struct InfoReturn {
     pub memo: Option<ByteVec>,
 
     #[n(1)]
-    pub submitter: Identity,
+    pub transaction: TransactionInfo,
 
     #[n(2)]
-    pub transaction: TransactionInfo,
+    pub submitter: Identity,
 
     #[n(3)]
     pub approvers: BTreeMap<Identity, ApproverInfo>,
