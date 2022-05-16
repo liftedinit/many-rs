@@ -355,11 +355,11 @@ impl<'b> Decode<'b> for TransactionKind {
                 x => Err(minicbor::decode::Error::UnknownVariant(x)),
             },
             Type::Array | Type::ArrayIndef => match d.decode::<Vec<u32>>()?.as_slice() {
-                &[9, 1, 0] => Ok(Self::MultisigSubmit),
-                &[9, 1, 1] => Ok(Self::MultisigApprove),
-                &[9, 1, 2] => Ok(Self::MultisigRevoke),
-                &[9, 1, 3] => Ok(Self::MultisigExecute),
-                &[9, 1, 4] => Ok(Self::MultisigWithdraw),
+                [9, 1, 0] => Ok(Self::MultisigSubmit),
+                [9, 1, 1] => Ok(Self::MultisigApprove),
+                [9, 1, 2] => Ok(Self::MultisigRevoke),
+                [9, 1, 3] => Ok(Self::MultisigExecute),
+                [9, 1, 4] => Ok(Self::MultisigWithdraw),
                 _ => Err(minicbor::decode::Error::Message("Invalid variant")),
             },
             x => Err(minicbor::decode::Error::TypeMismatch(
@@ -611,7 +611,7 @@ macro_rules! decode_struct {
             $( let $name: $type = $name.ok_or(minicbor::decode::Error::MissingValue($idx, stringify!($name)))?; )*
 
             Ok($sname {
-                $( $name: $name, )*
+                $( $name, )*
             })
         })
     };
