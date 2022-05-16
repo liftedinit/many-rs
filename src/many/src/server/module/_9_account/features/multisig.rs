@@ -207,6 +207,24 @@ pub struct InfoReturn {
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
+pub struct SetDefaultsArg {
+    #[n(0)]
+    pub account: Identity,
+
+    #[n(1)]
+    pub threshold: Option<u64>,
+
+    #[n(2)]
+    pub timeout_in_secs: Option<u64>,
+
+    #[n(3)]
+    pub execute_automatically: Option<bool>,
+}
+
+pub type SetDefaultsReturn = EmptyReturn;
+
+#[derive(Clone, Encode, Decode)]
+#[cbor(map)]
 pub struct ApproveArg {
     #[n(0)]
     pub token: ByteVec,
@@ -247,6 +265,11 @@ pub trait AccountMultisigModuleBackend: Send {
         args: SubmitTransactionArg,
     ) -> Result<SubmitTransactionReturn, ManyError>;
     fn multisig_info(&self, sender: &Identity, args: InfoArg) -> Result<InfoReturn, ManyError>;
+    fn multisig_set_defaults(
+        &mut self,
+        sender: &Identity,
+        args: SetDefaultsArg,
+    ) -> Result<SetDefaultsReturn, ManyError>;
     fn multisig_approve(
         &mut self,
         sender: &Identity,
