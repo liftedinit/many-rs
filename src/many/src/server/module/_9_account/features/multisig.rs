@@ -126,7 +126,7 @@ pub struct SubmitTransactionArg {
     pub account: Option<Identity>,
 
     #[n(1)]
-    pub memo: Option<ByteVec>,
+    pub memo: Option<String>,
 
     #[n(2)]
     pub transaction: TransactionInfo,
@@ -139,6 +139,9 @@ pub struct SubmitTransactionArg {
 
     #[n(5)]
     pub execute_automatically: Option<bool>,
+
+    #[n(6)]
+    pub data: Option<ByteVec>,
 }
 
 impl SubmitTransactionArg {
@@ -155,6 +158,7 @@ impl SubmitTransactionArg {
             threshold: None,
             timeout_in_secs: None,
             execute_automatically: None,
+            data: None,
         }
     }
 }
@@ -184,7 +188,7 @@ pub struct ApproverInfo {
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]
-    pub memo: Option<ByteVec>,
+    pub memo: Option<String>,
 
     #[n(1)]
     pub transaction: TransactionInfo,
@@ -203,6 +207,9 @@ pub struct InfoReturn {
 
     #[n(6)]
     pub timeout: Timestamp,
+
+    #[n(7)]
+    pub data: Option<ByteVec>,
 }
 
 #[derive(Clone, Encode, Decode)]
