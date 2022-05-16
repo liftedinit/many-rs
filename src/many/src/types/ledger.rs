@@ -8,7 +8,6 @@ use num_traits::Num;
 use serde::Deserialize;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
-use std::time::SystemTime;
 
 /// A Symbol is represented by a non-anonymous identity.
 pub type Symbol = crate::Identity;
@@ -385,46 +384,6 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn send(
-        id: TransactionId,
-        time: SystemTime,
-        from: Identity,
-        to: Identity,
-        symbol: Symbol,
-        amount: TokenAmount,
-    ) -> Self {
-        Transaction {
-            id,
-            time: time.into(),
-            content: TransactionInfo::Send {
-                from,
-                to,
-                symbol,
-                amount,
-            },
-        }
-    }
-
-    pub fn multisig_submit(
-        id: TransactionId,
-        time: SystemTime,
-        from: Identity,
-        to: Identity,
-        symbol: Symbol,
-        amount: TokenAmount,
-    ) -> Self {
-        Transaction {
-            id,
-            time: time.into(),
-            content: TransactionInfo::Send {
-                from,
-                to,
-                symbol,
-                amount,
-            },
-        }
-    }
-
     pub fn kind(&self) -> TransactionKind {
         match self.content {
             TransactionInfo::Send { .. } => TransactionKind::Send,
@@ -605,7 +564,7 @@ impl Encode for TransactionInfo {
             } => {
                 e.map(4)?
                     .u8(0)?
-                    .encode(TransactionKind::MultisigRevoke)?
+                    .encode(TransactionKind::MultisigExecute)?
                     .u8(1)?
                     .encode(account)?
                     .u8(2)?
@@ -620,7 +579,7 @@ impl Encode for TransactionInfo {
             } => {
                 e.map(4)?
                     .u8(0)?
-                    .encode(TransactionKind::MultisigRevoke)?
+                    .encode(TransactionKind::MultisigWithdraw)?
                     .u8(1)?
                     .encode(account)?
                     .u8(2)?
@@ -666,7 +625,9 @@ impl<'b> Decode<'b> for TransactionInfo {
         ))?;
 
         if d.u8()? != 0 {
-            return Err(minicbor::decode::Error::Message("Invalid TransactionKind"));
+            return Err(minicbor::decode::Error::Message(
+                "TransactionKind should be the first item.",
+            ));
         }
         match d.decode::<TransactionKind>()? {
             TransactionKind::Send => decode_struct!(
