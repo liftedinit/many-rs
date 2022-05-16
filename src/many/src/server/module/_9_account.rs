@@ -197,6 +197,8 @@ pub struct SetDescriptionArgs {
     pub description: String,
 }
 
+pub type SetDescriptionReturn = EmptyReturn;
+
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct ListRolesArgs {
@@ -238,6 +240,8 @@ pub struct AddRolesArgs {
     pub roles: BTreeMap<Identity, BTreeSet<String>>,
 }
 
+pub type AddRolesReturn = EmptyReturn;
+
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct RemoveRolesArgs {
@@ -247,6 +251,8 @@ pub struct RemoveRolesArgs {
     #[n(1)]
     pub roles: BTreeMap<Identity, BTreeSet<String>>,
 }
+
+pub type RemoveRolesReturn = EmptyReturn;
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
@@ -275,6 +281,8 @@ pub struct DeleteArgs {
     pub account: Identity,
 }
 
+pub type DeleteReturn = EmptyReturn;
+
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct AddFeaturesArgs {
@@ -288,6 +296,8 @@ pub struct AddFeaturesArgs {
     pub features: features::FeatureSet,
 }
 
+pub type AddFeaturesReturn = EmptyReturn;
+
 #[many_module(name = AccountModule, id = 9, namespace = account, many_crate = crate)]
 pub trait AccountModuleBackend: Send {
     /// Create an account.
@@ -298,7 +308,7 @@ pub trait AccountModuleBackend: Send {
         &mut self,
         sender: &Identity,
         args: SetDescriptionArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<SetDescriptionReturn, ManyError>;
 
     /// List all the roles supported by an account.
     fn list_roles(
@@ -316,27 +326,27 @@ pub trait AccountModuleBackend: Send {
         &mut self,
         sender: &Identity,
         args: AddRolesArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<AddRolesReturn, ManyError>;
 
     /// Remove roles from an identity for an account.
     fn remove_roles(
         &mut self,
         sender: &Identity,
         args: RemoveRolesArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<RemoveRolesReturn, ManyError>;
 
     /// Returns the information related to an account.
     fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError>;
 
     /// Delete an account.
-    fn delete(&mut self, sender: &Identity, args: DeleteArgs) -> Result<EmptyReturn, ManyError>;
+    fn delete(&mut self, sender: &Identity, args: DeleteArgs) -> Result<DeleteReturn, ManyError>;
 
     /// Add additional features to an account.
     fn add_features(
         &mut self,
         sender: &Identity,
         args: AddFeaturesArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<AddFeaturesReturn, ManyError>;
 }
 
 #[cfg(test)]
@@ -373,7 +383,7 @@ mod module_tests {
             &mut self,
             _sender: &Identity,
             args: SetDescriptionArgs,
-        ) -> Result<EmptyReturn, ManyError> {
+        ) -> Result<SetDescriptionReturn, ManyError> {
             let mut account = self
                 .0
                 .get_mut(&args.account)
@@ -419,7 +429,7 @@ mod module_tests {
             &mut self,
             _sender: &Identity,
             args: AddRolesArgs,
-        ) -> Result<EmptyReturn, ManyError> {
+        ) -> Result<AddRolesReturn, ManyError> {
             let account = self
                 .0
                 .get_mut(&args.account)
@@ -436,7 +446,7 @@ mod module_tests {
             &mut self,
             _sender: &Identity,
             args: RemoveRolesArgs,
-        ) -> Result<EmptyReturn, ManyError> {
+        ) -> Result<RemoveRolesReturn, ManyError> {
             let account = self
                 .0
                 .get_mut(&args.account)
@@ -467,7 +477,7 @@ mod module_tests {
             &mut self,
             sender: &Identity,
             args: DeleteArgs,
-        ) -> Result<EmptyReturn, ManyError> {
+        ) -> Result<DeleteReturn, ManyError> {
             if self.0.has_role(&args.account, sender, "owner") {
                 self.0.remove(&args.account).map_or_else(
                     || Err(errors::unknown_account(args.account)),
@@ -482,7 +492,7 @@ mod module_tests {
             &mut self,
             _sender: &Identity,
             _args: AddFeaturesArgs,
-        ) -> Result<EmptyReturn, ManyError> {
+        ) -> Result<AddFeaturesReturn, ManyError> {
             todo!()
         }
     }
