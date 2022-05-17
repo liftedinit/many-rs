@@ -27,9 +27,9 @@ reexport_module!(
     kvstore: _3_kvstore + _7_kvstore_commands;
     r#async: _8_async;
     account: _9_account;
-    idstore: _10_idstore;
     abci_backend: _1000_abci_backend;
     abci_frontend: _1001_abci_frontend;
+    idstore: _1002_idstore;
 );
 
 /// The specification says that some methods returns nothing (e.g. void or unit).
