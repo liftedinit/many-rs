@@ -2,7 +2,8 @@ use super::types::{CredentialId, RecallPhrase};
 use crate::Identity;
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
+#[cfg_attr(test, derive(PartialEq))]
 #[cbor(map)]
 pub struct StoreArgs {
     #[n(0)]
