@@ -121,7 +121,7 @@ impl super::FeatureInfo for MultisigAccountFeature {
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
-pub struct SubmitTransactionArg {
+pub struct SubmitTransactionArgs {
     #[n(0)]
     pub account: Option<Identity>,
 
@@ -144,7 +144,7 @@ pub struct SubmitTransactionArg {
     pub data: Option<ByteVec>,
 }
 
-impl SubmitTransactionArg {
+impl SubmitTransactionArgs {
     pub fn send(from: Identity, to: Identity, symbol: Identity, amount: TokenAmount) -> Self {
         Self {
             account: Some(from),
@@ -172,7 +172,7 @@ pub struct SubmitTransactionReturn {
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
-pub struct InfoArg {
+pub struct InfoArgs {
     #[n(0)]
     pub token: ByteVec,
 }
@@ -214,7 +214,7 @@ pub struct InfoReturn {
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
-pub struct SetDefaultsArg {
+pub struct SetDefaultsArgs {
     #[n(0)]
     pub account: Identity,
 
@@ -232,7 +232,7 @@ pub type SetDefaultsReturn = EmptyReturn;
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
-pub struct ApproveArg {
+pub struct ApproveArgs {
     #[n(0)]
     pub token: ByteVec,
 }
@@ -241,7 +241,7 @@ pub type ApproveReturn = EmptyReturn;
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
-pub struct RevokeArg {
+pub struct RevokeArgs {
     #[n(0)]
     pub token: ByteVec,
 }
@@ -250,14 +250,14 @@ pub type RevokeReturn = EmptyReturn;
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
-pub struct ExecuteArg {
+pub struct ExecuteArgs {
     #[n(0)]
     pub token: ByteVec,
 }
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
-pub struct WithdrawArg {
+pub struct WithdrawArgs {
     #[n(0)]
     pub token: ByteVec,
 }
@@ -269,32 +269,32 @@ pub trait AccountMultisigModuleBackend: Send {
     fn multisig_submit_transaction(
         &mut self,
         sender: &Identity,
-        args: SubmitTransactionArg,
+        args: SubmitTransactionArgs,
     ) -> Result<SubmitTransactionReturn, ManyError>;
-    fn multisig_info(&self, sender: &Identity, args: InfoArg) -> Result<InfoReturn, ManyError>;
+    fn multisig_info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError>;
     fn multisig_set_defaults(
         &mut self,
         sender: &Identity,
-        args: SetDefaultsArg,
+        args: SetDefaultsArgs,
     ) -> Result<SetDefaultsReturn, ManyError>;
     fn multisig_approve(
         &mut self,
         sender: &Identity,
-        args: ApproveArg,
+        args: ApproveArgs,
     ) -> Result<ApproveReturn, ManyError>;
     fn multisig_revoke(
         &mut self,
         sender: &Identity,
-        args: RevokeArg,
+        args: RevokeArgs,
     ) -> Result<RevokeReturn, ManyError>;
     fn multisig_execute(
         &mut self,
         sender: &Identity,
-        args: ExecuteArg,
+        args: ExecuteArgs,
     ) -> Result<ResponseMessage, ManyError>;
     fn multisig_withdraw(
         &mut self,
         sender: &Identity,
-        args: WithdrawArg,
+        args: WithdrawArgs,
     ) -> Result<WithdrawReturn, ManyError>;
 }

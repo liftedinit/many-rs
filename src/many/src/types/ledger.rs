@@ -443,12 +443,13 @@ pub enum TransactionInfo {
     MultisigSubmit {
         submitter: Identity,
         account: Identity,
-        memo: Option<ByteVec>,
+        memo: Option<String>,
         transaction: Box<TransactionInfo>,
         token: ByteVec,
         threshold: u64,
         timeout: Timestamp,
         execute_automatically: bool,
+        data: Option<ByteVec>,
     },
 
     MultisigApprove {
@@ -506,6 +507,7 @@ impl Encode for TransactionInfo {
                 threshold,
                 timeout,
                 execute_automatically,
+                data,
             } => {
                 e.map(8)?
                     .u8(0)?
@@ -525,7 +527,9 @@ impl Encode for TransactionInfo {
                     .u8(7)?
                     .encode(timeout)?
                     .u8(8)?
-                    .encode(execute_automatically)?;
+                    .encode(execute_automatically)?
+                    .u8(9)?
+                    .encode(data)?;
             }
             TransactionInfo::MultisigApprove {
                 account,
@@ -643,12 +647,13 @@ impl<'b> Decode<'b> for TransactionInfo {
                 MultisigSubmit {
                     1 => submitter: Identity,
                     2 => account: Identity,
-                    3 => memo: Option<ByteVec>,
+                    3 => memo: Option<String>,
                     4 => transaction: Box<TransactionInfo>,
                     5 => token: ByteVec,
                     6 => threshold: u64,
                     7 => timeout: Timestamp,
                     8 => execute_automatically: bool,
+                    9 => data: Option<ByteVec>,
                 }
             )(len, d),
 
