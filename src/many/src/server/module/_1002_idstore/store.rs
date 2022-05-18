@@ -17,5 +17,5 @@ pub struct StoreArgs {
 }
 
 #[derive(Clone, Debug, Encode, Decode)]
-#[cbor(transparent)]
+#[cbor(map)]
 pub struct StoreReturns(#[n(0)] pub RecallPhrase);

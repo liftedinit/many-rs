@@ -4,15 +4,16 @@ use minicbor::{Decode, Encode};
 
 #[derive(Clone, Debug, Encode, Decode)]
 #[cfg_attr(test, derive(PartialEq))]
-#[cbor(transparent)]
+#[cbor(map)]
 pub struct GetFromRecallPhraseArgs(#[n(0)] pub RecallPhrase);
 
 #[derive(Clone, Debug, Encode, Decode)]
 #[cfg_attr(test, derive(PartialEq))]
-#[cbor(transparent)]
+#[cbor(map)]
 pub struct GetFromAddressArgs(#[n(0)] pub Identity);
 
 #[derive(Clone, Encode, Decode)]
+#[cbor(map)]
 pub struct GetReturns{
     #[n(0)]
     pub cred_id: CredentialId,
