@@ -2,6 +2,7 @@ use crate::{Identity, ManyError};
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
+use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Bound, RangeBounds, Shl};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -43,6 +44,22 @@ impl<'b> Decode<'b> for Percent {
 #[must_use]
 pub struct VecOrSingle<T>(pub Vec<T>);
 
+impl<T> VecOrSingle<T> {
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.0.iter()
+    }
+}
+
+impl<T> IntoIterator for VecOrSingle<T> {
+    type Item = T;
+
+    type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 impl<T> From<VecOrSingle<T>> for Vec<T> {
     fn from(v: VecOrSingle<T>) -> Vec<T> {
         v.0
@@ -52,6 +69,12 @@ impl<T> From<VecOrSingle<T>> for Vec<T> {
 impl<T> From<Vec<T>> for VecOrSingle<T> {
     fn from(v: Vec<T>) -> Self {
         Self(v)
+    }
+}
+
+impl<T: Ord> From<VecOrSingle<T>> for BTreeSet<T> {
+    fn from(v: VecOrSingle<T>) -> BTreeSet<T> {
+        BTreeSet::from_iter(v.into_iter())
     }
 }
 
@@ -307,7 +330,7 @@ pub struct TransactionFilter {
     pub kind: Option<VecOrSingle<ledger::TransactionKind>>,
 
     #[n(2)]
-    pub symbol: Option<VecOrSingle<String>>,
+    pub symbol: Option<VecOrSingle<Identity>>,
 
     #[n(3)]
     pub id_range: Option<CborRange<ledger::TransactionId>>,

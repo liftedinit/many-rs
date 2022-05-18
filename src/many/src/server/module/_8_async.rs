@@ -74,7 +74,7 @@ pub mod attributes {
 
         fn try_from(value: Attribute) -> Result<Self, Self::Error> {
             if value.id != ASYNC.id {
-                return Err(ManyError::invalid_attribute_id(value.id.to_string()));
+                return Err(ManyError::invalid_attribute_id(value.id));
             }
 
             let arguments = value.into_arguments();
@@ -202,7 +202,9 @@ impl<'b> Decode<'b> for StatusReturn {
                 .map_err(minicbor::decode::Error::Message)?,
             match result {
                 Some(result) => Some(ResponseMessage::from_bytes(result).map_err(|_| {
-                    minicbor::decode::Error::Message("Invalid result type, expected CoseSign1.")
+                    minicbor::decode::Error::Message(
+                        "Invalid result type, expected ResponseMessage.",
+                    )
                 })?),
                 _ => None,
             },

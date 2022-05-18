@@ -47,6 +47,10 @@ impl AccountMap {
         }
     }
 
+    pub fn contains(&self, identity: &Identity) -> bool {
+        self.get(identity).is_some()
+    }
+
     pub fn get(&self, identity: &Identity) -> Option<&Account> {
         if identity.matches(&self.id) {
             if let Some(subid) = identity.subresource_id() {
@@ -94,11 +98,17 @@ impl AccountMap {
 }
 
 /// A generic Account type. This is useful as utility for managing accounts in your backend.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Encode, Decode)]
+#[cbor(map)]
 pub struct Account {
-    description: Option<String>,
-    roles: BTreeMap<Identity, BTreeSet<String>>,
-    features: features::FeatureSet,
+    #[n(0)]
+    pub description: Option<String>,
+
+    #[n(1)]
+    pub roles: BTreeMap<Identity, BTreeSet<String>>,
+
+    #[n(2)]
+    pub features: features::FeatureSet,
 }
 
 impl Account {
@@ -123,10 +133,13 @@ impl Account {
         }
     }
 
-    pub fn description(&self) -> Option<&String> {
-        self.description.as_ref()
+    pub fn set_description(&mut self, desc: Option<impl ToString>) {
+        self.description = desc.map(|d| d.to_string());
     }
 
+    pub fn features(&self) -> &features::FeatureSet {
+        &self.features
+    }
     pub fn roles(&self) -> &BTreeMap<Identity, BTreeSet<String>> {
         &self.roles
     }
@@ -135,6 +148,18 @@ impl Account {
         self.roles
             .get(id)
             .map_or(false, |v| v.contains(role.as_ref()))
+    }
+    pub fn add_role<Role: ToString>(&mut self, id: &Identity, role: Role) -> bool {
+        self.roles.entry(*id).or_default().insert(role.to_string())
+    }
+    pub fn remove_role<Role: AsRef<str>>(&mut self, id: &Identity, role: Role) -> bool {
+        self.roles
+            .get_mut(id)
+            .map_or(false, |v| v.remove(role.as_ref()))
+    }
+
+    pub fn get_roles(&self, id: &Identity) -> BTreeSet<String> {
+        self.roles.get(id).cloned().unwrap_or_default()
     }
 
     pub fn feature<F: features::TryCreateFeature>(&self) -> Option<F> {
@@ -166,11 +191,13 @@ pub struct CreateReturn {
 #[cbor(map)]
 pub struct SetDescriptionArgs {
     #[n(0)]
-    pub id: Identity,
+    pub account: Identity,
 
     #[n(1)]
     pub description: String,
 }
+
+pub type SetDescriptionReturn = EmptyReturn;
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
@@ -183,7 +210,7 @@ pub struct ListRolesArgs {
 #[cbor(map)]
 pub struct ListRolesReturn {
     #[n(0)]
-    roles: BTreeSet<String>,
+    pub roles: BTreeSet<String>,
 }
 
 #[derive(Clone, Encode, Decode)]
@@ -200,7 +227,7 @@ pub struct GetRolesArgs {
 #[cbor(map)]
 pub struct GetRolesReturn {
     #[n(0)]
-    roles: BTreeMap<Identity, BTreeSet<String>>,
+    pub roles: BTreeMap<Identity, BTreeSet<String>>,
 }
 
 #[derive(Clone, Encode, Decode)]
@@ -213,6 +240,8 @@ pub struct AddRolesArgs {
     pub roles: BTreeMap<Identity, BTreeSet<String>>,
 }
 
+pub type AddRolesReturn = EmptyReturn;
+
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct RemoveRolesArgs {
@@ -222,6 +251,8 @@ pub struct RemoveRolesArgs {
     #[n(1)]
     pub roles: BTreeMap<Identity, BTreeSet<String>>,
 }
+
+pub type RemoveRolesReturn = EmptyReturn;
 
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
@@ -234,13 +265,13 @@ pub struct InfoArgs {
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]
-    description: Option<String>,
+    pub description: Option<String>,
 
     #[n(1)]
-    roles: BTreeMap<Identity, BTreeSet<String>>,
+    pub roles: BTreeMap<Identity, BTreeSet<String>>,
 
     #[n(2)]
-    features: features::FeatureSet,
+    pub features: features::FeatureSet,
 }
 
 #[derive(Clone, Encode, Decode)]
@@ -250,6 +281,8 @@ pub struct DeleteArgs {
     pub account: Identity,
 }
 
+pub type DeleteReturn = EmptyReturn;
+
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct AddFeaturesArgs {
@@ -257,11 +290,13 @@ pub struct AddFeaturesArgs {
     pub account: Identity,
 
     #[n(1)]
-    roles: Option<BTreeMap<Identity, BTreeSet<String>>>,
+    pub roles: Option<BTreeMap<Identity, BTreeSet<String>>>,
 
     #[n(2)]
     pub features: features::FeatureSet,
 }
+
+pub type AddFeaturesReturn = EmptyReturn;
 
 #[many_module(name = AccountModule, id = 9, namespace = account, many_crate = crate)]
 pub trait AccountModuleBackend: Send {
@@ -273,7 +308,7 @@ pub trait AccountModuleBackend: Send {
         &mut self,
         sender: &Identity,
         args: SetDescriptionArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<SetDescriptionReturn, ManyError>;
 
     /// List all the roles supported by an account.
     fn list_roles(
@@ -291,27 +326,27 @@ pub trait AccountModuleBackend: Send {
         &mut self,
         sender: &Identity,
         args: AddRolesArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<AddRolesReturn, ManyError>;
 
     /// Remove roles from an identity for an account.
     fn remove_roles(
         &mut self,
         sender: &Identity,
         args: RemoveRolesArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<RemoveRolesReturn, ManyError>;
 
     /// Returns the information related to an account.
     fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError>;
 
     /// Delete an account.
-    fn delete(&mut self, sender: &Identity, args: DeleteArgs) -> Result<EmptyReturn, ManyError>;
+    fn delete(&mut self, sender: &Identity, args: DeleteArgs) -> Result<DeleteReturn, ManyError>;
 
     /// Add additional features to an account.
     fn add_features(
         &mut self,
         sender: &Identity,
         args: AddFeaturesArgs,
-    ) -> Result<EmptyReturn, ManyError>;
+    ) -> Result<AddFeaturesReturn, ManyError>;
 }
 
 #[cfg(test)]
@@ -348,11 +383,11 @@ mod module_tests {
             &mut self,
             _sender: &Identity,
             args: SetDescriptionArgs,
-        ) -> Result<EmptyReturn, ManyError> {
+        ) -> Result<SetDescriptionReturn, ManyError> {
             let mut account = self
                 .0
-                .get_mut(&args.id)
-                .ok_or_else(|| errors::unknown_account(args.id.to_string()))?;
+                .get_mut(&args.account)
+                .ok_or_else(|| errors::unknown_account(args.account))?;
 
             account.description = Some(args.description);
             Ok(EmptyReturn)
@@ -366,7 +401,7 @@ mod module_tests {
             let _ = self
                 .0
                 .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
 
             Ok(ListRolesReturn {
                 roles: BTreeSet::from_iter(
@@ -383,7 +418,7 @@ mod module_tests {
             let account = self
                 .0
                 .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
 
             Ok(GetRolesReturn {
                 roles: account.roles.clone(),
@@ -394,11 +429,11 @@ mod module_tests {
             &mut self,
             _sender: &Identity,
             args: AddRolesArgs,
-        ) -> Result<EmptyReturn, ManyError> {
+        ) -> Result<AddRolesReturn, ManyError> {
             let account = self
                 .0
                 .get_mut(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
 
             for (k, mut v) in args.roles {
                 let roles = account.roles.entry(k).or_default();
@@ -411,11 +446,11 @@ mod module_tests {
             &mut self,
             _sender: &Identity,
             args: RemoveRolesArgs,
-        ) -> Result<EmptyReturn, ManyError> {
+        ) -> Result<RemoveRolesReturn, ManyError> {
             let account = self
                 .0
                 .get_mut(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
 
             for (k, v) in args.roles {
                 let roles = account.roles.entry(k).or_default();
@@ -430,7 +465,7 @@ mod module_tests {
             let account = self
                 .0
                 .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account.to_string()))?;
+                .ok_or_else(|| errors::unknown_account(args.account))?;
             Ok(InfoReturn {
                 description: account.description.clone(),
                 roles: account.roles.clone(),
@@ -442,14 +477,14 @@ mod module_tests {
             &mut self,
             sender: &Identity,
             args: DeleteArgs,
-        ) -> Result<EmptyReturn, ManyError> {
+        ) -> Result<DeleteReturn, ManyError> {
             if self.0.has_role(&args.account, sender, "owner") {
                 self.0.remove(&args.account).map_or_else(
-                    || Err(errors::unknown_account(args.account.to_string())),
+                    || Err(errors::unknown_account(args.account)),
                     |_| Ok(EmptyReturn),
                 )
             } else {
-                Err(errors::user_needs_role("owner".to_string()))
+                Err(errors::user_needs_role("owner"))
             }
         }
 
@@ -457,7 +492,7 @@ mod module_tests {
             &mut self,
             _sender: &Identity,
             _args: AddFeaturesArgs,
-        ) -> Result<EmptyReturn, ManyError> {
+        ) -> Result<AddFeaturesReturn, ManyError> {
             todo!()
         }
     }

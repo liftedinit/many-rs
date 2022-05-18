@@ -73,12 +73,12 @@ pub trait BlockchainModuleBackend: Send {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, Mutex};
-    use mockall::predicate;
     use crate::{
         server::module::testutils::{call_module, call_module_cbor},
         types::{blockchain::TransactionIdentifier, Timestamp},
     };
+    use mockall::predicate;
+    use std::sync::{Arc, Mutex};
 
     #[test]
     fn info() {

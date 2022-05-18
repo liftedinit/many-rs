@@ -8,7 +8,6 @@ use num_traits::Num;
 use serde::Deserialize;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
-use std::time::SystemTime;
 
 /// A Symbol is represented by a non-anonymous identity.
 pub type Symbol = crate::Identity;
@@ -326,24 +325,48 @@ impl From<TransactionId> for Vec<u8> {
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u8)]
 pub enum TransactionKind {
-    Send = 0,
+    Send,
+    MultisigSubmit,
+    MultisigApprove,
+    MultisigRevoke,
+    MultisigExecute,
+    MultisigWithdraw,
 }
 
 impl Encode for TransactionKind {
     fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
-        e.u8(*self as u8)?;
+        match self {
+            TransactionKind::Send => e.u8(0),
+            TransactionKind::MultisigSubmit => e.array(3)?.u8(9)?.u8(1)?.u8(0),
+            TransactionKind::MultisigApprove => e.array(3)?.u8(9)?.u8(1)?.u8(1),
+            TransactionKind::MultisigRevoke => e.array(3)?.u8(9)?.u8(1)?.u8(2),
+            TransactionKind::MultisigExecute => e.array(3)?.u8(9)?.u8(1)?.u8(3),
+            TransactionKind::MultisigWithdraw => e.array(3)?.u8(9)?.u8(1)?.u8(4),
+        }?;
         Ok(())
     }
 }
 
 impl<'b> Decode<'b> for TransactionKind {
     fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-        Ok(match d.u8()? {
-            0 => Self::Send,
-            _ => {
-                return Err(minicbor::decode::Error::Message("Invalid TransactionKind."));
-            }
-        })
+        match d.datatype()? {
+            Type::U8 | Type::U16 | Type::U32 | Type::U64 => match d.u32()? {
+                0 => Ok(Self::Send),
+                x => Err(minicbor::decode::Error::UnknownVariant(x)),
+            },
+            Type::Array | Type::ArrayIndef => match d.decode::<Vec<u32>>()?.as_slice() {
+                [9, 1, 0] => Ok(Self::MultisigSubmit),
+                [9, 1, 1] => Ok(Self::MultisigApprove),
+                [9, 1, 2] => Ok(Self::MultisigRevoke),
+                [9, 1, 3] => Ok(Self::MultisigExecute),
+                [9, 1, 4] => Ok(Self::MultisigWithdraw),
+                _ => Err(minicbor::decode::Error::Message("Invalid variant")),
+            },
+            x => Err(minicbor::decode::Error::TypeMismatch(
+                x,
+                "An array or integer.",
+            )),
+        }
     }
 }
 
@@ -357,102 +380,314 @@ pub struct Transaction {
     pub time: Timestamp,
 
     #[n(2)]
-    pub content: TransactionContent,
+    pub content: TransactionInfo,
 }
 
 impl Transaction {
-    pub fn send(
-        id: TransactionId,
-        time: SystemTime,
-        from: Identity,
-        to: Identity,
-        symbol: String,
-        amount: TokenAmount,
-    ) -> Self {
-        Transaction {
-            id,
-            time: time.into(),
-            content: TransactionContent::Send {
-                from,
-                to,
-                symbol,
-                amount,
-            },
-        }
-    }
-
     pub fn kind(&self) -> TransactionKind {
         match self.content {
-            TransactionContent::Send { .. } => TransactionKind::Send,
+            TransactionInfo::Send { .. } => TransactionKind::Send,
+            TransactionInfo::MultisigSubmit { .. } => TransactionKind::MultisigSubmit,
+            TransactionInfo::MultisigApprove { .. } => TransactionKind::MultisigApprove,
+            TransactionInfo::MultisigRevoke { .. } => TransactionKind::MultisigRevoke,
+            TransactionInfo::MultisigExecute { .. } => TransactionKind::MultisigExecute,
+            TransactionInfo::MultisigWithdraw { .. } => TransactionKind::MultisigWithdraw,
         }
     }
 
-    pub fn symbol(&self) -> &String {
+    pub fn symbol(&self) -> Option<&Identity> {
         match &self.content {
-            TransactionContent::Send { symbol, .. } => symbol,
+            TransactionInfo::Send { symbol, .. } => Some(symbol),
+            TransactionInfo::MultisigSubmit { .. } => None,
+            TransactionInfo::MultisigApprove { .. } => None,
+            TransactionInfo::MultisigRevoke { .. } => None,
+            TransactionInfo::MultisigExecute { .. } => None,
+            TransactionInfo::MultisigWithdraw { .. } => None,
         }
     }
 
     pub fn is_about(&self, id: &Identity) -> bool {
         match &self.content {
-            TransactionContent::Send { from, to, .. } => id == from || id == to,
+            TransactionInfo::Send { from, to, .. } => id == from || id == to,
+            TransactionInfo::MultisigSubmit {
+                account, submitter, ..
+            } => id == submitter || id == account,
+            TransactionInfo::MultisigApprove {
+                account, approver, ..
+            } => id == approver || id == account,
+            TransactionInfo::MultisigRevoke {
+                account, revoker, ..
+            } => id == revoker || id == account,
+            TransactionInfo::MultisigExecute {
+                account, executer, ..
+            } => Some(id) == executer.as_ref() || id == account,
+            TransactionInfo::MultisigWithdraw {
+                account,
+                withdrawer,
+                ..
+            } => id == withdrawer || id == account,
         }
     }
 }
 
-pub enum TransactionContent {
+#[derive(Clone)]
+#[non_exhaustive]
+pub enum TransactionInfo {
     Send {
         from: Identity,
         to: Identity,
-        symbol: String,
+        symbol: Symbol,
         amount: TokenAmount,
+    },
+
+    MultisigSubmit {
+        submitter: Identity,
+        account: Identity,
+        memo: Option<String>,
+        transaction: Box<TransactionInfo>,
+        token: ByteVec,
+        threshold: u64,
+        timeout: Timestamp,
+        execute_automatically: bool,
+        data: Option<ByteVec>,
+    },
+
+    MultisigApprove {
+        account: Identity,
+        token: ByteVec,
+        approver: Identity,
+    },
+
+    MultisigRevoke {
+        account: Identity,
+        token: ByteVec,
+        revoker: Identity,
+    },
+
+    MultisigExecute {
+        account: Identity,
+        token: ByteVec,
+        executer: Option<Identity>,
+    },
+
+    MultisigWithdraw {
+        account: Identity,
+        token: ByteVec,
+        withdrawer: Identity,
     },
 }
 
-impl Encode for TransactionContent {
+impl Encode for TransactionInfo {
     fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
         match self {
-            TransactionContent::Send {
+            TransactionInfo::Send {
                 from,
                 to,
                 symbol,
                 amount,
             } => {
-                e.array(5)?
-                    .u8(TransactionKind::Send as u8)?
+                e.map(5)?
+                    .u8(0)?
+                    .encode(TransactionKind::Send)?
+                    .u8(1)?
                     .encode(from)?
+                    .u8(2)?
                     .encode(to)?
+                    .u8(3)?
                     .encode(symbol)?
+                    .u8(4)?
                     .encode(amount)?;
             }
+            TransactionInfo::MultisigSubmit {
+                submitter,
+                account,
+                memo,
+                transaction,
+                token,
+                threshold,
+                timeout,
+                execute_automatically,
+                data,
+            } => {
+                e.map(8)?
+                    .u8(0)?
+                    .encode(TransactionKind::MultisigSubmit)?
+                    .u8(1)?
+                    .encode(submitter)?
+                    .u8(2)?
+                    .encode(account)?
+                    .u8(3)?
+                    .encode(memo)?
+                    .u8(4)?
+                    .encode(transaction)?
+                    .u8(5)?
+                    .encode(token)?
+                    .u8(6)?
+                    .encode(threshold)?
+                    .u8(7)?
+                    .encode(timeout)?
+                    .u8(8)?
+                    .encode(execute_automatically)?
+                    .u8(9)?
+                    .encode(data)?;
+            }
+            TransactionInfo::MultisigApprove {
+                account,
+                token,
+                approver,
+            } => {
+                e.map(4)?
+                    .u8(0)?
+                    .encode(TransactionKind::MultisigApprove)?
+                    .u8(1)?
+                    .encode(account)?
+                    .u8(2)?
+                    .encode(token)?
+                    .u8(3)?
+                    .encode(approver)?;
+            }
+            TransactionInfo::MultisigRevoke {
+                account,
+                token,
+                revoker,
+            } => {
+                e.map(4)?
+                    .u8(0)?
+                    .encode(TransactionKind::MultisigRevoke)?
+                    .u8(1)?
+                    .encode(account)?
+                    .u8(2)?
+                    .encode(token)?
+                    .u8(3)?
+                    .encode(revoker)?;
+            }
+            TransactionInfo::MultisigExecute {
+                account,
+                token,
+                executer,
+            } => {
+                e.map(4)?
+                    .u8(0)?
+                    .encode(TransactionKind::MultisigExecute)?
+                    .u8(1)?
+                    .encode(account)?
+                    .u8(2)?
+                    .encode(token)?
+                    .u8(3)?
+                    .encode(executer)?;
+            }
+            TransactionInfo::MultisigWithdraw {
+                account,
+                token,
+                withdrawer,
+            } => {
+                e.map(4)?
+                    .u8(0)?
+                    .encode(TransactionKind::MultisigWithdraw)?
+                    .u8(1)?
+                    .encode(account)?
+                    .u8(2)?
+                    .encode(token)?
+                    .u8(3)?
+                    .encode(withdrawer)?;
+            }
         }
+
         Ok(())
     }
 }
 
-impl<'b> Decode<'b> for TransactionContent {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-        let mut len = d.array()?;
-        let content = match d.u8()? {
-            0 => {
-                // TransactionKind::Send
-                len = len.map(|x| x - 5);
-                TransactionContent::Send {
-                    from: d.decode()?,
-                    to: d.decode()?,
-                    symbol: d.decode()?,
-                    amount: d.decode()?,
-                }
-            }
-            _ => return Err(minicbor::decode::Error::Message("Invalid TransactionKind")),
-        };
+macro_rules! decode_struct {
+    ( $sname: tt { $( $idx: literal => $name: ident : $type: ty, )* } ) => {
+        (move |mut len: u64, d: &mut Decoder| {
+            $( let mut $name : Option< $type > = None; )*
 
-        match len {
-            Some(0) => Ok(content),
-            None if d.datatype()? == minicbor::data::Type::Break => Ok(content),
-            _ => Err(minicbor::decode::Error::Message(
-                "Invalid TransactionContent array.",
-            )),
+            // len also includes the index 0 which is treated outside this macro.
+            while len > 1 {
+                match d.u32()? {
+                    $( $idx => $name = Some(d.decode()?), )*
+
+                    x => return Err(minicbor::decode::Error::UnknownVariant(x)),
+                }
+                len -= 1;
+            }
+
+            $( let $name: $type = $name.ok_or(minicbor::decode::Error::MissingValue($idx, stringify!($name)))?; )*
+
+            Ok($sname {
+                $( $name, )*
+            })
+        })
+    };
+}
+
+impl<'b> Decode<'b> for TransactionInfo {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+        use TransactionInfo::*;
+        let len = d.map()?.ok_or(minicbor::decode::Error::Message(
+            "Invalid transaction type.",
+        ))?;
+
+        if d.u8()? != 0 {
+            return Err(minicbor::decode::Error::Message(
+                "TransactionKind should be the first item.",
+            ));
+        }
+        match d.decode::<TransactionKind>()? {
+            TransactionKind::Send => decode_struct!(
+                Send {
+                    1 => from: Identity,
+                    2 => to: Identity,
+                    3 => symbol: Identity,
+                    4 => amount: TokenAmount,
+                }
+            )(len, d),
+
+            TransactionKind::MultisigSubmit => decode_struct!(
+                MultisigSubmit {
+                    1 => submitter: Identity,
+                    2 => account: Identity,
+                    3 => memo: Option<String>,
+                    4 => transaction: Box<TransactionInfo>,
+                    5 => token: ByteVec,
+                    6 => threshold: u64,
+                    7 => timeout: Timestamp,
+                    8 => execute_automatically: bool,
+                    9 => data: Option<ByteVec>,
+                }
+            )(len, d),
+
+            TransactionKind::MultisigApprove => decode_struct!(
+                MultisigApprove {
+                    1 => account: Identity,
+                    2 => token: ByteVec,
+                    3 => approver: Identity,
+                }
+            )(len, d),
+
+            TransactionKind::MultisigRevoke => decode_struct!(
+                MultisigRevoke {
+                    1 => account: Identity,
+                    2 => token: ByteVec,
+                    3 => revoker: Identity,
+                }
+            )(len, d),
+
+            TransactionKind::MultisigExecute => decode_struct!(
+                MultisigExecute {
+                    1 => account: Identity,
+                    2 => token: ByteVec,
+                    3 => executer: Option<Identity>,
+                }
+            )(len, d),
+
+            TransactionKind::MultisigWithdraw => decode_struct!(
+                MultisigWithdraw {
+                    1 => account: Identity,
+                    2 => token: ByteVec,
+                    3 => withdrawer: Identity,
+                }
+            )(len, d),
         }
     }
 }

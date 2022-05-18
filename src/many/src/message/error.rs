@@ -63,12 +63,12 @@ macro_rules! many_error {
         impl ManyError {
             $($(
                 #[doc = $description]
-                pub fn $snake_name( $($arg: String,)* ) -> Self {
+                pub fn $snake_name( $($arg: impl ToString,)* ) -> Self {
                     let s = Self {
                         code: ManyErrorCode::$name,
                         message: Some($description.to_string()),
                         arguments: BTreeMap::from_iter(vec![
-                            $( (stringify!($arg).to_string(), $arg) ),*
+                            $( (stringify!($arg).to_string(), ($arg).to_string()) ),*
                         ]),
                     };
 
@@ -171,12 +171,12 @@ macro_rules! define_attribute_many_error {
     ( $( attribute $module_id: literal => { $( $id: literal : $vis: vis fn $name: ident ($( $var_name: ident ),*) => $message: literal ),* $(,)? } );* ) => {
         $(
         $(
-            $vis fn $name ( $($var_name: String),* ) -> $crate::ManyError {
+            $vis fn $name( $($var_name: impl ToString),* ) -> $crate::ManyError {
                 $crate::ManyError::attribute_specific(
                     ($module_id as i32) * -10000i32 - ($id as i32),
                     String::from($message),
                     std::iter::FromIterator::from_iter(vec![
-                        $( (stringify!($var_name).to_string(), $var_name) ),*
+                        $( (stringify!($var_name).to_string(), ($var_name).to_string()) ),*
                     ]),
                 )
             }
@@ -190,12 +190,12 @@ macro_rules! define_application_many_error {
     ( $( { $( $id: literal : $vis: vis fn $name: ident ($( $var_name: ident ),*) => $message: literal ),* $(,)? } );* ) => {
         $(
         $(
-            $vis fn $name ( $($var_name: String),* ) -> $crate::ManyError {
+            $vis fn $name ( $($var_name: impl ToString),* ) -> $crate::ManyError {
                 $crate::ManyError::application_specific(
                     $id as u32,
                     String::from($message),
                     std::iter::FromIterator::from_iter(vec![
-                        $( (stringify!($var_name).to_string(), $var_name) ),*
+                        $( (stringify!($var_name).to_string(), ($var_name).to_string()) ),*
                     ]),
                 )
             }
