@@ -44,7 +44,6 @@ mod tests {
             address: id.identity,
             cred_id: CredentialId(ByteVec::from(Vec::from([1u8; 16]))),
             public_key: PublicKey(ByteVec::from(id.key.unwrap().to_vec().unwrap()))
-
         };
         let ret = StoreReturns(vec!["foo".to_string(), "bar".to_string()]);
         let mut mock: MockIdStoreModuleBackend = MockIdStoreModuleBackend::new();
