@@ -316,7 +316,7 @@ mod tests {
         RequestMessageBuilder,
     };
     use crate::server::module::base::Status;
-    use crate::types::identity::cose::tests::generate_random_eddsa_identity;
+    use crate::types::identity::cose::testsutils::generate_random_eddsa_identity;
     use proptest::prelude::*;
 
     const ALPHA_NUM_DASH_REGEX: &str = "[a-zA-Z0-9-]";

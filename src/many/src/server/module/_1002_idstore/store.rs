@@ -1,4 +1,4 @@
-use super::types::{CredentialId, RecallPhrase};
+use super::types::{CredentialId, PublicKey, RecallPhrase};
 use crate::Identity;
 use minicbor::{Decode, Encode};
 
@@ -11,6 +11,9 @@ pub struct StoreArgs {
 
     #[n(1)]
     pub cred_id: CredentialId,
+
+    #[n(2)]
+    pub public_key: PublicKey,
 }
 
 #[derive(Clone, Debug, Encode, Decode)]
