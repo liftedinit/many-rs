@@ -106,7 +106,7 @@ where
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
 #[must_use]
-pub struct Timestamp(SystemTime);
+pub struct Timestamp(pub SystemTime);
 
 impl Timestamp {
     pub fn now() -> Self {
