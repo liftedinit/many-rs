@@ -146,6 +146,10 @@ struct ServerOpt {
     /// The address and port to bind to for the MANY Http server.
     #[clap(long, short, default_value = "127.0.0.1:8000")]
     addr: SocketAddr,
+
+    /// The name to give the server.
+    #[clap(long, short, default_value = "many-server")]
+    name: String,
 }
 
 #[derive(Parser)]
@@ -398,7 +402,7 @@ fn main() {
                 .expect("Could not generate identity from PEM file.");
 
             let many = ManyServer::simple(
-                "many-server",
+                o.name,
                 key,
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
                 None,
