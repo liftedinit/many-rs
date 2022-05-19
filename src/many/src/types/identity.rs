@@ -134,20 +134,38 @@ impl Identity {
     }
 }
 
-#[cfg(feature = "raw")]
 impl Identity {
     /// Create an identity from the raw value of a public key hash, without checking
     /// its validity.
     #[inline(always)]
-    pub fn public_key_raw(hash: PublicKeyHash) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn public_key_raw_(hash: PublicKeyHash) -> Self {
         Self(InnerIdentity::public_key(hash))
     }
 
     /// Create an identity from the raw value of a public key hash and a subresource
     /// id. The hash isn't validated, but the subid is.
     #[inline(always)]
-    pub fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn subresource_raw_(hash: PublicKeyHash, subid: u32) -> Self {
         Self(InnerIdentity::subresource_unchecked(hash, subid))
+    }
+}
+
+#[cfg(feature = "raw")]
+impl Identity {
+    /// Create an identity from the raw value of a public key hash, without checking
+    /// its validity.
+    #[inline(always)]
+    pub fn public_key_raw(hash: PublicKeyHash) -> Self {
+        Self::public_key_raw_(hash)
+    }
+
+    /// Create an identity from the raw value of a public key hash and a subresource
+    /// id. The hash isn't validated, but the subid is.
+    #[inline(always)]
+    pub fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
+        Self::subresource_raw_(hash, subid)
     }
 }
 

@@ -184,7 +184,7 @@ pub struct ApproverInfo {
     pub approved: bool,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Debug, Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]

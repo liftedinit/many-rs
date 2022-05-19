@@ -106,11 +106,17 @@ where
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
 #[must_use]
-pub struct Timestamp(pub SystemTime);
+pub struct Timestamp(SystemTime);
 
 impl Timestamp {
     pub fn now() -> Self {
-        Self(SystemTime::now())
+        Self::new(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Time flew backward")
+                .as_secs(),
+        )
+        .expect("Time flew all around")
     }
 
     pub fn new(secs: u64) -> Result<Self, ManyError> {
