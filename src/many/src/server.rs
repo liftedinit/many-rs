@@ -6,7 +6,6 @@ use crate::types::identity::cose::CoseKeyIdentity;
 use crate::ManyError;
 use async_trait::async_trait;
 use coset::CoseSign1;
-use once_cell::unsync::OnceCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
@@ -24,12 +23,6 @@ pub struct ManyModuleList {}
 
 pub const MANYSERVER_DEFAULT_TIMEOUT: u64 = 300;
 
-thread_local! {
-    /// List of allowed URLs to communicate with the server
-    /// WebAuthn-only
-    pub static ALLOWED_URLS: OnceCell<Option<Vec<ManyUrl>>> = OnceCell::new();
-}
-
 #[derive(Debug, Default)]
 pub struct ManyServer {
     modules: Vec<Arc<dyn ManyModule + Send>>,
@@ -39,6 +32,7 @@ pub struct ManyServer {
     version: Option<String>,
     timeout: u64,
     fallback: Option<Arc<dyn ManyServerFallback + Send + 'static>>,
+    allowed_origins: Option<Vec<ManyUrl>>,
 }
 
 impl ManyServer {
@@ -61,15 +55,13 @@ impl ManyServer {
     pub fn new<N: ToString>(
         name: N,
         identity: CoseKeyIdentity,
-        allow: Option<Vec<ManyUrl>>,
+        allowed_origins: Option<Vec<ManyUrl>>,
     ) -> Arc<Mutex<Self>> {
-        ALLOWED_URLS.with(|urls| {
-            urls.get_or_init(|| allow);
-        });
         Arc::new(Mutex::new(Self {
             name: name.to_string(),
             identity,
             timeout: MANYSERVER_DEFAULT_TIMEOUT,
+            allowed_origins,
             ..Default::default()
         }))
     }
@@ -245,7 +237,13 @@ impl base::BaseModuleBackend for ManyServer {
 #[async_trait]
 impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
-        let request = crate::message::decode_request_from_cose_sign1(envelope.clone());
+        let request = {
+            let this = self.lock().unwrap();
+            crate::message::decode_request_from_cose_sign1(
+                envelope.clone(),
+                this.allowed_origins.clone(),
+            )
+        };
 
         let response = {
             let this = self.lock().unwrap();
