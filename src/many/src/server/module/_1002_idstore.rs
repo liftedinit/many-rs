@@ -1,4 +1,4 @@
-use crate::ManyError;
+use crate::{Identity, ManyError};
 use many_macros::many_module;
 
 #[cfg(test)]
@@ -17,7 +17,7 @@ pub use types::*;
 #[many_module(name = IdStoreModule, id = 1002, namespace = idstore, many_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait IdStoreModuleBackend: Send {
-    fn store(&mut self, args: StoreArgs) -> Result<StoreReturns, ManyError>;
+    fn store(&mut self, sender: &Identity, args: StoreArgs) -> Result<StoreReturns, ManyError>;
     fn get_from_recall_phrase(
         &self,
         args: GetFromRecallPhraseArgs,
@@ -28,7 +28,11 @@ pub trait IdStoreModuleBackend: Send {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{server::module::testutils::call_module_cbor, Identity, types::identity::cose::testsutils::generate_random_eddsa_identity};
+    use crate::{
+        server::module::testutils::call_module_cbor,
+        types::identity::{cose::testsutils::generate_random_eddsa_identity, tests::identity},
+        Identity,
+    };
     use coset::CborSerializable;
     use minicbor::bytes::ByteVec;
     use mockall::predicate;
@@ -43,12 +47,15 @@ mod tests {
         let data = StoreArgs {
             address: id.identity,
             cred_id: CredentialId(ByteVec::from(Vec::from([1u8; 16]))),
-            public_key: PublicKey(ByteVec::from(id.key.unwrap().to_vec().unwrap()))
+            public_key: PublicKey(ByteVec::from(id.key.unwrap().to_vec().unwrap())),
         };
         let ret = StoreReturns(vec!["foo".to_string(), "bar".to_string()]);
         let mut mock: MockIdStoreModuleBackend = MockIdStoreModuleBackend::new();
         mock.expect_store()
-            .with(predicate::eq(data.clone()))
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
             .times(1)
             .return_const(Ok(ret.clone()));
 
@@ -66,9 +73,9 @@ mod tests {
     fn get_from_recall_phrase() {
         let id = generate_random_eddsa_identity();
         let data = GetFromRecallPhraseArgs(vec!["foo".to_string(), "bar".to_string()]);
-        let ret = GetReturns{
+        let ret = GetReturns {
             cred_id: CredentialId(ByteVec::from(Vec::from([1u8; 16]))),
-            public_key: PublicKey(ByteVec::from(id.key.unwrap().to_vec().unwrap()))
+            public_key: PublicKey(ByteVec::from(id.key.unwrap().to_vec().unwrap())),
         };
         let mut mock: MockIdStoreModuleBackend = MockIdStoreModuleBackend::new();
         mock.expect_get_from_recall_phrase()
@@ -98,9 +105,9 @@ mod tests {
         let data = GetFromAddressArgs(
             Identity::from_str("maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp").unwrap(),
         );
-        let ret = GetReturns{
+        let ret = GetReturns {
             cred_id: CredentialId(ByteVec::from(Vec::from([1u8; 16]))),
-            public_key: PublicKey(ByteVec::from(id.key.unwrap().to_vec().unwrap()))
+            public_key: PublicKey(ByteVec::from(id.key.unwrap().to_vec().unwrap())),
         };
         let mut mock: MockIdStoreModuleBackend = MockIdStoreModuleBackend::new();
         mock.expect_get_from_address()
