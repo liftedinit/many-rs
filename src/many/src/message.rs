@@ -23,7 +23,6 @@ use sha2::Digest;
 
 use crate::cose_helpers::public_key;
 use crate::server::ManyUrl;
-use crate::server::ALLOWED_URLS;
 use crate::types::identity::cose::{CoseKeyIdentity, CoseKeyIdentitySignature};
 use crate::Identity;
 use signature::{Signature, Signer, Verifier};
@@ -31,10 +30,13 @@ use signature::{Signature, Signer, Verifier};
 #[cfg(test)]
 use serde::Serialize;
 
-pub fn decode_request_from_cose_sign1(sign1: CoseSign1) -> Result<RequestMessage, ManyError> {
+pub fn decode_request_from_cose_sign1(
+    sign1: CoseSign1,
+    allowed_origins: Option<Vec<ManyUrl>>,
+) -> Result<RequestMessage, ManyError> {
     let request = CoseSign1RequestMessage { sign1 };
     let from_id = request
-        .verify()
+        .verify(allowed_origins)
         .map_err(ManyError::could_not_verify_signature)?;
 
     let payload = request
@@ -60,7 +62,7 @@ pub fn decode_response_from_cose_sign1(
     to: Option<Identity>,
 ) -> Result<ResponseMessage, String> {
     let request = CoseSign1RequestMessage { sign1 };
-    let from_id = request.verify()?;
+    let from_id = request.verify(None)?;
 
     let payload = request
         .sign1
@@ -206,6 +208,7 @@ impl CoseSign1RequestMessage {
         &self,
         unprotected: BTreeMap<Label, Value>,
         key: CoseKeyIdentity,
+        allowed_origins: Option<Vec<ManyUrl>>,
     ) -> Result<(), String> {
         tracing::trace!("We got a WebAuthn request");
         tracing::trace!("Getting `clientData` from unprotected header");
@@ -223,16 +226,11 @@ impl CoseSign1RequestMessage {
         }
 
         tracing::trace!("Verifying origin");
-        {
-            let origin = ManyUrl::parse(&client_data_json.origin).map_err(|e| e.to_string())?;
-            ALLOWED_URLS.with(|urls| {
-                if let Some(urls) = urls.get().ok_or("ALLOWED_URLS was not initialized")? {
-                    if !urls.contains(&origin) {
-                        return Err("Origin not allowed".to_string());
-                    }
-                }
-                Ok(())
-            })?;
+        let origin = ManyUrl::parse(&client_data_json.origin).map_err(|e| e.to_string())?;
+        if let Some(urls) = allowed_origins {
+            if !urls.contains(&origin) {
+                return Err("Origin not allowed".to_string());
+            }
         }
 
         tracing::trace!("Getting `authData` from unprotected header");
@@ -310,7 +308,7 @@ impl CoseSign1RequestMessage {
         Ok(())
     }
 
-    pub fn verify(&self) -> Result<Identity, String> {
+    pub fn verify(&self, allowed_origins: Option<Vec<ManyUrl>>) -> Result<Identity, String> {
         if !self.sign1.protected.header.key_id.is_empty() {
             if let Ok(id) = Identity::from_bytes(&self.sign1.protected.header.key_id) {
                 if id.is_anonymous() {
@@ -323,7 +321,7 @@ impl CoseSign1RequestMessage {
                 let unprotected =
                     BTreeMap::from_iter(self.sign1.unprotected.rest.clone().into_iter());
                 if unprotected.contains_key(&Label::Text("webauthn".to_string())) {
-                    self._verify_webauthn(unprotected, key)?;
+                    self._verify_webauthn(unprotected, key, allowed_origins)?;
                 } else {
                     self._verify(key)?;
                 }
@@ -379,12 +377,6 @@ mod tests {
         );
         CoseSign1::from_slice(&hex::decode(cbor).unwrap()).unwrap()
     });
-
-    fn setup() {
-        ALLOWED_URLS.with(|f| {
-            f.get_or_init(|| Some(vec![ManyUrl::parse("https://localhost:3000").unwrap()]));
-        });
-    }
 
     enum UnprotectedHeaderFieldType {
         Rest { field: String, value: Value },
@@ -475,8 +467,6 @@ mod tests {
     where
         T: FnOnce() + std::panic::UnwindSafe,
     {
-        setup();
-
         let result = std::panic::catch_unwind(test);
 
         assert!(result.is_ok())
@@ -488,7 +478,7 @@ mod tests {
             assert!(CoseSign1RequestMessage {
                 sign1: ENVELOPE.clone()
             }
-            .verify()
+            .verify(None)
             .is_ok())
         });
     }
@@ -502,7 +492,7 @@ mod tests {
                     value: Value::Bytes(vec![1, 2, 3])
                 }
             ))
-            .verify()
+            .verify(None)
             .is_err());
         });
     }
@@ -516,7 +506,7 @@ mod tests {
                     value: Value::Bytes(vec![1, 2, 3])
                 }
             ))
-            .verify()
+            .verify(None)
             .is_err());
         });
     }
@@ -530,7 +520,7 @@ mod tests {
                     value: Value::Text("Foobar".to_string())
                 }
             ))
-            .verify()
+            .verify(None)
             .is_err());
         });
     }
@@ -541,7 +531,7 @@ mod tests {
             assert!(get_tampered_request(Cose1FieldType::Unprotected(
                 UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Challenge)
             ))
-            .verify()
+            .verify(None)
             .is_err());
         });
     }
@@ -554,7 +544,7 @@ mod tests {
                     "Foobar".to_string()
                 ))
             ))
-            .verify()
+            .verify(None)
             .is_err());
         });
     }
@@ -567,7 +557,7 @@ mod tests {
                     "https://test.com".to_string()
                 ))
             ))
-            .verify()
+            .verify(Some(vec![ManyUrl::parse("https://foobar.com").unwrap()]))
             .is_err());
         });
     }
@@ -576,7 +566,7 @@ mod tests {
     fn webauthn_tamper_payload() {
         run_test(|| {
             assert!(get_tampered_request(Cose1FieldType::Payload(vec![1, 2, 3]))
-                .verify()
+                .verify(None)
                 .is_err());
         });
     }
@@ -588,7 +578,7 @@ mod tests {
                 field: "Foobar".to_string(),
                 value: Value::Bool(true)
             })
-            .verify()
+            .verify(None)
             .is_err());
         });
     }
