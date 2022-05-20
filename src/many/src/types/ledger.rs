@@ -785,8 +785,8 @@ mod test {
 
     #[test]
     fn tx_info_is_about() {
-        let i0 = Identity::public_key_raw_([0; 28]);
-        let i1 = Identity::public_key_raw_([1; 28]);
+        let i0 = Identity::public_key_raw([0; 28]);
+        let i1 = Identity::public_key_raw([1; 28]);
         let i01 = i0.with_subresource_id_unchecked(1);
         let i11 = i1.with_subresource_id_unchecked(1);
 
@@ -804,8 +804,8 @@ mod test {
 
     #[test]
     fn tx_info_symbol() {
-        let i0 = Identity::public_key_raw_([0; 28]);
-        let i1 = Identity::public_key_raw_([1; 28]);
+        let i0 = Identity::public_key_raw([0; 28]);
+        let i1 = Identity::public_key_raw([1; 28]);
         let i01 = i0.with_subresource_id_unchecked(1);
 
         let tx = TransactionInfo::Send {
@@ -830,8 +830,8 @@ mod test {
             transaction: AccountMultisigTransaction,
         ) -> TransactionInfo {
             TransactionInfo::AccountMultisigSubmit {
-                submitter: Identity::public_key_raw_([0; 28]),
-                account: Identity::public_key_raw_([1; 28]),
+                submitter: Identity::public_key_raw([0; 28]),
+                account: Identity::public_key_raw([1; 28]),
                 memo: Some(memo),
                 transaction: Box::new(transaction),
                 token: None,
@@ -854,9 +854,9 @@ mod test {
             fn submit_send(memo in "\\PC*", amount: u64) {
                 _assert_serde(
                     _create_tx_info(memo, vec![], AccountMultisigTransaction::Send(module::ledger::SendArgs {
-                        from: Some(Identity::public_key_raw_([2; 28])),
-                        to: Identity::public_key_raw_([3; 28]),
-                        symbol: Identity::public_key_raw_([4; 28]),
+                        from: Some(Identity::public_key_raw([2; 28])),
+                        to: Identity::public_key_raw([3; 28]),
+                        symbol: Identity::public_key_raw([4; 28]),
                         amount: amount.into(),
                     })),
                 );
@@ -868,12 +868,12 @@ mod test {
                     _create_tx_info(memo, vec![],
                         AccountMultisigTransaction::AccountMultisigSubmit(
                             module::account::features::multisig::SubmitTransactionArgs {
-                                account: Identity::public_key_raw_([2; 28]),
+                                account: Identity::public_key_raw([2; 28]),
                                 memo: Some(memo2),
                                 transaction: Box::new(AccountMultisigTransaction::Send(module::ledger::SendArgs {
-                                    from: Some(Identity::public_key_raw_([2; 28])),
-                                    to: Identity::public_key_raw_([3; 28]),
-                                    symbol: Identity::public_key_raw_([4; 28]),
+                                    from: Some(Identity::public_key_raw([2; 28])),
+                                    to: Identity::public_key_raw([3; 28]),
+                                    symbol: Identity::public_key_raw([4; 28]),
                                     amount: amount.into(),
                                 })),
                                 threshold: None,
@@ -890,7 +890,7 @@ mod test {
             fn submit_set_defaults(memo in "\\PC*") {
                 _assert_serde(
                     _create_tx_info(memo, vec![], AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
-                        account: Identity::public_key_raw_([2; 28]),
+                        account: Identity::public_key_raw([2; 28]),
                         threshold: Some(2),
                         timeout_in_secs: None,
                         execute_automatically: Some(false),
