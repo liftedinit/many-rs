@@ -406,9 +406,7 @@ macro_rules! define_tx_info_symbol {
                     define_tx_info_symbol!(@return_symbol $( $fname $( $tag )*, )* );
 
                     // If we're here, we need to go deeper. Check if there's an inner.
-                    // TODO: implement this for recursively checking if inner infos
-                    // has a symbol defined.
-                    // define_tx_info_symbol!(@inner $( $fname $( $tag )*, )*);
+                    define_tx_info_symbol!(@inner $( $fname $( $tag )*, )*);
                 } )*
             }
 
@@ -451,9 +449,7 @@ macro_rules! define_tx_info_is_about {
                     define_tx_info_is_about!(@check_id id $( $fname $( $tag )*, )* );
 
                     // Inner fields might match the identity.
-                    // TODO: implement this for recursively checking if inner infos
-                    // has a symbol defined.
-                    // define_tx_info_is_about!(@inner id $( $fname $( $tag )*, )* );
+                    define_tx_info_is_about!(@inner id $( $fname $( $tag )*, )* );
                 } )*
             }
             false
@@ -547,6 +543,18 @@ macro_rules! define_multisig_tx {
         #[derive(Clone, Debug)]
         pub enum AccountMultisigTransaction {
             $( $( $name($arg), )? )*
+        }
+
+        impl AccountMultisigTransaction {
+            pub fn symbol(&self) -> Option<&Identity> {
+                // TODO: implement this for recursively checking if inner infos
+                // has a symbol defined.
+                None
+            }
+
+            pub fn is_about(&self, _id: &Identity) -> bool {
+                false
+            }
         }
 
         impl Encode for AccountMultisigTransaction {
