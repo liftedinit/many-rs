@@ -308,15 +308,11 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
     }
 }
 
-#[cfg(test)]
-pub mod tests {
+#[cfg(feature = "testing")]
+pub mod testsutils {
+    use super::*;
     use ed25519_dalek::Keypair;
     use rand_07::rngs::OsRng;
-
-    use super::*;
-
-    // MSG == FOOBAR
-    const MSG: &[u8] = &[70, 79, 79, 66, 65, 82];
 
     pub fn generate_random_eddsa_identity() -> CoseKeyIdentity {
         let mut csprng = OsRng {};
@@ -329,6 +325,14 @@ pub mod tests {
 
         CoseKeyIdentity::from_key(cose_key, false).unwrap()
     }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    // MSG == FOOBAR
+    const MSG: &[u8] = &[70, 79, 79, 66, 65, 82];
 
     pub fn eddsa_identity() -> CoseKeyIdentity {
         let pem = "-----BEGIN PRIVATE KEY-----\n\

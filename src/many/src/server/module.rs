@@ -29,6 +29,7 @@ reexport_module!(
     account: _9_account;
     abci_backend: _1000_abci_backend;
     abci_frontend: _1001_abci_frontend;
+    idstore: _1002_idstore;
 );
 
 /// The specification says that some methods returns nothing (e.g. void or unit).
