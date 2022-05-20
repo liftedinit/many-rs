@@ -7,5 +7,5 @@ pub use send::*;
 
 #[many_module(name = LedgerCommandsModule, id = 6, namespace = ledger, many_crate = crate)]
 pub trait LedgerCommandsModuleBackend: Send {
-    fn send(&mut self, sender: &Identity, args: SendArgs) -> Result<(), ManyError>;
+    fn send(&mut self, sender: &Identity, args: SendArgs) -> Result<SendReturns, ManyError>;
 }
