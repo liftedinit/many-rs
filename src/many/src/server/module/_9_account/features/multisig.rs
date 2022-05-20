@@ -1,8 +1,9 @@
 use crate::cbor::CborAny;
 use crate::message::ResponseMessage;
 use crate::server::module::account::features::{Feature, FeatureId, TryCreateFeature};
+use crate::server::module::ledger::SendArgs;
 use crate::server::module::EmptyReturn;
-use crate::types::ledger::{TokenAmount, TransactionInfo};
+use crate::types::ledger::{AccountMultisigTransaction, TokenAmount};
 use crate::types::Timestamp;
 use crate::{Identity, ManyError};
 use many_macros::many_module;
@@ -22,7 +23,7 @@ pub mod errors {
     );
 }
 
-#[derive(Default, Clone, Encode, Decode)]
+#[derive(Default, Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct MultisigAccountFeatureArg {
     #[n(0)]
@@ -119,17 +120,17 @@ impl super::FeatureInfo for MultisigAccountFeature {
     }
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct SubmitTransactionArgs {
     #[n(0)]
-    pub account: Option<Identity>,
+    pub account: Identity,
 
     #[n(1)]
     pub memo: Option<String>,
 
     #[n(2)]
-    pub transaction: TransactionInfo,
+    pub transaction: Box<AccountMultisigTransaction>,
 
     #[n(3)]
     pub threshold: Option<u64>,
@@ -147,14 +148,14 @@ pub struct SubmitTransactionArgs {
 impl SubmitTransactionArgs {
     pub fn send(from: Identity, to: Identity, symbol: Identity, amount: TokenAmount) -> Self {
         Self {
-            account: Some(from),
+            account: from,
             memo: None,
-            transaction: TransactionInfo::Send {
-                from,
+            transaction: Box::new(AccountMultisigTransaction::Send(SendArgs {
+                from: Some(from),
                 to,
                 symbol,
                 amount,
-            },
+            })),
             threshold: None,
             timeout_in_secs: None,
             execute_automatically: None,
@@ -163,14 +164,14 @@ impl SubmitTransactionArgs {
     }
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct SubmitTransactionReturn {
     #[n(0)]
     pub token: ByteVec,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct InfoArgs {
     #[n(0)]
@@ -191,7 +192,7 @@ pub struct InfoReturn {
     pub memo: Option<String>,
 
     #[n(1)]
-    pub transaction: TransactionInfo,
+    pub transaction: AccountMultisigTransaction,
 
     #[n(2)]
     pub submitter: Identity,
@@ -212,7 +213,7 @@ pub struct InfoReturn {
     pub data: Option<ByteVec>,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct SetDefaultsArgs {
     #[n(0)]
@@ -230,7 +231,7 @@ pub struct SetDefaultsArgs {
 
 pub type SetDefaultsReturn = EmptyReturn;
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct ApproveArgs {
     #[n(0)]
@@ -239,7 +240,7 @@ pub struct ApproveArgs {
 
 pub type ApproveReturn = EmptyReturn;
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct RevokeArgs {
     #[n(0)]
@@ -248,14 +249,14 @@ pub struct RevokeArgs {
 
 pub type RevokeReturn = EmptyReturn;
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct ExecuteArgs {
     #[n(0)]
     pub token: ByteVec,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct WithdrawArgs {
     #[n(0)]

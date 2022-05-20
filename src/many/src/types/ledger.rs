@@ -1,4 +1,6 @@
-use crate::types::{Percent, Timestamp};
+use crate::server::module;
+use crate::server::module::account::features::FeatureSet;
+use crate::types::{AttributeRelatedIndex, Percent, Timestamp};
 use crate::Identity;
 use minicbor::bytes::ByteVec;
 use minicbor::data::{Tag, Type};
@@ -6,6 +8,7 @@ use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::{BigInt, BigUint};
 use num_traits::Num;
 use serde::Deserialize;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
 
@@ -322,120 +325,159 @@ impl From<TransactionId> for Vec<u8> {
     }
 }
 
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
-#[repr(u8)]
-pub enum TransactionKind {
-    Send,
-    MultisigSubmit,
-    MultisigApprove,
-    MultisigRevoke,
-    MultisigExecute,
-    MultisigWithdraw,
-    MultisigSetDefaults,
-}
+macro_rules! define_tx_kind {
+    ( $( [ $index: literal $(, $sub: literal )* ] $name: ident { $( $idx: literal | $fname: ident : $type: ty, )* }, )* ) => {
+        #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+        #[non_exhaustive]
+        #[repr(u8)]
+        pub enum TransactionKind {
+            $( $name ),*
+        }
 
-impl Encode for TransactionKind {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
-        match self {
-            TransactionKind::Send => e.u8(0),
-            TransactionKind::MultisigSubmit => e.array(3)?.u8(9)?.u8(1)?.u8(0),
-            TransactionKind::MultisigApprove => e.array(3)?.u8(9)?.u8(1)?.u8(1),
-            TransactionKind::MultisigRevoke => e.array(3)?.u8(9)?.u8(1)?.u8(2),
-            TransactionKind::MultisigExecute => e.array(3)?.u8(9)?.u8(1)?.u8(3),
-            TransactionKind::MultisigWithdraw => e.array(3)?.u8(9)?.u8(1)?.u8(4),
-            TransactionKind::MultisigSetDefaults => e.array(3)?.u8(9)?.u8(1)?.u8(5),
-        }?;
-        Ok(())
-    }
-}
+        impl From<TransactionKind> for AttributeRelatedIndex {
+            fn from(other: TransactionKind) -> Self {
+                match other {
+                    $( TransactionKind :: $name => AttributeRelatedIndex::new($index) $(.with_index($sub))* ),*
+                }
+            }
+        }
 
-impl<'b> Decode<'b> for TransactionKind {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-        match d.datatype()? {
-            Type::U8 | Type::U16 | Type::U32 | Type::U64 => match d.u32()? {
-                0 => Ok(Self::Send),
-                x => Err(minicbor::decode::Error::UnknownVariant(x)),
-            },
-            Type::Array | Type::ArrayIndef => match d.decode::<Vec<u32>>()?.as_slice() {
-                [9, 1, 0] => Ok(Self::MultisigSubmit),
-                [9, 1, 1] => Ok(Self::MultisigApprove),
-                [9, 1, 2] => Ok(Self::MultisigRevoke),
-                [9, 1, 3] => Ok(Self::MultisigExecute),
-                [9, 1, 4] => Ok(Self::MultisigWithdraw),
-                [9, 1, 5] => Ok(Self::MultisigSetDefaults),
-                _ => Err(minicbor::decode::Error::Message("Invalid variant")),
-            },
-            x => Err(minicbor::decode::Error::TypeMismatch(
-                x,
-                "An array or integer.",
-            )),
+        impl From<&TransactionInfo> for TransactionKind {
+            fn from(other: &TransactionInfo) -> Self {
+                match other {
+                    $( TransactionInfo :: $name { .. } => TransactionKind :: $name ),*
+                }
+            }
+        }
+
+        impl TryFrom<AttributeRelatedIndex> for TransactionKind {
+            type Error = Vec<u32>;
+
+            fn try_from(other: AttributeRelatedIndex) -> Result<Self, Vec<u32>> {
+                match &other.flattened()[..] {
+                    $( [ $index $(, $sub)* ] => Ok( TransactionKind :: $name ), )*
+                    x => Err(x.to_vec()),
+                }
+            }
+        }
+
+        impl Encode for TransactionKind {
+            fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+                Into::<AttributeRelatedIndex>::into(*self).encode(e)
+            }
+        }
+
+        impl<'b> Decode<'b> for TransactionKind {
+            fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+                TryFrom::try_from(d.decode::<AttributeRelatedIndex>()?)
+                    .map_err(|_| minicbor::decode::Error::Message("Invalid attribute index"))
+            }
         }
     }
 }
 
-#[derive(Encode, Decode)]
-#[cbor(map)]
-pub struct Transaction {
-    #[n(0)]
-    pub id: TransactionId,
+macro_rules! define_tx_info_symbol {
+    (@return_symbol) => {};
+    (@return_symbol $name: ident symbol $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        return Some(& $name)
+    };
+    (@return_symbol $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
+        define_tx_info_symbol!(@return_symbol $( $name $( $tag )*, )* )
+    };
 
-    #[n(1)]
-    pub time: Timestamp,
+    (@inner) => {};
+    (@inner $name: ident inner $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if let Some(s) = $name .symbol() {
+            return Some(s);
+        }
+    };
+    (@inner $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
+        define_tx_info_symbol!(@inner $( $name $( $tag )*, )* )
+    };
 
-    #[n(2)]
-    pub content: TransactionInfo,
+    ( $( $name: ident { $( $fname: ident $( $tag: ident )* , )* } )* ) => {
+        pub fn symbol(&self) -> Option<&Symbol> {
+            match self {
+                $( TransactionInfo :: $name {
+                    $( $fname, )*
+                } => {
+                    // Remove warnings.
+                    $( let _ = $fname; )*
+                    define_tx_info_symbol!(@return_symbol $( $fname $( $tag )*, )* );
+
+                    // If we're here, we need to go deeper. Check if there's an inner.
+                    // TODO: implement this for recursively checking if inner infos
+                    // has a symbol defined.
+                    // define_tx_info_symbol!(@inner $( $fname $( $tag )*, )*);
+                } )*
+            }
+
+            None
+        }
+    };
 }
 
-impl Transaction {
-    pub fn kind(&self) -> TransactionKind {
-        match self.content {
-            TransactionInfo::Send { .. } => TransactionKind::Send,
-            TransactionInfo::MultisigSubmit { .. } => TransactionKind::MultisigSubmit,
-            TransactionInfo::MultisigApprove { .. } => TransactionKind::MultisigApprove,
-            TransactionInfo::MultisigRevoke { .. } => TransactionKind::MultisigRevoke,
-            TransactionInfo::MultisigExecute { .. } => TransactionKind::MultisigExecute,
-            TransactionInfo::MultisigWithdraw { .. } => TransactionKind::MultisigWithdraw,
-            TransactionInfo::MultisigSetDefaults { .. } => TransactionKind::MultisigSetDefaults,
+macro_rules! define_tx_info_is_about {
+    (@check_id $id: ident) => {};
+    (@check_id $id: ident $name: ident id $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if $name == $id {
+            return true;
         }
-    }
+        define_tx_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
+    };
+    (@check_id $id: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
+        define_tx_info_is_about!(@check_id $id $( $name $( $tag )*, )* )
+    };
 
-    pub fn symbol(&self) -> Option<&Identity> {
-        match &self.content {
-            TransactionInfo::Send { symbol, .. } => Some(symbol),
-            TransactionInfo::MultisigSubmit { .. } => None,
-            TransactionInfo::MultisigApprove { .. } => None,
-            TransactionInfo::MultisigRevoke { .. } => None,
-            TransactionInfo::MultisigExecute { .. } => None,
-            TransactionInfo::MultisigWithdraw { .. } => None,
-            TransactionInfo::MultisigSetDefaults { .. } => None,
+    (@inner $id: ident) => {};
+    (@inner $id: ident $name: ident inner $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if $name .is_about($id) {
+            return true;
         }
-    }
+        define_tx_info_is_about!(@inner $id $( $name_ $( $tag_ )*, )* )
+    };
+    (@inner $id: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
+        define_tx_info_is_about!(@inner $id $( $name $( $tag )*, )* )
+    };
 
-    pub fn is_about(&self, id: &Identity) -> bool {
-        match &self.content {
-            TransactionInfo::Send { from, to, .. } => id == from || id == to,
-            TransactionInfo::MultisigSubmit {
-                account, submitter, ..
-            } => id == submitter || id == account,
-            TransactionInfo::MultisigApprove {
-                account, approver, ..
-            } => id == approver || id == account,
-            TransactionInfo::MultisigRevoke {
-                account, revoker, ..
-            } => id == revoker || id == account,
-            TransactionInfo::MultisigExecute {
-                account, executer, ..
-            } => Some(id) == executer.as_ref() || id == account,
-            TransactionInfo::MultisigWithdraw {
-                account,
-                withdrawer,
-                ..
-            } => id == withdrawer || id == account,
-            TransactionInfo::MultisigSetDefaults {
-                account, submitter, ..
-            } => submitter.map(|ref e| id == e).unwrap_or(false) || id == account,
+    ( $( $name: ident { $( $fname: ident $( $tag: ident )* , )* } )* ) => {
+        pub fn is_about(&self, id: &Identity) -> bool {
+            match self {
+                $( TransactionInfo :: $name {
+                    $( $fname, )*
+                } => {
+                    // Remove warnings.
+                    $( let _ = $fname; )*
+                    define_tx_info_is_about!(@check_id id $( $fname $( $tag )*, )* );
+
+                    // Inner fields might match the identity.
+                    // TODO: implement this for recursively checking if inner infos
+                    // has a symbol defined.
+                    // define_tx_info_is_about!(@inner id $( $fname $( $tag )*, )* );
+                } )*
+            }
+            false
         }
-    }
+    };
+}
+
+macro_rules! define_tx_info {
+    ( $( $name: ident { $( $idx: literal | $fname: ident : $type: ty $([ $( $tag: ident )* ])?, )* }, )* ) => {
+        #[derive(Clone, Debug)]
+        #[non_exhaustive]
+        pub enum TransactionInfo {
+            $( $name {
+                $( $fname: $type ),*
+            } ),*
+        }
+
+        impl TransactionInfo {
+            define_tx_info_symbol!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
+            define_tx_info_is_about!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
+        }
+
+        encode_tx_info!( $( $name { $( $idx => $fname : $type, )* }, )* );
+    };
 }
 
 // This is necessary because variables must be used in repeating patterns.
@@ -500,106 +542,172 @@ macro_rules! encode_tx_info {
     }
 }
 
-#[derive(Clone, Debug)]
-#[non_exhaustive]
-pub enum TransactionInfo {
-    Send {
-        from: Identity,
-        to: Identity,
-        symbol: Symbol,
-        amount: TokenAmount,
-    },
+macro_rules! define_multisig_tx {
+    ( $( $name: ident $(: $arg: ty )?, )* ) => {
+        #[derive(Clone, Debug)]
+        pub enum AccountMultisigTransaction {
+            $( $( $name($arg), )? )*
+        }
 
-    MultisigSubmit {
-        submitter: Identity,
-        account: Identity,
-        memo: Option<String>,
-        transaction: Box<TransactionInfo>,
-        token: Option<ByteVec>,
-        threshold: u64,
-        timeout: Timestamp,
-        execute_automatically: bool,
-        data: Option<ByteVec>,
-    },
+        impl Encode for AccountMultisigTransaction {
+            fn encode<W: encode::Write>(
+                &self,
+                e: &mut Encoder<W>,
+            ) -> Result<(), encode::Error<W::Error>> {
+                match self {
+                    $(
+                    $( AccountMultisigTransaction :: $name(arg) => {
+                        let _: $arg;  // We do this to remove a macro error for not using $arg.
+                        e.map(2)?
+                         .u8(0)?.encode(TransactionKind:: $name)?
+                         .u8(1)?.encode(arg)?;
+                    }, )?
+                    )*
+                }
+                Ok(())
+            }
+        }
 
-    MultisigApprove {
-        account: Identity,
-        token: ByteVec,
-        approver: Identity,
-    },
+        impl<'b> Decode<'b> for AccountMultisigTransaction {
+            fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+                let len = d.map()?.ok_or(minicbor::decode::Error::Message(
+                    "Invalid transaction type.",
+                ))?;
 
-    MultisigRevoke {
-        account: Identity,
-        token: ByteVec,
-        revoker: Identity,
-    },
+                if len != 2 {
+                    return Err(minicbor::decode::Error::Message("Transactions must have 2 values"));
+                }
+                if d.u8()? != 0 {
+                    return Err(minicbor::decode::Error::Message(
+                        "TransactionKind should be the first item.",
+                    ));
+                }
+                match d.decode::<TransactionKind>()? {
+                    $(
+                    $(  TransactionKind :: $name => {
+                        let _: $arg;  // We do this to remove a macro error for not using $arg.
+                        if d.u8()? != 1 {
+                            Err(minicbor::decode::Error::Message("Invalid field index"))
+                        } else {
+                            Ok(Self :: $name(d.decode()?))
+                        }
+                    }, )?
+                    )*
+                    _ => return Err(minicbor::decode::Error::Message("Unsupported transaction kind"))
+                }
+            }
+        }
+    }
+}
 
-    MultisigExecute {
-        account: Identity,
-        token: ByteVec,
-        executer: Option<Identity>,
-    },
+macro_rules! define_tx {
+    ( $( [ $index: literal $(, $sub: literal )* ] $name: ident $(($method_arg: ty))? { $( $idx: literal | $fname: ident : $type: ty $([ $($tag: ident)* ])?, )* }, )* ) => {
+        define_tx_kind!( $( [ $index $(, $sub )* ] $name { $( $idx | $fname : $type, )* }, )* );
+        define_tx_info!( $( $name { $( $idx | $fname : $type $([ $( $tag )* ])?, )* }, )* );
 
-    MultisigWithdraw {
-        account: Identity,
-        token: ByteVec,
-        withdrawer: Identity,
-    },
+        define_multisig_tx!( $( $name $(: $method_arg)?, )*);
+    }
+}
 
-    MultisigSetDefaults {
-        submitter: Option<Identity>,
-        account: Identity,
-        threshold: Option<u64>,
-        timeout_in_secs: Option<u64>,
-        execute_automatically: Option<bool>,
+// We flatten the attribute related index here, but it is unflattened when serializing.
+define_tx! {
+    [4, 0]      Send (module::ledger::SendArgs) {
+        1     | from:                   Identity                                [ id ],
+        2     | to:                     Identity                                [ id ],
+        3     | symbol:                 Symbol                                  [ symbol ],
+        4     | amount:                 TokenAmount,
+    },
+    [9, 0]      AccountCreate {
+        1     | account:                Identity                                [ id ],
+        2     | description:            Option<String>,
+        3     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
+        4     | features:               FeatureSet,
+    },
+    [9, 1]      AccountSetDescription {
+        1     | account:                Identity                                [ id ],
+        2     | description:            String,
+    },
+    [9, 2]      AccountAddRoles {
+        1     | account:                Identity                                [ id ],
+        2     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
+    },
+    [9, 3]      AccountRemoveRoles {
+        1     | account:                Identity                                [ id ],
+        2     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
+    },
+    [9, 4]      AccountDelete {
+        1     | account:                Identity                                [ id ],
+    },
+    [9, 5]      AccountAddFeatures {
+        1     | account:                Identity                                [ id ],
+        2     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
+        3     | features:               FeatureSet,
+    },
+    [9, 1, 0]   AccountMultisigSubmit (module::account::features::multisig::SubmitTransactionArgs) {
+        1     | submitter:              Identity                                [ id ],
+        2     | account:                Identity                                [ id ],
+        3     | memo:                   Option<String>,
+        4     | transaction:            Box<AccountMultisigTransaction>         [ inner ],
+        5     | token:                  Option<ByteVec>,
+        6     | threshold:              u64,
+        7     | timeout:                Timestamp,
+        8     | execute_automatically:  bool,
+        9     | data:                   Option<ByteVec>,
+    },
+    [9, 1, 1]   AccountMultisigApprove {
+        1     | account:                Identity                                [ id ],
+        2     | token:                  ByteVec,
+        3     | approver:               Identity                                [ id ],
+    },
+    [9, 1, 2]   AccountMultisigRevoke {
+        1     | account:                Identity                                [ id ],
+        2     | token:                  ByteVec,
+        3     | revoker:                Identity                                [ id ],
+    },
+    [9, 1, 3]   AccountMultisigExecute {
+        1     | account:                Identity                                [ id ],
+        2     | token:                  ByteVec,
+        3     | executer:               Identity                                [ id ],
+    },
+    [9, 1, 4]   AccountMultisigWithdraw {
+        1     | account:                Identity                                [ id ],
+        2     | token:                  ByteVec,
+        3     | withdrawer:             Identity                                [ id ],
+    },
+    [9, 1, 5]   AccountMultisigSetDefaults (module::account::features::multisig::SetDefaultsArgs) {
+        1     | submitter:              Identity                                [ id ],
+        2     | account:                Identity                                [ id ],
+        3     | threshold:              Option<u64>,
+        4     | timeout_in_secs:        Option<u64>,
+        5     | execute_automatically:  Option<bool>,
     },
 }
 
-encode_tx_info! {
-    Send {
-        1 => from: Identity,
-        2 => to: Identity,
-        3 => symbol: Symbol,
-        4 => amount: TokenAmount,
-    },
-    MultisigSubmit {
-        1 => submitter: Identity,
-        2 => account: Identity,
-        3 => memo: Option<String>,
-        4 => transaction: Box<TransactionInfo>,
-        5 => token: Option<ByteVec>,
-        6 => threshold: u64,
-        7 => timeout: Timestamp,
-        8 => execute_automatically: bool,
-        9 => data: Option<ByteVec>,
-    },
-    MultisigApprove {
-        1 => account: Identity,
-        2 => token: ByteVec,
-        3 => approver: Identity,
-    },
-    MultisigRevoke {
-        1 => account: Identity,
-        2 => token: ByteVec,
-        3 => revoker: Identity,
-    },
-    MultisigExecute {
-        1 => account: Identity,
-        2 => token: ByteVec,
-        3 => executer: Option<Identity>,
-    },
-    MultisigWithdraw {
-        1 => account: Identity,
-        2 => token: ByteVec,
-        3 => withdrawer: Identity,
-    },
-    MultisigSetDefaults {
-        1 => submitter: Option<Identity>,
-        2 => account: Identity,
-        3 => threshold: Option<u64>,
-        4 => timeout_in_secs: Option<u64>,
-        5 => execute_automatically: Option<bool>,
-    },
+#[derive(Encode, Decode)]
+#[cbor(map)]
+pub struct Transaction {
+    #[n(0)]
+    pub id: TransactionId,
+
+    #[n(1)]
+    pub time: Timestamp,
+
+    #[n(2)]
+    pub content: TransactionInfo,
+}
+
+impl Transaction {
+    pub fn kind(&self) -> TransactionKind {
+        TransactionKind::from(&self.content)
+    }
+
+    pub fn symbol(&self) -> Option<&Identity> {
+        self.content.symbol()
+    }
+
+    pub fn is_about(&self, id: &Identity) -> bool {
+        self.content.is_about(id)
+    }
 }
 
 #[cfg(test)]
@@ -667,6 +775,43 @@ mod test {
         assert_eq!(Into::<Vec<u8>>::into(t2), (v - 1).to_be_bytes());
     }
 
+    #[test]
+    fn tx_info_is_about() {
+        let i0 = Identity::public_key_raw_([0; 28]);
+        let i1 = Identity::public_key_raw_([1; 28]);
+        let i01 = i0.with_subresource_id_unchecked(1);
+        let i11 = i1.with_subresource_id_unchecked(1);
+
+        let s0 = TransactionInfo::Send {
+            from: i0,
+            to: i01,
+            symbol: Default::default(),
+            amount: Default::default(),
+        };
+        assert!(s0.is_about(&i0));
+        assert!(s0.is_about(&i01));
+        assert!(!s0.is_about(&i1));
+        assert!(!s0.is_about(&i11));
+    }
+
+    #[test]
+    fn tx_info_symbol() {
+        let i0 = Identity::public_key_raw_([0; 28]);
+        let i1 = Identity::public_key_raw_([1; 28]);
+        let i01 = i0.with_subresource_id_unchecked(1);
+
+        let tx = TransactionInfo::Send {
+            from: i0,
+            to: i01,
+            symbol: i1,
+            amount: Default::default(),
+        };
+        assert_eq!(tx.symbol(), Some(&i1));
+
+        let tx = TransactionInfo::AccountDelete { account: i0 };
+        assert_eq!(tx.symbol(), None);
+    }
+
     mod tx_info {
         use super::super::*;
         use proptest::prelude::*;
@@ -674,9 +819,9 @@ mod test {
         fn _create_tx_info(
             memo: String,
             data: Vec<u8>,
-            transaction: TransactionInfo,
+            transaction: AccountMultisigTransaction,
         ) -> TransactionInfo {
-            TransactionInfo::MultisigSubmit {
+            TransactionInfo::AccountMultisigSubmit {
                 submitter: Identity::public_key_raw_([0; 28]),
                 account: Identity::public_key_raw_([1; 28]),
                 memo: Some(memo),
@@ -690,9 +835,7 @@ mod test {
         }
 
         fn _assert_serde(info: TransactionInfo) {
-            eprintln!("info: {:?}", info);
             let bytes = minicbor::to_vec(info.clone()).expect("Could not serialize");
-            eprintln!("bytes: {}", hex::encode(&bytes));
             let decoded: TransactionInfo = minicbor::decode(&bytes).expect("Could not decode");
 
             assert_eq!(format!("{:?}", decoded), format!("{:?}", info));
@@ -702,12 +845,12 @@ mod test {
             #[test]
             fn submit_send(memo in "\\PC*", amount: u64) {
                 _assert_serde(
-                    _create_tx_info(memo, vec![], TransactionInfo::Send {
-                        from: Identity::public_key_raw_([2; 28]),
+                    _create_tx_info(memo, vec![], AccountMultisigTransaction::Send(module::ledger::SendArgs {
+                        from: Some(Identity::public_key_raw_([2; 28])),
                         to: Identity::public_key_raw_([3; 28]),
                         symbol: Identity::public_key_raw_([4; 28]),
                         amount: amount.into(),
-                    })
+                    })),
                 );
             }
 
@@ -715,12 +858,22 @@ mod test {
             fn submit_submit_send(memo in "\\PC*", memo2 in "\\PC*", amount: u64) {
                 _assert_serde(
                     _create_tx_info(memo, vec![],
-                        _create_tx_info(memo2, vec![], TransactionInfo::Send {
-                            from: Identity::public_key_raw_([2; 28]),
-                            to: Identity::public_key_raw_([3; 28]),
-                            symbol: Identity::public_key_raw_([4; 28]),
-                            amount: amount.into(),
-                        }),
+                        AccountMultisigTransaction::AccountMultisigSubmit(
+                            module::account::features::multisig::SubmitTransactionArgs {
+                                account: Identity::public_key_raw_([2; 28]),
+                                memo: Some(memo2),
+                                transaction: Box::new(AccountMultisigTransaction::Send(module::ledger::SendArgs {
+                                    from: Some(Identity::public_key_raw_([2; 28])),
+                                    to: Identity::public_key_raw_([3; 28]),
+                                    symbol: Identity::public_key_raw_([4; 28]),
+                                    amount: amount.into(),
+                                })),
+                                threshold: None,
+                                timeout_in_secs: None,
+                                execute_automatically: None,
+                                data: None,
+                            }
+                        )
                     )
                 );
             }
@@ -728,13 +881,12 @@ mod test {
             #[test]
             fn submit_set_defaults(memo in "\\PC*") {
                 _assert_serde(
-                    _create_tx_info(memo, vec![], TransactionInfo::MultisigSetDefaults {
+                    _create_tx_info(memo, vec![], AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
                         account: Identity::public_key_raw_([2; 28]),
-                        submitter: Some(Identity::public_key_raw_([3; 28])),
                         threshold: Some(2),
                         timeout_in_secs: None,
                         execute_automatically: Some(false),
-                    })
+                    }))
                 );
             }
         }
