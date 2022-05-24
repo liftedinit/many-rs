@@ -453,7 +453,7 @@ mod module_tests {
         });
 
         let module_impl = Arc::new(Mutex::new(mock));
-        let module = super::AccountModule::new(module_impl.clone());
+        let module = super::AccountModule::new(module_impl);
         let id_from = tests::identity(1);
 
         let result: CreateReturn = minicbor::decode(
