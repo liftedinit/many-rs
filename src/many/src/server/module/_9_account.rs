@@ -2,11 +2,38 @@ use crate::server::module::EmptyReturn;
 use crate::types::VecOrSingle;
 use crate::{Identity, ManyError};
 use many_macros::many_module;
-use minicbor::{Decode, Encode};
+use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
+use strum_macros::{AsRefStr, EnumString};
 
 pub mod errors;
 pub mod features;
+
+#[derive(
+    Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, EnumString, AsRefStr, strum_macros::Display,
+)]
+#[repr(u8)]
+#[strum(serialize_all = "camelCase")]
+pub enum Role {
+    Owner,
+    CanLedgerSend,
+    CanMultisigSubmit,
+    CanMultisigApprove,
+}
+
+impl Encode for Role {
+    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+        e.str(self.as_ref())?;
+        Ok(())
+    }
+}
+
+impl<'b> Decode<'b> for Role {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+        let role = d.str()?;
+        std::str::FromStr::from_str(role).map_err(|_| decode::Error::Message("Invalid role"))
+    }
+}
 
 /// An iterator that iterates over accounts. The keys will be identities, and not just
 /// subresource IDs.
@@ -84,7 +111,7 @@ impl AccountMap {
         None
     }
 
-    pub fn has_role<R: AsRef<str>>(&self, account: &Identity, id: &Identity, role: R) -> bool {
+    pub fn has_role(&self, account: &Identity, id: &Identity, role: Role) -> bool {
         if let Some(account) = self.get(account) {
             account.has_role(id, role)
         } else {
@@ -105,7 +132,7 @@ pub struct Account {
     pub description: Option<String>,
 
     #[n(1)]
-    pub roles: BTreeMap<Identity, BTreeSet<String>>,
+    pub roles: BTreeMap<Identity, BTreeSet<Role>>,
 
     #[n(2)]
     pub features: features::FeatureSet,
@@ -122,10 +149,7 @@ impl Account {
     ) -> Self {
         // Add the sender as owner role.
         let mut roles = roles.unwrap_or_default();
-        roles
-            .entry(*sender)
-            .or_default()
-            .insert("owner".to_string());
+        roles.entry(*sender).or_default().insert(Role::Owner);
         Self {
             description,
             roles,
@@ -140,25 +164,25 @@ impl Account {
     pub fn features(&self) -> &features::FeatureSet {
         &self.features
     }
-    pub fn roles(&self) -> &BTreeMap<Identity, BTreeSet<String>> {
+    pub fn roles(&self) -> &BTreeMap<Identity, BTreeSet<Role>> {
         &self.roles
     }
 
-    pub fn has_role<Role: AsRef<str>>(&self, id: &Identity, role: Role) -> bool {
+    pub fn has_role<R: Into<Role>>(&self, id: &Identity, role: R) -> bool {
         self.roles
             .get(id)
-            .map_or(false, |v| v.contains(role.as_ref()))
+            .map_or(false, |v| v.contains(&role.into()))
     }
-    pub fn add_role<Role: ToString>(&mut self, id: &Identity, role: Role) -> bool {
-        self.roles.entry(*id).or_default().insert(role.to_string())
+    pub fn add_role<R: Into<Role>>(&mut self, id: &Identity, role: R) -> bool {
+        self.roles.entry(*id).or_default().insert(role.into())
     }
-    pub fn remove_role<Role: AsRef<str>>(&mut self, id: &Identity, role: Role) -> bool {
+    pub fn remove_role<R: Into<Role>>(&mut self, id: &Identity, role: R) -> bool {
         self.roles
             .get_mut(id)
-            .map_or(false, |v| v.remove(role.as_ref()))
+            .map_or(false, |v| v.remove(&role.into()))
     }
 
-    pub fn get_roles(&self, id: &Identity) -> BTreeSet<String> {
+    pub fn get_roles(&self, id: &Identity) -> BTreeSet<Role> {
         self.roles.get(id).cloned().unwrap_or_default()
     }
 
@@ -167,14 +191,14 @@ impl Account {
     }
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct CreateArgs {
     #[n(0)]
     pub description: Option<String>,
 
     #[n(1)]
-    pub roles: Option<BTreeMap<Identity, BTreeSet<String>>>,
+    pub roles: Option<BTreeMap<Identity, BTreeSet<Role>>>,
 
     #[n(2)]
     pub features: features::FeatureSet,
@@ -187,7 +211,7 @@ pub struct CreateReturn {
     pub id: Identity,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct SetDescriptionArgs {
     #[n(0)]
@@ -199,7 +223,7 @@ pub struct SetDescriptionArgs {
 
 pub type SetDescriptionReturn = EmptyReturn;
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct ListRolesArgs {
     #[n(0)]
@@ -210,10 +234,10 @@ pub struct ListRolesArgs {
 #[cbor(map)]
 pub struct ListRolesReturn {
     #[n(0)]
-    pub roles: BTreeSet<String>,
+    pub roles: BTreeSet<Role>,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct GetRolesArgs {
     #[n(0)]
@@ -227,34 +251,34 @@ pub struct GetRolesArgs {
 #[cbor(map)]
 pub struct GetRolesReturn {
     #[n(0)]
-    pub roles: BTreeMap<Identity, BTreeSet<String>>,
+    pub roles: BTreeMap<Identity, BTreeSet<Role>>,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct AddRolesArgs {
     #[n(0)]
     pub account: Identity,
 
     #[n(1)]
-    pub roles: BTreeMap<Identity, BTreeSet<String>>,
+    pub roles: BTreeMap<Identity, BTreeSet<Role>>,
 }
 
 pub type AddRolesReturn = EmptyReturn;
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct RemoveRolesArgs {
     #[n(0)]
     pub account: Identity,
 
     #[n(1)]
-    pub roles: BTreeMap<Identity, BTreeSet<String>>,
+    pub roles: BTreeMap<Identity, BTreeSet<Role>>,
 }
 
 pub type RemoveRolesReturn = EmptyReturn;
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct InfoArgs {
     #[n(0)]
@@ -268,13 +292,13 @@ pub struct InfoReturn {
     pub description: Option<String>,
 
     #[n(1)]
-    pub roles: BTreeMap<Identity, BTreeSet<String>>,
+    pub roles: BTreeMap<Identity, BTreeSet<Role>>,
 
     #[n(2)]
     pub features: features::FeatureSet,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct DeleteArgs {
     #[n(0)]
@@ -283,14 +307,14 @@ pub struct DeleteArgs {
 
 pub type DeleteReturn = EmptyReturn;
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct AddFeaturesArgs {
     #[n(0)]
     pub account: Identity,
 
     #[n(1)]
-    pub roles: Option<BTreeMap<Identity, BTreeSet<String>>>,
+    pub roles: Option<BTreeMap<Identity, BTreeSet<Role>>>,
 
     #[n(2)]
     pub features: features::FeatureSet,
@@ -299,6 +323,7 @@ pub struct AddFeaturesArgs {
 pub type AddFeaturesReturn = EmptyReturn;
 
 #[many_module(name = AccountModule, id = 9, namespace = account, many_crate = crate)]
+#[cfg_attr(test, mockall::automock)]
 pub trait AccountModuleBackend: Send {
     /// Create an account.
     fn create(&mut self, sender: &Identity, args: CreateArgs) -> Result<CreateReturn, ManyError>;
@@ -354,153 +379,78 @@ mod module_tests {
     use super::*;
     use crate::server::module::testutils::call_module;
     use crate::types::identity::tests;
-    use std::sync::{Arc, Mutex};
-
-    struct AccountImpl(pub AccountMap);
-    impl std::default::Default for AccountImpl {
-        fn default() -> Self {
-            Self(AccountMap::new(
-                Identity::from_bytes(
-                    &hex::decode("0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D")
-                        .unwrap(),
-                )
-                .unwrap(),
-            ))
-        }
-    }
-
-    impl super::AccountModuleBackend for AccountImpl {
-        fn create(
-            &mut self,
-            sender: &Identity,
-            args: CreateArgs,
-        ) -> Result<CreateReturn, ManyError> {
-            let (id, _) = self.0.insert(Account::create(sender, args))?;
-            Ok(CreateReturn { id })
-        }
-
-        fn set_description(
-            &mut self,
-            _sender: &Identity,
-            args: SetDescriptionArgs,
-        ) -> Result<SetDescriptionReturn, ManyError> {
-            let mut account = self
-                .0
-                .get_mut(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account))?;
-
-            account.description = Some(args.description);
-            Ok(EmptyReturn)
-        }
-
-        fn list_roles(
-            &self,
-            _sender: &Identity,
-            args: ListRolesArgs,
-        ) -> Result<ListRolesReturn, ManyError> {
-            let _ = self
-                .0
-                .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account))?;
-
-            Ok(ListRolesReturn {
-                roles: BTreeSet::from_iter(
-                    vec!["owner".to_string(), "other-role".to_string()].into_iter(),
-                ),
-            })
-        }
-
-        fn get_roles(
-            &self,
-            _sender: &Identity,
-            args: GetRolesArgs,
-        ) -> Result<GetRolesReturn, ManyError> {
-            let account = self
-                .0
-                .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account))?;
-
-            Ok(GetRolesReturn {
-                roles: account.roles.clone(),
-            })
-        }
-
-        fn add_roles(
-            &mut self,
-            _sender: &Identity,
-            args: AddRolesArgs,
-        ) -> Result<AddRolesReturn, ManyError> {
-            let account = self
-                .0
-                .get_mut(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account))?;
-
-            for (k, mut v) in args.roles {
-                let roles = account.roles.entry(k).or_default();
-                roles.append(&mut v);
-            }
-            Ok(EmptyReturn)
-        }
-
-        fn remove_roles(
-            &mut self,
-            _sender: &Identity,
-            args: RemoveRolesArgs,
-        ) -> Result<RemoveRolesReturn, ManyError> {
-            let account = self
-                .0
-                .get_mut(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account))?;
-
-            for (k, v) in args.roles {
-                let roles = account.roles.entry(k).or_default();
-                for role in v {
-                    roles.remove(&role);
-                }
-            }
-            Ok(EmptyReturn)
-        }
-
-        fn info(&self, _sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError> {
-            let account = self
-                .0
-                .get(&args.account)
-                .ok_or_else(|| errors::unknown_account(args.account))?;
-            Ok(InfoReturn {
-                description: account.description.clone(),
-                roles: account.roles.clone(),
-                features: account.features.clone(),
-            })
-        }
-
-        fn delete(
-            &mut self,
-            sender: &Identity,
-            args: DeleteArgs,
-        ) -> Result<DeleteReturn, ManyError> {
-            if self.0.has_role(&args.account, sender, "owner") {
-                self.0.remove(&args.account).map_or_else(
-                    || Err(errors::unknown_account(args.account)),
-                    |_| Ok(EmptyReturn),
-                )
-            } else {
-                Err(errors::user_needs_role("owner"))
-            }
-        }
-
-        fn add_features(
-            &mut self,
-            _sender: &Identity,
-            _args: AddFeaturesArgs,
-        ) -> Result<AddFeaturesReturn, ManyError> {
-            todo!()
-        }
-    }
+    use std::sync::{Arc, Mutex, RwLock};
 
     // TODO: split this to get easier to maintain tests.
     #[test]
     fn module_works() {
-        let module_impl = Arc::new(Mutex::new(AccountImpl::default()));
+        let account_map = Arc::new(RwLock::new(AccountMap::new(Identity::public_key_raw(
+            [0; 28],
+        ))));
+        let mut mock = MockAccountModuleBackend::new();
+
+        mock.expect_create().returning({
+            let account_map = Arc::clone(&account_map);
+            move |sender, args| {
+                let mut account_map = account_map.write().unwrap();
+                let (id, _) = account_map.insert(Account::create(sender, args))?;
+                Ok(CreateReturn { id })
+            }
+        });
+        mock.expect_set_description().returning({
+            let account_map = Arc::clone(&account_map);
+            move |_, args| {
+                let mut account_map = account_map.write().unwrap();
+                let mut account = account_map
+                    .get_mut(&args.account)
+                    .ok_or_else(|| errors::unknown_account(args.account))?;
+                account.description = Some(args.description);
+                Ok(EmptyReturn)
+            }
+        });
+        mock.expect_info().returning({
+            let account_map = Arc::clone(&account_map);
+            move |_, args| {
+                let account_map = account_map.write().unwrap();
+                let account = account_map
+                    .get(&args.account)
+                    .ok_or_else(|| errors::unknown_account(args.account))?;
+                Ok(InfoReturn {
+                    description: account.description.clone(),
+                    roles: account.roles.clone(),
+                    features: account.features.clone(),
+                })
+            }
+        });
+        mock.expect_list_roles().returning({
+            let account_map = Arc::clone(&account_map);
+            move |_, args| {
+                let account_map = account_map.write().unwrap();
+                let _ = account_map
+                    .get(&args.account)
+                    .ok_or_else(|| errors::unknown_account(args.account))?;
+
+                Ok(ListRolesReturn {
+                    roles: BTreeSet::from_iter(vec![Role::Owner, Role::CanLedgerSend].into_iter()),
+                })
+            }
+        });
+        mock.expect_delete().returning({
+            let account_map = Arc::clone(&account_map);
+            move |sender, args| {
+                let mut account_map = account_map.write().unwrap();
+                if account_map.has_role(&args.account, sender, Role::Owner) {
+                    account_map.remove(&args.account).map_or_else(
+                        || Err(errors::unknown_account(args.account)),
+                        |_| Ok(EmptyReturn),
+                    )
+                } else {
+                    Err(errors::user_needs_role(Role::Owner))
+                }
+            }
+        });
+
+        let module_impl = Arc::new(Mutex::new(mock));
         let module = super::AccountModule::new(module_impl.clone());
         let id_from = tests::identity(1);
 
@@ -510,8 +460,8 @@ mod module_tests {
         .unwrap();
 
         let id = {
-            let lock = module_impl.lock().unwrap();
-            let (id, account) = lock.0.iter().next().unwrap();
+            let account_map = account_map.read().unwrap();
+            let (id, account) = account_map.iter().next().unwrap();
 
             assert_eq!(id, result.id);
             assert_eq!(id.subresource_id(), Some(0));
@@ -522,7 +472,7 @@ mod module_tests {
                 .get_key_value(&id_from)
                 .unwrap()
                 .1
-                .contains("owner"));
+                .contains(&Role::Owner));
             id
         };
         let wrong_id = id.with_subresource_id(12345).unwrap();
@@ -555,7 +505,7 @@ mod module_tests {
                 .get_key_value(&id_from)
                 .unwrap()
                 .1
-                .contains("owner"));
+                .contains(&Role::Owner));
             assert!(account.features.has_id(0));
         }
 
@@ -579,20 +529,33 @@ mod module_tests {
             )
             .unwrap()
             .roles,
-            BTreeSet::from_iter(vec!["owner".to_string(), "other-role".to_string()].into_iter()),
+            BTreeSet::from_iter(vec![Role::Owner, Role::CanLedgerSend].into_iter()),
         );
 
-        let _ = call_module(
+        assert!(call_module(
+            2,
+            &module,
+            "account.delete",
+            format!(r#"{{ 0: "{}" }}"#, id),
+        )
+        .is_err());
+        assert!(call_module(
+            1,
+            &module,
+            "account.delete",
+            format!(r#"{{ 0: "{}" }}"#, id.with_subresource_id(9999).unwrap()),
+        )
+        .is_err());
+
+        assert!(call_module(
             1,
             &module,
             "account.delete",
             format!(r#"{{ 0: "{}" }}"#, id),
         )
-        .unwrap();
+        .is_ok());
 
-        {
-            let lock = module_impl.lock().unwrap();
-            assert!(lock.0.inner.is_empty());
-        }
+        let account_map = account_map.read().unwrap();
+        assert!(account_map.inner.is_empty());
     }
 }
