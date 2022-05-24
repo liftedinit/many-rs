@@ -182,10 +182,33 @@ impl Account {
         &self.roles
     }
 
-    pub fn has_role<R: Into<Role>>(&self, id: &Identity, role: R) -> bool {
-        self.roles
-            .get(id)
-            .map_or(false, |v| v.contains(&role.into()))
+    pub fn has_role<R: TryInto<Role>>(&self, id: &Identity, role: R) -> bool {
+        let role: Role = if let Ok(r) = role.try_into() {
+            r
+        } else {
+            return false;
+        };
+        self.roles.get(id).map_or(false, |v| v.contains(&role))
+    }
+
+    /// Verify that an ID has the proper role, or return an
+    pub fn needs_role<R: TryInto<Role> + std::fmt::Display>(
+        &self,
+        id: &Identity,
+        role: R,
+    ) -> Result<(), ManyError> {
+        match role.try_into() {
+            Ok(r) => {
+                if self.has_role(id, r) {
+                    Ok(())
+                } else {
+                    Err(errors::user_needs_role(r))
+                }
+            }
+            Err(e) => {
+                Err(errors::unknown_role(e.))
+            }
+        }
     }
     pub fn add_role<R: Into<Role>>(&mut self, id: &Identity, role: R) -> bool {
         self.roles.entry(*id).or_default().insert(role.into())
