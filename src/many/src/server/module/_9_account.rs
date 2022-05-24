@@ -4,13 +4,21 @@ use crate::{Identity, ManyError};
 use many_macros::many_module;
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
-use strum_macros::{AsRefStr, EnumString};
 
 pub mod errors;
 pub mod features;
 
 #[derive(
-    Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, EnumString, AsRefStr, strum_macros::Display,
+    Copy,
+    Clone,
+    Debug,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    strum_macros::EnumString,
+    strum_macros::AsRefStr,
+    strum_macros::Display,
 )]
 #[repr(u8)]
 #[strum(serialize_all = "camelCase")]
@@ -19,6 +27,12 @@ pub enum Role {
     CanLedgerTransact,
     CanMultisigSubmit,
     CanMultisigApprove,
+}
+
+impl PartialEq<&str> for Role {
+    fn eq(&self, other: &&str) -> bool {
+        self.as_ref() == *other
+    }
 }
 
 impl Encode for Role {
@@ -560,4 +574,12 @@ mod module_tests {
         let account_map = account_map.read().unwrap();
         assert!(account_map.inner.is_empty());
     }
+}
+
+#[test]
+fn roles_from_str() {
+    use std::str::FromStr;
+    assert_eq!(Role::from_str("owner").unwrap(), Role::Owner);
+    assert_eq!(Role::Owner, "owner");
+    assert_eq!(format!("a {} b", Role::Owner), "a owner b");
 }
