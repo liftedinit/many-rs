@@ -16,7 +16,7 @@ pub mod features;
 #[strum(serialize_all = "camelCase")]
 pub enum Role {
     Owner,
-    CanLedgerSend,
+    CanLedgerTransact,
     CanMultisigSubmit,
     CanMultisigApprove,
 }
@@ -431,7 +431,9 @@ mod module_tests {
                     .ok_or_else(|| errors::unknown_account(args.account))?;
 
                 Ok(ListRolesReturn {
-                    roles: BTreeSet::from_iter(vec![Role::Owner, Role::CanLedgerSend].into_iter()),
+                    roles: BTreeSet::from_iter(
+                        vec![Role::Owner, Role::CanLedgerTransact].into_iter(),
+                    ),
                 })
             }
         });
@@ -529,7 +531,7 @@ mod module_tests {
             )
             .unwrap()
             .roles,
-            BTreeSet::from_iter(vec![Role::Owner, Role::CanLedgerSend].into_iter()),
+            BTreeSet::from_iter(vec![Role::Owner, Role::CanLedgerTransact].into_iter()),
         );
 
         assert!(call_module(
