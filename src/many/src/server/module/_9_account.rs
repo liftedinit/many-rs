@@ -192,11 +192,12 @@ impl Account {
     }
 
     /// Verify that an ID has the proper role, or return an
-    pub fn needs_role<R: TryInto<Role> + std::fmt::Display>(
+    pub fn needs_role<R: TryInto<Role> + std::fmt::Display + Copy>(
         &self,
         id: &Identity,
         role: R,
     ) -> Result<(), ManyError> {
+        let cp = role;
         match role.try_into() {
             Ok(r) => {
                 if self.has_role(id, r) {
@@ -205,9 +206,7 @@ impl Account {
                     Err(errors::user_needs_role(r))
                 }
             }
-            Err(e) => {
-                Err(errors::unknown_role(e.))
-            }
+            Err(_) => Err(errors::unknown_role(cp)),
         }
     }
     pub fn add_role<R: Into<Role>>(&mut self, id: &Identity, role: R) -> bool {
