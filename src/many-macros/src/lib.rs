@@ -225,13 +225,13 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
 
     let ns = namespace.clone();
     let validate_envelope = if let Some(endpoint) = attrs.drop_non_webauthn {
-        let mut field_names = endpoint.iter().map(|e| match &ns {
+        let field_names = endpoint.iter().map(|e| match &ns {
             Some(namespace) => format!("{}.{}", namespace, e),
             None => e.to_string(),
         });
         // Note: The endpoint needs to be the endpoind method name, not the trait method
         // Ex: getFromAddress and NOT get_from_address
-        field_names
+        field_names.clone()
             .any(|name| endpoint_strings.contains(&name))
             .then(|| 0)
             .ok_or_else(|| {
