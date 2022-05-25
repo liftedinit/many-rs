@@ -231,7 +231,8 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         });
         // Note: The endpoint needs to be the endpoind method name, not the trait method
         // Ex: getFromAddress and NOT get_from_address
-        field_names.clone()
+        field_names
+            .clone()
             .any(|name| endpoint_strings.contains(&name))
             .then(|| 0)
             .ok_or_else(|| {
