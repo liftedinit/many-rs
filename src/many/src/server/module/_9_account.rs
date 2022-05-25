@@ -133,6 +133,19 @@ impl AccountMap {
         }
     }
 
+    pub fn needs_role(
+        &self,
+        account: &Identity,
+        id: &Identity,
+        role: impl IntoIterator<Item = Role>,
+    ) -> Result<(), ManyError> {
+        if let Some(account) = self.get(account) {
+            account.needs_role(id, role)
+        } else {
+            Err(errors::unknown_account(account))
+        }
+    }
+
     pub fn iter(&self) -> AccountMapIterator {
         AccountMapIterator(self.id, self.inner.iter())
     }
@@ -195,23 +208,28 @@ impl Account {
     pub fn needs_role<R: TryInto<Role> + std::fmt::Display + Copy>(
         &self,
         id: &Identity,
-        role: R,
+        role: impl IntoIterator<Item = R>,
     ) -> Result<(), ManyError> {
-        let cp = role;
-        match role.try_into() {
-            Ok(r) => {
-                if self.has_role(id, r) {
-                    Ok(())
-                } else {
-                    Err(errors::user_needs_role(r))
+        let mut first = None;
+        for role in role {
+            let cp = role;
+            match role.try_into() {
+                Ok(r) => {
+                    first = Some(r);
+                    if self.has_role(id, r) {
+                        return Ok(());
+                    }
                 }
+                Err(_) => return Err(errors::unknown_role(cp)),
             }
-            Err(_) => Err(errors::unknown_role(cp)),
         }
+        Err(errors::user_needs_role(first.unwrap_or(Role::Owner)))
     }
+
     pub fn add_role<R: Into<Role>>(&mut self, id: &Identity, role: R) -> bool {
         self.roles.entry(*id).or_default().insert(role.into())
     }
+
     pub fn remove_role<R: Into<Role>>(&mut self, id: &Identity, role: R) -> bool {
         self.roles
             .get_mut(id)
@@ -477,14 +495,11 @@ mod module_tests {
             let account_map = Arc::clone(&account_map);
             move |sender, args| {
                 let mut account_map = account_map.write().unwrap();
-                if account_map.has_role(&args.account, sender, Role::Owner) {
-                    account_map.remove(&args.account).map_or_else(
-                        || Err(errors::unknown_account(args.account)),
-                        |_| Ok(EmptyReturn),
-                    )
-                } else {
-                    Err(errors::user_needs_role(Role::Owner))
-                }
+                account_map.needs_role(&args.account, sender, [Role::Owner])?;
+                account_map.remove(&args.account).map_or_else(
+                    || Err(errors::unknown_account(args.account)),
+                    |_| Ok(EmptyReturn),
+                )
             }
         });
 
@@ -604,4 +619,24 @@ fn roles_from_str() {
     assert_eq!(Role::from_str("owner").unwrap(), Role::Owner);
     assert_eq!(Role::Owner, "owner");
     assert_eq!(format!("a {} b", Role::Owner), "a owner b");
+}
+
+#[test]
+fn needs_role() {
+    let owner = Identity::public_key_raw([0; 28]);
+    let account = Account::create(
+        &owner,
+        CreateArgs {
+            description: None,
+            roles: None,
+            features: Default::default(),
+        },
+    );
+    assert!(account.needs_role(&owner, [Role::Owner]).is_ok());
+    assert!(account
+        .needs_role(&owner, [Role::CanMultisigSubmit])
+        .is_err());
+    assert!(account
+        .needs_role(&Identity::public_key_raw([1; 28]), [Role::Owner])
+        .is_err());
 }
