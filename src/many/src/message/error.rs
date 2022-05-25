@@ -153,6 +153,8 @@ many_error! {
             => "The message's timestamp is out of the accepted range of the server.",
     -1006: RequiredFieldMissing as required_field_missing(field)
             => "Field is required but missing: '{field}'.",
+    -1007: NonWebAuthnRequestDenied as non_webauthn_request_denied(endpoint)
+            => "Non-WebAuthn request denied for endpoint '{endpoint}'.",
 
     // -2000 - -2999 is for server errors.
     -2000: InternalServerError as internal_server_error()

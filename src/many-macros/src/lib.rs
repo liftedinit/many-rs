@@ -16,6 +16,7 @@ struct ManyModuleAttributes {
     pub name: Option<String>,
     pub namespace: Option<String>,
     pub many_crate: Option<String>,
+    pub drop_non_webauthn: Option<Vec<String>>,
 }
 
 #[derive(Debug)]
@@ -222,6 +223,41 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         }
     };
 
+    let ns = namespace.clone();
+    let validate_envelope = if let Some(endpoint) = attrs.drop_non_webauthn {
+        let mut field_names = endpoint.iter().map(|e| match &ns {
+            Some(namespace) => format!("{}.{}", namespace, e),
+            None => e.to_string(),
+        });
+        // Note: The endpoint needs to be the endpoind method name, not the trait method
+        // Ex: getFromAddress and NOT get_from_address
+        field_names
+            .any(|name| endpoint_strings.contains(&name))
+            .then(|| 0)
+            .ok_or_else(|| {
+                syn::Error::new(span, "`drop_non_webauthn` endpoint non found in trait.")
+            })?;
+        quote! {
+            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
+                let method = message.method.as_str();
+                if vec![#(#field_names),*].contains(&method) {
+                    let unprotected =
+                        std::collections::BTreeMap::from_iter(envelope.unprotected.rest.clone().into_iter());
+                    if !unprotected.contains_key(&coset::Label::Text("webauthn".to_string())) {
+                        return Err( #many ::ManyError::non_webauthn_request_denied(&method))
+                    }
+                }
+                Ok(())
+            }
+        }
+    } else {
+        quote! {
+            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
+                Ok(())
+            }
+        }
+    };
+
     let ns = namespace;
     let execute_endpoint_pat = endpoints.iter().map(|e| {
         let span = e.span;
@@ -337,6 +373,8 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             fn info(&self) -> & #many ::server::module::ManyModuleInfo {
                 & #info_ident
             }
+
+            #validate_envelope
 
             #validate
 

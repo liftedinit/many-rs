@@ -98,6 +98,14 @@ pub trait ManyModule: Sync + Send + Debug {
         Ok(())
     }
 
+    fn validate_envelope(
+        &self,
+        _envelope: &coset::CoseSign1,
+        _message: &RequestMessage,
+    ) -> Result<(), ManyError> {
+        Ok(())
+    }
+
     /// Execute a message and returns its response.
     async fn execute(&self, message: RequestMessage) -> Result<ResponseMessage, ManyError>;
 }
