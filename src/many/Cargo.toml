@@ -6,6 +6,7 @@ description = "Library to build MANY modules and servers."
 license-file = "../../LICENSE"
 homepage = "https://liftedinit.org/"
 repository = "https://github.com/liftedinit/many-rs.git"
+authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 
 [lib]
 name = "many"

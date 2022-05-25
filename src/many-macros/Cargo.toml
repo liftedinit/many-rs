@@ -6,6 +6,7 @@ description = "Procedural macros to support create MANY modules."
 license-file = "../../LICENSE"
 homepage = "https://liftedinit.org/"
 repository = "https://github.com/liftedinit/many-rs.git"
+authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 
 [lib]
 proc-macro = true
