@@ -4,6 +4,7 @@ use minicbor::bytes::ByteVec;
 use minicbor::{Decode, Encode};
 use std::collections::BTreeMap;
 
+
 #[derive(Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct EndpointInfo {
@@ -51,6 +52,86 @@ pub struct AbciCommitInfo {
     pub hash: ByteVec,
 }
 
+#[derive(Encode, Decode, Debug, Clone)]
+#[cbor(map)]
+pub struct Snapshots {
+    #[n(0)]
+    pub height: u64,
+
+    #[n(1)]
+    pub format: u32,
+
+    #[n(2)]
+    pub chunks: u32,
+    
+    /// Number of chunks in the snapshot
+    #[n(3)]
+    pub hash: Vec<u8>,
+
+    /// Metadata of the snapshot is a SHA256 hash
+    #[n(4)]
+    pub metadata: Vec<u8>,
+}
+
+
+impl Snapshots {
+    pub fn new() -> Self {
+        Snapshots {
+            height: 0,
+            format: 1,
+            chunks: 0,
+            hash: vec![],
+            metadata: vec![],
+        }
+    }
+
+}
+
+impl Default for Snapshots {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Encode, Decode)]
+#[cbor(map)]
+pub struct AbciListSnapshot {
+    #[n(0)]
+    pub snapshots: Vec<Snapshots>,
+}
+
+impl AbciListSnapshot {
+    pub fn new(snapshots: Vec<Snapshots>) -> Self {
+        AbciListSnapshot {
+            snapshots,
+        }
+    }  
+}
+
+#[derive(Encode, Decode)]
+#[cbor(map)]
+pub struct AbciOfferSnapshot {
+    #[n(0)]
+    pub snapshot: Option<Snapshots>,
+
+    #[n(1)]
+    pub app_hash: ByteVec,
+}
+
+#[derive(Encode, Decode)]
+#[cbor(map)]
+pub struct AbciLoadSnapshotChunk {
+    #[n(0)]
+    pub height: u64,
+
+    #[n(1)]
+    pub format: u32,
+
+    #[n(2)]
+    pub chunk: u32,
+}
+
+
 /// A module that adapt a MANY application to an ABCI-MANY bridge.
 /// This module takes a backend (another module) which ALSO implements the ModuleBackend
 /// trait, and exposes the `abci.info` and `abci.init` endpoints.
@@ -81,4 +162,11 @@ pub trait ManyAbciModuleBackend: std::fmt::Debug + Send + Sync {
 
     /// Called after a block. The app should take this call and serialize its state.
     fn commit(&mut self) -> Result<AbciCommitInfo, ManyError>;
+
+    /// Called to list all available snapshots.
+    fn list_snapshots(&mut self) -> Result<AbciListSnapshot, ManyError>;
+
+    fn offer_snapshot(&mut self, _req: AbciOfferSnapshot) -> Result<(), ManyError>;
+
+    fn load_snapshot_chunk(&mut self, _req: AbciLoadSnapshotChunk) -> Result<(), ManyError>;
 }
