@@ -1,5 +1,6 @@
 use crate::cbor::CborAny;
 use crate::protocol::Attribute;
+use crate::server::module::account::Role;
 use crate::ManyError;
 use minicbor::{Decode, Encode};
 use std::collections::BTreeSet;
@@ -9,6 +10,7 @@ pub mod multisig;
 /// See feature `_0_account_ledger`.
 pub mod ledger {
     use super::{Feature, FeatureId, TryCreateFeature};
+    use crate::server::module::account::Role;
     use crate::ManyError;
     use std::collections::BTreeSet;
 
@@ -27,8 +29,8 @@ pub mod ledger {
             Feature::with_id(Self::ID)
         }
 
-        fn roles() -> BTreeSet<String> {
-            BTreeSet::from(["canLedgerTransact".to_string()])
+        fn roles() -> BTreeSet<Role> {
+            BTreeSet::from([Role::CanLedgerTransact])
         }
     }
 }
@@ -154,7 +156,7 @@ pub trait TryCreateFeature: Sized {
 
 pub trait FeatureInfo {
     fn as_feature(&self) -> Feature;
-    fn roles() -> BTreeSet<String>;
+    fn roles() -> BTreeSet<Role>;
 }
 
 #[cfg(test)]

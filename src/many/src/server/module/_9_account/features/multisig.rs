@@ -1,6 +1,7 @@
 use crate::cbor::CborAny;
 use crate::message::ResponseMessage;
 use crate::server::module::account::features::{Feature, FeatureId, TryCreateFeature};
+use crate::server::module::account::Role;
 use crate::server::module::ledger::SendArgs;
 use crate::server::module::EmptyReturn;
 use crate::types::ledger::{AccountMultisigTransaction, TokenAmount};
@@ -112,11 +113,8 @@ impl super::FeatureInfo for MultisigAccountFeature {
         Feature::with_id(Self::ID).with_argument(CborAny::Map(map))
     }
 
-    fn roles() -> BTreeSet<String> {
-        BTreeSet::from([
-            "canMultisigSubmit".to_string(),
-            "canMultisigApprove".to_string(),
-        ])
+    fn roles() -> BTreeSet<Role> {
+        BTreeSet::from([Role::CanMultisigSubmit, Role::CanMultisigApprove])
     }
 }
 

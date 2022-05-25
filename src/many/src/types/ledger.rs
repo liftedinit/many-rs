@@ -328,8 +328,8 @@ impl From<TransactionId> for Vec<u8> {
 macro_rules! define_tx_kind {
     ( $( [ $index: literal $(, $sub: literal )* ] $name: ident { $( $idx: literal | $fname: ident : $type: ty, )* }, )* ) => {
         #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
-        #[non_exhaustive]
         #[repr(u8)]
+        #[non_exhaustive]
         pub enum TransactionKind {
             $( $name ),*
         }
@@ -377,12 +377,12 @@ macro_rules! define_tx_kind {
 }
 
 macro_rules! define_tx_info_symbol {
-    (@return_symbol) => {};
-    (@return_symbol $name: ident symbol $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+    (@pick_symbol) => {};
+    (@pick_symbol $name: ident symbol $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
         return Some(& $name)
     };
-    (@return_symbol $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_tx_info_symbol!(@return_symbol $( $name $( $tag )*, )* )
+    (@pick_symbol $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
+        define_tx_info_symbol!(@pick_symbol $( $name $( $tag )*, )* )
     };
 
     (@inner) => {};
@@ -403,7 +403,7 @@ macro_rules! define_tx_info_symbol {
                 } => {
                     // Remove warnings.
                     $( let _ = $fname; )*
-                    define_tx_info_symbol!(@return_symbol $( $fname $( $tag )*, )* );
+                    define_tx_info_symbol!(@pick_symbol $( $fname $( $tag )*, )* );
 
                     // If we're here, we need to go deeper. Check if there's an inner.
                     define_tx_info_symbol!(@inner $( $fname $( $tag )*, )*);
@@ -513,6 +513,7 @@ macro_rules! encode_tx_info {
                         "TransactionKind should be the first item.",
                     ));
                 }
+                #[allow(unreachable_patterns)]
                 match d.decode::<TransactionKind>()? {
                     $(  TransactionKind :: $sname => {
                         $( let mut $name : Option< $type > = None; )*
@@ -532,6 +533,7 @@ macro_rules! encode_tx_info {
                             $( $name, )*
                         })
                     }, )*
+                    _ => Err(minicbor::decode::Error::Message("Unsupported transaction kind"))
                 }
             }
         }
@@ -591,6 +593,7 @@ macro_rules! define_multisig_tx {
                         "TransactionKind should be the first item.",
                     ));
                 }
+                #[allow(unreachable_patterns)]
                 match d.decode::<TransactionKind>()? {
                     $(
                     $(  TransactionKind :: $name => {
@@ -626,28 +629,28 @@ define_tx! {
         3     | symbol:                 Symbol                                  [ symbol ],
         4     | amount:                 TokenAmount,
     },
-    [9, 0]      AccountCreate {
+    [9, 0]      AccountCreate (module::account::CreateArgs) {
         1     | account:                Identity                                [ id ],
         2     | description:            Option<String>,
         3     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
         4     | features:               FeatureSet,
     },
-    [9, 1]      AccountSetDescription {
+    [9, 1]      AccountSetDescription (module::account::SetDescriptionArgs) {
         1     | account:                Identity                                [ id ],
         2     | description:            String,
     },
-    [9, 2]      AccountAddRoles {
+    [9, 2]      AccountAddRoles (module::account::AddRolesArgs) {
         1     | account:                Identity                                [ id ],
         2     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
     },
-    [9, 3]      AccountRemoveRoles {
+    [9, 3]      AccountRemoveRoles (module::account::RemoveRolesArgs) {
         1     | account:                Identity                                [ id ],
         2     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
     },
-    [9, 4]      AccountDelete {
+    [9, 4]      AccountDelete (module::account::DeleteArgs) {
         1     | account:                Identity                                [ id ],
     },
-    [9, 5]      AccountAddFeatures {
+    [9, 5]      AccountAddFeatures (module::account::AddFeaturesArgs) {
         1     | account:                Identity                                [ id ],
         2     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
         3     | features:               FeatureSet,
@@ -663,22 +666,22 @@ define_tx! {
         8     | execute_automatically:  bool,
         9     | data:                   Option<ByteVec>,
     },
-    [9, 1, 1]   AccountMultisigApprove {
+    [9, 1, 1]   AccountMultisigApprove (module::account::features::multisig::ApproveArgs) {
         1     | account:                Identity                                [ id ],
         2     | token:                  ByteVec,
         3     | approver:               Identity                                [ id ],
     },
-    [9, 1, 2]   AccountMultisigRevoke {
+    [9, 1, 2]   AccountMultisigRevoke (module::account::features::multisig::RevokeArgs) {
         1     | account:                Identity                                [ id ],
         2     | token:                  ByteVec,
         3     | revoker:                Identity                                [ id ],
     },
-    [9, 1, 3]   AccountMultisigExecute {
+    [9, 1, 3]   AccountMultisigExecute (module::account::features::multisig::ExecuteArgs) {
         1     | account:                Identity                                [ id ],
         2     | token:                  ByteVec,
         3     | executer:               Identity                                [ id ],
     },
-    [9, 1, 4]   AccountMultisigWithdraw {
+    [9, 1, 4]   AccountMultisigWithdraw (module::account::features::multisig::WithdrawArgs) {
         1     | account:                Identity                                [ id ],
         2     | token:                  ByteVec,
         3     | withdrawer:             Identity                                [ id ],
