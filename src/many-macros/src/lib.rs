@@ -238,17 +238,26 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             .ok_or_else(|| {
                 syn::Error::new(span, "`drop_non_webauthn` endpoint non found in trait.")
             })?;
-        quote! {
-            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
-                let method = message.method.as_str();
-                if vec![#(#field_names),*].contains(&method) {
-                    let unprotected =
-                        std::collections::BTreeMap::from_iter(envelope.unprotected.rest.clone().into_iter());
-                    if !unprotected.contains_key(&coset::Label::Text("webauthn".to_string())) {
-                        return Err( #many ::ManyError::non_webauthn_request_denied(&method))
+
+        if cfg!(not(feature = "allow_all_requests")) {
+            quote! {
+                fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
+                    let method = message.method.as_str();
+                    if vec![#(#field_names),*].contains(&method) {
+                        let unprotected =
+                            std::collections::BTreeMap::from_iter(envelope.unprotected.rest.clone().into_iter());
+                        if !unprotected.contains_key(&coset::Label::Text("webauthn".to_string())) {
+                            return Err( #many ::ManyError::non_webauthn_request_denied(&method))
+                        }
                     }
+                    Ok(())
                 }
-                Ok(())
+            }
+        } else {
+            quote! {
+                fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
+                    Ok(())
+                }
             }
         }
     } else {
