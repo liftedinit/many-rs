@@ -14,7 +14,7 @@ pub use get::*;
 pub use store::*;
 pub use types::*;
 
-#[many_module(name = IdStoreModule, id = 1002, namespace = idstore, many_crate = crate)]
+#[many_module(name = IdStoreModule, id = 1002, namespace = idstore, many_crate = crate, drop_non_webauthn = [store])]
 #[cfg_attr(test, automock)]
 pub trait IdStoreModuleBackend: Send {
     fn store(&mut self, sender: &Identity, args: StoreArgs) -> Result<StoreReturns, ManyError>;
