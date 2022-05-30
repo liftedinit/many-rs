@@ -12,6 +12,40 @@ use std::time::SystemTime;
 
 pub mod module;
 
+/// Validate that the timestamp of a message is within a timeout, either in the future
+/// or the past.
+fn _validate_time(
+    message: &RequestMessage,
+    now: SystemTime,
+    timeout_in_secs: u64,
+) -> Result<(), ManyError> {
+    if timeout_in_secs == 0 {
+        return Err(ManyError::timestamp_out_of_range());
+    }
+    let ts = message
+        .timestamp
+        .ok_or_else(|| ManyError::required_field_missing("timestamp".to_string()))?;
+
+    // Get the absolute time difference.
+    let (early, later) = if ts < now { (ts, now) } else { (now, ts) };
+    let diff = later
+        .duration_since(early)
+        .map_err(|_| ManyError::timestamp_out_of_range())?;
+
+    if diff.as_secs() >= timeout_in_secs {
+        tracing::error!(
+            "ERR: Timestamp outside of timeout: {} >= {}",
+            diff.as_secs(),
+            timeout_in_secs
+        );
+        return Err(ManyError::timestamp_out_of_range());
+    }
+
+    Ok(())
+}
+
+pub type ManyUrl = reqwest::Url;
+
 trait ManyServerFallback: LowLevelManyRequestHandler + base::BaseModuleBackend {}
 
 impl<M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static> ManyServerFallback for M {}
@@ -30,6 +64,7 @@ pub struct ManyServer {
     version: Option<String>,
     timeout: u64,
     fallback: Option<Arc<dyn ManyServerFallback + Send + 'static>>,
+    allowed_origins: Option<Vec<ManyUrl>>,
 }
 
 impl ManyServer {
@@ -37,8 +72,9 @@ impl ManyServer {
         name: N,
         identity: CoseKeyIdentity,
         version: Option<String>,
+        allow: Option<Vec<ManyUrl>>,
     ) -> Arc<Mutex<Self>> {
-        let s = Self::new(name, identity);
+        let s = Self::new(name, identity, allow);
         {
             let mut s2 = s.lock().unwrap();
             s2.version = version;
@@ -48,11 +84,16 @@ impl ManyServer {
         s
     }
 
-    pub fn new<N: ToString>(name: N, identity: CoseKeyIdentity) -> Arc<Mutex<Self>> {
+    pub fn new<N: ToString>(
+        name: N,
+        identity: CoseKeyIdentity,
+        allowed_origins: Option<Vec<ManyUrl>>,
+    ) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self {
             name: name.to_string(),
             identity,
             timeout: MANYSERVER_DEFAULT_TIMEOUT,
+            allowed_origins,
             ..Default::default()
         }))
     }
@@ -76,14 +117,18 @@ impl ManyServer {
             ..
         } = info;
 
-        let id = attribute.id;
-
-        if let Some(m) = self.modules.iter().find(|m| m.info().attribute.id == id) {
-            panic!(
-                "Module {} already implements attribute {}.",
-                m.info().name,
-                id
-            );
+        if let Some(Attribute { id, .. }) = attribute {
+            if let Some(m) = self
+                .modules
+                .iter()
+                .find(|m| m.info().attribute.as_ref().map(|x| x.id) == Some(*id))
+            {
+                panic!(
+                    "Module {} already implements attribute {}.",
+                    m.info().name,
+                    id
+                );
+            }
         }
 
         for e in endpoints {
@@ -117,29 +162,6 @@ impl ManyServer {
         }
     }
 
-    pub fn validate_time(&self, message: &RequestMessage) -> Result<(), ManyError> {
-        if self.timeout != 0 {
-            let ts = message
-                .timestamp
-                .ok_or_else(|| ManyError::required_field_missing("timestamp".to_string()))?;
-            let now = SystemTime::now();
-
-            let diff = now.duration_since(ts).map_err(|_| {
-                tracing::error!("ERR: System time error");
-                ManyError::timestamp_out_of_range()
-            })?;
-            if diff.as_secs() >= self.timeout {
-                tracing::error!(
-                    "ERR: Timestamp outside of timeout: {} >= {}",
-                    diff.as_secs(),
-                    self.timeout
-                );
-                return Err(ManyError::timestamp_out_of_range());
-            }
-        }
-        Ok(())
-    }
-
     pub fn find_module(&self, message: &RequestMessage) -> Option<Arc<dyn ManyModule + Send>> {
         self.modules
             .iter()
@@ -166,7 +188,7 @@ impl base::BaseModuleBackend for ManyServer {
         let mut attributes: BTreeSet<Attribute> = self
             .modules
             .iter()
-            .map(|m| m.info().attribute.clone())
+            .filter_map(|m| m.info().attribute.clone())
             .collect();
 
         let mut builder = base::StatusBuilder::default();
@@ -224,14 +246,20 @@ impl base::BaseModuleBackend for ManyServer {
 #[async_trait]
 impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
-        let request = crate::message::decode_request_from_cose_sign1(envelope.clone());
+        let request = {
+            let this = self.lock().unwrap();
+            crate::message::decode_request_from_cose_sign1(
+                envelope.clone(),
+                this.allowed_origins.clone(),
+            )
+        };
 
         let response = {
             let this = self.lock().unwrap();
             let cose_id = this.identity.clone();
             request
                 .and_then(|message| {
-                    this.validate_time(&message)?;
+                    _validate_time(&message, SystemTime::now(), this.timeout)?;
                     Ok(message)
                 })
                 .and_then(|message| {
@@ -241,6 +269,12 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                 .map(|message| {
                     let maybe_module = this.find_module(&message);
                     (message, maybe_module)
+                })
+                .and_then(|(message, maybe_module)| {
+                    if let Some(ref m) = maybe_module {
+                        m.validate_envelope(&envelope, &message)?;
+                    }
+                    Ok((message, maybe_module))
                 })
                 .and_then(|(message, maybe_module)| {
                     if let Some(ref m) = maybe_module {
@@ -290,41 +324,39 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 
 #[cfg(test)]
 mod tests {
-    use coset::cbor::de::from_reader;
-    use coset::cbor::value::Value;
+    use semver::{BuildMetadata, Prerelease, Version};
+    use std::time::Duration;
 
     use super::*;
+    use crate::cose_helpers::public_key;
     use crate::message::{
         decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
         RequestMessageBuilder,
     };
-    use crate::types::identity::cose::tests::generate_random_eddsa_identity;
+    use crate::server::module::base::Status;
+    use crate::types::identity::cose::testsutils::generate_random_eddsa_identity;
+    use crate::Identity;
     use proptest::prelude::*;
 
-    // Official SemVer regex
-    // See https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
-    //
-    // Note: \d were replaced with [0-9], since the current regex engine matches other digits characters, such as Eastern Arabic numerals
-    //       https://stackoverflow.com/questions/6479423/does-d-in-regex-mean-a-digit/6479605#6479605
-    const SEMVER_REGEX: &str = r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?";
+    const ALPHA_NUM_DASH_REGEX: &str = "[a-zA-Z0-9-]";
 
-    /// Execute a request on a MANY server and return the response message
-    pub fn execute_request(
-        id: CoseKeyIdentity,
-        server: Arc<Mutex<ManyServer>>,
-        request: RequestMessage,
-    ) -> ResponseMessage {
-        let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
-        let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
-        decode_response_from_cose_sign1(response, None).unwrap()
+    prop_compose! {
+        fn arb_semver()((major, minor, patch) in (any::<u64>(), any::<u64>(), any::<u64>()), pre in ALPHA_NUM_DASH_REGEX, build in ALPHA_NUM_DASH_REGEX) -> Version {
+            Version {
+                major,
+                minor,
+                patch,
+                pre: Prerelease::new(&pre).unwrap(),
+                build: BuildMetadata::new(&build).unwrap(),
+            }
+        }
     }
 
     proptest! {
         #[test]
-        fn simple_status(name in "\\PC*", version in SEMVER_REGEX) {
-            println!("\n\n{version}\n\n");
+        fn simple_status(name in "\\PC*", version in arb_semver()) {
             let id = generate_random_eddsa_identity();
-            let server = ManyServer::simple(name.clone(), id.clone(), Some(version));
+            let server = ManyServer::simple(name.clone(), id.clone(), Some(version.to_string()), None);
 
             // Test status() using a message instead of a direct call
             //
@@ -338,13 +370,46 @@ mod tests {
                 .build()
                 .unwrap();
 
-            let response_message = execute_request(id, server, request);
+            let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
+            let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
+            let response_message = decode_response_from_cose_sign1(response, None).unwrap();
 
-            let data: BTreeMap<u8, Value> =
-                from_reader(response_message.data.unwrap().as_slice()).unwrap();
-            let response_name = data.get(&1).unwrap();
+            let status: Status = minicbor::decode(&response_message.data.unwrap()).unwrap();
 
-            assert_eq!(response_name, &Value::Text(name));
+            assert_eq!(status.version, 1);
+            assert_eq!(status.name, name);
+            assert_eq!(status.public_key, Some(public_key(&id.key.unwrap()).unwrap()));
+            assert_eq!(status.identity, id.identity);
+            assert!(status.attributes.has_id(0));
+            assert_eq!(status.server_version, Some(version.to_string()));
+            assert_eq!(status.timeout, Some(MANYSERVER_DEFAULT_TIMEOUT));
+            assert_eq!(status.extras, BTreeMap::new());
         }
+    }
+
+    #[test]
+    fn validate_time() {
+        let timestamp = SystemTime::now();
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .version(1)
+            .from(Identity::anonymous())
+            .to(Identity::anonymous())
+            .method("status".to_string())
+            .data("null".as_bytes().to_vec())
+            .timestamp(timestamp)
+            .build()
+            .unwrap();
+
+        // Okay with the same
+        assert!(_validate_time(&request, timestamp, 100).is_ok());
+        // Okay with the past
+        assert!(_validate_time(&request, timestamp - Duration::from_secs(10), 100).is_ok());
+        // Okay with the future
+        assert!(_validate_time(&request, timestamp + Duration::from_secs(10), 100).is_ok());
+
+        // NOT okay with the past too much
+        assert!(_validate_time(&request, timestamp - Duration::from_secs(101), 100).is_err());
+        // NOT okay with the future too much
+        assert!(_validate_time(&request, timestamp + Duration::from_secs(101), 100).is_err());
     }
 }

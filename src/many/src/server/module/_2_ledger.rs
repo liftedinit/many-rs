@@ -30,21 +30,20 @@ pub trait LedgerModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::{
+        server::module::testutils::{call_module, call_module_cbor},
+        types::identity::tests::identity,
+        types::{ledger::TokenAmount, VecOrSingle},
+    };
+    use minicbor::bytes::ByteVec;
+    use mockall::predicate;
+    use once_cell::sync::Lazy;
     use std::{
         collections::BTreeMap,
         str::FromStr,
         sync::{Arc, Mutex},
     };
-
-    use minicbor::bytes::ByteVec;
-    use once_cell::sync::Lazy;
-
-    use crate::{
-        server::module::testutils::{call_module, call_module_cbor},
-        types::{ledger::TokenAmount, VecOrSingle},
-    };
-
-    use super::*;
 
     static SYMBOL: Lazy<Identity> = Lazy::new(|| {
         Identity::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap()
@@ -54,13 +53,17 @@ mod tests {
     #[test]
     fn info() {
         let mut mock = MockLedgerModuleBackend::new();
-        mock.expect_info().times(1).returning(|_id, _args| {
-            Ok(InfoReturns {
+        mock.expect_info()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(InfoArgs {}),
+            )
+            .times(1)
+            .return_const(Ok(InfoReturns {
                 symbols: vec![*SYMBOL],
                 hash: ByteVec::from(vec![10u8; 8]),
                 local_names: BTreeMap::from([(*SYMBOL, SYMBOL_NAME.to_string())]),
-            })
-        });
+            }));
         let module = super::LedgerModule::new(Arc::new(Mutex::new(mock)));
 
         let info_returns: InfoReturns =
@@ -76,19 +79,27 @@ mod tests {
 
     #[test]
     fn balance() {
-        let mut mock = MockLedgerModuleBackend::new();
-
-        mock.expect_balance().times(1).returning(|_id, args| {
-            Ok(BalanceReturns {
-                balances: BTreeMap::from([(args.symbols.unwrap().0[0], TokenAmount::from(123u16))]),
-            })
-        });
-        let module = super::LedgerModule::new(Arc::new(Mutex::new(mock)));
-
         let data = BalanceArgs {
             account: None,
             symbols: Some(VecOrSingle::from(vec![*SYMBOL])),
         };
+        let mut mock = MockLedgerModuleBackend::new();
+        mock.expect_balance()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .returning(|_id, args| {
+                Ok(BalanceReturns {
+                    balances: BTreeMap::from([(
+                        args.symbols.unwrap().0[0],
+                        TokenAmount::from(123u16),
+                    )]),
+                })
+            });
+        let module = super::LedgerModule::new(Arc::new(Mutex::new(mock)));
+
         let balance_returns: BalanceReturns = minicbor::decode(
             &call_module_cbor(
                 1,

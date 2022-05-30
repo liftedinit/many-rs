@@ -1,14 +1,15 @@
 use minicbor::bytes::ByteVec;
 use minicbor::{Decode, Encode};
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[cbor(map)]
 pub struct GetArgs {
     #[n(0)]
     pub key: ByteVec,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct GetReturns {
     #[n(0)]
