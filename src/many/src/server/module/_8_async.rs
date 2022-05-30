@@ -1,5 +1,5 @@
+use crate::message::ResponseMessage;
 use crate::{Identity, ManyError};
-use coset::{CborSerializable, CoseSign1};
 use many_macros::many_module;
 use minicbor::data::Type;
 use minicbor::encode::{Error, Write};
@@ -11,6 +11,7 @@ use mockall::{automock, predicate::*};
 /// An AsyncToken which is returned when the server does not have an immediate
 /// response.
 #[derive(Clone)]
+#[cfg_attr(test, derive(PartialEq))]
 #[repr(transparent)]
 pub struct AsyncToken(Vec<u8>);
 
@@ -77,7 +78,7 @@ pub mod attributes {
 
         fn try_from(value: Attribute) -> Result<Self, Self::Error> {
             if value.id != ASYNC.id {
-                return Err(ManyError::invalid_attribute_id(value.id.to_string()));
+                return Err(ManyError::invalid_attribute_id(value.id));
             }
 
             let arguments = value.into_arguments();
@@ -105,6 +106,7 @@ pub mod attributes {
 }
 
 #[derive(Debug, Clone, Encode, Decode)]
+#[cfg_attr(test, derive(PartialEq))]
 #[cbor(map)]
 pub struct StatusArgs {
     #[n(0)]
@@ -116,7 +118,7 @@ pub enum StatusReturn {
     Unknown,
     Queued,
     Processing,
-    Done { response: Box<CoseSign1> },
+    Done { response: Box<ResponseMessage> },
     Expired,
 }
 
@@ -131,8 +133,8 @@ impl StatusReturn {
         }
     }
 
-    fn from_key(key: u8, response: Option<CoseSign1>) -> Result<Self, ()> {
-        match (key, response) {
+    fn from_kind(kind: u8, response: Option<ResponseMessage>) -> Result<Self, ()> {
+        match (kind, response) {
             (0, None) => Ok(Self::Unknown),
             (1, None) => Ok(Self::Queued),
             (2, None) => Ok(Self::Processing),
@@ -152,7 +154,7 @@ impl Encode for StatusReturn {
             e.u8(1)?.bytes(
                 response
                     .clone()
-                    .to_vec()
+                    .to_bytes()
                     .map_err(|_err| Error::Message("Response could not be encoded."))?
                     .as_ref(),
             )?
@@ -200,12 +202,14 @@ impl<'b> Decode<'b> for StatusReturn {
             }
         }
 
-        Self::from_key(
+        Self::from_kind(
             key.map_or(Err("Invalid variant."), Ok)
                 .map_err(minicbor::decode::Error::Message)?,
             match result {
-                Some(result) => Some(CoseSign1::from_slice(result).map_err(|_| {
-                    minicbor::decode::Error::Message("Invalid result type, expected CoseSign1.")
+                Some(result) => Some(ResponseMessage::from_bytes(result).map_err(|_| {
+                    minicbor::decode::Error::Message(
+                        "Invalid result type, expected ResponseMessage.",
+                    )
                 })?),
                 _ => None,
             },
@@ -222,17 +226,17 @@ pub trait AsyncModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use proptest::prelude::*;
-    use std::sync::{Arc, Mutex};
-
+    use super::attributes::AsyncAttribute;
+    use super::*;
     use crate::cbor::CborAny;
     use crate::protocol::attributes::TryFromAttributeSet;
-    use crate::protocol::{AttributeSet, Attribute};
+    use crate::protocol::{Attribute, AttributeSet};
     use crate::server::module::_8_async::attributes::ASYNC;
-    use crate::{server::module::testutils::call_module_cbor};
-
-    use super::*;
-    use super::attributes::AsyncAttribute;
+    use crate::server::module::testutils::call_module_cbor;
+    use crate::types::identity::tests::identity;
+    use mockall::predicate;
+    use proptest::prelude::*;
+    use std::sync::{Arc, Mutex};
 
     fn arb_status() -> impl Strategy<Value = StatusReturn> {
         prop_oneof![
@@ -240,7 +244,7 @@ mod tests {
             Just(StatusReturn::Queued),
             Just(StatusReturn::Processing),
             Just(StatusReturn::Done {
-                response: Box::new(CoseSign1::default())
+                response: Box::new(ResponseMessage::default())
             }),
             Just(StatusReturn::Expired),
         ]
@@ -250,15 +254,16 @@ mod tests {
     proptest! {
         #[test]
         fn status(status in arb_status()) {
+            let data = StatusArgs {
+                token: AsyncToken::from(vec![11, 12, 13])
+            };
             let mut mock = MockAsyncModuleBackend::new();
             mock.expect_status()
+                .with(predicate::eq(tests::identity(1)), predicate::eq(data.clone()))
                 .times(1)
                 .return_const(Ok(status.clone()));
             let module = super::AsyncModule::new(Arc::new(Mutex::new(mock)));
 
-            let data = StatusArgs {
-                token: AsyncToken::from(vec![11, 12, 13])
-            };
             let status_return: StatusReturn = minicbor::decode(
                 &call_module_cbor(1, &module, "async.status", minicbor::to_vec(data).unwrap()).unwrap(),
             )

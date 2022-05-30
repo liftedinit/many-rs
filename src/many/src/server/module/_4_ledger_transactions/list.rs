@@ -1,7 +1,8 @@
 use crate::types::{ledger, SortOrder, TransactionFilter};
 use minicbor::{Decode, Encode};
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[cbor(map)]
 pub struct ListArgs {
     #[n(0)]
