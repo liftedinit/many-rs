@@ -22,11 +22,12 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use minicbor::bytes::ByteVec;
+    use mockall::predicate;
 
     use crate::{
         server::module::testutils::{call_module, call_module_cbor},
         types::{
-            ledger::{TokenAmount, Transaction, TransactionContent, TransactionId},
+            ledger::{TokenAmount, Transaction, TransactionId, TransactionInfo},
             Timestamp,
         },
         Identity,
@@ -37,11 +38,14 @@ mod tests {
     #[test]
     fn transactions() {
         let mut mock = MockLedgerTransactionsModuleBackend::new();
-        mock.expect_transactions().times(1).returning(|_args| {
-            Ok(TransactionsReturns {
-                nb_transactions: 12,
-            })
-        });
+        mock.expect_transactions()
+            .with(predicate::eq(TransactionsArgs {}))
+            .times(1)
+            .returning(|_args| {
+                Ok(TransactionsReturns {
+                    nb_transactions: 12,
+                })
+            });
         let module = super::LedgerTransactionsModule::new(Arc::new(Mutex::new(mock)));
 
         let transactions_returns: TransactionsReturns =
@@ -53,31 +57,31 @@ mod tests {
 
     #[test]
     fn list() {
-        let mut mock = MockLedgerTransactionsModuleBackend::new();
-        mock.expect_list().times(1).returning(|_args| {
-            Ok(ListReturns {
-                nb_transactions: 1,
-                transactions: vec![
-                    Transaction {
-                        id: TransactionId(ByteVec::from(vec![1, 1, 1, 1])),
-                        time: Timestamp::now(),
-                        content: TransactionContent::Send {
-                            from: Identity::anonymous(),
-                            to: Identity::anonymous(),
-                            symbol: "FOOBAR".to_string(),
-                            amount: TokenAmount::from(1000u64),
-                        },
-                    },
-                ],
-            })
-        });
-        let module = super::LedgerTransactionsModule::new(Arc::new(Mutex::new(mock)));
-
         let data = ListArgs {
             count: Some(1),
             order: None,
             filter: None,
         };
+        let mut mock = MockLedgerTransactionsModuleBackend::new();
+        mock.expect_list()
+        .with(predicate::eq(data.clone()))
+        .times(1).returning(|_args| {
+            Ok(ListReturns {
+                nb_transactions: 1,
+                transactions: vec![Transaction {
+                    id: TransactionId(ByteVec::from(vec![1, 1, 1, 1])),
+                    time: Timestamp::now(),
+                    content: TransactionInfo::Send {
+                        from: Identity::anonymous(),
+                        to: Identity::anonymous(),
+                        symbol: Default::default(),
+                        amount: TokenAmount::from(1000u64),
+                    },
+                }],
+            })
+        });
+        let module = super::LedgerTransactionsModule::new(Arc::new(Mutex::new(mock)));
+
         let list_returns: ListReturns = minicbor::decode(
             &call_module_cbor(1, &module, "ledger.list", minicbor::to_vec(data).unwrap()).unwrap(),
         )

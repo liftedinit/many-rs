@@ -11,7 +11,7 @@ pub use send::*;
 #[many_module(name = LedgerCommandsModule, id = 6, namespace = ledger, many_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait LedgerCommandsModuleBackend: Send {
-    fn send(&mut self, sender: &Identity, args: SendArgs) -> Result<SendReturn, ManyError>;
+    fn send(&mut self, sender: &Identity, args: SendArgs) -> Result<SendReturns, ManyError>;
 }
 
 #[cfg(test)]
@@ -30,7 +30,7 @@ mod tests {
         let mut mock = MockLedgerCommandsModuleBackend::new();
         mock.expect_send()
             .times(1)
-            .returning(|_sender, _args| Ok(SendReturn {}));
+            .returning(|_sender, _args| Ok(SendReturns {}));
         let module = super::LedgerCommandsModule::new(Arc::new(Mutex::new(mock)));
 
         let data = SendArgs {
@@ -40,7 +40,7 @@ mod tests {
             symbol: Identity::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz")
                 .unwrap(),
         };
-        let _: SendReturn = minicbor::decode(
+        let _: SendReturns = minicbor::decode(
             &call_module_cbor(1, &module, "ledger.send", minicbor::to_vec(data).unwrap()).unwrap(),
         )
         .unwrap();

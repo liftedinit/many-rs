@@ -1,8 +1,12 @@
 use clap::{ArgGroup, Parser};
 use coset::CborSerializable;
 use many::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
-use many::message::{encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder};
+use many::message::{
+    encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
+};
 use many::server::module::ledger;
+use many::server::module::r#async::attributes::AsyncAttribute;
+use many::server::module::r#async::{StatusArgs, StatusReturn};
 use many::transport::http::HttpServer;
 use many::types::identity::CoseKeyIdentity;
 use many::{Identity, ManyServer};
@@ -11,7 +15,9 @@ use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
-use tracing::{error, level_filters::LevelFilter, trace};
+use std::time::Duration;
+use tracing::{error, info, level_filters::LevelFilter, trace};
+use url::Url;
 
 #[derive(Parser)]
 struct Opts {
@@ -99,6 +105,11 @@ struct MessageOpt {
     #[clap(long, conflicts_with("hex"))]
     base64: bool,
 
+    /// Show the async token and exit right away. By default, will poll for the
+    /// result of the async operation.
+    #[clap(long)]
+    r#async: bool,
+
     /// The identity to send it to.
     #[clap(long)]
     to: Option<Identity>,
@@ -135,6 +146,10 @@ struct ServerOpt {
     /// The address and port to bind to for the MANY Http server.
     #[clap(long, short, default_value = "127.0.0.1:8000")]
     addr: SocketAddr,
+
+    /// The name to give the server.
+    #[clap(long, short, default_value = "many-server")]
+    name: String,
 }
 
 #[derive(Parser)]
@@ -145,6 +160,86 @@ struct GetTokenIdOpt {
     /// The token to get. If not listed in the list of tokens, this will
     /// error.
     symbol: String,
+}
+
+fn show_response(
+    response: ResponseMessage,
+    client: ManyClient,
+    r#async: bool,
+) -> Result<(), anyhow::Error> {
+    let ResponseMessage {
+        data, attributes, ..
+    } = response;
+
+    let payload = data?;
+    if payload.is_empty() {
+        let attr = attributes.get::<AsyncAttribute>().unwrap();
+        info!("Async token: {}", hex::encode(&attr.token));
+
+        // Allow eprint/ln for showing the progress bar, when we're interactive.
+        #[allow(clippy::print_stderr)]
+        fn progress(str: &str, done: bool) {
+            if atty::is(atty::Stream::Stderr) {
+                if done {
+                    eprintln!("{}", str);
+                } else {
+                    eprint!("{}", str);
+                }
+            }
+        }
+
+        if !r#async {
+            progress("Waiting.", false);
+
+            // TODO: improve on this by using duration and thread and watchdog.
+            // Wait for the server for ~60 seconds by pinging it every second.
+            for _ in 0..60 {
+                let response = client.call(
+                    "async.status",
+                    StatusArgs {
+                        token: attr.token.clone(),
+                    },
+                )?;
+                let status: StatusReturn = minicbor::decode(&response.data?)?;
+                match status {
+                    StatusReturn::Done { response } => {
+                        progress(".", true);
+                        return show_response(*response, client, r#async);
+                    }
+                    StatusReturn::Expired => {
+                        progress(".", true);
+                        info!("Async token expired before we could check it.");
+                        return Ok(());
+                    }
+                    _ => {
+                        progress(".", false);
+                        std::thread::sleep(Duration::from_secs(1));
+                    }
+                }
+            }
+        }
+    } else {
+        println!(
+            "{}",
+            cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
+        );
+    }
+
+    Ok(())
+}
+
+fn message(
+    s: Url,
+    to: Identity,
+    key: CoseKeyIdentity,
+    method: String,
+    data: Vec<u8>,
+    r#async: bool,
+) -> Result<(), anyhow::Error> {
+    let client = ManyClient::new(s, to, key).unwrap();
+    let response = client.call_raw(method, &data)?;
+
+    show_response(response, client, r#async)
 }
 
 fn main() {
@@ -267,21 +362,8 @@ fn main() {
                 .map_or(vec![], |d| cbor_diag::parse_diag(&d).unwrap().to_bytes());
 
             if let Some(s) = o.server {
-                let client = ManyClient::new(s, to_identity, key).unwrap();
-                let response = client.call_raw(o.method, &data).unwrap();
-
-                match &response.data {
-                    Ok(payload) => {
-                        if payload.is_empty() {
-                            error!("Empty response:\n{:#?}", response);
-                        } else {
-                            println!(
-                                "{}",
-                                cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
-                            );
-                        }
-                        std::process::exit(0);
-                    }
+                match message(s, to_identity, key, o.method, data, o.r#async) {
+                    Ok(()) => {}
                     Err(err) => {
                         error!(
                             "Error returned by server:\n|  {}\n",
@@ -320,9 +402,10 @@ fn main() {
                 .expect("Could not generate identity from PEM file.");
 
             let many = ManyServer::simple(
-                "many-server",
+                o.name,
                 key,
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
+                None,
             );
             HttpServer::new(many).bind(o.addr).unwrap();
         }
@@ -342,7 +425,7 @@ fn main() {
 
             let info: ledger::InfoReturns = minicbor::decode(
                 &client
-                    .call("ledger.info", ledger::InfoArgs)
+                    .call("ledger.info", ledger::InfoArgs {})
                     .unwrap()
                     .data
                     .expect("An error happened during the call to ledger.info"),

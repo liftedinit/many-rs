@@ -181,9 +181,9 @@ impl Verifier<CoseKeyIdentitySignature> for CoseKeyIdentity {
                     let points =
                         p256::EncodedPoint::from_affine_coordinates(x.into(), y.into(), false);
 
-                    let verify_key =
-                        p256::ecdsa::VerifyingKey::from_encoded_point(&points).unwrap();
-                    let signature = p256::ecdsa::Signature::from_bytes(&signature.bytes).unwrap();
+                    let verify_key = p256::ecdsa::VerifyingKey::from_encoded_point(&points)?;
+                    let signature = p256::ecdsa::Signature::from_der(&signature.bytes)
+                        .or_else(|_| p256::ecdsa::Signature::from_bytes(&signature.bytes))?;
                     verify_key.verify(msg, &signature).map_err(|e| {
                         error!("Key verify failed: {}", e);
                         Error::new()
@@ -308,15 +308,11 @@ impl Signer<CoseKeyIdentitySignature> for CoseKeyIdentity {
     }
 }
 
-#[cfg(test)]
-pub mod tests {
+#[cfg(feature = "testing")]
+pub mod testsutils {
+    use super::*;
     use ed25519_dalek::Keypair;
     use rand_07::rngs::OsRng;
-
-    use super::*;
-
-    // MSG == FOOBAR
-    const MSG: &[u8] = &[70, 79, 79, 66, 65, 82];
 
     pub fn generate_random_eddsa_identity() -> CoseKeyIdentity {
         let mut csprng = OsRng {};
@@ -329,6 +325,14 @@ pub mod tests {
 
         CoseKeyIdentity::from_key(cose_key, false).unwrap()
     }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    // MSG == FOOBAR
+    const MSG: &[u8] = &[70, 79, 79, 66, 65, 82];
 
     pub fn eddsa_identity() -> CoseKeyIdentity {
         let pem = "-----BEGIN PRIVATE KEY-----\n\
