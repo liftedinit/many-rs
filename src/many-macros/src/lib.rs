@@ -12,10 +12,11 @@ use syn::{
 
 #[derive(Deserialize)]
 struct ManyModuleAttributes {
-    pub id: u32,
+    pub id: Option<u32>,
     pub name: Option<String>,
     pub namespace: Option<String>,
     pub many_crate: Option<String>,
+    pub drop_non_webauthn: Option<Vec<String>>,
 }
 
 #[derive(Debug)]
@@ -157,7 +158,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
 
     let vis = trait_.vis.clone();
 
-    let attr_id = attrs.id;
+    let attr_id = attrs.id.iter();
     let attr_name =
         inflections::Inflect::to_constant_case(format!("{}Attribute", struct_name).as_str());
     let attr_ident = Ident::new(&attr_name, attr.span());
@@ -219,6 +220,42 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
                 _ => return Err( #many ::ManyError::invalid_method_name(method.to_string())),
             };
             Ok(())
+        }
+    };
+
+    let ns = namespace.clone();
+    let validate_envelope = if let Some(endpoint) = attrs.drop_non_webauthn {
+        let field_names = endpoint.iter().map(|e| match &ns {
+            Some(namespace) => format!("{}.{}", namespace, e),
+            None => e.to_string(),
+        });
+        // Note: The endpoint needs to be the endpoind method name, not the trait method
+        // Ex: getFromAddress and NOT get_from_address
+        field_names
+            .clone()
+            .any(|name| endpoint_strings.contains(&name))
+            .then(|| 0)
+            .ok_or_else(|| {
+                syn::Error::new(span, "`drop_non_webauthn` endpoint non found in trait.")
+            })?;
+        quote! {
+            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
+                let method = message.method.as_str();
+                if vec![#(#field_names),*].contains(&method) {
+                    let unprotected =
+                        std::collections::BTreeMap::from_iter(envelope.unprotected.rest.clone().into_iter());
+                    if !unprotected.contains_key(&coset::Label::Text("webauthn".to_string())) {
+                        return Err( #many ::ManyError::non_webauthn_request_denied(&method))
+                    }
+                }
+                Ok(())
+            }
+        }
+    } else {
+        quote! {
+            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
+                Ok(())
+            }
         }
     };
 
@@ -284,8 +321,14 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         }
     };
 
+    let attribute = if attrs.id.is_some() {
+        quote! { Some(#attr_ident) }
+    } else {
+        quote! { None }
+    };
+
     Ok(quote! {
-        #vis const #attr_ident:  #many ::protocol::Attribute =  #many ::protocol::Attribute::id(#attr_id);
+        #( #vis const #attr_ident:  #many ::protocol::Attribute =  #many ::protocol::Attribute::id(#attr_id); )*
 
         #vis struct #info_ident;
         impl std::ops::Deref for #info_ident {
@@ -299,7 +342,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
                 unsafe {
                     ONCE.call_once(|| VALUE = Box::into_raw(Box::new(ManyModuleInfo {
                         name: #struct_name .to_string(),
-                        attribute: #attr_ident,
+                        attribute: #attribute,
                         endpoints: vec![ #( #endpoint_strings .to_string() ),* ],
                     })));
                     &*VALUE
@@ -331,6 +374,8 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             fn info(&self) -> & #many ::server::module::ManyModuleInfo {
                 & #info_ident
             }
+
+            #validate_envelope
 
             #validate
 

@@ -29,6 +29,7 @@ reexport_module!(
     account: _9_account;
     abci_backend: _1000_abci_backend;
     abci_frontend: _1001_abci_frontend;
+    idstore: _1002_idstore;
 );
 
 /// The specification says that some methods returns nothing (e.g. void or unit).
@@ -54,13 +55,33 @@ impl<'b> minicbor::Decode<'b> for EmptyReturn {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct EmptyArg;
+
+impl minicbor::Encode for EmptyArg {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+        // We encode nothing as a null so it's a value.
+        e.null()?;
+        Ok(())
+    }
+}
+
+impl<'b> minicbor::Decode<'b> for EmptyArg {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+        // Nothing to do. Skip a value if there's one, but don't error if there's none.
+        let _ = d.skip();
+        Ok(Self)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ManyModuleInfo {
     /// Returns the name of this module, for logs and metering.
     pub name: String,
 
-    /// Returns a list of all attributes supported by this module.
-    pub attribute: Attribute,
+    /// Returns the attribute supported by this module, if available.
+    pub attribute: Option<Attribute>,
 
     /// The endpoints that this module exports.
     pub endpoints: Vec<String>,
@@ -74,6 +95,14 @@ pub trait ManyModule: Sync + Send + Debug {
 
     /// Verify that a message is well formed (ACLs, arguments, etc).
     fn validate(&self, _message: &RequestMessage) -> Result<(), ManyError> {
+        Ok(())
+    }
+
+    fn validate_envelope(
+        &self,
+        _envelope: &coset::CoseSign1,
+        _message: &RequestMessage,
+    ) -> Result<(), ManyError> {
         Ok(())
     }
 

@@ -19,7 +19,7 @@ define_attribute_many_error!(
     }
 );
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct InfoReturns {
     #[n(0)]
@@ -32,28 +32,30 @@ pub struct InfoReturns {
     pub retained_height: Option<u64>,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[cbor(map)]
 pub struct BlockArgs {
     #[n(0)]
     pub query: SingleBlockQuery,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct BlockReturns {
     #[n(0)]
     pub block: Block,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[cbor(map)]
 pub struct TransactionArgs {
     #[n(0)]
     pub query: SingleTransactionQuery,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct TransactionReturns {
     #[n(0)]
@@ -70,29 +72,27 @@ pub trait BlockchainModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
-
+    use super::*;
     use crate::{
         server::module::testutils::{call_module, call_module_cbor},
         types::{blockchain::TransactionIdentifier, Timestamp},
     };
+    use mockall::predicate;
+    use std::sync::{Arc, Mutex};
 
-    use super::*;
     #[test]
     fn info() {
         let mut mock = MockBlockchainModuleBackend::new();
-        mock.expect_info().times(1).returning(|| {
-            Ok(InfoReturns {
-                latest_block: {
-                    BlockIdentifier {
-                        hash: vec![0u8; 8],
-                        height: 0,
-                    }
-                },
-                app_hash: Some(vec![2u8; 8]),
-                retained_height: Some(2),
-            })
-        });
+        mock.expect_info().times(1).return_const(Ok(InfoReturns {
+            latest_block: {
+                BlockIdentifier {
+                    hash: vec![0u8; 8],
+                    height: 0,
+                }
+            },
+            app_hash: Some(vec![2u8; 8]),
+            retained_height: Some(2),
+        }));
         let module = super::BlockchainModule::new(Arc::new(Mutex::new(mock)));
 
         let info_returns: InfoReturns =
@@ -108,15 +108,19 @@ mod tests {
 
     #[test]
     fn block_hash() {
+        let data = BlockArgs {
+            query: SingleBlockQuery::Hash(vec![5u8; 8]),
+        };
         let mut mock = MockBlockchainModuleBackend::new();
         mock.expect_block()
-            .times(2)
+            .with(predicate::eq(data.clone()))
+            .times(1)
             .returning(|args| match args.query {
                 SingleBlockQuery::Hash(v) => Ok(BlockReturns {
                     block: Block {
                         id: BlockIdentifier::new(v, 1),
                         parent: BlockIdentifier::genesis(),
-                        post_hash: Some(vec![4u8; 8]),
+                        app_hash: Some(vec![4u8; 8]),
                         timestamp: Timestamp::now(),
                         txs_count: 1,
                         txs: vec![Transaction {
@@ -125,44 +129,64 @@ mod tests {
                         }],
                     },
                 }),
-                SingleBlockQuery::Height(h) => Ok(BlockReturns {
-                    block: Block {
-                        id: BlockIdentifier::new(vec![3u8; 8], h),
-                        parent: BlockIdentifier::genesis(),
-                        post_hash: Some(vec![4u8; 8]),
-                        timestamp: Timestamp::now(),
-                        txs_count: 1,
-                        txs: vec![Transaction {
-                            id: TransactionIdentifier { hash: vec![] },
-                            content: None,
-                        }],
-                    },
-                }),
+                _ => unimplemented!(),
             });
         let module = super::BlockchainModule::new(Arc::new(Mutex::new(mock)));
 
-        let data = BlockArgs {
-            query: SingleBlockQuery::Hash(vec![5u8; 8]),
-        };
-        let data = minicbor::to_vec(data).unwrap();
-
-        let block_returns: BlockReturns =
-            minicbor::decode(&call_module_cbor(1, &module, "blockchain.block", data).unwrap())
-                .unwrap();
+        let block_returns: BlockReturns = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "blockchain.block",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
 
         assert_eq!(
             block_returns.block.id,
             BlockIdentifier::new(vec![5u8; 8], 1)
         );
+    }
 
+    #[test]
+    fn block_height() {
         let data = BlockArgs {
             query: SingleBlockQuery::Height(3),
         };
-        let data = minicbor::to_vec(data).unwrap();
+        let mut mock = MockBlockchainModuleBackend::new();
+        mock.expect_block()
+            .with(predicate::eq(data.clone()))
+            .times(1)
+            .returning(|args| match args.query {
+                SingleBlockQuery::Height(h) => Ok(BlockReturns {
+                    block: Block {
+                        id: BlockIdentifier::new(vec![3u8; 8], h),
+                        parent: BlockIdentifier::genesis(),
+                        app_hash: Some(vec![4u8; 8]),
+                        timestamp: Timestamp::now(),
+                        txs_count: 1,
+                        txs: vec![Transaction {
+                            id: TransactionIdentifier { hash: vec![] },
+                            content: None,
+                        }],
+                    },
+                }),
+                _ => unimplemented!(),
+            });
+        let module = super::BlockchainModule::new(Arc::new(Mutex::new(mock)));
 
-        let block_returns: BlockReturns =
-            minicbor::decode(&call_module_cbor(1, &module, "blockchain.block", data).unwrap())
-                .unwrap();
+        let block_returns: BlockReturns = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "blockchain.block",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
 
         assert_eq!(
             block_returns.block.id,
@@ -172,8 +196,12 @@ mod tests {
 
     #[test]
     fn transaction() {
+        let data = TransactionArgs {
+            query: SingleTransactionQuery::Hash(vec![6u8; 8]),
+        };
         let mut mock = MockBlockchainModuleBackend::new();
         mock.expect_transaction()
+            .with(predicate::eq(data.clone()))
             .times(1)
             .returning(|args| match args.query {
                 SingleTransactionQuery::Hash(v) => Ok(TransactionReturns {
@@ -185,13 +213,14 @@ mod tests {
             });
         let module = super::BlockchainModule::new(Arc::new(Mutex::new(mock)));
 
-        let data = TransactionArgs {
-            query: SingleTransactionQuery::Hash(vec![6u8; 8]),
-        };
-        let data = minicbor::to_vec(data).unwrap();
-
         let transaction_returns: TransactionReturns = minicbor::decode(
-            &call_module_cbor(1, &module, "blockchain.transaction", data).unwrap(),
+            &call_module_cbor(
+                1,
+                &module,
+                "blockchain.transaction",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
         )
         .unwrap();
 

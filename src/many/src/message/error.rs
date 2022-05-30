@@ -63,12 +63,12 @@ macro_rules! many_error {
         impl ManyError {
             $($(
                 #[doc = $description]
-                pub fn $snake_name( $($arg: String,)* ) -> Self {
+                pub fn $snake_name( $($arg: impl ToString,)* ) -> Self {
                     let s = Self {
                         code: ManyErrorCode::$name,
                         message: Some($description.to_string()),
                         arguments: BTreeMap::from_iter(vec![
-                            $( (stringify!($arg).to_string(), $arg) ),*
+                            $( (stringify!($arg).to_string(), ($arg).to_string()) ),*
                         ]),
                     };
 
@@ -143,8 +143,8 @@ many_error! {
             => r#"Invalid method name: "{method}"."#,
     -1001: InvalidFromIdentity as invalid_from_identity()
             => "The identity of the from field is invalid or unexpected.",
-    -1002: CouldNotVerifySignature as could_not_verify_signature()
-            => "Signature does not match the public key.",
+    -1002: CouldNotVerifySignature as could_not_verify_signature(details)
+            => "Could not verify the signature: {details}.",
     -1003: UnknownDestination as unknown_destination(to, this)
             => "Unknown destination for message.\nThis is \"{this}\", message was for \"{to}\".",
     -1004: EmptyEnvelope as empty_envelope()
@@ -153,6 +153,8 @@ many_error! {
             => "The message's timestamp is out of the accepted range of the server.",
     -1006: RequiredFieldMissing as required_field_missing(field)
             => "Field is required but missing: '{field}'.",
+    -1007: NonWebAuthnRequestDenied as non_webauthn_request_denied(endpoint)
+            => "Non-WebAuthn request denied for endpoint '{endpoint}'.",
 
     // -2000 - -2999 is for server errors.
     -2000: InternalServerError as internal_server_error()
@@ -171,12 +173,12 @@ macro_rules! define_attribute_many_error {
     ( $( attribute $module_id: literal => { $( $id: literal : $vis: vis fn $name: ident ($( $var_name: ident ),*) => $message: literal ),* $(,)? } );* ) => {
         $(
         $(
-            $vis fn $name ( $($var_name: String),* ) -> $crate::ManyError {
+            $vis fn $name( $($var_name: impl ToString),* ) -> $crate::ManyError {
                 $crate::ManyError::attribute_specific(
                     ($module_id as i32) * -10000i32 - ($id as i32),
                     String::from($message),
                     std::iter::FromIterator::from_iter(vec![
-                        $( (stringify!($var_name).to_string(), $var_name) ),*
+                        $( (stringify!($var_name).to_string(), ($var_name).to_string()) ),*
                     ]),
                 )
             }
@@ -190,12 +192,12 @@ macro_rules! define_application_many_error {
     ( $( { $( $id: literal : $vis: vis fn $name: ident ($( $var_name: ident ),*) => $message: literal ),* $(,)? } );* ) => {
         $(
         $(
-            $vis fn $name ( $($var_name: String),* ) -> $crate::ManyError {
+            $vis fn $name ( $($var_name: impl ToString),* ) -> $crate::ManyError {
                 $crate::ManyError::application_specific(
                     $id as u32,
                     String::from($message),
                     std::iter::FromIterator::from_iter(vec![
-                        $( (stringify!($var_name).to_string(), $var_name) ),*
+                        $( (stringify!($var_name).to_string(), ($var_name).to_string()) ),*
                     ]),
                 )
             }
