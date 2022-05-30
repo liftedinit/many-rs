@@ -3,6 +3,7 @@ use crate::Identity;
 use minicbor::{Decode, Encode};
 
 #[derive(Debug, Clone, Encode, Decode)]
+#[cfg_attr(test, derive(PartialEq))]
 #[cbor(map)]
 pub struct SendArgs {
     #[n(0)]
@@ -18,4 +19,4 @@ pub struct SendArgs {
     pub symbol: ledger::Symbol,
 }
 
-pub type SendReturn = EmptyReturn;
+pub type SendReturns = EmptyReturn;

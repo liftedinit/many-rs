@@ -18,26 +18,29 @@ pub trait KvStoreCommandsModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
-
-    use minicbor::bytes::ByteVec;
-
-    use crate::server::module::testutils::call_module_cbor;
-
     use super::*;
+    use crate::server::module::testutils::call_module_cbor;
+    use crate::types::identity::tests::identity;
+    use minicbor::bytes::ByteVec;
+    use mockall::predicate;
+    use std::sync::{Arc, Mutex};
 
     #[test]
     fn put() {
-        let mut mock = MockKvStoreCommandsModuleBackend::new();
-        mock.expect_put()
-            .times(1)
-            .returning(|_sender, _args| Ok(PutReturn {} ));
-        let module = super::KvStoreCommandsModule::new(Arc::new(Mutex::new(mock)));
-
         let data = PutArgs {
             key: ByteVec::from(vec![1]),
             value: ByteVec::from(vec![2]),
         };
+
+        let mut mock = MockKvStoreCommandsModuleBackend::new();
+        mock.expect_put()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .returning(|_sender, _args| Ok(PutReturn {}));
+        let module = super::KvStoreCommandsModule::new(Arc::new(Mutex::new(mock)));
 
         let _: PutReturn = minicbor::decode(
             &call_module_cbor(1, &module, "kvstore.put", minicbor::to_vec(data).unwrap()).unwrap(),
@@ -47,18 +50,28 @@ mod tests {
 
     #[test]
     fn delete() {
-        let mut mock = MockKvStoreCommandsModuleBackend::new();
-        mock.expect_delete()
-            .times(1)
-            .returning(|_sender, _args| Ok(DeleteReturn {} ));
-        let module = super::KvStoreCommandsModule::new(Arc::new(Mutex::new(mock)));
-
         let data = DeleteArgs {
             key: ByteVec::from(vec![1]),
         };
 
+        let mut mock = MockKvStoreCommandsModuleBackend::new();
+        mock.expect_delete()
+            .with(
+                predicate::eq(tests::identity(1)),
+                predicate::eq(data.clone()),
+            )
+            .times(1)
+            .returning(|_sender, _args| Ok(DeleteReturn {}));
+        let module = super::KvStoreCommandsModule::new(Arc::new(Mutex::new(mock)));
+
         let _: DeleteReturn = minicbor::decode(
-            &call_module_cbor(1, &module, "kvstore.delete", minicbor::to_vec(data).unwrap()).unwrap(),
+            &call_module_cbor(
+                1,
+                &module,
+                "kvstore.delete",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
         )
         .unwrap();
     }

@@ -134,7 +134,7 @@ impl Identity {
     }
 }
 
-#[cfg(feature = "raw")]
+#[cfg(any(test, feature = "raw"))]
 impl Identity {
     /// Create an identity from the raw value of a public key hash, without checking
     /// its validity.
@@ -146,7 +146,8 @@ impl Identity {
     /// Create an identity from the raw value of a public key hash and a subresource
     /// id. The hash isn't validated, but the subid is.
     #[inline(always)]
-    pub fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
         Self(InnerIdentity::subresource_unchecked(hash, subid))
     }
 }
@@ -713,7 +714,7 @@ pub mod tests {
         let id = ecdsa_256_identity();
         assert_eq!(
             id.identity,
-            "mafdewutfd6c3killp3nhz3aqi36uv4mrbemvaggiy7axb2qoc"
+            "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf"
         );
     }
 

@@ -1,13 +1,18 @@
 use crate::cbor::CborAny;
 use crate::protocol::Attribute;
+use crate::server::module::account::Role;
 use crate::ManyError;
 use minicbor::{Decode, Encode};
 use std::collections::BTreeSet;
 
+pub mod multisig;
+
 /// See feature `_0_account_ledger`.
 pub mod ledger {
     use super::{Feature, FeatureId, TryCreateFeature};
+    use crate::server::module::account::Role;
     use crate::ManyError;
+    use std::collections::BTreeSet;
 
     pub struct AccountLedger;
 
@@ -16,6 +21,16 @@ pub mod ledger {
 
         fn try_create(_: &Feature) -> Result<Self, ManyError> {
             Ok(Self)
+        }
+    }
+
+    impl super::FeatureInfo for AccountLedger {
+        fn as_feature(&self) -> Feature {
+            Feature::with_id(Self::ID)
+        }
+
+        fn roles() -> BTreeSet<Role> {
+            BTreeSet::from([Role::CanLedgerTransact])
         }
     }
 }
@@ -69,6 +84,10 @@ impl Feature {
 pub struct FeatureSet(#[n(0)] BTreeSet<Feature>);
 
 impl FeatureSet {
+    pub fn empty() -> Self {
+        Self(BTreeSet::new())
+    }
+
     /// Returns true if the set is empty.
     ///
     /// ```
@@ -83,7 +102,7 @@ impl FeatureSet {
     }
 
     pub fn insert(&mut self, attr: Feature) -> bool {
-        self.0.insert(attr)
+        self.0.replace(attr).is_some()
     }
 
     pub fn remove(&mut self, id: FeatureId) -> bool {
@@ -110,9 +129,22 @@ impl FeatureSet {
         )
     }
 
+    pub fn info<T: TryCreateFeature + FeatureInfo>(&self) -> Result<T, ManyError> {
+        self.get_feature(T::ID).map_or_else(
+            || Err(ManyError::attribute_not_found(format!("{}", T::ID))),
+            |f| T::try_create(f),
+        )
+    }
+
     /// Creates an iterator to traverse all features.
     pub fn iter(&self) -> impl Iterator<Item = &Feature> {
         self.0.iter()
+    }
+}
+
+impl FromIterator<Feature> for FeatureSet {
+    fn from_iter<I: IntoIterator<Item = Feature>>(iter: I) -> FeatureSet {
+        Self(BTreeSet::from_iter(iter))
     }
 }
 
@@ -120,6 +152,11 @@ pub trait TryCreateFeature: Sized {
     const ID: FeatureId;
 
     fn try_create(feature: &Feature) -> Result<Self, ManyError>;
+}
+
+pub trait FeatureInfo {
+    fn as_feature(&self) -> Feature;
+    fn roles() -> BTreeSet<Role>;
 }
 
 #[cfg(test)]

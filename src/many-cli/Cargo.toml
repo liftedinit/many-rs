@@ -2,14 +2,21 @@
 name = "many-cli"
 version = "0.1.0"
 edition = "2021"
+description = "CLI tool to communicate with the MANY protocol network."
+license-file = "../../LICENSE"
+homepage = "https://liftedinit.org/"
+repository = "https://github.com/liftedinit/many-rs.git"
+authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 
 [[bin]]
 name = "many"
 path = "src/main.rs"
 
 [dependencies]
-many = { path = "../many" }
-many-client = { path = "../many-client" }
+many = { path = "../many", version = "0.1.0" }
+many-client = { path = "../many-client", version = "0.1.0" }
+anyhow = "1.0.57"
+atty = "0.2.14"
 base64 = "0.13.0"
 cbor-diag = "0.1.8"
 clap = { version = "3.0.0-rc.9", features = [ "derive" ] }
