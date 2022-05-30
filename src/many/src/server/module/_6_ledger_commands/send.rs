@@ -3,6 +3,7 @@ use crate::Identity;
 use minicbor::{Decode, Encode};
 
 #[derive(Debug, Clone, Encode, Decode)]
+#[cfg_attr(test, derive(PartialEq))]
 #[cbor(map)]
 pub struct SendArgs {
     #[n(0)]
