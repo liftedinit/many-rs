@@ -26,7 +26,7 @@ impl<H: ManyRequestHandler + Debug> HandlerExecutorAdapter<H> {
 #[async_trait]
 impl<H: ManyRequestHandler + Debug> LowLevelManyRequestHandler for HandlerExecutorAdapter<H> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
-        let request = crate::message::decode_request_from_cose_sign1(envelope)
+        let request = crate::message::decode_request_from_cose_sign1(envelope, None)
             .and_then(|message| self.handler.validate(&message).map(|_| message));
 
         let response = match request {

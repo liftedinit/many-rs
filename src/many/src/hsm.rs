@@ -57,9 +57,7 @@ pub struct Hsm {
 impl Hsm {
     /// Return the HSM global instance
     pub fn get_instance() -> Result<MutexGuard<'static, Hsm>, ManyError> {
-        let hsm = HSM_INSTANCE
-            .lock()
-            .map_err(|e| ManyError::hsm_mutex_poisoned(e.to_string()))?;
+        let hsm = HSM_INSTANCE.lock().map_err(ManyError::hsm_mutex_poisoned)?;
         Ok(hsm)
     }
 
@@ -68,9 +66,10 @@ impl Hsm {
     /// Note: The NIST P-256 curve requires the user to hash the message with
     /// SHA256, and to sign the result.
     pub fn sign(&self, msg: &[u8], mechanism: &HsmMechanism) -> Result<Vec<u8>, ManyError> {
-        let session = self.session.as_ref().ok_or_else(|| {
-            ManyError::hsm_session_error("No PKCS#11 open session found".to_string())
-        })?;
+        let session = self
+            .session
+            .as_ref()
+            .ok_or_else(|| ManyError::hsm_session_error("No PKCS#11 open session found"))?;
 
         let signer = self.signer()?;
         trace!("Signing message using HSM");
@@ -82,13 +81,14 @@ impl Hsm {
 
     /// Return the object handle of the HSM singing key (private key)
     fn signer(&self) -> Result<ObjectHandle, ManyError> {
-        let session = self.session.as_ref().ok_or_else(|| {
-            ManyError::hsm_session_error("No PKCS#11 open session found".to_string())
-        })?;
+        let session = self
+            .session
+            .as_ref()
+            .ok_or_else(|| ManyError::hsm_session_error("No PKCS#11 open session found"))?;
         let keyid = self
             .keyid
             .as_ref()
-            .ok_or_else(|| ManyError::hsm_keyid_error("No PKCS#11 key ID found".to_string()))?;
+            .ok_or_else(|| ManyError::hsm_keyid_error("No PKCS#11 key ID found"))?;
 
         trace!("Looking for private key");
         let template = &[Attribute::Id(keyid.clone()), Attribute::Sign(true)];
@@ -101,9 +101,9 @@ impl Hsm {
             0 => {
                 panic!("Unable to find private key")
             }
-            1 => signers.pop().ok_or_else(|| {
-                ManyError::hsm_sign_error("Unable to fetch private key".to_string())
-            })?,
+            1 => signers
+                .pop()
+                .ok_or_else(|| ManyError::hsm_sign_error("Unable to fetch private key"))?,
             _ => {
                 panic!("Multiple private key found")
             }
@@ -121,9 +121,10 @@ impl Hsm {
         signature: &[u8],
         mechanism: &HsmMechanism,
     ) -> Result<(), ManyError> {
-        let session = self.session.as_ref().ok_or_else(|| {
-            ManyError::hsm_session_error("No PKCS#11 open session found".to_string())
-        })?;
+        let session = self
+            .session
+            .as_ref()
+            .ok_or_else(|| ManyError::hsm_session_error("No PKCS#11 open session found"))?;
 
         let verifier = self.verifier()?;
         session
@@ -134,9 +135,10 @@ impl Hsm {
 
     /// Return the object handle of the HSM verification key (public key)
     fn verifier(&self) -> Result<ObjectHandle, ManyError> {
-        let session = self.session.as_ref().ok_or_else(|| {
-            ManyError::hsm_session_error("No PKCS#11 open session found".to_string())
-        })?;
+        let session = self
+            .session
+            .as_ref()
+            .ok_or_else(|| ManyError::hsm_session_error("No PKCS#11 open session found"))?;
         let keyid = self
             .keyid
             .as_ref()

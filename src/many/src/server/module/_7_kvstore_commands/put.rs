@@ -3,7 +3,8 @@ use minicbor::{Decode, Encode};
 
 use crate::server::module::EmptyReturn;
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[cbor(map)]
 pub struct PutArgs {
     #[n(0)]

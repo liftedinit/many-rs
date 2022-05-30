@@ -3,7 +3,8 @@ use crate::Identity;
 use minicbor::{Decode, Encode};
 use std::collections::BTreeMap;
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[cbor(map)]
 pub struct BalanceArgs {
     #[n(0)]
@@ -13,7 +14,7 @@ pub struct BalanceArgs {
     pub symbols: Option<VecOrSingle<ledger::Symbol>>,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct BalanceReturns {
     #[n(0)]
