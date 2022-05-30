@@ -113,14 +113,12 @@ fn encode_cose_sign1_from_payload(
         .payload(payload);
 
     if cose_key.key.is_some() {
-        cose_builder = cose_builder
-            .try_create_signature(b"", |msg| {
-                cose_key
-                    .try_sign(msg)
-                    .map(|v| v.as_bytes().to_vec())
-                    .map_err(|e| e.to_string())
-            })
-            .map_err(|e| e)?;
+        cose_builder = cose_builder.try_create_signature(b"", |msg| {
+            cose_key
+                .try_sign(msg)
+                .map(|v| v.as_bytes().to_vec())
+                .map_err(|e| e.to_string())
+        })?;
     }
     Ok(cose_builder.build())
 }
