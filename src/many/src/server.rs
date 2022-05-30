@@ -12,6 +12,38 @@ use std::time::SystemTime;
 
 pub mod module;
 
+/// Validate that the timestamp of a message is within a timeout, either in the future
+/// or the past.
+fn _validate_time(
+    message: &RequestMessage,
+    now: SystemTime,
+    timeout_in_secs: u64,
+) -> Result<(), ManyError> {
+    if timeout_in_secs == 0 {
+        return Err(ManyError::timestamp_out_of_range());
+    }
+    let ts = message
+        .timestamp
+        .ok_or_else(|| ManyError::required_field_missing("timestamp".to_string()))?;
+
+    // Get the absolute time difference.
+    let (early, later) = if ts < now { (ts, now) } else { (now, ts) };
+    let diff = later
+        .duration_since(early)
+        .map_err(|_| ManyError::timestamp_out_of_range())?;
+
+    if diff.as_secs() >= timeout_in_secs {
+        tracing::error!(
+            "ERR: Timestamp outside of timeout: {} >= {}",
+            diff.as_secs(),
+            timeout_in_secs
+        );
+        return Err(ManyError::timestamp_out_of_range());
+    }
+
+    Ok(())
+}
+
 pub type ManyUrl = reqwest::Url;
 
 trait ManyServerFallback: LowLevelManyRequestHandler + base::BaseModuleBackend {}
@@ -130,29 +162,6 @@ impl ManyServer {
         }
     }
 
-    pub fn validate_time(&self, message: &RequestMessage) -> Result<(), ManyError> {
-        if self.timeout != 0 {
-            let ts = message
-                .timestamp
-                .ok_or_else(|| ManyError::required_field_missing("timestamp".to_string()))?;
-            let now = SystemTime::now();
-
-            let diff = now.duration_since(ts).map_err(|_| {
-                tracing::error!("ERR: System time error");
-                ManyError::timestamp_out_of_range()
-            })?;
-            if diff.as_secs() >= self.timeout {
-                tracing::error!(
-                    "ERR: Timestamp outside of timeout: {} >= {}",
-                    diff.as_secs(),
-                    self.timeout
-                );
-                return Err(ManyError::timestamp_out_of_range());
-            }
-        }
-        Ok(())
-    }
-
     pub fn find_module(&self, message: &RequestMessage) -> Option<Arc<dyn ManyModule + Send>> {
         self.modules
             .iter()
@@ -250,7 +259,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
             let cose_id = this.identity.clone();
             request
                 .and_then(|message| {
-                    this.validate_time(&message)?;
+                    _validate_time(&message, SystemTime::now(), this.timeout)?;
                     Ok(message)
                 })
                 .and_then(|message| {
@@ -316,6 +325,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 #[cfg(test)]
 mod tests {
     use semver::{BuildMetadata, Prerelease, Version};
+    use std::time::Duration;
 
     use super::*;
     use crate::cose_helpers::public_key;
@@ -325,6 +335,7 @@ mod tests {
     };
     use crate::server::module::base::Status;
     use crate::types::identity::cose::testsutils::generate_random_eddsa_identity;
+    use crate::Identity;
     use proptest::prelude::*;
 
     const ALPHA_NUM_DASH_REGEX: &str = "[a-zA-Z0-9-]";
@@ -374,5 +385,31 @@ mod tests {
             assert_eq!(status.timeout, Some(MANYSERVER_DEFAULT_TIMEOUT));
             assert_eq!(status.extras, BTreeMap::new());
         }
+    }
+
+    #[test]
+    fn validate_time() {
+        let timestamp = SystemTime::now();
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .version(1)
+            .from(Identity::anonymous())
+            .to(Identity::anonymous())
+            .method("status".to_string())
+            .data("null".as_bytes().to_vec())
+            .timestamp(timestamp)
+            .build()
+            .unwrap();
+
+        // Okay with the same
+        assert!(_validate_time(&request, timestamp, 100).is_ok());
+        // Okay with the past
+        assert!(_validate_time(&request, timestamp - Duration::from_secs(10), 100).is_ok());
+        // Okay with the future
+        assert!(_validate_time(&request, timestamp + Duration::from_secs(10), 100).is_ok());
+
+        // NOT okay with the past too much
+        assert!(_validate_time(&request, timestamp - Duration::from_secs(101), 100).is_err());
+        // NOT okay with the future too much
+        assert!(_validate_time(&request, timestamp + Duration::from_secs(101), 100).is_err());
     }
 }
