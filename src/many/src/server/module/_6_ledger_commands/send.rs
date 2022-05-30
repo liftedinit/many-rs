@@ -1,9 +1,9 @@
-use crate::server::module::EmptyReturn;
-use crate::types::ledger;
+use crate::{types::ledger, server::module::EmptyReturn};
 use crate::Identity;
 use minicbor::{Decode, Encode};
 
 #[derive(Debug, Clone, Encode, Decode)]
+#[cfg_attr(test, derive(PartialEq))]
 #[cbor(map)]
 pub struct SendArgs {
     #[n(0)]

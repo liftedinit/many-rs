@@ -5,6 +5,9 @@ use many_macros::many_module;
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
 
+#[cfg(test)]
+use mockall::{automock, predicate::*};
+
 pub mod errors;
 pub mod features;
 
@@ -377,7 +380,7 @@ pub struct AddFeaturesArgs {
 pub type AddFeaturesReturn = EmptyReturn;
 
 #[many_module(name = AccountModule, id = 9, namespace = account, many_crate = crate)]
-#[cfg_attr(test, mockall::automock)]
+#[cfg_attr(test, automock)]
 pub trait AccountModuleBackend: Send {
     /// Create an account.
     fn create(&mut self, sender: &Identity, args: CreateArgs) -> Result<CreateReturn, ManyError>;

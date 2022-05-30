@@ -1,7 +1,10 @@
 use minicbor::bytes::ByteVec;
 use minicbor::{Decode, Encode};
 
-#[derive(Encode, Decode)]
+use crate::server::module::EmptyReturn;
+
+#[derive(Clone, Encode, Decode)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[cbor(map)]
 pub struct PutArgs {
     #[n(0)]
@@ -11,6 +14,4 @@ pub struct PutArgs {
     pub value: ByteVec,
 }
 
-#[derive(Encode, Decode)]
-#[cbor(map)]
-pub struct PutReturns {}
+pub type PutReturn = EmptyReturn;
