@@ -26,7 +26,7 @@ mod tests {
     use crate::{
         server::module::testutils::{call_module, call_module_cbor},
         types::{
-            ledger::{TokenAmount, Transaction, TransactionContent, TransactionId},
+            ledger::{TokenAmount, Transaction, TransactionInfo, TransactionId},
             Timestamp,
         },
         Identity,
@@ -61,10 +61,10 @@ mod tests {
                     Transaction {
                         id: TransactionId(ByteVec::from(vec![1, 1, 1, 1])),
                         time: Timestamp::now(),
-                        content: TransactionContent::Send {
+                        content: TransactionInfo::Send {
                             from: Identity::anonymous(),
                             to: Identity::anonymous(),
-                            symbol: "FOOBAR".to_string(),
+                            symbol: Default::default(),
                             amount: TokenAmount::from(1000u64),
                         },
                     },
