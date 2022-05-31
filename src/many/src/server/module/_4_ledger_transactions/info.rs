@@ -1,11 +1,7 @@
-use minicbor::{decode, Decode, Decoder, Encode};
+use crate::server::module::EmptyArg;
+use minicbor::{Decode, Encode};
 
-pub struct TransactionsArgs;
-impl<'de> Decode<'de> for TransactionsArgs {
-    fn decode(_d: &mut Decoder<'de>) -> Result<Self, decode::Error> {
-        Ok(Self)
-    }
-}
+pub type TransactionsArgs = EmptyArg;
 
 #[derive(Decode, Encode)]
 #[cbor(map)]

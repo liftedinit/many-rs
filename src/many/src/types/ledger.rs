@@ -327,7 +327,7 @@ impl From<TransactionId> for Vec<u8> {
 
 macro_rules! define_tx_kind {
     ( $( [ $index: literal $(, $sub: literal )* ] $name: ident { $( $idx: literal | $fname: ident : $type: ty, )* }, )* ) => {
-        #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+        #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
         #[repr(u8)]
         #[non_exhaustive]
         pub enum TransactionKind {
