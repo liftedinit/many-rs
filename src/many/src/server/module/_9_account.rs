@@ -301,7 +301,7 @@ pub struct GetRolesArgs {
     pub identities: VecOrSingle<Identity>,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct GetRolesReturn {
     #[n(0)]
@@ -339,7 +339,7 @@ pub struct InfoArgs {
     pub account: Identity,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]
@@ -431,8 +431,7 @@ pub trait AccountModuleBackend: Send {
 #[cfg(test)]
 mod module_tests {
     use super::*;
-    use crate::server::module::testutils::call_module;
-    use crate::types::identity::tests;
+    use crate::{server::module::testutils::call_module, types::identity::testing::identity};
     use std::sync::{Arc, Mutex, RwLock};
 
     // TODO: split this to get easier to maintain tests.
@@ -505,7 +504,7 @@ mod module_tests {
 
         let module_impl = Arc::new(Mutex::new(mock));
         let module = super::AccountModule::new(module_impl);
-        let id_from = tests::identity(1);
+        let id_from = identity(1);
 
         let result: CreateReturn = minicbor::decode(
             &call_module(1, &module, "account.create", r#"{ 0: "test", 2: [0] }"#).unwrap(),

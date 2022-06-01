@@ -30,7 +30,7 @@ mod tests {
     use super::*;
     use crate::{
         server::module::testutils::call_module_cbor,
-        types::identity::{cose::testsutils::generate_random_eddsa_identity, tests::identity},
+        types::identity::{cose::testsutils::generate_random_eddsa_identity, testing::identity},
         Identity,
     };
     use coset::CborSerializable;
