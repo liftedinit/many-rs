@@ -22,6 +22,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use minicbor::bytes::ByteVec;
     use mockall::predicate;
+
     use crate::{
         server::module::testutils::{call_module, call_module_cbor},
         types::{
