@@ -12,7 +12,7 @@ pub struct GetFromRecallPhraseArgs(#[n(0)] pub RecallPhrase);
 #[cbor(map)]
 pub struct GetFromAddressArgs(#[n(0)] pub Identity);
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct GetReturns{
     #[n(0)]
