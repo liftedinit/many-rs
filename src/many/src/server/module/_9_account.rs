@@ -258,7 +258,7 @@ pub struct CreateArgs {
     pub features: features::FeatureSet,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct CreateReturn {
     #[n(0)]
