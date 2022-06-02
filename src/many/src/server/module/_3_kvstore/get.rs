@@ -1,8 +1,7 @@
 use minicbor::bytes::ByteVec;
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Encode, Decode)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct GetArgs {
     #[n(0)]

@@ -40,8 +40,7 @@ impl<'b> Decode<'b> for Percent {
     }
 }
 
-#[derive(Clone, Default, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Clone, Default, Debug, PartialEq)]
 #[must_use]
 pub struct VecOrSingle<T>(pub Vec<T>);
 
@@ -172,8 +171,7 @@ impl From<Timestamp> for SystemTime {
     }
 }
 
-#[derive(Copy, Clone)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Copy, Clone, PartialEq)]
 #[must_use]
 pub struct CborRange<T> {
     pub start: std::ops::Bound<T>,
@@ -328,8 +326,7 @@ impl<'b, T: Decode<'b>> Decode<'b> for CborRange<T> {
     }
 }
 
-#[derive(Clone, Default, Encode, Decode)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Clone, Debug, Default, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct TransactionFilter {
     #[n(0)]
@@ -348,8 +345,7 @@ pub struct TransactionFilter {
     pub date_range: Option<CborRange<Timestamp>>,
 }
 
-#[derive(Clone)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Clone, Debug, PartialEq)]
 #[must_use]
 pub enum SortOrder {
     Indeterminate = 0,

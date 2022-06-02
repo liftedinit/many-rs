@@ -18,7 +18,7 @@ pub use request::RequestMessage;
 pub use request::RequestMessageBuilder;
 pub use response::ResponseMessage;
 pub use response::ResponseMessageBuilder;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
 use crate::cose_helpers::public_key;
@@ -26,9 +26,6 @@ use crate::server::ManyUrl;
 use crate::types::identity::cose::{CoseKeyIdentity, CoseKeyIdentitySignature};
 use crate::Identity;
 use signature::{Signature, Signer, Verifier};
-
-#[cfg(test)]
-use serde::Serialize;
 
 pub fn decode_request_from_cose_sign1(
     sign1: CoseSign1,
@@ -149,8 +146,7 @@ pub(crate) struct CoseSign1RequestMessage {
 }
 
 /// WebAuthn ClientData
-#[derive(Deserialize)]
-#[cfg_attr(test, derive(Serialize))]
+#[derive(Deserialize, Serialize)]
 struct ClientData {
     challenge: String,
     origin: String,
