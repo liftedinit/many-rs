@@ -3,8 +3,7 @@ use crate::Identity;
 use minicbor::{Decode, Encode};
 use std::collections::BTreeMap;
 
-#[derive(Clone, Encode, Decode)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct BalanceArgs {
     #[n(0)]

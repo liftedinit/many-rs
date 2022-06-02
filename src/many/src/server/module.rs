@@ -55,8 +55,7 @@ impl<'b> minicbor::Decode<'b> for EmptyReturn {
     }
 }
 
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, PartialEq)]
 pub struct EmptyArg;
 
 impl minicbor::Encode for EmptyArg {

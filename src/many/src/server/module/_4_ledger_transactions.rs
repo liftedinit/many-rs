@@ -20,7 +20,6 @@ pub trait LedgerTransactionsModuleBackend: Send {
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, Mutex};
-
     use minicbor::bytes::ByteVec;
     use mockall::predicate;
 
