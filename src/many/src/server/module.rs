@@ -112,7 +112,7 @@ pub trait ManyModule: Sync + Send + Debug {
 #[cfg(test)]
 pub(crate) mod testutils {
     use crate::message::RequestMessage;
-    use crate::types::identity::tests;
+    use crate::types::identity::testing::identity;
     use crate::{ManyError, ManyModule};
 
     pub fn call_module(
@@ -140,7 +140,7 @@ pub(crate) mod testutils {
             .with_data(payload);
 
         message = if key > 0 {
-            message.with_from(tests::identity(key))
+            message.with_from(identity(key))
         } else {
             message
         };

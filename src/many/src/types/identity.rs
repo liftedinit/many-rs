@@ -593,11 +593,10 @@ mod serde {
     }
 }
 
-#[cfg(test)]
-pub mod tests {
-    use crate::types::identity::cose::tests::{ecdsa_256_identity, eddsa_identity};
-    use crate::Identity;
-    use std::str::FromStr;
+#[cfg(feature = "testing")]
+pub mod testing {
+
+    use super::Identity;
 
     pub fn identity(seed: u32) -> Identity {
         #[rustfmt::skip]
@@ -613,6 +612,14 @@ pub mod tests {
         ];
         Identity::from_bytes(&bytes).unwrap()
     }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::testing::identity;
+    use crate::types::identity::cose::tests::{ecdsa_256_identity, eddsa_identity};
+    use crate::Identity;
+    use std::str::FromStr;
 
     #[test]
     fn can_read_anonymous() {
