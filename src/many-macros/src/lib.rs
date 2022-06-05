@@ -6,8 +6,8 @@ use serde_tokenstream::from_tokenstream;
 use syn::spanned::Spanned;
 use syn::PathArguments::AngleBracketed;
 use syn::{
-    AngleBracketedGenericArguments, FnArg, GenericArgument, PatType, ReturnType, Signature,
-    TraitItem, Type, TypePath,
+    AngleBracketedGenericArguments, FnArg, GenericArgument, Pat, PatType, ReturnType, TraitItem,
+    TraitItemMethod, Type, TypePath,
 };
 
 #[derive(Deserialize)]
@@ -16,30 +16,32 @@ struct ManyModuleAttributes {
     pub name: Option<String>,
     pub namespace: Option<String>,
     pub many_crate: Option<String>,
-    pub drop_non_webauthn: Option<Vec<String>>,
 }
 
 #[derive(Debug)]
 struct Endpoint {
+    pub attributes: Vec<syn::Attribute>,
     pub name: String,
     pub func: Ident,
     pub span: Span,
     pub is_async: bool,
     pub is_mut: bool,
     pub has_sender: bool,
-    pub arg_type: Option<Box<Type>>,
-    #[allow(unused)]
+    pub arg: Option<(Box<Pat>, Box<Type>)>,
     pub ret_type: Box<Type>,
+    pub block: Option<syn::Block>,
 }
 
 impl Endpoint {
-    pub fn new(signature: &Signature) -> Result<Self, (String, Span)> {
+    pub fn new(item: &TraitItemMethod) -> Result<Self, (String, Span)> {
+        let signature = &item.sig;
+
         let func = signature.ident.clone();
         let name = func.to_string();
         let is_async = signature.asyncness.is_some();
 
         let mut has_sender = false;
-        let arg_type: Option<Box<Type>>;
+        let arg: Option<(Box<Pat>, Box<Type>)>;
         let mut ret_type: Option<Box<Type>> = None;
 
         let mut inputs = signature.inputs.iter();
@@ -62,15 +64,15 @@ impl Endpoint {
         let maybe_argument = inputs.next();
 
         match (maybe_identity, maybe_argument) {
-            (_id, Some(FnArg::Typed(PatType { ty, .. }))) => {
+            (_id, Some(FnArg::Typed(PatType { ty, pat, .. }))) => {
                 has_sender = true;
-                arg_type = Some(ty.clone());
+                arg = Some((pat.clone(), ty.clone()));
             }
-            (Some(FnArg::Typed(PatType { ty, .. })), None) => {
-                arg_type = Some(ty.clone());
+            (Some(FnArg::Typed(PatType { ty, pat, .. })), None) => {
+                arg = Some((pat.clone(), ty.clone()));
             }
             (None, None) => {
-                arg_type = None;
+                arg = None;
             }
             (_, _) => {
                 return Err(("Must have 2 or 3 arguments".to_string(), signature.span()));
@@ -115,15 +117,66 @@ impl Endpoint {
         }
 
         Ok(Self {
+            attributes: item.attrs.clone(),
             name,
             func,
             span: signature.span(),
             is_async,
             is_mut,
             has_sender,
-            arg_type,
+            arg,
             ret_type: ret_type.unwrap(),
+            block: item.default.clone(),
         })
+    }
+
+    /// Returns the endpoint declaration.
+    pub fn to_decl(&self) -> TokenStream {
+        let Self {
+            attributes,
+            name: _,
+            func,
+            is_async,
+            is_mut,
+            has_sender,
+            arg,
+            ret_type,
+            block,
+            ..
+        } = self;
+
+        let s = if *is_mut {
+            quote! { &mut self }
+        } else {
+            quote! { &self }
+        };
+        let a = if *is_async {
+            quote! { async }
+        } else {
+            quote! {}
+        };
+        let sender = if *has_sender {
+            Some(quote! {, sender: &Identity })
+        } else {
+            None
+        };
+        let attributes = attributes.iter();
+        let block = if let Some(b) = block {
+            quote! { #b }
+        } else {
+            quote! { ; }
+        };
+
+        let arg = if let Some((name, ty)) = arg {
+            quote! {, #name: #ty}
+        } else {
+            quote! {}
+        };
+
+        quote! {
+            #(#attributes)*
+            #a fn #func(#s #sender #arg) -> Result< #ret_type, ManyError > #block
+        }
     }
 }
 
@@ -149,14 +202,12 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             .map_or_else(|| attr.span(), |_| tr.ident.span()),
     );
 
-    let mut trait_ = tr.clone();
-
-    if attrs.name.is_none() {
-        trait_.ident = Ident::new(&format!("{}Backend", struct_name), tr.ident.span());
-    }
-    let trait_ident = trait_.ident.clone();
-
-    let vis = trait_.vis.clone();
+    let vis = tr.vis.clone();
+    let trait_ident = if attrs.name.is_none() {
+        Ident::new(&format!("{}Backend", struct_name), tr.ident.span())
+    } else {
+        tr.ident.clone()
+    };
 
     let attr_id = attrs.id.iter();
     let attr_name =
@@ -166,16 +217,32 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
     let info_name = format!("{}Info", struct_name);
     let info_ident = Ident::new(&info_name, attr.span());
 
-    let endpoints: Result<Vec<_>, (String, Span)> = trait_
+    let endpoints: Vec<Endpoint> = tr
         .items
         .iter()
         .filter_map(|item| match item {
             TraitItem::Method(m) => Some(m),
             _ => None,
         })
-        .map(|item| Endpoint::new(&item.sig))
-        .collect();
-    let endpoints = endpoints.map_err(|(msg, span)| syn::Error::new(span, msg))?;
+        .map(Endpoint::new)
+        .collect::<Result<_, (String, Span)>>()
+        .map_err(|(msg, span)| syn::Error::new(span, msg))?;
+
+    let trait_ = {
+        let attributes = tr.attrs.iter();
+        let endpoints = endpoints.iter().map(|x| x.to_decl());
+        quote! {
+            #(#attributes)*
+            #vis trait #trait_ident: Send {
+                #(#endpoints)*
+
+                fn validate_(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
+                    Ok(())
+                }
+            }
+        }
+    };
+
     let ns = namespace.clone();
     let endpoint_strings: Vec<String> = endpoints
         .iter()
@@ -197,7 +264,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             None => name,
         };
 
-        if let Some(ty) = &e.arg_type {
+        if let Some((_, ty)) = &e.arg {
             quote_spanned! { span =>
                 #ep => {
                     minicbor::decode::<'_, #ty>(data)
@@ -223,39 +290,13 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         }
     };
 
-    let ns = namespace.clone();
-    let validate_envelope = if let Some(endpoint) = attrs.drop_non_webauthn {
-        let field_names = endpoint.iter().map(|e| match &ns {
-            Some(namespace) => format!("{}.{}", namespace, e),
-            None => e.to_string(),
-        });
-        // Note: The endpoint needs to be the endpoind method name, not the trait method
-        // Ex: getFromAddress and NOT get_from_address
-        field_names
-            .clone()
-            .any(|name| endpoint_strings.contains(&name))
-            .then(|| 0)
-            .ok_or_else(|| {
-                syn::Error::new(span, "`drop_non_webauthn` endpoint non found in trait.")
-            })?;
-        quote! {
-            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
-                let method = message.method.as_str();
-                if vec![#(#field_names),*].contains(&method) {
-                    let unprotected =
-                        std::collections::BTreeMap::from_iter(envelope.unprotected.rest.clone().into_iter());
-                    if !unprotected.contains_key(&coset::Label::Text("webauthn".to_string())) {
-                        return Err( #many ::ManyError::non_webauthn_request_denied(&method))
-                    }
-                }
-                Ok(())
-            }
-        }
-    } else {
-        quote! {
-            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
-                Ok(())
-            }
+    let validate_envelope = quote! {
+        fn validate_envelope(
+            &self,
+            envelope: &coset::CoseSign1,
+            message: & #many ::message::RequestMessage
+        ) -> Result<(), #many ::ManyError> {
+            self.backend.lock().unwrap().validate_(envelope, message)
         }
     };
 
@@ -275,7 +316,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             quote! { let backend = self.backend.lock().unwrap(); }
         };
 
-        let call = match (e.has_sender, e.arg_type.is_some(), e.is_async) {
+        let call = match (e.has_sender, e.arg.is_some(), e.is_async) {
             (false, true, false) => quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ) ) },
             (false, true, true) => quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ).await ) },
             (true, true, false) => quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )? ) ) },
