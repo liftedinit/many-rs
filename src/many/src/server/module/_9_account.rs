@@ -245,7 +245,7 @@ impl Account {
     }
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct CreateArgs {
     #[n(0)]
@@ -265,7 +265,7 @@ pub struct CreateReturn {
     pub id: Identity,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct SetDescriptionArgs {
     #[n(0)]
@@ -277,7 +277,7 @@ pub struct SetDescriptionArgs {
 
 pub type SetDescriptionReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct ListRolesArgs {
     #[n(0)]
@@ -291,7 +291,7 @@ pub struct ListRolesReturn {
     pub roles: BTreeSet<Role>,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct GetRolesArgs {
     #[n(0)]
@@ -308,7 +308,7 @@ pub struct GetRolesReturn {
     pub roles: BTreeMap<Identity, BTreeSet<Role>>,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct AddRolesArgs {
     #[n(0)]
@@ -320,7 +320,7 @@ pub struct AddRolesArgs {
 
 pub type AddRolesReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct RemoveRolesArgs {
     #[n(0)]
@@ -332,7 +332,7 @@ pub struct RemoveRolesArgs {
 
 pub type RemoveRolesReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct InfoArgs {
     #[n(0)]
@@ -352,7 +352,7 @@ pub struct InfoReturn {
     pub features: features::FeatureSet,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct DeleteArgs {
     #[n(0)]
@@ -361,7 +361,7 @@ pub struct DeleteArgs {
 
 pub type DeleteReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct AddFeaturesArgs {
     #[n(0)]

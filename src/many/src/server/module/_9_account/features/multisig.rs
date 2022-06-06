@@ -118,7 +118,7 @@ impl super::FeatureInfo for MultisigAccountFeature {
     }
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct SubmitTransactionArgs {
     #[n(0)]
@@ -169,7 +169,7 @@ pub struct SubmitTransactionReturn {
     pub token: ByteVec,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct InfoArgs {
     #[n(0)]
@@ -211,7 +211,7 @@ pub struct InfoReturn {
     pub data: Option<ByteVec>,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct SetDefaultsArgs {
     #[n(0)]
@@ -229,7 +229,7 @@ pub struct SetDefaultsArgs {
 
 pub type SetDefaultsReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct ApproveArgs {
     #[n(0)]
@@ -238,7 +238,7 @@ pub struct ApproveArgs {
 
 pub type ApproveReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct RevokeArgs {
     #[n(0)]
@@ -247,14 +247,14 @@ pub struct RevokeArgs {
 
 pub type RevokeReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct ExecuteArgs {
     #[n(0)]
     pub token: ByteVec,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct WithdrawArgs {
     #[n(0)]
