@@ -542,7 +542,7 @@ macro_rules! encode_tx_info {
 
 macro_rules! define_multisig_tx {
     ( $( $name: ident $(: $arg: ty )?, )* ) => {
-        #[derive(Clone, Debug)]
+        #[derive(Clone, Debug, PartialEq)]
         #[non_exhaustive]
         pub enum AccountMultisigTransaction {
             $( $( $name($arg), )? )*
