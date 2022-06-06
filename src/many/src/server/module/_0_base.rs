@@ -150,7 +150,8 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use crate::{
-        protocol::Attribute, server::module::testutils::call_module, types::identity::cose::testsutils::generate_random_eddsa_identity,
+        protocol::Attribute, server::module::testutils::call_module,
+        types::identity::cose::testsutils::generate_random_eddsa_identity,
     };
 
     use super::*;
