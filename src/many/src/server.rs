@@ -253,12 +253,15 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                 this.allowed_origins.clone(),
             )
         };
+        let mut id = None;
 
         let response = {
             let this = self.lock().unwrap();
             let cose_id = this.identity.clone();
+
             request
                 .and_then(|message| {
+                    id = message.id;
                     _validate_time(&message, SystemTime::now(), this.timeout)?;
                     Ok(message)
                 })
@@ -290,7 +293,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                         this.fallback.clone(),
                     )
                 })
-                .map_err(|many_err| ResponseMessage::error(&cose_id.identity, many_err))
+                .map_err(|many_err| ResponseMessage::error(&cose_id.identity, id, many_err))
         };
 
         match response {
@@ -298,7 +301,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                 (Some(m), _) => {
                     let mut response = match m.execute(message).await {
                         Ok(response) => response,
-                        Err(many_err) => ResponseMessage::error(&cose_id.identity, many_err),
+                        Err(many_err) => ResponseMessage::error(&cose_id.identity, id, many_err),
                     };
                     response.from = cose_id.identity;
                     crate::message::encode_cose_sign1_from_response(response, &cose_id)
@@ -309,6 +312,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                 (None, None) => {
                     let response = ResponseMessage::error(
                         &cose_id.identity,
+                        id,
                         ManyError::could_not_route_message(),
                     );
                     crate::message::encode_cose_sign1_from_response(response, &cose_id)

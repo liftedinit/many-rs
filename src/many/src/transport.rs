@@ -28,13 +28,17 @@ impl<H: ManyRequestHandler + Debug> LowLevelManyRequestHandler for HandlerExecut
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
         let request = crate::message::decode_request_from_cose_sign1(envelope, None)
             .and_then(|message| self.handler.validate(&message).map(|_| message));
+        let mut id = None;
 
         let response = match request {
-            Ok(x) => match self.handler.execute(x).await {
-                Err(e) => ResponseMessage::error(&self.identity.identity, e),
-                Ok(x) => x,
-            },
-            Err(e) => ResponseMessage::error(&self.identity.identity, e),
+            Ok(x) => {
+                id = x.id;
+                match self.handler.execute(x).await {
+                    Err(e) => ResponseMessage::error(&self.identity.identity, id, e),
+                    Ok(x) => x,
+                }
+            }
+            Err(e) => ResponseMessage::error(&self.identity.identity, id, e),
         };
 
         crate::message::encode_cose_sign1_from_response(response, &self.identity)
