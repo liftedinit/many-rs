@@ -1413,6 +1413,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "serde_test",
  "sha2 0.10.2",
  "sha3",
  "signature",
@@ -2449,6 +2450,15 @@ checksum = "9b7ce2b32a1aed03c558dc61a5cd328f15aff2dbc17daad8fb8af04d2100e15c"
 dependencies = [
  "itoa",
  "ryu",
+ "serde",
+]
+
+[[package]]
+name = "serde_test"
+version = "1.0.137"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe196827aea34242c314d2f0dd49ed00a129225e80dda71b0dbf65d54d25628d"
+dependencies = [
  "serde",
 ]
 

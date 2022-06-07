@@ -210,11 +210,11 @@ pub use define_application_many_error;
 
 impl ManyErrorCode {
     #[inline]
-    pub fn is_attribute_specific(&self) -> bool {
+    pub const fn is_attribute_specific(&self) -> bool {
         matches!(self, ManyErrorCode::AttributeSpecific(_))
     }
     #[inline]
-    pub fn is_application_specific(&self) -> bool {
+    pub const fn is_application_specific(&self) -> bool {
         matches!(self, ManyErrorCode::ApplicationSpecific(_))
     }
 
@@ -233,17 +233,17 @@ pub struct ManyError {
 
 impl ManyError {
     #[inline]
-    pub fn is_attribute_specific(&self) -> bool {
+    pub const fn is_attribute_specific(&self) -> bool {
         self.code.is_attribute_specific()
     }
 
     #[inline]
-    pub fn is_application_specific(&self) -> bool {
+    pub const fn is_application_specific(&self) -> bool {
         self.code.is_application_specific()
     }
 
     #[inline]
-    pub fn attribute_specific(
+    pub const fn attribute_specific(
         code: i32,
         message: String,
         arguments: BTreeMap<String, String>,
@@ -256,7 +256,7 @@ impl ManyError {
     }
 
     #[inline]
-    pub fn application_specific(
+    pub const fn application_specific(
         code: u32,
         message: String,
         arguments: BTreeMap<String, String>,
