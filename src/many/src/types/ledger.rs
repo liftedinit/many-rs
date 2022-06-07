@@ -7,6 +7,7 @@ use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::{BigInt, BigUint};
 use num_traits::Num;
+use serde::de::Unexpected;
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Formatter};
@@ -218,6 +219,20 @@ impl<'de> Deserialize<'de> for TokenAmount {
 
             fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
                 formatter.write_str("amount in number or string")
+            }
+
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if v >= 0 {
+                    self.visit_u64(v as u64)
+                } else {
+                    Err(E::invalid_type(
+                        Unexpected::Signed(v),
+                        &"a positive integer",
+                    ))
+                }
             }
 
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -725,6 +740,17 @@ impl Transaction {
 #[cfg(test)]
 mod test {
     use super::*;
+    use serde_test::{assert_de_tokens, Token};
+
+    #[test]
+    fn serde_token_amount() {
+        let token = TokenAmount::from(123u32);
+        assert_de_tokens(&token, &[Token::U8(123)]);
+        assert_de_tokens(&token, &[Token::U32(123)]);
+        assert_de_tokens(&token, &[Token::U64(123)]);
+        assert_de_tokens(&token, &[Token::I64(123)]);
+        assert_de_tokens(&token, &[Token::String("123")]);
+    }
 
     #[test]
     fn txid_from_bytevec() {
