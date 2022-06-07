@@ -1,6 +1,7 @@
 // TODO: Implement a SubresourceId type. Best way here is to use num-* crates.
 use crate::cose_helpers::public_key;
 use crate::message::ManyError;
+use ::serde::de::Error;
 use coset::{CborSerializable, CoseKey};
 use minicbor::data::Type;
 use minicbor::encode::Write;
@@ -236,6 +237,34 @@ impl<'de> Deserialize<'de> for Identity {
 
             fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
                 formatter.write_str("identity string or bytes")
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Identity::from_str(v.as_str()).map_err(E::custom)
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Identity::from_str(v).map_err(E::custom)
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Identity::from_bytes(v).map_err(E::custom)
+            }
+
+            fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Identity::from_bytes(v.as_ref()).map_err(E::custom)
             }
 
             fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
