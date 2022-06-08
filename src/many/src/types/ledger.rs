@@ -242,13 +242,6 @@ impl<'de> Deserialize<'de> for TokenAmount {
                 Ok(TokenAmount(v.into()))
             }
 
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                self.visit_borrowed_str(v.as_str())
-            }
-
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,
@@ -262,6 +255,13 @@ impl<'de> Deserialize<'de> for TokenAmount {
             {
                 let storage = TokenAmountStorage::from_str_radix(v, 10).map_err(E::custom)?;
                 Ok(TokenAmount(storage))
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_borrowed_str(v.as_str())
             }
         }
 
@@ -764,6 +764,12 @@ mod test {
         assert_de_tokens(&token, &[Token::U64(123)]);
         assert_de_tokens(&token, &[Token::I64(123)]);
         assert_de_tokens(&token, &[Token::String("123")]);
+    }
+
+    #[test]
+    fn serde_token_amount_extra() {
+        let token = TokenAmount::from(123456789000u64);
+        assert_de_tokens(&token, &[Token::String("123_456_789__000")]);
     }
 
     #[test]
