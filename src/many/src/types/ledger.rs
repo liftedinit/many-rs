@@ -242,6 +242,20 @@ impl<'de> Deserialize<'de> for TokenAmount {
                 Ok(TokenAmount(v.into()))
             }
 
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_borrowed_str(v.as_str())
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_borrowed_str(v)
+            }
+
             fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,
