@@ -7,6 +7,7 @@ use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::{BigInt, BigUint};
 use num_traits::Num;
+use serde::de::Unexpected;
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Formatter};
@@ -207,6 +208,28 @@ impl<'b> Decode<'b> for TokenAmount {
     }
 }
 
+// Automatically create variants of the i* deserialization.
+macro_rules! decl_token_deserialize {
+    ( @signed $( $id: ident => $t: ty ),* $(,)? ) => {
+        $(
+            fn $id <E>(self, v: $t) -> Result<Self::Value, E> where E: serde::de::Error {
+                if v >= 0 {
+                    self.visit_u64(v as u64)
+                } else {
+                    Err(E::invalid_type(Unexpected::Signed(v as i64), &"a positive integer"))
+                }
+            }
+        )*
+    };
+    ( @unsigned $( $id: ident => $t: ty ),* $(,)? ) => {
+        $(
+            fn $id <E>(self, v: $t) -> Result<Self::Value, E> where E: serde::de::Error {
+                self.visit_u64(v as u64)
+            }
+        )*
+    }
+}
+
 impl<'de> Deserialize<'de> for TokenAmount {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -220,11 +243,30 @@ impl<'de> Deserialize<'de> for TokenAmount {
                 formatter.write_str("amount in number or string")
             }
 
+            decl_token_deserialize!( @signed
+                visit_i8 => i8,
+                visit_i16 => i16,
+                visit_i32 => i32,
+                visit_i64 => i64,
+            );
+            decl_token_deserialize!( @unsigned
+                visit_u8 => u8,
+                visit_u16 => u16,
+                visit_u32 => u32,
+            );
+
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,
             {
                 Ok(TokenAmount(v.into()))
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_borrowed_str(v)
             }
 
             fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
@@ -233,6 +275,13 @@ impl<'de> Deserialize<'de> for TokenAmount {
             {
                 let storage = TokenAmountStorage::from_str_radix(v, 10).map_err(E::custom)?;
                 Ok(TokenAmount(storage))
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_borrowed_str(v.as_str())
             }
         }
 
@@ -725,6 +774,38 @@ impl Transaction {
 #[cfg(test)]
 mod test {
     use super::*;
+    use serde_test::{assert_de_tokens, Token};
+
+    #[test]
+    fn serde_token_amount() {
+        let token = TokenAmount::from(123u32);
+        assert_de_tokens(&token, &[Token::U8(123)]);
+        assert_de_tokens(&token, &[Token::U16(123)]);
+        assert_de_tokens(&token, &[Token::U32(123)]);
+        assert_de_tokens(&token, &[Token::U64(123)]);
+        assert_de_tokens(&token, &[Token::I8(123)]);
+        assert_de_tokens(&token, &[Token::I16(123)]);
+        assert_de_tokens(&token, &[Token::I32(123)]);
+        assert_de_tokens(&token, &[Token::I64(123)]);
+        assert_de_tokens(&token, &[Token::String("123")]);
+    }
+
+    #[test]
+    fn serde_token_amount_extra() {
+        let token = TokenAmount::from(123456789000u64);
+        assert_de_tokens(&token, &[Token::String("123_456_789__000")]);
+    }
+
+    #[test]
+    fn serde_token_amount_big() {
+        // This is 80 bits, larger than U64.
+        let token =
+            TokenAmount::from(BigUint::from_str_radix("FFFF_FFFF_FFFF_FFFF_FFFF", 16).unwrap());
+        assert_de_tokens(
+            &token,
+            &[Token::String("1_208_925_819_614_629_174_706_175")],
+        );
+    }
 
     #[test]
     fn txid_from_bytevec() {
