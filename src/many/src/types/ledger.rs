@@ -681,7 +681,7 @@ define_tx! {
     [9, 0]      AccountCreate (module::account::CreateArgs) {
         1     | account:                Identity                                [ id ],
         2     | description:            Option<String>,
-        3     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
+        3     | roles:                  BTreeMap<Identity, BTreeSet<module::account::Role>>,
         4     | features:               FeatureSet,
     },
     [9, 1]      AccountSetDescription (module::account::SetDescriptionArgs) {
@@ -690,18 +690,18 @@ define_tx! {
     },
     [9, 2]      AccountAddRoles (module::account::AddRolesArgs) {
         1     | account:                Identity                                [ id ],
-        2     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
+        2     | roles:                  BTreeMap<Identity, BTreeSet<module::account::Role>>,
     },
     [9, 3]      AccountRemoveRoles (module::account::RemoveRolesArgs) {
         1     | account:                Identity                                [ id ],
-        2     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
+        2     | roles:                  BTreeMap<Identity, BTreeSet<module::account::Role>>,
     },
     [9, 4]      AccountDelete (module::account::DeleteArgs) {
         1     | account:                Identity                                [ id ],
     },
     [9, 5]      AccountAddFeatures (module::account::AddFeaturesArgs) {
         1     | account:                Identity                                [ id ],
-        2     | roles:                  BTreeMap<Identity, BTreeSet<String>>,
+        2     | roles:                  BTreeMap<Identity, BTreeSet<module::account::Role>>,
         3     | features:               FeatureSet,
     },
     [9, 1, 0]   AccountMultisigSubmit (module::account::features::multisig::SubmitTransactionArgs) {
@@ -744,7 +744,7 @@ define_tx! {
     },
 }
 
-#[derive(Encode, Decode)]
+#[derive(Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct Transaction {
     #[n(0)]
