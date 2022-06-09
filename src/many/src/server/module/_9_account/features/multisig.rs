@@ -20,6 +20,7 @@ pub mod errors {
             101: pub fn user_cannot_approve_transaction() => "The user is not in the list of approvers.",
             102: pub fn transaction_type_unsupported() => "This transaction is not supported.",
             103: pub fn cannot_execute_transaction() => "This transaction cannot be executed yet.",
+            104: pub fn transaction_expired_or_withdrawn() => "This transaction expired or was withdrawn.",
         }
     );
 }

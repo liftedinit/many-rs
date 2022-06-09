@@ -171,6 +171,24 @@ impl PartialEq<&str> for Identity {
     }
 }
 
+impl PartialEq<Option<Identity>> for Identity {
+    fn eq(&self, other: &Option<Identity>) -> bool {
+        match other {
+            Some(o) => o == self,
+            None => self.is_anonymous(),
+        }
+    }
+}
+
+impl PartialEq<Identity> for Option<Identity> {
+    fn eq(&self, other: &Identity) -> bool {
+        match self {
+            Some(s) => other == s,
+            None => other.is_anonymous(),
+        }
+    }
+}
+
 impl Debug for Identity {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Identity")

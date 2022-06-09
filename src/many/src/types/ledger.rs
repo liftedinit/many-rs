@@ -1,3 +1,4 @@
+use crate::message::ResponseMessage;
 use crate::server::module;
 use crate::server::module::account::features::FeatureSet;
 use crate::types::{AttributeRelatedIndex, Percent, Timestamp};
@@ -728,7 +729,8 @@ define_tx! {
     [9, 1, 3]   AccountMultisigExecute (module::account::features::multisig::ExecuteArgs) {
         1     | account:                Identity                                [ id ],
         2     | token:                  ByteVec,
-        3     | executer:               Identity                                [ id ],
+        3     | executer:               Option<Identity>                        [ id ],
+        4     | response:               ResponseMessage,
     },
     [9, 1, 4]   AccountMultisigWithdraw (module::account::features::multisig::WithdrawArgs) {
         1     | account:                Identity                                [ id ],
@@ -741,6 +743,11 @@ define_tx! {
         3     | threshold:              Option<u64>,
         4     | timeout_in_secs:        Option<u64>,
         5     | execute_automatically:  Option<bool>,
+    },
+    [9, 1, 6]   AccountMultisigExpired {
+        1     | account:                Identity                                [ id ],
+        2     | token:                  ByteVec,
+        3     | time:                   Timestamp,
     },
 }
 
