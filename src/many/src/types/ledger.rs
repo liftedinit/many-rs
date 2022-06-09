@@ -729,7 +729,7 @@ define_tx! {
     [9, 1, 3]   AccountMultisigExecute (module::account::features::multisig::ExecuteArgs) {
         1     | account:                Identity                                [ id ],
         2     | token:                  ByteVec,
-        3     | executer:               Identity                                [ id ],
+        3     | executer:               Option<Identity>                        [ id ],
         4     | response:               ResponseMessage,
     },
     [9, 1, 4]   AccountMultisigWithdraw (module::account::features::multisig::WithdrawArgs) {
