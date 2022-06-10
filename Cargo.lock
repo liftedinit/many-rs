@@ -3287,3 +3287,7 @@ dependencies = [
  "syn",
  "synstructure",
 ]
+
+[[patch.unused]]
+name = "merk"
+version = "1.0.0"

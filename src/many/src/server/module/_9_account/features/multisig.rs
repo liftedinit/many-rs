@@ -9,7 +9,7 @@ use crate::types::Timestamp;
 use crate::{Identity, ManyError};
 use many_macros::many_module;
 use minicbor::bytes::ByteVec;
-use minicbor::{Decode, Encode};
+use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub mod errors {
@@ -184,6 +184,42 @@ pub struct ApproverInfo {
     pub approved: bool,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[repr(u8)]
+pub enum MultisigTransactionState {
+    Pending = 0,
+    ExecutedAutomatically = 1,
+    ExecutedManually = 2,
+    Withdrawn = 3,
+    Expired = 4,
+}
+
+impl Encode for MultisigTransactionState {
+    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+        e.u8(match self {
+            MultisigTransactionState::Pending => 0,
+            MultisigTransactionState::ExecutedAutomatically => 1,
+            MultisigTransactionState::ExecutedManually => 2,
+            MultisigTransactionState::Withdrawn => 3,
+            MultisigTransactionState::Expired => 4,
+        })?;
+        Ok(())
+    }
+}
+
+impl<'b> Decode<'b> for MultisigTransactionState {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+        match d.u32()? {
+            0 => Ok(Self::Pending),
+            1 => Ok(Self::ExecutedAutomatically),
+            2 => Ok(Self::ExecutedManually),
+            3 => Ok(Self::Withdrawn),
+            4 => Ok(Self::Expired),
+            x => Err(minicbor::decode::Error::UnknownVariant(x)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct InfoReturn {
@@ -210,6 +246,9 @@ pub struct InfoReturn {
 
     #[n(7)]
     pub data: Option<ByteVec>,
+
+    #[n(8)]
+    pub state: MultisigTransactionState,
 }
 
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
