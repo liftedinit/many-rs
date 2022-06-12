@@ -9,6 +9,7 @@ use crate::types::Timestamp;
 use crate::{Identity, ManyError};
 use many_macros::many_module;
 use minicbor::bytes::ByteVec;
+use minicbor::data::Type;
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -119,6 +120,8 @@ impl super::FeatureInfo for MultisigAccountFeature {
     }
 }
 
+const MULTISIG_MEMO_DATA_MAX_SIZE: usize = 4000; //4kB
+
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct SubmitTransactionArgs {
@@ -126,6 +129,7 @@ pub struct SubmitTransactionArgs {
     pub account: Identity,
 
     #[n(1)]
+    #[cbor(decode_with = "decode_memo")]
     pub memo: Option<String>,
 
     #[n(2)]
@@ -141,6 +145,7 @@ pub struct SubmitTransactionArgs {
     pub execute_automatically: Option<bool>,
 
     #[n(6)]
+    #[cbor(decode_with = "decode_data")]
     pub data: Option<ByteVec>,
 }
 
@@ -160,6 +165,42 @@ impl SubmitTransactionArgs {
             execute_automatically: None,
             data: None,
         }
+    }
+}
+
+/// Memo decoder. Check if the memo is less than or equal to the maximum allowed size
+fn decode_memo(d: &mut minicbor::Decoder) -> Result<Option<String>, minicbor::decode::Error> {
+    match d.datatype()? {
+        Type::String => {
+            let memo = d.str()?;
+            if memo.as_bytes().len() > MULTISIG_MEMO_DATA_MAX_SIZE {
+                return Err(minicbor::decode::Error::Message("Memo size over limit"));
+            }
+            Ok(Some(String::from(memo)))
+        },
+        Type::Null => {
+            d.skip()?;
+            Ok(None)
+        },
+        _ => unimplemented!(),
+    }
+}
+
+/// Data decoder. Check if the data is less than or equal to the maximum allowed size
+fn decode_data(d: &mut minicbor::Decoder) -> Result<Option<ByteVec>, minicbor::decode::Error> {
+    match d.datatype()? {
+        Type::Bytes => {
+            let data = d.bytes()?;
+            if data.len() > MULTISIG_MEMO_DATA_MAX_SIZE {
+                return Err(minicbor::decode::Error::Message("Data size over limit"));
+            }
+            Ok(Some(data.to_vec().into()))
+        },
+        Type::Null => {
+            d.skip()?;
+            Ok(None)
+        }
+        _ => unimplemented!(),
     }
 }
 
@@ -337,3 +378,54 @@ pub trait AccountMultisigModuleBackend: Send {
         args: WithdrawArgs,
     ) -> Result<WithdrawReturn, ManyError>;
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{types::{ledger::AccountMultisigTransaction, identity::testing::identity}, server::module::account::{DeleteArgs, features::multisig::MULTISIG_MEMO_DATA_MAX_SIZE}};
+    use super::SubmitTransactionArgs;
+
+    #[test]
+    fn memo_size() {
+        let mut tx = SubmitTransactionArgs {
+            account: identity(1),
+            memo: Some(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE]).unwrap()),
+            transaction: Box::new(AccountMultisigTransaction::AccountDelete(DeleteArgs {account: identity(1) })),
+            threshold: None,
+            timeout_in_secs: None,
+            execute_automatically: None,
+            data: None,
+        };
+        let enc = minicbor::to_vec(&tx).unwrap();
+        let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
+        assert!(dec.is_ok());
+
+        tx.memo = Some(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE + 1]).unwrap());
+        let enc = minicbor::to_vec(&tx).unwrap();
+        let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
+        assert!(dec.is_err());
+        assert_eq!(dec.unwrap_err().to_string(), "Memo size over limit");
+    }
+
+    #[test]
+    fn data_size() {
+        let mut tx = SubmitTransactionArgs {
+            account: identity(1),
+            memo: None,
+            transaction: Box::new(AccountMultisigTransaction::AccountDelete(DeleteArgs {account: identity(1) })),
+            threshold: None,
+            timeout_in_secs: None,
+            execute_automatically: None,
+            data: Some(vec![1u8; MULTISIG_MEMO_DATA_MAX_SIZE].into()),
+        };
+        let enc = minicbor::to_vec(&tx).unwrap();
+        let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
+        assert!(dec.is_ok());
+
+        tx.data = Some(vec![1u8; MULTISIG_MEMO_DATA_MAX_SIZE + 1].into());
+        let enc = minicbor::to_vec(&tx).unwrap();
+        let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
+        assert!(dec.is_err());
+        assert_eq!(dec.unwrap_err().to_string(), "Data size over limit");
+    }
+}
+
