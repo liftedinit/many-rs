@@ -228,7 +228,7 @@ impl Account {
             let cp = role;
             match role.try_into() {
                 Ok(r) => {
-                    first = Some(r);
+                    first.get_or_insert(r);
                     if self.has_role(id, r) {
                         return Ok(());
                     }
