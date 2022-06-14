@@ -37,6 +37,15 @@ macro_rules! many_error {
             }
         }
 
+        impl Display for ManyErrorCode {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                match self.message() {
+                    Some(msg) => f.write_str(msg),
+                    None => write!(f, "{}", Into::<i64>::into(*self)),
+                }
+            }
+        }
+
         impl From<i64> for ManyErrorCode {
             fn from(v: i64) -> Self {
                 match v {
@@ -60,17 +69,31 @@ macro_rules! many_error {
             }
         }
 
+        impl Encode for ManyErrorCode {
+            #[inline]
+            fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+                e.i64((*self).into())?;
+                Ok(())
+            }
+        }
+
+        impl<'b> Decode<'b> for ManyErrorCode {
+            fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+                Ok(d.i64()?.into())
+            }
+        }
+
         impl ManyError {
             $($(
                 #[doc = $description]
                 pub fn $snake_name( $($arg: impl ToString,)* ) -> Self {
-                    let s = Self {
-                        code: ManyErrorCode::$name,
-                        message: Some($description.to_string()),
-                        arguments: BTreeMap::from_iter(vec![
+                    let s = Self::new(
+                        ManyErrorCode::$name,
+                        Some($description.to_string()),
+                        BTreeMap::from_iter(vec![
                             $( (stringify!($arg).to_string(), ($arg).to_string()) ),*
                         ]),
-                    };
+                    );
 
                     #[cfg(feature = "trace_error_creation")] {
                         tracing::trace!("{}", s);
@@ -217,95 +240,56 @@ impl ManyErrorCode {
     pub const fn is_application_specific(&self) -> bool {
         matches!(self, ManyErrorCode::ApplicationSpecific(_))
     }
-
-    #[inline]
-    pub fn message_of(code: i64) -> Option<&'static str> {
-        ManyErrorCode::from(code).message()
-    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct ManyError {
-    pub code: ManyErrorCode,
+pub struct Reason<T> {
+    pub code: T,
     pub message: Option<String>,
     pub arguments: BTreeMap<String, String>,
 }
 
-impl ManyError {
-    #[inline]
-    pub const fn is_attribute_specific(&self) -> bool {
-        self.code.is_attribute_specific()
-    }
-
-    #[inline]
-    pub const fn is_application_specific(&self) -> bool {
-        self.code.is_application_specific()
-    }
-
-    #[inline]
-    pub const fn attribute_specific(
-        code: i32,
-        message: String,
+impl<T> Reason<T> {
+    pub const fn new(
+        code: T,
+        message: Option<String>,
         arguments: BTreeMap<String, String>,
     ) -> Self {
-        ManyError {
-            code: ManyErrorCode::AttributeSpecific(code),
-            message: Some(message),
+        Self {
+            code,
+            message,
             arguments,
         }
     }
+}
 
-    #[inline]
-    pub const fn application_specific(
-        code: u32,
-        message: String,
-        arguments: BTreeMap<String, String>,
-    ) -> Self {
-        ManyError {
-            code: ManyErrorCode::ApplicationSpecific(code),
-            message: Some(message),
-            arguments,
-        }
-    }
-
+impl<T: Encode> Reason<T> {
     #[inline]
     pub fn to_bytes(&self) -> Result<Vec<u8>, String> {
         let mut bytes = Vec::new();
         minicbor::encode(self, &mut bytes).map_err(|e| format!("{}", e))?;
         Ok(bytes)
     }
+}
 
+impl<'b, T: Decode<'b> + Default> Reason<T> {
     #[inline]
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
+    pub fn from_bytes(bytes: &'b [u8]) -> Result<Self, String> {
         minicbor::decode(bytes).map_err(|e| format!("{}", e))
     }
 }
 
-impl Default for ManyErrorCode {
-    #[inline]
-    fn default() -> Self {
-        ManyErrorCode::Unknown
-    }
-}
-
-impl Default for ManyError {
-    #[inline]
-    fn default() -> Self {
-        ManyError::unknown("?".to_string())
-    }
-}
-
-impl Display for ManyError {
+impl<T: Display> Display for Reason<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let message = self
             .message
-            .as_deref()
-            .unwrap_or_else(|| self.code.message().unwrap_or("Invalid error code."));
+            .clone()
+            .unwrap_or_else(|| format!("Error '{}'", self.code));
 
         let re = regex::Regex::new(r"\{\{|\}\}|\{[^\}\s]*\}").unwrap();
         let mut current = 0;
 
-        for mat in re.find_iter(message) {
+        for mat in re.find_iter(&message) {
             let std::ops::Range { start, end } = mat.range();
             f.write_str(&message[current..start])?;
             current = end;
@@ -329,9 +313,7 @@ impl Display for ManyError {
     }
 }
 
-impl std::error::Error for ManyError {}
-
-impl Encode for ManyError {
+impl<T: Encode> Encode for Reason<T> {
     #[inline]
     fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
         e.map(
@@ -339,7 +321,7 @@ impl Encode for ManyError {
                 + if self.arguments.is_empty() { 0 } else { 1 },
         )?
         .u32(ManyErrorCborKey::Code as u32)?
-        .i64(self.code.into())?;
+        .encode(&self.code)?;
 
         if let Some(msg) = &self.message {
             e.u32(ManyErrorCborKey::Message as u32)?.str(msg.as_str())?;
@@ -352,11 +334,11 @@ impl Encode for ManyError {
     }
 }
 
-impl<'b> Decode<'b> for ManyError {
+impl<'b, T: Decode<'b> + Default> Decode<'b> for Reason<T> {
     fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
         let len = d.map()?;
 
-        let mut code = None;
+        let mut code: Option<T> = None;
         let mut message = None;
         let mut arguments: BTreeMap<String, String> = BTreeMap::new();
 
@@ -368,7 +350,7 @@ impl<'b> Decode<'b> for ManyError {
             }
 
             match num_traits::FromPrimitive::from_i64(d.i64()?) {
-                Some(ManyErrorCborKey::Code) => code = Some(d.i64()?),
+                Some(ManyErrorCborKey::Code) => code = Some(d.decode()?),
                 Some(ManyErrorCborKey::Message) => message = Some(d.str()?),
                 Some(ManyErrorCborKey::Arguments) => arguments = d.decode()?,
                 None => {}
@@ -381,10 +363,95 @@ impl<'b> Decode<'b> for ManyError {
         }
 
         Ok(Self {
-            code: code.unwrap_or(0).into(),
+            code: code.unwrap_or_default().into(),
             message: message.map(|s| s.to_string()),
             arguments,
         })
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[repr(transparent)]
+pub struct ManyError(Reason<ManyErrorCode>);
+
+impl ManyError {
+    #[inline]
+    pub const fn is_attribute_specific(&self) -> bool {
+        self.0.code.is_attribute_specific()
+    }
+
+    #[inline]
+    pub const fn is_application_specific(&self) -> bool {
+        self.0.code.is_application_specific()
+    }
+
+    pub const fn new(
+        code: ManyErrorCode,
+        message: Option<String>,
+        arguments: BTreeMap<String, String>,
+    ) -> Self {
+        Self(Reason::new(code, message, arguments))
+    }
+
+    #[inline]
+    pub const fn attribute_specific(
+        code: i32,
+        message: String,
+        arguments: BTreeMap<String, String>,
+    ) -> Self {
+        Self::new(
+            ManyErrorCode::AttributeSpecific(code),
+            Some(message),
+            arguments,
+        )
+    }
+
+    #[inline]
+    pub const fn application_specific(
+        code: u32,
+        message: String,
+        arguments: BTreeMap<String, String>,
+    ) -> Self {
+        Self::new(
+            ManyErrorCode::ApplicationSpecific(code),
+            Some(message),
+            arguments,
+        )
+    }
+}
+
+impl Display for ManyError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Default for ManyErrorCode {
+    #[inline]
+    fn default() -> Self {
+        ManyErrorCode::Unknown
+    }
+}
+
+impl std::error::Error for ManyError {}
+
+impl Default for ManyError {
+    #[inline]
+    fn default() -> Self {
+        ManyError::unknown("?")
+    }
+}
+
+impl Encode for ManyError {
+    #[inline]
+    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+        e.encode(&self.0)?;
+        Ok(())
+    }
+}
+impl<'b> Decode<'b> for ManyError {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+        Ok(Self(d.decode()?))
     }
 }
 
@@ -401,11 +468,11 @@ mod tests {
         arguments.insert("1".to_string(), "ONE".to_string());
         arguments.insert("2".to_string(), "TWO".to_string());
 
-        let e = ManyError {
-            code: ErrorCode::Unknown,
-            message: Some("Hello {0} and {2}.".to_string()),
+        let e = ManyError::new(
+            ErrorCode::Unknown,
+            Some("Hello {0} and {2}.".to_string()),
             arguments,
-        };
+        );
 
         assert_eq!(format!("{}", e), "Hello ZERO and TWO.");
     }
@@ -417,11 +484,7 @@ mod tests {
         arguments.insert("1".to_string(), "ONE".to_string());
         arguments.insert("2".to_string(), "TWO".to_string());
 
-        let e = ManyError {
-            code: ErrorCode::Unknown,
-            message: Some("{2}".to_string()),
-            arguments,
-        };
+        let e = ManyError::new(ErrorCode::Unknown, Some("{2}".to_string()), arguments);
 
         assert_eq!(format!("{}", e), "TWO");
     }
@@ -433,11 +496,11 @@ mod tests {
         arguments.insert("1".to_string(), "ONE".to_string());
         arguments.insert("2".to_string(), "TWO".to_string());
 
-        let e = ManyError {
-            code: ErrorCode::Unknown,
-            message: Some("@{a}{b}{c}.".to_string()),
+        let e = ManyError::new(
+            ErrorCode::Unknown,
+            Some("@{a}{b}{c}.".to_string()),
             arguments,
-        };
+        );
 
         assert_eq!(format!("{}", e), "@.");
     }
@@ -449,11 +512,11 @@ mod tests {
         arguments.insert("1".to_string(), "ONE".to_string());
         arguments.insert("2".to_string(), "TWO".to_string());
 
-        let e = ManyError {
-            code: ErrorCode::Unknown,
-            message: Some("/{{}}{{{0}}}{{{a}}}{b}}}{{{2}.".to_string()),
+        let e = ManyError::new(
+            ErrorCode::Unknown,
+            Some("/{{}}{{{0}}}{{{a}}}{b}}}{{{2}.".to_string()),
             arguments,
-        };
+        );
 
         assert_eq!(format!("{}", e), "/{}{ZERO}{}}{TWO.");
     }

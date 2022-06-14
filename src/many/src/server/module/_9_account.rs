@@ -1,3 +1,4 @@
+use crate::message::error::Reason;
 use crate::server::module::EmptyReturn;
 use crate::types::{Either, VecOrSingle};
 use crate::{Identity, ManyError};
@@ -165,7 +166,7 @@ pub struct Account {
     pub features: features::FeatureSet,
 
     #[n(3)]
-    pub disabled: Option<Either<bool, ManyError>>,
+    pub disabled: Option<Either<bool, Reason<u64>>>,
 }
 
 impl Account {
@@ -189,7 +190,7 @@ impl Account {
     }
 
     /// Disable the account, providing a reason or not.
-    pub fn disable(&mut self, reason: Option<ManyError>) {
+    pub fn disable(&mut self, reason: Option<Reason<u64>>) {
         self.disabled = Some(match reason {
             None => Either::Left(true),
             Some(e) => Either::Right(e),
