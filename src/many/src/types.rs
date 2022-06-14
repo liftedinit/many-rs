@@ -40,6 +40,47 @@ impl<'b> Decode<'b> for Percent {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Debug, Hash)]
+#[must_use]
+pub enum Either<L, R> {
+    Left(L),
+    Right(R),
+}
+
+impl<L: Default, R> Default for Either<L, R> {
+    fn default() -> Self {
+        Self::Left(L::default())
+    }
+}
+
+impl<L, R> From<L> for Either<L, R> {
+    fn from(l: L) -> Self {
+        Self::Left(l)
+    }
+}
+
+impl<L: Encode, R: Encode> Encode for Either<L, R> {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+        match self {
+            Either::Left(l) => e.encode(l)?,
+            Either::Right(r) => e.encode(r)?,
+        };
+        Ok(())
+    }
+}
+
+impl<'b, L: Decode<'b>, R: Decode<'b>> Decode<'b> for Either<L, R> {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+        let pos = d.position();
+        if let Ok(l) = d.decode::<L>() {
+            Ok(Self::Left(l))
+        } else {
+            d.set_position(pos);
+            d.decode::<R>().map(|r| Self::Right(r))
+        }
+    }
+}
+
 #[derive(Clone, Default, Debug, PartialEq)]
 #[must_use]
 pub struct VecOrSingle<T>(pub Vec<T>);
@@ -581,4 +622,28 @@ fn attribute_related_index_encode_5() {
         "[16, [17, [18, [19, 20]]]]"
     );
     assert_eq!(minicbor::decode::<AttributeRelatedIndex>(&b).unwrap(), i);
+}
+
+#[test]
+fn either_works() {
+    type EitherTest = Either<bool, u32>;
+
+    assert_eq!(
+        minicbor::decode::<EitherTest>(&[0]).unwrap(),
+        EitherTest::Right(0)
+    );
+    assert_eq!(
+        minicbor::decode::<EitherTest>(&[0xF4]).unwrap(),
+        EitherTest::Left(false)
+    );
+    assert_eq!(
+        minicbor::decode::<EitherTest>(&[0x1A, 0x00, 0x0F, 0x42, 0x40]).unwrap(),
+        EitherTest::Right(1_000_000)
+    );
+
+    assert_eq!(
+        &minicbor::to_vec(EitherTest::Right(1_000_000)).unwrap(),
+        &[0x1A, 0x00, 0x0F, 0x42, 0x40]
+    );
+    assert_eq!(&minicbor::to_vec(EitherTest::Left(true)).unwrap(), &[0xF5]);
 }

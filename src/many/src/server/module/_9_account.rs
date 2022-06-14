@@ -1,5 +1,6 @@
+use crate::message::error::Reason;
 use crate::server::module::EmptyReturn;
-use crate::types::VecOrSingle;
+use crate::types::{Either, VecOrSingle};
 use crate::{Identity, ManyError};
 use many_macros::many_module;
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
@@ -163,6 +164,9 @@ pub struct Account {
 
     #[n(2)]
     pub features: features::FeatureSet,
+
+    #[n(3)]
+    pub disabled: Option<Either<bool, Reason<u64>>>,
 }
 
 impl Account {
@@ -181,7 +185,16 @@ impl Account {
             description,
             roles,
             features,
+            disabled: None,
         }
+    }
+
+    /// Disable the account, providing a reason or not.
+    pub fn disable(&mut self, reason: Option<Reason<u64>>) {
+        self.disabled = Some(match reason {
+            None => Either::Left(true),
+            Some(e) => Either::Right(e),
+        })
     }
 
     pub fn set_description(&mut self, desc: Option<impl ToString>) {
