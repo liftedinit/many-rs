@@ -8,7 +8,7 @@ use std::iter::FromIterator;
 
 #[derive(FromPrimitive, ToPrimitive)]
 #[repr(i8)]
-enum ManyErrorCborKey {
+enum ReasonCborKey {
     Code = 0,
     Message = 1,
     Arguments = 2,
@@ -244,12 +244,13 @@ impl ManyErrorCode {
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Reason<T> {
-    pub code: T,
-    pub message: Option<String>,
-    pub arguments: BTreeMap<String, String>,
+    code: T,
+    message: Option<String>,
+    arguments: BTreeMap<String, String>,
 }
 
 impl<T> Reason<T> {
+    #[inline]
     pub const fn new(
         code: T,
         message: Option<String>,
@@ -260,6 +261,26 @@ impl<T> Reason<T> {
             message,
             arguments,
         }
+    }
+
+    #[inline]
+    pub const fn code(&self) -> &T {
+        &self.code
+    }
+
+    #[inline]
+    pub fn message(&self) -> Option<&str> {
+        self.message.as_deref()
+    }
+
+    #[inline]
+    pub fn argument<S: AsRef<str>>(&self, field: S) -> Option<&str> {
+        self.arguments.get(field.as_ref()).map(|x| x.as_str())
+    }
+
+    #[inline]
+    pub fn arguments(&self) -> &BTreeMap<String, String> {
+        &self.arguments
     }
 }
 
@@ -320,14 +341,14 @@ impl<T: Encode> Encode for Reason<T> {
             1 + if self.message.is_none() { 0 } else { 1 }
                 + if self.arguments.is_empty() { 0 } else { 1 },
         )?
-        .u32(ManyErrorCborKey::Code as u32)?
+        .u32(ReasonCborKey::Code as u32)?
         .encode(&self.code)?;
 
         if let Some(msg) = &self.message {
-            e.u32(ManyErrorCborKey::Message as u32)?.str(msg.as_str())?;
+            e.u32(ReasonCborKey::Message as u32)?.str(msg.as_str())?;
         }
         if !self.arguments.is_empty() {
-            e.u32(ManyErrorCborKey::Arguments as u32)?
+            e.u32(ReasonCborKey::Arguments as u32)?
                 .encode(&self.arguments)?;
         }
         Ok(())
@@ -350,9 +371,9 @@ impl<'b, T: Decode<'b> + Default> Decode<'b> for Reason<T> {
             }
 
             match num_traits::FromPrimitive::from_i64(d.i64()?) {
-                Some(ManyErrorCborKey::Code) => code = Some(d.decode()?),
-                Some(ManyErrorCborKey::Message) => message = Some(d.str()?),
-                Some(ManyErrorCborKey::Arguments) => arguments = d.decode()?,
+                Some(ReasonCborKey::Code) => code = Some(d.decode()?),
+                Some(ReasonCborKey::Message) => message = Some(d.str()?),
+                Some(ReasonCborKey::Arguments) => arguments = d.decode()?,
                 None => {}
             }
 
@@ -375,6 +396,26 @@ impl<'b, T: Decode<'b> + Default> Decode<'b> for Reason<T> {
 pub struct ManyError(Reason<ManyErrorCode>);
 
 impl ManyError {
+    #[inline]
+    pub const fn code(&self) -> ManyErrorCode {
+        *self.0.code()
+    }
+
+    #[inline]
+    pub fn message(&self) -> Option<&str> {
+        self.0.message()
+    }
+
+    #[inline]
+    pub fn argument<S: AsRef<str>>(&self, field: S) -> Option<&str> {
+        self.0.argument(field)
+    }
+
+    #[inline]
+    pub fn arguments(&self) -> &BTreeMap<String, String> {
+        self.0.arguments()
+    }
+
     #[inline]
     pub const fn is_attribute_specific(&self) -> bool {
         self.0.code.is_attribute_specific()
