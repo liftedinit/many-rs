@@ -363,7 +363,7 @@ impl<'b, T: Decode<'b> + Default> Decode<'b> for Reason<T> {
         }
 
         Ok(Self {
-            code: code.unwrap_or_default().into(),
+            code: code.unwrap_or_default(),
             message: message.map(|s| s.to_string()),
             arguments,
         })
