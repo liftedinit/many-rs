@@ -14,8 +14,8 @@
 use std::convert::{AsMut, AsRef};
 use std::fmt;
 use std::iter;
+use std::ops::Deref;
 use std::ops::DerefMut;
-use std::ops::{ControlFlow, Deref};
 
 use std::error::Error;
 use std::io::{self, BufRead, Read, Write};

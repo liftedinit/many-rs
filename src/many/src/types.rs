@@ -10,6 +10,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub mod blockchain;
 pub mod either;
+pub mod events;
 pub mod identity;
 pub mod ledger;
 
@@ -336,13 +337,13 @@ pub struct TransactionFilter {
     pub account: Option<VecOrSingle<Identity>>,
 
     #[n(1)]
-    pub kind: Option<VecOrSingle<ledger::TransactionKind>>,
+    pub kind: Option<VecOrSingle<events::EventKind>>,
 
     #[n(2)]
     pub symbol: Option<VecOrSingle<Identity>>,
 
     #[n(3)]
-    pub id_range: Option<CborRange<ledger::TransactionId>>,
+    pub id_range: Option<CborRange<events::EventId>>,
 
     #[n(4)]
     pub date_range: Option<CborRange<Timestamp>>,

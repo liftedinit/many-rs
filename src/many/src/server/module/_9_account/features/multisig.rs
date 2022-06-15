@@ -4,7 +4,8 @@ use crate::server::module::account::features::{Feature, FeatureId, TryCreateFeat
 use crate::server::module::account::Role;
 use crate::server::module::ledger::SendArgs;
 use crate::server::module::EmptyReturn;
-use crate::types::ledger::{AccountMultisigTransaction, TokenAmount};
+use crate::types::events::AccountMultisigTransaction;
+use crate::types::ledger::TokenAmount;
 use crate::types::Timestamp;
 use crate::{Identity, ManyError};
 use many_macros::many_module;
@@ -384,7 +385,7 @@ mod tests {
     use super::SubmitTransactionArgs;
     use crate::{
         server::module::account::{features::multisig::MULTISIG_MEMO_DATA_MAX_SIZE, DisableArgs},
-        types::{identity::testing::identity, ledger::AccountMultisigTransaction},
+        types::{events::AccountMultisigTransaction, identity::testing::identity},
     };
 
     #[test]
