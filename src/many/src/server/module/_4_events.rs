@@ -23,6 +23,7 @@ mod tests {
     use mockall::predicate;
     use std::sync::{Arc, Mutex};
 
+    use crate::types::ledger::TransactionKind;
     use crate::{
         server::module::testutils::{call_module, call_module_cbor},
         types::{
@@ -35,18 +36,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn transactions() {
+    fn info() {
         let mut mock = MockEventsModuleBackend::new();
         mock.expect_info()
             .with(predicate::eq(InfoArgs {}))
             .times(1)
-            .returning(|_args| Ok(InfoReturn { total: 12 }));
+            .returning(|_args| {
+                Ok(InfoReturn {
+                    total: 12,
+                    event_types: vec![TransactionKind::Send],
+                })
+            });
         let module = super::EventsModule::new(Arc::new(Mutex::new(mock)));
 
         let info_returns: InfoReturn =
             minicbor::decode(&call_module(1, &module, "events.info", "null").unwrap()).unwrap();
 
         assert_eq!(info_returns.total, 12);
+        assert_eq!(info_returns.event_types, &[TransactionKind::Send]);
     }
 
     #[test]
@@ -82,7 +89,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(list_returns.nb_transactions, 1);
-        assert_eq!(list_returns.transactions.len(), 1);
+        assert_eq!(list_returns.nb_events, 1);
+        assert_eq!(list_returns.events.len(), 1);
     }
 }

@@ -10,6 +10,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub mod blockchain;
 pub mod either;
+pub mod events;
 pub mod identity;
 pub mod ledger;
 
