@@ -1,11 +1,11 @@
 use crate::server::module::EmptyArg;
 use minicbor::{Decode, Encode};
 
-pub type TransactionsArgs = EmptyArg;
+pub type InfoArgs = EmptyArg;
 
 #[derive(Decode, Encode)]
 #[cbor(map)]
-pub struct TransactionsReturns {
+pub struct InfoReturn {
     #[n(0)]
-    pub nb_transactions: u64,
+    pub total: u64,
 }
