@@ -105,7 +105,7 @@ impl From<EventId> for Vec<u8> {
     }
 }
 
-macro_rules! define_tx_kind {
+macro_rules! define_event_kind {
     ( $( [ $index: literal $(, $sub: literal )* ] $name: ident { $( $idx: literal | $fname: ident : $type: ty, )* }, )* ) => {
         #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
         #[repr(u8)]
@@ -156,13 +156,13 @@ macro_rules! define_tx_kind {
     }
 }
 
-macro_rules! define_tx_info_symbol {
+macro_rules! define_event_info_symbol {
     (@pick_symbol) => {};
     (@pick_symbol $name: ident symbol $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
         return Some(& $name)
     };
     (@pick_symbol $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_tx_info_symbol!(@pick_symbol $( $name $( $tag )*, )* )
+        define_event_info_symbol!(@pick_symbol $( $name $( $tag )*, )* )
     };
 
     (@inner) => {};
@@ -172,7 +172,7 @@ macro_rules! define_tx_info_symbol {
         }
     };
     (@inner $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_tx_info_symbol!(@inner $( $name $( $tag )*, )* )
+        define_event_info_symbol!(@inner $( $name $( $tag )*, )* )
     };
 
     ( $( $name: ident { $( $fname: ident $( $tag: ident )* , )* } )* ) => {
@@ -183,10 +183,10 @@ macro_rules! define_tx_info_symbol {
                 } => {
                     // Remove warnings.
                     $( let _ = $fname; )*
-                    define_tx_info_symbol!(@pick_symbol $( $fname $( $tag )*, )* );
+                    define_event_info_symbol!(@pick_symbol $( $fname $( $tag )*, )* );
 
                     // If we're here, we need to go deeper. Check if there's an inner.
-                    define_tx_info_symbol!(@inner $( $fname $( $tag )*, )*);
+                    define_event_info_symbol!(@inner $( $fname $( $tag )*, )*);
                 } )*
             }
 
@@ -195,16 +195,16 @@ macro_rules! define_tx_info_symbol {
     };
 }
 
-macro_rules! define_tx_info_is_about {
+macro_rules! define_event_info_is_about {
     (@check_id $id: ident) => {};
     (@check_id $id: ident $name: ident id $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
         if $name == $id {
             return true;
         }
-        define_tx_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
+        define_event_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
     };
     (@check_id $id: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_tx_info_is_about!(@check_id $id $( $name $( $tag )*, )* )
+        define_event_info_is_about!(@check_id $id $( $name $( $tag )*, )* )
     };
 
     (@inner $id: ident) => {};
@@ -212,10 +212,10 @@ macro_rules! define_tx_info_is_about {
         if $name .is_about($id) {
             return true;
         }
-        define_tx_info_is_about!(@inner $id $( $name_ $( $tag_ )*, )* )
+        define_event_info_is_about!(@inner $id $( $name_ $( $tag_ )*, )* )
     };
     (@inner $id: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_tx_info_is_about!(@inner $id $( $name $( $tag )*, )* )
+        define_event_info_is_about!(@inner $id $( $name $( $tag )*, )* )
     };
 
     ( $( $name: ident { $( $fname: ident $( $tag: ident )* , )* } )* ) => {
@@ -226,10 +226,10 @@ macro_rules! define_tx_info_is_about {
                 } => {
                     // Remove warnings.
                     $( let _ = $fname; )*
-                    define_tx_info_is_about!(@check_id id $( $fname $( $tag )*, )* );
+                    define_event_info_is_about!(@check_id id $( $fname $( $tag )*, )* );
 
                     // Inner fields might match the identity.
-                    define_tx_info_is_about!(@inner id $( $fname $( $tag )*, )* );
+                    define_event_info_is_about!(@inner id $( $fname $( $tag )*, )* );
                 } )*
             }
             false
@@ -237,7 +237,7 @@ macro_rules! define_tx_info_is_about {
     };
 }
 
-macro_rules! define_tx_info {
+macro_rules! define_event_info {
     ( $( $name: ident { $( $idx: literal | $fname: ident : $type: ty $([ $( $tag: ident )* ])?, )* }, )* ) => {
         #[derive(Clone, Debug)]
         #[non_exhaustive]
@@ -248,11 +248,11 @@ macro_rules! define_tx_info {
         }
 
         impl EventInfo {
-            define_tx_info_symbol!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
-            define_tx_info_is_about!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
+            define_event_info_symbol!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
+            define_event_info_is_about!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
         }
 
-        encode_tx_info!( $( $name { $( $idx => $fname : $type, )* }, )* );
+        encode_event_info!( $( $name { $( $idx => $fname : $type, )* }, )* );
     };
 }
 
@@ -263,7 +263,7 @@ macro_rules! replace_expr {
     };
 }
 
-macro_rules! encode_tx_info {
+macro_rules! encode_event_info {
     ( $( $sname: ident { $( $idx: literal => $name: ident : $type: ty, )* }, )* ) => {
         impl Encode for EventInfo {
             fn encode<W: encode::Write>(
@@ -320,7 +320,7 @@ macro_rules! encode_tx_info {
     }
 }
 
-macro_rules! define_multisig_tx {
+macro_rules! define_multisig_event {
     ( $( $name: ident $(: $arg: ty )?, )* ) => {
         #[derive(Clone, Debug, PartialEq)]
         #[non_exhaustive]
@@ -392,17 +392,17 @@ macro_rules! define_multisig_tx {
     }
 }
 
-macro_rules! define_tx {
+macro_rules! define_event {
     ( $( [ $index: literal $(, $sub: literal )* ] $name: ident $(($method_arg: ty))? { $( $idx: literal | $fname: ident : $type: ty $([ $($tag: ident)* ])?, )* }, )* ) => {
-        define_tx_kind!( $( [ $index $(, $sub )* ] $name { $( $idx | $fname : $type, )* }, )* );
-        define_tx_info!( $( $name { $( $idx | $fname : $type $([ $( $tag )* ])?, )* }, )* );
+        define_event_kind!( $( [ $index $(, $sub )* ] $name { $( $idx | $fname : $type, )* }, )* );
+        define_event_info!( $( $name { $( $idx | $fname : $type $([ $( $tag )* ])?, )* }, )* );
 
-        define_multisig_tx!( $( $name $(: $method_arg)?, )*);
+        define_multisig_event!( $( $name $(: $method_arg)?, )*);
     }
 }
 
 // We flatten the attribute related index here, but it is unflattened when serializing.
-define_tx! {
+define_event! {
     [4, 0]      Send (module::ledger::SendArgs) {
         1     | from:                   Identity                                [ id ],
         2     | to:                     Identity                                [ id ],
@@ -514,7 +514,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn txid_from_bytevec() {
+    fn eventid_from_bytevec() {
         let b = ByteVec::from(vec![1, 2, 3, 4, 5]);
         let t = EventId::from(b.clone());
 
@@ -522,7 +522,7 @@ mod test {
     }
 
     #[test]
-    fn txid_from_biguint() {
+    fn eventid_from_biguint() {
         let v = u64::MAX;
         let t = EventId::from(BigUint::from(v));
 
@@ -530,7 +530,7 @@ mod test {
     }
 
     #[test]
-    fn txid_from_u64() {
+    fn eventid_from_u64() {
         let v = u64::MAX;
         let t = EventId::from(v);
 
@@ -538,7 +538,7 @@ mod test {
     }
 
     #[test]
-    fn txid_add() {
+    fn eventid_add() {
         let v = u64::MAX;
         let mut t = EventId::from(v) + 1;
 
@@ -562,7 +562,7 @@ mod test {
     }
 
     #[test]
-    fn txid_sub() {
+    fn eventid_sub() {
         let v = u64::MAX;
         let t = EventId::from(v) - 1;
 
@@ -575,7 +575,7 @@ mod test {
     }
 
     #[test]
-    fn tx_info_is_about() {
+    fn event_info_is_about() {
         let i0 = Identity::public_key_raw([0; 28]);
         let i1 = Identity::public_key_raw([1; 28]);
         let i01 = i0.with_subresource_id_unchecked(1);
@@ -594,28 +594,28 @@ mod test {
     }
 
     #[test]
-    fn tx_info_symbol() {
+    fn event_info_symbol() {
         let i0 = Identity::public_key_raw([0; 28]);
         let i1 = Identity::public_key_raw([1; 28]);
         let i01 = i0.with_subresource_id_unchecked(1);
 
-        let tx = EventInfo::Send {
+        let event = EventInfo::Send {
             from: i0,
             to: i01,
             symbol: i1,
             amount: Default::default(),
         };
-        assert_eq!(tx.symbol(), Some(&i1));
+        assert_eq!(event.symbol(), Some(&i1));
 
-        let tx = EventInfo::AccountDelete { account: i0 };
-        assert_eq!(tx.symbol(), None);
+        let event = EventInfo::AccountDelete { account: i0 };
+        assert_eq!(event.symbol(), None);
     }
 
-    mod tx_info {
+    mod event_info {
         use super::super::*;
         use proptest::prelude::*;
 
-        fn _create_tx_info(
+        fn _create_event_info(
             memo: String,
             data: Vec<u8>,
             transaction: AccountMultisigTransaction,
@@ -644,7 +644,7 @@ mod test {
             #[test]
             fn submit_send(memo in "\\PC*", amount: u64) {
                 _assert_serde(
-                    _create_tx_info(memo, vec![], AccountMultisigTransaction::Send(module::ledger::SendArgs {
+                    _create_event_info(memo, vec![], AccountMultisigTransaction::Send(module::ledger::SendArgs {
                         from: Some(Identity::public_key_raw([2; 28])),
                         to: Identity::public_key_raw([3; 28]),
                         symbol: Identity::public_key_raw([4; 28]),
@@ -656,7 +656,7 @@ mod test {
             #[test]
             fn submit_submit_send(memo in "\\PC*", memo2 in "\\PC*", amount: u64) {
                 _assert_serde(
-                    _create_tx_info(memo, vec![],
+                    _create_event_info(memo, vec![],
                         AccountMultisigTransaction::AccountMultisigSubmit(
                             module::account::features::multisig::SubmitTransactionArgs {
                                 account: Identity::public_key_raw([2; 28]),
@@ -680,7 +680,7 @@ mod test {
             #[test]
             fn submit_set_defaults(memo in "\\PC*") {
                 _assert_serde(
-                    _create_tx_info(memo, vec![], AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
+                    _create_event_info(memo, vec![], AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
                         account: Identity::public_key_raw([2; 28]),
                         threshold: Some(2),
                         timeout_in_secs: None,
