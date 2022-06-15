@@ -24,7 +24,7 @@ mod tests {
 
     use crate::server::module::testutils::{call_module, call_module_cbor};
     use crate::types::events::EventKind;
-    use crate::types::events::{EventId, EventLog, TransactionInfo};
+    use crate::types::events::{EventId, EventInfo, EventLog};
     use crate::types::ledger::TokenAmount;
     use crate::types::Timestamp;
     use crate::Identity;
@@ -69,7 +69,7 @@ mod tests {
                     events: vec![EventLog {
                         id: EventId::from(vec![1, 1, 1, 1]),
                         time: Timestamp::now(),
-                        content: TransactionInfo::Send {
+                        content: EventInfo::Send {
                             from: Identity::anonymous(),
                             to: Identity::anonymous(),
                             symbol: Default::default(),

@@ -122,10 +122,10 @@ macro_rules! define_tx_kind {
             }
         }
 
-        impl From<&TransactionInfo> for EventKind {
-            fn from(other: &TransactionInfo) -> Self {
+        impl From<&EventInfo> for EventKind {
+            fn from(other: &EventInfo) -> Self {
                 match other {
-                    $( TransactionInfo :: $name { .. } => EventKind :: $name ),*
+                    $( EventInfo :: $name { .. } => EventKind :: $name ),*
                 }
             }
         }
@@ -178,7 +178,7 @@ macro_rules! define_tx_info_symbol {
     ( $( $name: ident { $( $fname: ident $( $tag: ident )* , )* } )* ) => {
         pub fn symbol(&self) -> Option<&Symbol> {
             match self {
-                $( TransactionInfo :: $name {
+                $( EventInfo :: $name {
                     $( $fname, )*
                 } => {
                     // Remove warnings.
@@ -221,7 +221,7 @@ macro_rules! define_tx_info_is_about {
     ( $( $name: ident { $( $fname: ident $( $tag: ident )* , )* } )* ) => {
         pub fn is_about(&self, id: &Identity) -> bool {
             match self {
-                $( TransactionInfo :: $name {
+                $( EventInfo :: $name {
                     $( $fname, )*
                 } => {
                     // Remove warnings.
@@ -241,13 +241,13 @@ macro_rules! define_tx_info {
     ( $( $name: ident { $( $idx: literal | $fname: ident : $type: ty $([ $( $tag: ident )* ])?, )* }, )* ) => {
         #[derive(Clone, Debug)]
         #[non_exhaustive]
-        pub enum TransactionInfo {
+        pub enum EventInfo {
             $( $name {
                 $( $fname: $type ),*
             } ),*
         }
 
-        impl TransactionInfo {
+        impl EventInfo {
             define_tx_info_symbol!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
             define_tx_info_is_about!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
         }
@@ -265,13 +265,13 @@ macro_rules! replace_expr {
 
 macro_rules! encode_tx_info {
     ( $( $sname: ident { $( $idx: literal => $name: ident : $type: ty, )* }, )* ) => {
-        impl Encode for TransactionInfo {
+        impl Encode for EventInfo {
             fn encode<W: encode::Write>(
                 &self,
                 e: &mut Encoder<W>,
             ) -> Result<(), encode::Error<W::Error>> {
                 match self {
-                    $(  TransactionInfo :: $sname { $( $name, )* } => {
+                    $(  EventInfo :: $sname { $( $name, )* } => {
                             e.map( 1u64 $(+ replace_expr!($idx 1u64))* )?
                                 .u8(0)?.encode(EventKind :: $sname)?
                                 $( .u8($idx)?.encode($name)? )*
@@ -282,7 +282,7 @@ macro_rules! encode_tx_info {
             }
         }
 
-        impl<'b> Decode<'b> for TransactionInfo {
+        impl<'b> Decode<'b> for EventInfo {
             fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
                 let mut len = d.map()?.ok_or(minicbor::decode::Error::Message(
                     "Invalid transaction type.",
@@ -309,7 +309,7 @@ macro_rules! encode_tx_info {
 
                         $( let $name: $type = $name.ok_or(minicbor::decode::Error::MissingValue($idx, stringify!($name)))?; )*
 
-                        Ok(TransactionInfo :: $sname {
+                        Ok(EventInfo :: $sname {
                             $( $name, )*
                         })
                     }, )*
@@ -492,7 +492,7 @@ pub struct EventLog {
     pub time: Timestamp,
 
     #[n(2)]
-    pub content: TransactionInfo,
+    pub content: EventInfo,
 }
 
 impl EventLog {
@@ -581,7 +581,7 @@ mod test {
         let i01 = i0.with_subresource_id_unchecked(1);
         let i11 = i1.with_subresource_id_unchecked(1);
 
-        let s0 = TransactionInfo::Send {
+        let s0 = EventInfo::Send {
             from: i0,
             to: i01,
             symbol: Default::default(),
@@ -599,7 +599,7 @@ mod test {
         let i1 = Identity::public_key_raw([1; 28]);
         let i01 = i0.with_subresource_id_unchecked(1);
 
-        let tx = TransactionInfo::Send {
+        let tx = EventInfo::Send {
             from: i0,
             to: i01,
             symbol: i1,
@@ -607,7 +607,7 @@ mod test {
         };
         assert_eq!(tx.symbol(), Some(&i1));
 
-        let tx = TransactionInfo::AccountDelete { account: i0 };
+        let tx = EventInfo::AccountDelete { account: i0 };
         assert_eq!(tx.symbol(), None);
     }
 
@@ -619,8 +619,8 @@ mod test {
             memo: String,
             data: Vec<u8>,
             transaction: AccountMultisigTransaction,
-        ) -> TransactionInfo {
-            TransactionInfo::AccountMultisigSubmit {
+        ) -> EventInfo {
+            EventInfo::AccountMultisigSubmit {
                 submitter: Identity::public_key_raw([0; 28]),
                 account: Identity::public_key_raw([1; 28]),
                 memo: Some(memo),
@@ -633,9 +633,9 @@ mod test {
             }
         }
 
-        fn _assert_serde(info: TransactionInfo) {
+        fn _assert_serde(info: EventInfo) {
             let bytes = minicbor::to_vec(info.clone()).expect("Could not serialize");
-            let decoded: TransactionInfo = minicbor::decode(&bytes).expect("Could not decode");
+            let decoded: EventInfo = minicbor::decode(&bytes).expect("Could not decode");
 
             assert_eq!(format!("{:?}", decoded), format!("{:?}", info));
         }
