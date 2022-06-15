@@ -1,5 +1,5 @@
 use crate::server::module::EmptyArg;
-use crate::types::ledger::TransactionKind;
+use crate::types::events::TransactionKind;
 use minicbor::{Decode, Encode};
 
 pub type InfoArgs = EmptyArg;

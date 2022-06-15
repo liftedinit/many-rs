@@ -1,4 +1,4 @@
-use crate::types::{ledger, SortOrder, TransactionFilter};
+use crate::types::{events, SortOrder, TransactionFilter};
 use minicbor::{Decode, Encode};
 
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
@@ -21,5 +21,5 @@ pub struct ListReturns {
     pub nb_events: u64,
 
     #[n(1)]
-    pub events: Vec<ledger::Transaction>,
+    pub events: Vec<events::Transaction>,
 }

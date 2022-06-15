@@ -4,7 +4,8 @@ use crate::server::module::account::features::{Feature, FeatureId, TryCreateFeat
 use crate::server::module::account::Role;
 use crate::server::module::ledger::SendArgs;
 use crate::server::module::EmptyReturn;
-use crate::types::ledger::{AccountMultisigTransaction, TokenAmount};
+use crate::types::events::AccountMultisigTransaction;
+use crate::types::ledger::TokenAmount;
 use crate::types::Timestamp;
 use crate::{Identity, ManyError};
 use many_macros::many_module;
@@ -177,11 +178,11 @@ fn decode_memo(d: &mut minicbor::Decoder) -> Result<Option<String>, minicbor::de
                 return Err(minicbor::decode::Error::Message("Memo size over limit"));
             }
             Ok(Some(String::from(memo)))
-        },
+        }
         Type::Null => {
             d.skip()?;
             Ok(None)
-        },
+        }
         _ => unimplemented!(),
     }
 }
@@ -195,7 +196,7 @@ fn decode_data(d: &mut minicbor::Decoder) -> Result<Option<ByteVec>, minicbor::d
                 return Err(minicbor::decode::Error::Message("Data size over limit"));
             }
             Ok(Some(data.to_vec().into()))
-        },
+        }
         Type::Null => {
             d.skip()?;
             Ok(None)
@@ -381,15 +382,20 @@ pub trait AccountMultisigModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use crate::{types::{ledger::AccountMultisigTransaction, identity::testing::identity}, server::module::account::{DeleteArgs, features::multisig::MULTISIG_MEMO_DATA_MAX_SIZE}};
     use super::SubmitTransactionArgs;
+    use crate::{
+        server::module::account::{features::multisig::MULTISIG_MEMO_DATA_MAX_SIZE, DeleteArgs},
+        types::{events::AccountMultisigTransaction, identity::testing::identity},
+    };
 
     #[test]
     fn memo_size() {
         let mut tx = SubmitTransactionArgs {
             account: identity(1),
             memo: Some(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE]).unwrap()),
-            transaction: Box::new(AccountMultisigTransaction::AccountDelete(DeleteArgs {account: identity(1) })),
+            transaction: Box::new(AccountMultisigTransaction::AccountDelete(DeleteArgs {
+                account: identity(1),
+            })),
             threshold: None,
             timeout_in_secs: None,
             execute_automatically: None,
@@ -411,7 +417,9 @@ mod tests {
         let mut tx = SubmitTransactionArgs {
             account: identity(1),
             memo: None,
-            transaction: Box::new(AccountMultisigTransaction::AccountDelete(DeleteArgs {account: identity(1) })),
+            transaction: Box::new(AccountMultisigTransaction::AccountDelete(DeleteArgs {
+                account: identity(1),
+            })),
             threshold: None,
             timeout_in_secs: None,
             execute_automatically: None,
@@ -428,4 +436,3 @@ mod tests {
         assert_eq!(dec.unwrap_err().to_string(), "Data size over limit");
     }
 }
-

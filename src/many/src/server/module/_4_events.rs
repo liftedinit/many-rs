@@ -23,15 +23,12 @@ mod tests {
     use mockall::predicate;
     use std::sync::{Arc, Mutex};
 
-    use crate::types::ledger::TransactionKind;
-    use crate::{
-        server::module::testutils::{call_module, call_module_cbor},
-        types::{
-            ledger::{TokenAmount, Transaction, TransactionId, TransactionInfo},
-            Timestamp,
-        },
-        Identity,
-    };
+    use crate::server::module::testutils::{call_module, call_module_cbor};
+    use crate::types::events::TransactionKind;
+    use crate::types::events::{Transaction, TransactionId, TransactionInfo};
+    use crate::types::ledger::TokenAmount;
+    use crate::types::Timestamp;
+    use crate::Identity;
 
     use super::*;
 
@@ -69,8 +66,8 @@ mod tests {
             .times(1)
             .returning(|_args| {
                 Ok(ListReturns {
-                    nb_transactions: 1,
-                    transactions: vec![Transaction {
+                    nb_events: 1,
+                    events: vec![Transaction {
                         id: TransactionId(ByteVec::from(vec![1, 1, 1, 1])),
                         time: Timestamp::now(),
                         content: TransactionInfo::Send {

@@ -337,13 +337,13 @@ pub struct TransactionFilter {
     pub account: Option<VecOrSingle<Identity>>,
 
     #[n(1)]
-    pub kind: Option<VecOrSingle<ledger::TransactionKind>>,
+    pub kind: Option<VecOrSingle<events::TransactionKind>>,
 
     #[n(2)]
     pub symbol: Option<VecOrSingle<Identity>>,
 
     #[n(3)]
-    pub id_range: Option<CborRange<ledger::TransactionId>>,
+    pub id_range: Option<CborRange<events::TransactionId>>,
 
     #[n(4)]
     pub date_range: Option<CborRange<Timestamp>>,
