@@ -285,7 +285,7 @@ macro_rules! encode_tx_info {
         impl<'b> Decode<'b> for EventInfo {
             fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
                 let mut len = d.map()?.ok_or(minicbor::decode::Error::Message(
-                    "Invalid transaction type.",
+                    "Invalid event type.",
                 ))?;
 
                 if d.u8()? != 0 {
@@ -313,7 +313,7 @@ macro_rules! encode_tx_info {
                             $( $name, )*
                         })
                     }, )*
-                    _ => Err(minicbor::decode::Error::Message("Unsupported transaction kind"))
+                    _ => Err(minicbor::decode::Error::Message("Unsupported event kind"))
                 }
             }
         }
@@ -362,7 +362,7 @@ macro_rules! define_multisig_tx {
         impl<'b> Decode<'b> for AccountMultisigTransaction {
             fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
                 let len = d.map()?.ok_or(minicbor::decode::Error::Message(
-                    "Invalid transaction type.",
+                    "Invalid event type.",
                 ))?;
 
                 if len != 2 {
