@@ -23,7 +23,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use crate::server::module::testutils::{call_module, call_module_cbor};
-    use crate::types::events::TransactionKind;
+    use crate::types::events::EventKind;
     use crate::types::events::{EventId, EventLog, TransactionInfo};
     use crate::types::ledger::TokenAmount;
     use crate::types::Timestamp;
@@ -40,7 +40,7 @@ mod tests {
             .returning(|_args| {
                 Ok(InfoReturn {
                     total: 12,
-                    event_types: vec![TransactionKind::Send],
+                    event_types: vec![EventKind::Send],
                 })
             });
         let module = super::EventsModule::new(Arc::new(Mutex::new(mock)));
@@ -49,7 +49,7 @@ mod tests {
             minicbor::decode(&call_module(1, &module, "events.info", "null").unwrap()).unwrap();
 
         assert_eq!(info_returns.total, 12);
-        assert_eq!(info_returns.event_types, &[TransactionKind::Send]);
+        assert_eq!(info_returns.event_types, &[EventKind::Send]);
     }
 
     #[test]

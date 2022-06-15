@@ -1,5 +1,5 @@
 use crate::server::module::EmptyArg;
-use crate::types::events::TransactionKind;
+use crate::types::events::EventKind;
 use minicbor::{Decode, Encode};
 
 pub type InfoArgs = EmptyArg;
@@ -11,5 +11,5 @@ pub struct InfoReturn {
     pub total: u64,
 
     #[n(1)]
-    pub event_types: Vec<TransactionKind>,
+    pub event_types: Vec<EventKind>,
 }

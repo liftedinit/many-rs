@@ -110,44 +110,44 @@ macro_rules! define_tx_kind {
         #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
         #[repr(u8)]
         #[non_exhaustive]
-        pub enum TransactionKind {
+        pub enum EventKind {
             $( $name ),*
         }
 
-        impl From<TransactionKind> for AttributeRelatedIndex {
-            fn from(other: TransactionKind) -> Self {
+        impl From<EventKind> for AttributeRelatedIndex {
+            fn from(other: EventKind) -> Self {
                 match other {
-                    $( TransactionKind :: $name => AttributeRelatedIndex::new($index) $(.with_index($sub))* ),*
+                    $( EventKind :: $name => AttributeRelatedIndex::new($index) $(.with_index($sub))* ),*
                 }
             }
         }
 
-        impl From<&TransactionInfo> for TransactionKind {
+        impl From<&TransactionInfo> for EventKind {
             fn from(other: &TransactionInfo) -> Self {
                 match other {
-                    $( TransactionInfo :: $name { .. } => TransactionKind :: $name ),*
+                    $( TransactionInfo :: $name { .. } => EventKind :: $name ),*
                 }
             }
         }
 
-        impl TryFrom<AttributeRelatedIndex> for TransactionKind {
+        impl TryFrom<AttributeRelatedIndex> for EventKind {
             type Error = Vec<u32>;
 
             fn try_from(other: AttributeRelatedIndex) -> Result<Self, Vec<u32>> {
                 match &other.flattened()[..] {
-                    $( [ $index $(, $sub)* ] => Ok( TransactionKind :: $name ), )*
+                    $( [ $index $(, $sub)* ] => Ok( EventKind :: $name ), )*
                     x => Err(x.to_vec()),
                 }
             }
         }
 
-        impl Encode for TransactionKind {
+        impl Encode for EventKind {
             fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
                 Into::<AttributeRelatedIndex>::into(*self).encode(e)
             }
         }
 
-        impl<'b> Decode<'b> for TransactionKind {
+        impl<'b> Decode<'b> for EventKind {
             fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
                 TryFrom::try_from(d.decode::<AttributeRelatedIndex>()?)
                     .map_err(|_| minicbor::decode::Error::Message("Invalid attribute index"))
@@ -273,7 +273,7 @@ macro_rules! encode_tx_info {
                 match self {
                     $(  TransactionInfo :: $sname { $( $name, )* } => {
                             e.map( 1u64 $(+ replace_expr!($idx 1u64))* )?
-                                .u8(0)?.encode(TransactionKind :: $sname)?
+                                .u8(0)?.encode(EventKind :: $sname)?
                                 $( .u8($idx)?.encode($name)? )*
                             ;
                             Ok(())
@@ -290,12 +290,12 @@ macro_rules! encode_tx_info {
 
                 if d.u8()? != 0 {
                     return Err(minicbor::decode::Error::Message(
-                        "TransactionKind should be the first item.",
+                        "EventKind should be the first item.",
                     ));
                 }
                 #[allow(unreachable_patterns)]
-                match d.decode::<TransactionKind>()? {
-                    $(  TransactionKind :: $sname => {
+                match d.decode::<EventKind>()? {
+                    $(  EventKind :: $sname => {
                         $( let mut $name : Option< $type > = None; )*
                         // len also includes the index 0 which is treated outside this macro.
                         while len > 1 {
@@ -350,7 +350,7 @@ macro_rules! define_multisig_tx {
                     $( AccountMultisigTransaction :: $name(arg) => {
                         let _: $arg;  // We do this to remove a macro error for not using $arg.
                         e.map(2)?
-                         .u8(0)?.encode(TransactionKind:: $name)?
+                         .u8(0)?.encode(EventKind:: $name)?
                          .u8(1)?.encode(arg)?;
                     }, )?
                     )*
@@ -370,13 +370,13 @@ macro_rules! define_multisig_tx {
                 }
                 if d.u8()? != 0 {
                     return Err(minicbor::decode::Error::Message(
-                        "TransactionKind should be the first item.",
+                        "EventKind should be the first item.",
                     ));
                 }
                 #[allow(unreachable_patterns)]
-                match d.decode::<TransactionKind>()? {
+                match d.decode::<EventKind>()? {
                     $(
-                    $(  TransactionKind :: $name => {
+                    $(  EventKind :: $name => {
                         let _: $arg;  // We do this to remove a macro error for not using $arg.
                         if d.u8()? != 1 {
                             Err(minicbor::decode::Error::Message("Invalid field index"))
@@ -496,8 +496,8 @@ pub struct EventLog {
 }
 
 impl EventLog {
-    pub fn kind(&self) -> TransactionKind {
-        TransactionKind::from(&self.content)
+    pub fn kind(&self) -> EventKind {
+        EventKind::from(&self.content)
     }
 
     pub fn symbol(&self) -> Option<&Identity> {

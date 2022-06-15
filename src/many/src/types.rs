@@ -337,7 +337,7 @@ pub struct TransactionFilter {
     pub account: Option<VecOrSingle<Identity>>,
 
     #[n(1)]
-    pub kind: Option<VecOrSingle<events::TransactionKind>>,
+    pub kind: Option<VecOrSingle<events::EventKind>>,
 
     #[n(2)]
     pub symbol: Option<VecOrSingle<Identity>>,
