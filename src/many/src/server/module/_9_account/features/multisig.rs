@@ -384,7 +384,7 @@ pub trait AccountMultisigModuleBackend: Send {
 mod tests {
     use super::SubmitTransactionArgs;
     use crate::{
-        server::module::account::{features::multisig::MULTISIG_MEMO_DATA_MAX_SIZE, DeleteArgs},
+        server::module::account::{features::multisig::MULTISIG_MEMO_DATA_MAX_SIZE, DisableArgs},
         types::{events::AccountMultisigTransaction, identity::testing::identity},
     };
 
@@ -393,7 +393,7 @@ mod tests {
         let mut tx = SubmitTransactionArgs {
             account: identity(1),
             memo: Some(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE]).unwrap()),
-            transaction: Box::new(AccountMultisigTransaction::AccountDelete(DeleteArgs {
+            transaction: Box::new(AccountMultisigTransaction::AccountDisable(DisableArgs {
                 account: identity(1),
             })),
             threshold: None,
@@ -417,7 +417,7 @@ mod tests {
         let mut tx = SubmitTransactionArgs {
             account: identity(1),
             memo: None,
-            transaction: Box::new(AccountMultisigTransaction::AccountDelete(DeleteArgs {
+            transaction: Box::new(AccountMultisigTransaction::AccountDisable(DisableArgs {
                 account: identity(1),
             })),
             threshold: None,

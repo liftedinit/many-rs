@@ -367,12 +367,12 @@ pub struct InfoReturn {
 
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
-pub struct DeleteArgs {
+pub struct DisableArgs {
     #[n(0)]
     pub account: Identity,
 }
 
-pub type DeleteReturn = EmptyReturn;
+pub type DisableReturn = EmptyReturn;
 
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
@@ -430,8 +430,9 @@ pub trait AccountModuleBackend: Send {
     /// Returns the information related to an account.
     fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError>;
 
-    /// Delete an account.
-    fn delete(&mut self, sender: &Identity, args: DeleteArgs) -> Result<DeleteReturn, ManyError>;
+    /// Disable or delete an account.
+    fn disable(&mut self, sender: &Identity, args: DisableArgs)
+        -> Result<DisableReturn, ManyError>;
 
     /// Add additional features to an account.
     fn add_features(
@@ -503,7 +504,7 @@ mod module_tests {
                 })
             }
         });
-        mock.expect_delete().returning({
+        mock.expect_disable().returning({
             let account_map = Arc::clone(&account_map);
             move |sender, args| {
                 let mut account_map = account_map.write().unwrap();
@@ -600,14 +601,14 @@ mod module_tests {
         assert!(call_module(
             2,
             &module,
-            "account.delete",
+            "account.disable",
             format!(r#"{{ 0: "{}" }}"#, id),
         )
         .is_err());
         assert!(call_module(
             1,
             &module,
-            "account.delete",
+            "account.disable",
             format!(r#"{{ 0: "{}" }}"#, id.with_subresource_id(9999).unwrap()),
         )
         .is_err());
@@ -615,7 +616,7 @@ mod module_tests {
         assert!(call_module(
             1,
             &module,
-            "account.delete",
+            "account.disable",
             format!(r#"{{ 0: "{}" }}"#, id),
         )
         .is_ok());

@@ -37,7 +37,7 @@ reexport_module!(
 /// Empty returns are empty semantically (unit type), but we don't want to break CBOR
 /// decoders so we use a null value instead.
 /// We expect decoders to skip the value anyway.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct EmptyReturn;
 
 impl minicbor::Encode for EmptyReturn {
