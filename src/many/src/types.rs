@@ -9,8 +9,11 @@ use std::ops::{Bound, RangeBounds, Shl};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub mod blockchain;
+pub mod either;
 pub mod identity;
 pub mod ledger;
+
+pub use either::Either;
 
 /// A deterministic (fixed point) percent value that can be multiplied with
 /// numbers and rounded down.
@@ -37,47 +40,6 @@ impl Encode for Percent {
 impl<'b> Decode<'b> for Percent {
     fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
         Ok(Self(fixed::types::U32F32::from_bits(d.u64()?)))
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Debug, Hash)]
-#[must_use]
-pub enum Either<L, R> {
-    Left(L),
-    Right(R),
-}
-
-impl<L: Default, R> Default for Either<L, R> {
-    fn default() -> Self {
-        Self::Left(L::default())
-    }
-}
-
-impl<L, R> From<L> for Either<L, R> {
-    fn from(l: L) -> Self {
-        Self::Left(l)
-    }
-}
-
-impl<L: Encode, R: Encode> Encode for Either<L, R> {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
-        match self {
-            Either::Left(l) => e.encode(l)?,
-            Either::Right(r) => e.encode(r)?,
-        };
-        Ok(())
-    }
-}
-
-impl<'b, L: Decode<'b>, R: Decode<'b>> Decode<'b> for Either<L, R> {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
-        let pos = d.position();
-        if let Ok(l) = d.decode::<L>() {
-            Ok(Self::Left(l))
-        } else {
-            d.set_position(pos);
-            d.decode::<R>().map(|r| Self::Right(r))
-        }
     }
 }
 
