@@ -427,7 +427,7 @@ define_event! {
         1     | account:                Identity                                [ id ],
         2     | roles:                  BTreeMap<Identity, BTreeSet<module::account::Role>>,
     },
-    [9, 4]      AccountDelete (module::account::DeleteArgs) {
+    [9, 4]      AccountDisable (module::account::DisableArgs) {
         1     | account:                Identity                                [ id ],
     },
     [9, 5]      AccountAddFeatures (module::account::AddFeaturesArgs) {
@@ -607,7 +607,7 @@ mod test {
         };
         assert_eq!(event.symbol(), Some(&i1));
 
-        let event = EventInfo::AccountDelete { account: i0 };
+        let event = EventInfo::AccountDisable { account: i0 };
         assert_eq!(event.symbol(), None);
     }
 
