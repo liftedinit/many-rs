@@ -363,6 +363,9 @@ pub struct InfoReturn {
 
     #[n(2)]
     pub features: features::FeatureSet,
+
+    #[n(3)]
+    pub disabled: Option<Either<bool, Reason<u64>>>,
 }
 
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
