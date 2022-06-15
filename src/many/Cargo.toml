@@ -75,3 +75,5 @@ raw = []
 testing = []
 # Whether to trace ManyError creation, which can be useful for debugging.
 trace_error_creation = ["backtrace"]
+# Whether to run hsm tests. This is disabled by default and only used in cargo test.
+hsm_test = []
