@@ -19,13 +19,12 @@ pub trait EventsModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use minicbor::bytes::ByteVec;
     use mockall::predicate;
     use std::sync::{Arc, Mutex};
 
     use crate::server::module::testutils::{call_module, call_module_cbor};
     use crate::types::events::TransactionKind;
-    use crate::types::events::{Transaction, TransactionId, TransactionInfo};
+    use crate::types::events::{EventId, EventLog, TransactionInfo};
     use crate::types::ledger::TokenAmount;
     use crate::types::Timestamp;
     use crate::Identity;
@@ -67,8 +66,8 @@ mod tests {
             .returning(|_args| {
                 Ok(ListReturns {
                     nb_events: 1,
-                    events: vec![Transaction {
-                        id: TransactionId(ByteVec::from(vec![1, 1, 1, 1])),
+                    events: vec![EventLog {
+                        id: EventId::from(vec![1, 1, 1, 1]),
                         time: Timestamp::now(),
                         content: TransactionInfo::Send {
                             from: Identity::anonymous(),

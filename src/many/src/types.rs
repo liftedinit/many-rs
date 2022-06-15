@@ -343,7 +343,7 @@ pub struct TransactionFilter {
     pub symbol: Option<VecOrSingle<Identity>>,
 
     #[n(3)]
-    pub id_range: Option<CborRange<events::TransactionId>>,
+    pub id_range: Option<CborRange<events::EventId>>,
 
     #[n(4)]
     pub date_range: Option<CborRange<Timestamp>>,

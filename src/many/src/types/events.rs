@@ -10,85 +10,97 @@ use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
 #[repr(transparent)]
-pub struct TransactionId(pub ByteVec);
+pub struct EventId(ByteVec);
 
-impl From<ByteVec> for TransactionId {
-    fn from(t: ByteVec) -> TransactionId {
-        TransactionId(t)
+impl From<ByteVec> for EventId {
+    fn from(t: ByteVec) -> EventId {
+        EventId(t)
     }
 }
 
-impl From<Vec<u8>> for TransactionId {
-    fn from(t: Vec<u8>) -> TransactionId {
-        TransactionId(ByteVec::from(t))
+impl From<EventId> for ByteVec {
+    fn from(id: EventId) -> Self {
+        id.0
     }
 }
 
-impl From<u64> for TransactionId {
-    fn from(v: u64) -> TransactionId {
-        TransactionId(ByteVec::from(v.to_be_bytes().to_vec()))
+impl AsRef<[u8]> for EventId {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
     }
 }
 
-impl From<BigUint> for TransactionId {
-    fn from(b: BigUint) -> TransactionId {
-        TransactionId(ByteVec::from(b.to_bytes_be()))
+impl From<Vec<u8>> for EventId {
+    fn from(t: Vec<u8>) -> EventId {
+        EventId(ByteVec::from(t))
     }
 }
 
-impl std::ops::Add<ByteVec> for TransactionId {
-    type Output = TransactionId;
+impl From<u64> for EventId {
+    fn from(v: u64) -> EventId {
+        EventId(ByteVec::from(v.to_be_bytes().to_vec()))
+    }
+}
+
+impl From<BigUint> for EventId {
+    fn from(b: BigUint) -> EventId {
+        EventId(ByteVec::from(b.to_bytes_be()))
+    }
+}
+
+impl std::ops::Add<ByteVec> for EventId {
+    type Output = EventId;
 
     fn add(self, rhs: ByteVec) -> Self::Output {
         (BigUint::from_bytes_be(&self.0) + BigUint::from_bytes_be(&rhs)).into()
     }
 }
 
-impl std::ops::Add<u32> for TransactionId {
-    type Output = TransactionId;
+impl std::ops::Add<u32> for EventId {
+    type Output = EventId;
 
     fn add(self, rhs: u32) -> Self::Output {
         (BigUint::from_bytes_be(&self.0) + rhs).into()
     }
 }
 
-impl std::ops::AddAssign<u32> for TransactionId {
+impl std::ops::AddAssign<u32> for EventId {
     fn add_assign(&mut self, other: u32) {
         *self = self.clone() + other;
     }
 }
 
-impl std::ops::Sub<ByteVec> for TransactionId {
-    type Output = TransactionId;
+impl std::ops::Sub<ByteVec> for EventId {
+    type Output = EventId;
 
     fn sub(self, rhs: ByteVec) -> Self::Output {
         (BigUint::from_bytes_be(&self.0) - BigUint::from_bytes_be(&rhs)).into()
     }
 }
 
-impl std::ops::Sub<u32> for TransactionId {
-    type Output = TransactionId;
+impl std::ops::Sub<u32> for EventId {
+    type Output = EventId;
 
     fn sub(self, rhs: u32) -> Self::Output {
         (BigUint::from_bytes_be(&self.0) - rhs).into()
     }
 }
 
-impl Encode for TransactionId {
+impl Encode for EventId {
     fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
         e.bytes(&self.0)?;
         Ok(())
     }
 }
 
-impl<'b> Decode<'b> for TransactionId {
+impl<'b> Decode<'b> for EventId {
     fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-        Ok(TransactionId(ByteVec::from(d.bytes()?.to_vec())))
+        Ok(EventId(ByteVec::from(d.bytes()?.to_vec())))
     }
 }
 
-impl From<TransactionId> for Vec<u8> {
-    fn from(t: TransactionId) -> Vec<u8> {
+impl From<EventId> for Vec<u8> {
+    fn from(t: EventId) -> Vec<u8> {
         t.0.to_vec()
     }
 }
@@ -469,11 +481,12 @@ define_tx! {
     },
 }
 
+/// An Event that happened on the server and that is part of the log.
 #[derive(Debug, Encode, Decode)]
 #[cbor(map)]
-pub struct Transaction {
+pub struct EventLog {
     #[n(0)]
-    pub id: TransactionId,
+    pub id: EventId,
 
     #[n(1)]
     pub time: Timestamp,
@@ -482,7 +495,7 @@ pub struct Transaction {
     pub content: TransactionInfo,
 }
 
-impl Transaction {
+impl EventLog {
     pub fn kind(&self) -> TransactionKind {
         TransactionKind::from(&self.content)
     }
@@ -503,7 +516,7 @@ mod test {
     #[test]
     fn txid_from_bytevec() {
         let b = ByteVec::from(vec![1, 2, 3, 4, 5]);
-        let t = TransactionId::from(b.clone());
+        let t = EventId::from(b.clone());
 
         assert_eq!(b.as_slice(), Into::<Vec<u8>>::into(t));
     }
@@ -511,7 +524,7 @@ mod test {
     #[test]
     fn txid_from_biguint() {
         let v = u64::MAX;
-        let t = TransactionId::from(BigUint::from(v));
+        let t = EventId::from(BigUint::from(v));
 
         assert_eq!(v.to_be_bytes(), Into::<Vec<u8>>::into(t).as_slice());
     }
@@ -519,7 +532,7 @@ mod test {
     #[test]
     fn txid_from_u64() {
         let v = u64::MAX;
-        let t = TransactionId::from(v);
+        let t = EventId::from(v);
 
         assert_eq!(v.to_be_bytes(), Into::<Vec<u8>>::into(t).as_slice());
     }
@@ -527,7 +540,7 @@ mod test {
     #[test]
     fn txid_add() {
         let v = u64::MAX;
-        let mut t = TransactionId::from(v) + 1;
+        let mut t = EventId::from(v) + 1;
 
         assert_eq!(
             Into::<Vec<u8>>::into(t.clone()),
@@ -540,7 +553,7 @@ mod test {
         );
 
         let b = ByteVec::from(v.to_be_bytes().to_vec());
-        let t2 = TransactionId::from(v) + b;
+        let t2 = EventId::from(v) + b;
 
         assert_eq!(
             Into::<Vec<u8>>::into(t2),
@@ -551,12 +564,12 @@ mod test {
     #[test]
     fn txid_sub() {
         let v = u64::MAX;
-        let t = TransactionId::from(v) - 1;
+        let t = EventId::from(v) - 1;
 
         assert_eq!(Into::<Vec<u8>>::into(t), (v - 1).to_be_bytes());
 
         let b = ByteVec::from(1u64.to_be_bytes().to_vec());
-        let t2 = TransactionId::from(v) - b;
+        let t2 = EventId::from(v) - b;
 
         assert_eq!(Into::<Vec<u8>>::into(t2), (v - 1).to_be_bytes());
     }

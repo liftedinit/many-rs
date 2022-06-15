@@ -21,5 +21,5 @@ pub struct ListReturns {
     pub nb_events: u64,
 
     #[n(1)]
-    pub events: Vec<events::Transaction>,
+    pub events: Vec<events::EventLog>,
 }
