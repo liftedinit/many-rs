@@ -489,6 +489,7 @@ mod module_tests {
                     description: account.description.clone(),
                     roles: account.roles.clone(),
                     features: account.features.clone(),
+                    disabled: None,
                 })
             }
         });
