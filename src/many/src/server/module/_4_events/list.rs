@@ -1,4 +1,4 @@
-use crate::types::{events, SortOrder, TransactionFilter};
+use crate::types::{events, SortOrder};
 use minicbor::{Decode, Encode};
 
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
@@ -11,7 +11,7 @@ pub struct ListArgs {
     pub order: Option<SortOrder>,
 
     #[n(2)]
-    pub filter: Option<TransactionFilter>,
+    pub filter: Option<events::EventFilter>,
 }
 
 #[derive(Encode, Decode)]
