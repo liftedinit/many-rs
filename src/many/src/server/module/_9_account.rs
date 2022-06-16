@@ -363,6 +363,9 @@ pub struct InfoReturn {
 
     #[n(2)]
     pub features: features::FeatureSet,
+
+    #[n(3)]
+    pub disabled: Option<Either<bool, Reason<u64>>>,
 }
 
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
@@ -486,6 +489,7 @@ mod module_tests {
                     description: account.description.clone(),
                     roles: account.roles.clone(),
                     features: account.features.clone(),
+                    disabled: None,
                 })
             }
         });
