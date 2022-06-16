@@ -120,6 +120,7 @@ macro_rules! define_event_kind {
             strum_macros::EnumString,
         )]
         #[repr(u8)]
+        #[strum(serialize_all = "kebab-case")]
         #[non_exhaustive]
         pub enum EventKind {
             $( $name ),*
