@@ -17,9 +17,10 @@ pub mod features;
     PartialOrd,
     Eq,
     PartialEq,
-    strum_macros::EnumString,
     strum_macros::AsRefStr,
     strum_macros::Display,
+    strum_macros::EnumIter,
+    strum_macros::EnumString,
 )]
 #[repr(u8)]
 #[strum(serialize_all = "camelCase")]

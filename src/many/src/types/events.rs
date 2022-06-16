@@ -107,7 +107,18 @@ impl From<EventId> for Vec<u8> {
 
 macro_rules! define_event_kind {
     ( $( [ $index: literal $(, $sub: literal )* ] $name: ident { $( $idx: literal | $fname: ident : $type: ty, )* }, )* ) => {
-        #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+        #[derive(
+            Copy,
+            Clone,
+            Debug,
+            Ord,
+            PartialOrd,
+            Eq,
+            PartialEq,
+            strum_macros::Display,
+            strum_macros::EnumIter,
+            strum_macros::EnumString,
+        )]
         #[repr(u8)]
         #[non_exhaustive]
         pub enum EventKind {
