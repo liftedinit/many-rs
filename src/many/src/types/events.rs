@@ -434,7 +434,7 @@ macro_rules! define_event {
 
 // We flatten the attribute related index here, but it is unflattened when serializing.
 define_event! {
-    [4, 0]      Send (module::ledger::SendArgs) {
+    [6, 0]      Send (module::ledger::SendArgs) {
         1     | from:                   Identity                                [ id ],
         2     | to:                     Identity                                [ id ],
         3     | symbol:                 Symbol                                  [ symbol ],
