@@ -1,7 +1,7 @@
 use crate::message::ResponseMessage;
 use crate::server::module;
 use crate::types::ledger::{Symbol, TokenAmount};
-use crate::types::{AttributeRelatedIndex, Timestamp};
+use crate::types::{AttributeRelatedIndex, CborRange, Timestamp, VecOrSingle};
 use crate::Identity;
 use minicbor::bytes::ByteVec;
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
@@ -103,6 +103,25 @@ impl From<EventId> for Vec<u8> {
     fn from(t: EventId) -> Vec<u8> {
         t.0.to_vec()
     }
+}
+
+#[derive(Clone, Debug, Default, Encode, Decode, PartialEq)]
+#[cbor(map)]
+pub struct EventFilter {
+    #[n(0)]
+    pub account: Option<VecOrSingle<Identity>>,
+
+    #[n(1)]
+    pub kind: Option<VecOrSingle<EventKind>>,
+
+    #[n(2)]
+    pub symbol: Option<VecOrSingle<Identity>>,
+
+    #[n(3)]
+    pub id_range: Option<CborRange<EventId>>,
+
+    #[n(4)]
+    pub date_range: Option<CborRange<Timestamp>>,
 }
 
 macro_rules! define_event_kind {

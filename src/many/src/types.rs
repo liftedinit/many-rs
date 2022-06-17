@@ -1,5 +1,5 @@
 use crate::protocol::AttributeId;
-use crate::{Identity, ManyError};
+use crate::ManyError;
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
@@ -328,25 +328,6 @@ impl<'b, T: Decode<'b>> Decode<'b> for CborRange<T> {
 
         Ok(Self { start, end })
     }
-}
-
-#[derive(Clone, Debug, Default, Encode, Decode, PartialEq)]
-#[cbor(map)]
-pub struct TransactionFilter {
-    #[n(0)]
-    pub account: Option<VecOrSingle<Identity>>,
-
-    #[n(1)]
-    pub kind: Option<VecOrSingle<events::EventKind>>,
-
-    #[n(2)]
-    pub symbol: Option<VecOrSingle<Identity>>,
-
-    #[n(3)]
-    pub id_range: Option<CborRange<events::EventId>>,
-
-    #[n(4)]
-    pub date_range: Option<CborRange<Timestamp>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
