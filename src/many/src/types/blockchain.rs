@@ -2,8 +2,7 @@ use crate::types::Timestamp;
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 
-#[derive(Clone)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SingleBlockQuery {
     Hash(Vec<u8>),
     Height(u64),
@@ -51,8 +50,7 @@ impl<'d> Decode<'d> for SingleBlockQuery {
     }
 }
 
-#[derive(Clone, Decode, Encode)]
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct BlockIdentifier {
     #[cbor(n(0), with = "minicbor::bytes")]
@@ -117,8 +115,7 @@ pub struct Block {
 //     { 0 => bstr }
 //     ; A block + transaction index.
 //     / { 1 => [ single-block-query, uint ] }
-#[derive(Clone)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SingleTransactionQuery {
     Hash(Vec<u8>),
 }

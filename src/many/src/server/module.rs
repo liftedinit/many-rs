@@ -23,7 +23,8 @@ macro_rules! reexport_module {
 reexport_module!(
     base: _0_base;
     blockchain: _1_blockchain;
-    ledger: _2_ledger + _4_ledger_transactions + _6_ledger_commands;
+    ledger: _2_ledger + _6_ledger_commands;
+    events: _4_events;
     kvstore: _3_kvstore + _7_kvstore_commands;
     r#async: _8_async;
     account: _9_account;
@@ -36,7 +37,7 @@ reexport_module!(
 /// Empty returns are empty semantically (unit type), but we don't want to break CBOR
 /// decoders so we use a null value instead.
 /// We expect decoders to skip the value anyway.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct EmptyReturn;
 
 impl minicbor::Encode for EmptyReturn {
@@ -55,8 +56,7 @@ impl<'b> minicbor::Decode<'b> for EmptyReturn {
     }
 }
 
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, PartialEq)]
 pub struct EmptyArg;
 
 impl minicbor::Encode for EmptyArg {
@@ -113,7 +113,7 @@ pub trait ManyModule: Sync + Send + Debug {
 #[cfg(test)]
 pub(crate) mod testutils {
     use crate::message::RequestMessage;
-    use crate::types::identity::tests;
+    use crate::types::identity::testing::identity;
     use crate::{ManyError, ManyModule};
 
     pub fn call_module(
@@ -141,7 +141,7 @@ pub(crate) mod testutils {
             .with_data(payload);
 
         message = if key > 0 {
-            message.with_from(tests::identity(key))
+            message.with_from(identity(key))
         } else {
             message
         };

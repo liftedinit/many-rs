@@ -71,14 +71,14 @@ impl ResponseMessage {
         }
     }
 
-    pub fn error(from: &Identity, data: super::ManyError) -> Self {
+    pub fn error(from: &Identity, id: Option<u64>, data: super::ManyError) -> Self {
         Self {
             version: Some(1),
             from: *from,
             to: None,
             data: Err(data),
             timestamp: None, // To be filled.
-            id: None,
+            id,
             attributes: Default::default(),
         }
     }
