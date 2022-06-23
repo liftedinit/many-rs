@@ -100,8 +100,8 @@ impl RequestMessage {
     }
 }
 
-impl Encode for RequestMessage {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for RequestMessage {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         e.tag(Tag::Unassigned(10001))?;
         let l =
             2 + if self.from.is_none() || self.from == Some(Identity::anonymous()) {
@@ -164,10 +164,10 @@ impl Encode for RequestMessage {
     }
 }
 
-impl<'b> Decode<'b> for RequestMessage {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> Decode<'b, C> for RequestMessage {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         if d.tag()? != Tag::Unassigned(10001) {
-            return Err(minicbor::decode::Error::Message(
+            return Err(minicbor::decode::Error::message(
                 "Invalid tag, expected 10001 for a message.",
             ));
         };
@@ -190,7 +190,7 @@ impl<'b> Decode<'b> for RequestMessage {
                     let v = d.u8()?;
                     // Only support version 1.
                     if v != 1 {
-                        return Err(minicbor::decode::Error::Message("Invalid version."));
+                        return Err(minicbor::decode::Error::message("Invalid version."));
                     }
                     builder.version(v)
                 }
@@ -202,13 +202,13 @@ impl<'b> Decode<'b> for RequestMessage {
                     // Some logic applies.
                     let t = d.tag()?;
                     if t != minicbor::data::Tag::Timestamp {
-                        return Err(minicbor::decode::Error::Message("Invalid tag."));
+                        return Err(minicbor::decode::Error::message("Invalid tag."));
                     }
 
                     let secs = d.u64()?;
                     let timestamp = std::time::UNIX_EPOCH
                         .checked_add(Duration::from_secs(secs))
-                        .ok_or(minicbor::decode::Error::Message(
+                        .ok_or(minicbor::decode::Error::message(
                             "duration value can not represent system time",
                         ))?;
                     builder.timestamp(timestamp)
@@ -226,6 +226,6 @@ impl<'b> Decode<'b> for RequestMessage {
 
         builder
             .build()
-            .map_err(|_e| minicbor::decode::Error::Message("could not build"))
+            .map_err(|_e| minicbor::decode::Error::message("could not build"))
     }
 }

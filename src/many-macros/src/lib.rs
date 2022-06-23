@@ -299,10 +299,10 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             message:  #many ::message::RequestMessage,
         ) -> Result< #many ::message::ResponseMessage,  #many ::ManyError> {
             use  #many ::ManyError;
-            fn decode<'a, T: minicbor::Decode<'a>>(data: &'a [u8]) -> Result<T, ManyError> {
+            fn decode<'a, T: minicbor::Decode<'a, ()>>(data: &'a [u8]) -> Result<T, ManyError> {
                 minicbor::decode(data).map_err(|e| ManyError::deserialization_error(e.to_string()))
             }
-            fn encode<T: minicbor::Encode>(result: Result<T, ManyError>) -> Result<Vec<u8>, ManyError> {
+            fn encode<T: minicbor::Encode<()>>(result: Result<T, ManyError>) -> Result<Vec<u8>, ManyError> {
                 minicbor::to_vec(result?).map_err(|e| ManyError::serialization_error(e.to_string()))
             }
 

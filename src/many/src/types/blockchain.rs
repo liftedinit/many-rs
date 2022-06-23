@@ -8,8 +8,8 @@ pub enum SingleBlockQuery {
     Height(u64),
 }
 
-impl Encode for SingleBlockQuery {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for SingleBlockQuery {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         match &self {
             SingleBlockQuery::Hash(hash) => {
                 e.map(1)?.u8(0)?.bytes(hash)?;
@@ -22,8 +22,8 @@ impl Encode for SingleBlockQuery {
     }
 }
 
-impl<'d> Decode<'d> for SingleBlockQuery {
-    fn decode(d: &mut Decoder<'d>) -> Result<Self, decode::Error> {
+impl<'d, C> Decode<'d, C> for SingleBlockQuery {
+    fn decode(d: &mut Decoder<'d>, _: &mut C) -> Result<Self, decode::Error> {
         let mut indefinite = false;
         let key = match d.map()? {
             None => {
@@ -31,7 +31,7 @@ impl<'d> Decode<'d> for SingleBlockQuery {
                 d.u8()
             }
             Some(1) => d.u8(),
-            Some(_) => Err(decode::Error::Message(
+            Some(_) => Err(decode::Error::message(
                 "Invalid length for single block query map.",
             )),
         }?;
@@ -39,7 +39,7 @@ impl<'d> Decode<'d> for SingleBlockQuery {
         let result = match key {
             0 => Ok(SingleBlockQuery::Hash(d.bytes()?.to_vec())),
             1 => Ok(SingleBlockQuery::Height(d.u64()?)),
-            x => Err(decode::Error::UnknownVariant(u32::from(x))),
+            x => Err(decode::Error::unknown_variant(u32::from(x))),
         };
 
         if indefinite {
@@ -120,8 +120,8 @@ pub enum SingleTransactionQuery {
     Hash(Vec<u8>),
 }
 
-impl Encode for SingleTransactionQuery {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for SingleTransactionQuery {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         match &self {
             SingleTransactionQuery::Hash(hash) => {
                 e.map(1)?.u8(0)?.bytes(hash)?;
@@ -131,8 +131,8 @@ impl Encode for SingleTransactionQuery {
     }
 }
 
-impl<'d> Decode<'d> for SingleTransactionQuery {
-    fn decode(d: &mut Decoder<'d>) -> Result<Self, decode::Error> {
+impl<'d, C> Decode<'d, C> for SingleTransactionQuery {
+    fn decode(d: &mut Decoder<'d>, _: &mut C) -> Result<Self, decode::Error> {
         let mut indefinite = false;
         let key = match d.map()? {
             None => {
@@ -140,14 +140,14 @@ impl<'d> Decode<'d> for SingleTransactionQuery {
                 d.u8()
             }
             Some(1) => d.u8(),
-            Some(_) => Err(decode::Error::Message(
+            Some(_) => Err(decode::Error::message(
                 "Invalid hash for single transaction query.",
             )),
         }?;
 
         let result = match key {
             0 => Ok(SingleTransactionQuery::Hash(d.bytes()?.to_vec())),
-            x => Err(decode::Error::UnknownVariant(u32::from(x))),
+            x => Err(decode::Error::unknown_variant(u32::from(x))),
         };
 
         if indefinite {

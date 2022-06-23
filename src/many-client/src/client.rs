@@ -84,7 +84,7 @@ impl ManyClient {
     pub fn call<M, I>(&self, method: M, argument: I) -> Result<ResponseMessage, ManyError>
     where
         M: Into<String>,
-        I: Encode,
+        I: Encode<()>,
     {
         let bytes: Vec<u8> = minicbor::to_vec(argument)
             .map_err(|e| ManyError::serialization_error(e.to_string()))?;
@@ -95,7 +95,7 @@ impl ManyClient {
     pub fn call_<M, I>(&self, method: M, argument: I) -> Result<Vec<u8>, ManyError>
     where
         M: Into<String>,
-        I: Encode,
+        I: Encode<()>,
     {
         self.call(method, argument)?.data
     }

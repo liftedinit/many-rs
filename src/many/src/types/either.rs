@@ -976,24 +976,24 @@ fn read_write() {
 //========== Local Impl ===========
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 
-impl<L: Encode, R: Encode> Encode for Either<L, R> {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+impl<L: Encode<C>, R: Encode<C>, C> Encode<C> for Either<L, R> {
+    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), encode::Error<W::Error>> {
         match self {
-            Either::Left(l) => e.encode(l)?,
-            Either::Right(r) => e.encode(r)?,
+            Either::Left(l) => e.encode_with(l, ctx)?,
+            Either::Right(r) => e.encode_with(r, ctx)?,
         };
         Ok(())
     }
 }
 
-impl<'b, L: Decode<'b>, R: Decode<'b>> Decode<'b> for Either<L, R> {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+impl<'b, L: Decode<'b, C>, R: Decode<'b, C>, C> Decode<'b, C> for Either<L, R> {
+    fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
         let pos = d.position();
-        if let Ok(l) = d.decode::<L>() {
+        if let Ok(l) = d.decode_with::<C, L>(ctx) {
             Ok(Self::Left(l))
         } else {
             d.set_position(pos);
-            d.decode::<R>().map(|r| Self::Right(r))
+            d.decode_with::<C, R>(ctx).map(|r| Self::Right(r))
         }
     }
 }

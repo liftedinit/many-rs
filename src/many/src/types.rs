@@ -31,15 +31,15 @@ impl Percent {
     }
 }
 
-impl Encode for Percent {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for Percent {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         e.u64(self.0.to_bits())?;
         Ok(())
     }
 }
 
-impl<'b> Decode<'b> for Percent {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+impl<'b, C> Decode<'b, C> for Percent {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
         Ok(Self(fixed::types::U32F32::from_bits(d.u64()?)))
     }
 }
@@ -82,27 +82,27 @@ impl<T: Ord> From<VecOrSingle<T>> for BTreeSet<T> {
     }
 }
 
-impl<T> Encode for VecOrSingle<T>
+impl<T, C> Encode<C> for VecOrSingle<T>
 where
-    T: Encode,
+    T: Encode<C>,
 {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), encode::Error<W::Error>> {
         if self.0.len() == 1 {
-            self.0.get(0).encode(e)
+            self.0.get(0).encode(e, ctx)
         } else {
-            self.0.encode(e)
+            self.0.encode(e, ctx)
         }
     }
 }
 
-impl<'b, T> Decode<'b> for VecOrSingle<T>
+impl<'b, T, C> Decode<'b, C> for VecOrSingle<T>
 where
-    T: Decode<'b>,
+    T: Decode<'b, C>,
 {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+    fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
         Ok(match d.datatype()? {
-            Type::Array | Type::ArrayIndef => Self(d.array_iter()?.collect::<Result<_, _>>()?),
-            _ => Self(vec![d.decode::<T>()?]),
+            Type::Array | Type::ArrayIndef => Self(d.array_iter_with(ctx)?.collect::<Result<_, _>>()?),
+            _ => Self(vec![d.decode_with::<C, T>(ctx)?]),
         })
     }
 }
@@ -134,8 +134,8 @@ impl Timestamp {
     }
 }
 
-impl Encode for Timestamp {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+impl<C> Encode<C> for Timestamp {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), encode::Error<W::Error>> {
         e.tag(Tag::Timestamp)?.u64(
             self.0
                 .duration_since(UNIX_EPOCH)
@@ -146,17 +146,17 @@ impl Encode for Timestamp {
     }
 }
 
-impl<'b> Decode<'b> for Timestamp {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+impl<'b, C> Decode<'b, C> for Timestamp {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
         if d.tag()? != Tag::Timestamp {
-            return Err(decode::Error::Message("Invalid tag."));
+            return Err(decode::Error::message("Invalid tag."));
         }
 
         let secs = d.u64()?;
         Ok(Self(
             UNIX_EPOCH
                 .checked_add(Duration::from_secs(secs))
-                .ok_or(decode::Error::Message(
+                .ok_or(decode::Error::message(
                     "duration value can not represent system time",
                 ))?,
         ))
@@ -244,21 +244,22 @@ impl<T: PartialOrd<T>> CborRange<T> {
     }
 }
 
-impl<T> Encode for CborRange<T>
+impl<T, C> Encode<C> for CborRange<T>
 where
-    T: Encode,
+    T: Encode<C>,
 {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
-        fn encode_bound<T: Encode, W: Write>(
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), Error<W::Error>> {
+        fn encode_bound<T: Encode<C>, W: Write, C>(
             b: &Bound<T>,
             e: &mut Encoder<W>,
+            ctx: &mut C,
         ) -> Result<(), Error<W::Error>> {
             match b {
                 Bound::Included(v) => {
-                    e.array(2)?.u8(0)?.encode(v)?;
+                    e.array(2)?.u8(0)?.encode_with(v, ctx)?;
                 }
                 Bound::Excluded(v) => {
-                    e.array(2)?.u8(1)?.encode(v)?;
+                    e.array(2)?.u8(1)?.encode_with(v, ctx)?;
                 }
                 Bound::Unbounded => {
                     e.array(0)?;
@@ -273,18 +274,18 @@ where
             }
             (st, Bound::Unbounded) => {
                 e.map(1)?.u8(0)?;
-                encode_bound(st, e)?;
+                encode_bound(st, e, ctx)?;
             }
             (Bound::Unbounded, en) => {
                 e.map(1)?.u8(1)?;
-                encode_bound(en, e)?;
+                encode_bound(en, e, ctx)?;
             }
             (st, en) => {
                 e.map(2)?;
                 e.u8(0)?;
-                encode_bound(st, e)?;
+                encode_bound(st, e, ctx)?;
                 e.u8(1)?;
-                encode_bound(en, e)?;
+                encode_bound(en, e, ctx)?;
             }
         }
 
@@ -292,23 +293,23 @@ where
     }
 }
 
-impl<'b, T: Decode<'b>> Decode<'b> for CborRange<T> {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+impl<'b, T: Decode<'b, C>, C> Decode<'b, C> for CborRange<T> {
+    fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
         struct BoundDecoder<T>(pub Bound<T>);
-        impl<'b, T: Decode<'b>> Decode<'b> for BoundDecoder<T> {
-            fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+        impl<'b, T: Decode<'b, C>, C> Decode<'b, C> for BoundDecoder<T> {
+            fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
                 let len = d.array()?;
                 let bound = match len {
                     Some(x) => match x {
                         0 => Bound::Unbounded,
                         2 => match d.u32()? {
-                            0 => Bound::Included(d.decode()?),
-                            1 => Bound::Excluded(d.decode()?),
-                            x => return Err(decode::Error::UnknownVariant(x)),
+                            0 => Bound::Included(d.decode_with(ctx)?),
+                            1 => Bound::Excluded(d.decode_with(ctx)?),
+                            x => return Err(decode::Error::unknown_variant(x)),
                         },
-                        x => return Err(decode::Error::UnknownVariant(x as u32)),
+                        x => return Err(decode::Error::unknown_variant(x as u32)),
                     },
-                    None => return Err(decode::Error::TypeMismatch(Type::ArrayIndef, "Array")),
+                    None => return Err(decode::Error::type_mismatch(Type::ArrayIndef)),
                 };
                 Ok(Self(bound))
             }
@@ -317,7 +318,7 @@ impl<'b, T: Decode<'b>> Decode<'b> for CborRange<T> {
         let mut start: Bound<T> = Bound::Unbounded;
         let mut end: Bound<T> = Bound::Unbounded;
 
-        for item in d.map_iter()? {
+        for item in d.map_iter_with(ctx)? {
             let (key, value) = item?;
             match key {
                 0u8 => start = value,
@@ -344,8 +345,8 @@ impl Default for SortOrder {
     }
 }
 
-impl Encode for SortOrder {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for SortOrder {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         e.u8(match self {
             SortOrder::Indeterminate => 0,
             SortOrder::Ascending => 1,
@@ -355,13 +356,13 @@ impl Encode for SortOrder {
     }
 }
 
-impl<'b> Decode<'b> for SortOrder {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+impl<'b, C> Decode<'b, C> for SortOrder {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
         Ok(match d.u8()? {
             0 => Self::Indeterminate,
             1 => Self::Ascending,
             2 => Self::Descending,
-            x => return Err(decode::Error::UnknownVariant(u32::from(x))),
+            x => return Err(decode::Error::unknown_variant(u32::from(x))),
         })
     }
 }
@@ -444,8 +445,8 @@ impl Debug for AttributeRelatedIndex {
     }
 }
 
-impl Encode for AttributeRelatedIndex {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for AttributeRelatedIndex {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         match self.indices() {
             [] => {
                 e.encode(self.attribute)?;
@@ -475,27 +476,27 @@ impl Encode for AttributeRelatedIndex {
     }
 }
 
-impl<'b> Decode<'b> for AttributeRelatedIndex {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+impl<'b, C> Decode<'b, C> for AttributeRelatedIndex {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
         let mut index = match d.datatype()? {
             Type::Array => match d.array()? {
                 Some(x) if x == 2 => Self::new(d.decode()?),
-                _ => return Err(decode::Error::Message("Expected array of 2 elements")),
+                _ => return Err(decode::Error::message("Expected array of 2 elements")),
             },
             Type::U8 | Type::U16 | Type::U32 | Type::U64 => return Ok(Self::new(d.decode()?)),
-            x => return Err(decode::Error::TypeMismatch(x, "array or attribute id")),
+            x => return Err(decode::Error::type_mismatch(x)),
         };
 
         loop {
             index = match d.datatype()? {
                 Type::Array => match d.array()? {
                     Some(x) if x == 2 => index.with_index(d.decode()?),
-                    _ => return Err(decode::Error::Message("Expected array of 2 elements")),
+                    _ => return Err(decode::Error::message("Expected array of 2 elements")),
                 },
                 Type::U8 | Type::U16 | Type::U32 | Type::U64 => {
                     return Ok(index.with_index(d.decode()?))
                 }
-                x => return Err(decode::Error::TypeMismatch(x, "array or uint")),
+                x => return Err(decode::Error::type_mismatch(x)),
             };
         }
     }

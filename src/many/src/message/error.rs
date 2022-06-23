@@ -69,16 +69,16 @@ macro_rules! many_error {
             }
         }
 
-        impl Encode for ManyErrorCode {
+        impl<C> Encode<C> for ManyErrorCode {
             #[inline]
-            fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+            fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
                 e.i64((*self).into())?;
                 Ok(())
             }
         }
 
-        impl<'b> Decode<'b> for ManyErrorCode {
-            fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+        impl<'b, C> Decode<'b, C> for ManyErrorCode {
+            fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
                 Ok(d.i64()?.into())
             }
         }
@@ -284,7 +284,7 @@ impl<T> Reason<T> {
     }
 }
 
-impl<T: Encode> Reason<T> {
+impl<T: Encode<()>> Reason<T> {
     #[inline]
     pub fn to_bytes(&self) -> Result<Vec<u8>, String> {
         let mut bytes = Vec::new();
@@ -293,7 +293,7 @@ impl<T: Encode> Reason<T> {
     }
 }
 
-impl<'b, T: Decode<'b> + Default> Reason<T> {
+impl<'b, T: Decode<'b, ()> + Default> Reason<T> {
     #[inline]
     pub fn from_bytes(bytes: &'b [u8]) -> Result<Self, String> {
         minicbor::decode(bytes).map_err(|e| format!("{}", e))
@@ -334,15 +334,15 @@ impl<T: Display> Display for Reason<T> {
     }
 }
 
-impl<T: Encode> Encode for Reason<T> {
+impl<T: Encode<C>, C> Encode<C> for Reason<T> {
     #[inline]
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), Error<W::Error>> {
         e.map(
             1 + if self.message.is_none() { 0 } else { 1 }
                 + if self.arguments.is_empty() { 0 } else { 1 },
         )?
         .u32(ReasonCborKey::Code as u32)?
-        .encode(&self.code)?;
+        .encode_with(&self.code, ctx)?;
 
         if let Some(msg) = &self.message {
             e.u32(ReasonCborKey::Message as u32)?.str(msg.as_str())?;
@@ -355,8 +355,8 @@ impl<T: Encode> Encode for Reason<T> {
     }
 }
 
-impl<'b, T: Decode<'b> + Default> Decode<'b> for Reason<T> {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, T: Decode<'b, C> + Default, C> Decode<'b, C> for Reason<T> {
+    fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, minicbor::decode::Error> {
         let len = d.map()?;
 
         let mut code: Option<T> = None;
@@ -371,7 +371,7 @@ impl<'b, T: Decode<'b> + Default> Decode<'b> for Reason<T> {
             }
 
             match num_traits::FromPrimitive::from_i64(d.i64()?) {
-                Some(ReasonCborKey::Code) => code = Some(d.decode()?),
+                Some(ReasonCborKey::Code) => code = Some(d.decode_with(ctx)?),
                 Some(ReasonCborKey::Message) => message = Some(d.str()?),
                 Some(ReasonCborKey::Arguments) => arguments = d.decode()?,
                 None => {}
@@ -483,15 +483,15 @@ impl Default for ManyError {
     }
 }
 
-impl Encode for ManyError {
+impl<C> Encode<C> for ManyError {
     #[inline]
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         e.encode(&self.0)?;
         Ok(())
     }
 }
-impl<'b> Decode<'b> for ManyError {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> Decode<'b, C> for ManyError {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         Ok(Self(d.decode()?))
     }
 }

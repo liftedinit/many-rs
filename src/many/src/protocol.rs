@@ -66,8 +66,8 @@ impl Ord for Attribute {
     }
 }
 
-impl Encode for Attribute {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for Attribute {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         if self.arguments.is_empty() {
             e.u32(self.id as u32)?;
         } else {
@@ -82,22 +82,22 @@ impl Encode for Attribute {
     }
 }
 
-impl<'d> Decode<'d> for Attribute {
-    fn decode(d: &mut Decoder<'d>) -> Result<Self, minicbor::decode::Error> {
+impl<'d, C> Decode<'d, C> for Attribute {
+    fn decode(d: &mut Decoder<'d>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         match d.datatype()? {
             Type::Array | Type::ArrayIndef => {
                 let arr = d.array_iter()?.collect::<Result<Vec<CborAny>, _>>()?;
                 let (id, arguments) = arr
                     .as_slice()
                     .split_first()
-                    .ok_or(minicbor::decode::Error::Message("Invalid empty attribute."))?;
+                    .ok_or(minicbor::decode::Error::message("Invalid empty attribute."))?;
 
                 match id {
                     CborAny::Int(i) if i <= &i64::from(u32::MAX) => Ok(Self {
                         id: *i as u32,
                         arguments: arguments.to_vec(),
                     }),
-                    _ => Err(minicbor::decode::Error::Message(
+                    _ => Err(minicbor::decode::Error::message(
                         "Expected an attribute ID.",
                     )),
                 }
