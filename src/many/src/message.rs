@@ -343,33 +343,33 @@ mod tests {
     // A real CBOR WebAuthn CoseSign1 request
     static ENVELOPE: Lazy<CoseSign1> = Lazy::new(|| {
         let cbor = concat!(
-            "84589da3012604581d0103db2d266f53339c00571f6c8813d027c7a308ba291a5",
-            "b31228cde7e666b6579736574587181a7010202581d0103db2d266f53339c0057",
-            "1f6c8813d027c7a308ba291a5b31228cde7e03260481022001215820738cc5654",
-            "74defb6af2e7b385461380433cf5663a54eb715ec9e9e04bf295f69225820b709",
-            "ed3d1ec57f367f2deb490ff1bdf50992659a4bdfb97e0610a5093786bad1a4686",
-            "175746844617461582549960de5880e8c687434170f6476605b8fe4aeb9a28632",
-            "c7995cf3ba831d976301000000cf68776562617574686ef5697369676e6174757",
-            "2655847304502202d4564f676c44de08d2b81b9d0050e94d2ebd90cf6fb7ee104",
-            "013b7965c22616022100e7667d72af46315e258f34600bc13ac1c11efb4be4565",
-            "fb50eb742bc96202db36a636c69656e74446174617901c87b226368616c6c656e",
-            "6765223a226f6742596e614d424a675259485145443279306d62314d7a6e41425",
-            "8483279494539416e78364d4975696b61577a45696a4e352d5a6d746c65584e6c",
-            "644668786761634241674a59485145443279306d62314d7a6e414258483279494",
-            "539416e78364d4975696b61577a45696a4e352d41795945675149674153465949",
-            "484f4d7857564854652d32727935374f4652684f41517a7a315a6a70553633466",
-            "579656e67535f4b563970496c676774776e7450523746667a5a5f4c65744a445f",
-            "473939516d535a5a704c33376c2d4268436c43546547757445426546683463314",
-            "64661484a614e566446565752484d7a517756334e36574652365a33705a4f586c",
-            "7a557a46704d55357a6245785462303559526c4e32626b6c3154565a4f5657743",
-            "24d466b7653475177576a526c4d574a4e6146427a556d59796132397a51326435",
-            "57585a6c4d6b4e6b65464a4355543039222c22636c69656e74457874656e73696",
-            "f6e73223a7b7d2c2268617368416c676f726974686d223a225348412d32353622",
-            "2c226f726967696e223a2268747470733a2f2f6c6f63616c686f73743a3330303",
-            "0222c2274797065223a22776562617574686e2e676574227d584fd92711a40001",
-            "0178326d61656235776c6a676e356a74686861616b3470777a636174326174347",
-            "06979697869757275777a72656b676e3437717334036b6c65646765722e696e66",
-            "6f05c11a627bfe9140"
+            "8458a7a4012604581d01bed012259e9db16529f10752a99e66c0738c5bcbc008273a4fdf5aaf666b",
+            "6579736574587181a7010202581d01bed012259e9db16529f10752a99e66c0738c5bcbc008273a4f",
+            "df5aaf032604810220012158204a06f7487abdf4e1629bff173189a2765fee4b9e26d2a75da79211",
+            "ef21d5c4ee2258205a7b35acc5df4ad7a389e484c000e869cfe138df8c03160e6bae33ff84ecb6aa",
+            "68776562617574686ef5a3686175746844617461582549960de5880e8c687434170f6476605b8fe4",
+            "aeb9a28632c7995cf3ba831d97630100000001697369676e61747572655847304502201c0b14fe9a",
+            "368218d9dfea93e8798c0ebf9196e97304ed4413ea76df0747d9d102210081c3524dab1730efe281",
+            "bc45a0add9a43eee20a5c866ef87df036812d979f7a76a636c69656e74446174617901d67b226368",
+            "616c6c656e6765223a226f674259703651424a6752594851472d3042496c6e7032785a536e784231",
+            "4b706e6d624163347862793841494a7a7050333171765a6d746c65584e6c64466878676163424167",
+            "4a594851472d3042496c6e7032785a536e7842314b706e6d624163347862793841494a7a70503331",
+            "717641795945675149674153465949456f4739306836766654685970765f467a474a6f6e5a66376b",
+            "75654a744b6e586165534565386831635475496c6767576e7331724d58665374656a696553457741",
+            "446f61635f684f4e2d4d4178594f6136347a5f3454737471706f6432566959585630614737314158",
+            "685959586f325448687362327453526a5671516c6c4e4e56424656574e715a456c52536a41346557",
+            "4e4c65544e7a643055345153747a566e527157556435536b64744f444a50546b5a6d64556f726155",
+            "7772526e465152474e6c5130646e4c324e4565556c77596d5677556d564963555644534863395051",
+            "222c22636c69656e74457874656e73696f6e73223a7b7d2c2268617368416c676f726974686d223a",
+            "225348412d323536222c226f726967696e223a2268747470733a2f2f6c6f63616c686f73743a3330",
+            "3030222c2274797065223a22776562617574686e2e676574227d59011dd92711a500010178326d61",
+            "67376e6165726674326f33637a6a6a36656476666b6d366d336168686463337a706161716a7a326a",
+            "377076766c796635036d696473746f72652e73746f72650458c9a30078326d6167376e6165726674",
+            "326f33637a6a6a36656476666b6d366d336168686463337a706161716a7a326a377076766c796635",
+            "0158406c9f928914c639f1e00cc28517f7c574271adaf5c0c399dec223d4529f8bb653d9064723f2",
+            "73194dc9b87535044fea436079569cd2c348756a619e56f1bd6e0b02584da5010203262001215820",
+            "4a06f7487abdf4e1629bff173189a2765fee4b9e26d2a75da79211ef21d5c4ee2258205a7b35acc5",
+            "df4ad7a389e484c000e869cfe138df8c03160e6bae33ff84ecb6aa05c11a62b4afe440"
         );
         CoseSign1::from_slice(&hex::decode(cbor).unwrap()).unwrap()
     });
@@ -396,13 +396,26 @@ mod tests {
     fn get_tampered_request(field_type: Cose1FieldType) -> CoseSign1RequestMessage {
         let mut envelope = ENVELOPE.clone();
         match field_type {
-            // Simply insert a new value in the `rest` field of the ProtectedHeader
             Cose1FieldType::Protected { field, value } => {
-                envelope
-                    .protected
-                    .header
-                    .rest
-                    .insert(0, (Label::Text(field), value));
+                // Remove the `webauthn` flag from the protected header
+                if field == "webauthn" {
+                    let pos = envelope
+                        .protected
+                        .header
+                        .rest
+                        .iter()
+                        .position(|(k, _)| k == &Label::Text(field.clone()))
+                        .unwrap();
+                    envelope.protected.header.rest.remove(pos);
+                }
+                // Insert a new field in the protected header
+                else {
+                    envelope
+                        .protected
+                        .header
+                        .rest
+                        .insert(0, (Label::Text(field), value));
+                }
             }
             Cose1FieldType::Unprotected(field_type) => match field_type {
                 // Find the matching Label in the rest field and change its value
@@ -434,8 +447,8 @@ mod tests {
                         serde_json::from_str(client_data).unwrap();
                     match field_type {
                         ClientDataFieldType::Challenge => {
-                            client_data_json.challenge =
-                                client_data_json.challenge[1..].to_string();
+                            // Change a char in the payload portion of the challenge
+                            client_data_json.challenge.replace_range(310..311, "x");
                         }
                         ClientDataFieldType::Origin(value) => {
                             client_data_json.origin = value;
@@ -482,100 +495,124 @@ mod tests {
     #[test]
     fn webauthn_tamper_signature() {
         run_test(|| {
-            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+            let request = get_tampered_request(Cose1FieldType::Unprotected(
                 UnprotectedHeaderFieldType::Rest {
                     field: "signature".to_string(),
-                    value: Value::Bytes(vec![1, 2, 3])
-                }
+                    value: Value::Bytes(vec![1, 2, 3]),
+                },
             ))
-            .verify(None)
-            .is_err());
+            .verify(None);
+            assert!(request.is_err());
+            assert_eq!(request.unwrap_err(), "signature error");
         });
     }
 
     #[test]
     fn webauthn_tamper_authdata() {
         run_test(|| {
-            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+            let request = get_tampered_request(Cose1FieldType::Unprotected(
                 UnprotectedHeaderFieldType::Rest {
                     field: "authData".to_string(),
-                    value: Value::Bytes(vec![1, 2, 3])
-                }
+                    value: Value::Bytes(vec![1, 2, 3]),
+                },
             ))
-            .verify(None)
-            .is_err());
+            .verify(None);
+            assert!(request.is_err());
+            assert_eq!(request.unwrap_err(), "signature error");
         });
     }
 
     #[test]
     fn webauthn_tamper_clientdata() {
         run_test(|| {
-            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+            let request = get_tampered_request(Cose1FieldType::Unprotected(
                 UnprotectedHeaderFieldType::Rest {
                     field: "clientData".to_string(),
-                    value: Value::Text("Foobar".to_string())
-                }
+                    value: Value::Bool(false),
+                },
             ))
-            .verify(None)
-            .is_err());
+            .verify(None);
+            assert!(request.is_err());
+            assert_eq!(request.unwrap_err(), "`clientData` entry is not Text");
         });
     }
 
     #[test]
     fn webauthn_tamper_challenge() {
         run_test(|| {
-            assert!(get_tampered_request(Cose1FieldType::Unprotected(
-                UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Challenge)
+            let request = get_tampered_request(Cose1FieldType::Unprotected(
+                UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Challenge),
             ))
-            .verify(None)
-            .is_err());
+            .verify(None);
+
+            assert!(request.is_err());
+            assert_eq!(request.unwrap_err(), "`challenge` SHA doesn't match");
         });
     }
 
     #[test]
     fn webauthn_tamper_type() {
         run_test(|| {
-            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+            let request = get_tampered_request(Cose1FieldType::Unprotected(
                 UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Type(
-                    "Foobar".to_string()
-                ))
+                    "Foobar".to_string(),
+                )),
             ))
-            .verify(None)
-            .is_err());
+            .verify(None);
+            assert!(request.is_err());
+            assert_eq!(request.unwrap_err(), "request type != webauthn.get");
         });
     }
 
     #[test]
     fn webauthn_tamper_origin() {
         run_test(|| {
-            assert!(get_tampered_request(Cose1FieldType::Unprotected(
+            let request = get_tampered_request(Cose1FieldType::Unprotected(
                 UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Origin(
-                    "https://test.com".to_string()
-                ))
+                    "https://test.com".to_string(),
+                )),
             ))
-            .verify(Some(vec![ManyUrl::parse("https://foobar.com").unwrap()]))
-            .is_err());
+            .verify(Some(vec![ManyUrl::parse("https://foobar.com").unwrap()]));
+            assert!(request.is_err());
+            assert_eq!(request.unwrap_err(), "Origin not allowed");
         });
     }
 
     #[test]
     fn webauthn_tamper_payload() {
         run_test(|| {
-            assert!(get_tampered_request(Cose1FieldType::Payload(vec![1, 2, 3]))
-                .verify(None)
-                .is_err());
+            let request = get_tampered_request(Cose1FieldType::Payload(vec![1, 2, 3])).verify(None);
+            assert!(request.is_err());
+            assert_eq!(request.unwrap_err(), "`challenge` SHA doesn't match");
+        });
+    }
+
+    #[test]
+    fn webauthn_tamper_webauthn_flag() {
+        run_test(|| {
+            let request = get_tampered_request(Cose1FieldType::Protected {
+                field: "webauthn".to_string(),
+                value: Value::Bool(false), // Unused
+            })
+            .verify(None);
+            assert!(request.is_err());
+            assert_eq!(request.unwrap_err(), "signature error");
         });
     }
 
     #[test]
     fn webauthn_tamper_protected_header() {
         run_test(|| {
-            assert!(get_tampered_request(Cose1FieldType::Protected {
-                field: "Foobar".to_string(),
-                value: Value::Bool(true)
+            let request = get_tampered_request(Cose1FieldType::Protected {
+                field: "foo".to_string(),
+                value: Value::Bool(true),
             })
-            .verify(None)
-            .is_err());
+            .verify(None);
+            assert!(request.is_err());
+            assert_eq!(
+                request.unwrap_err(),
+                "Protected header doesn't match `challenge`"
+            );
         });
     }
 }
