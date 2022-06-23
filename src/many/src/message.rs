@@ -312,9 +312,11 @@ impl CoseSign1RequestMessage {
                 let key = self
                     .get_public_key_for_identity(&id)
                     .ok_or_else(|| "Could not find a public key in the envelope".to_string())?;
-                let unprotected =
-                    BTreeMap::from_iter(self.sign1.unprotected.rest.clone().into_iter());
-                if unprotected.contains_key(&Label::Text("webauthn".to_string())) {
+                let protected =
+                    BTreeMap::from_iter(self.sign1.protected.header.rest.clone().into_iter());
+                if protected.contains_key(&Label::Text("webauthn".to_string())) {
+                    let unprotected =
+                        BTreeMap::from_iter(self.sign1.unprotected.rest.clone().into_iter());
                     self._verify_webauthn(unprotected, key, allowed_origins)?;
                 } else {
                     self._verify(key)?;
