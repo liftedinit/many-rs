@@ -86,7 +86,11 @@ impl<T, C> Encode<C> for VecOrSingle<T>
 where
     T: Encode<C>,
 {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), encode::Error<W::Error>> {
+    fn encode<W: Write>(
+        &self,
+        e: &mut Encoder<W>,
+        ctx: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
         if self.0.len() == 1 {
             self.0.get(0).encode(e, ctx)
         } else {
@@ -101,7 +105,9 @@ where
 {
     fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
         Ok(match d.datatype()? {
-            Type::Array | Type::ArrayIndef => Self(d.array_iter_with(ctx)?.collect::<Result<_, _>>()?),
+            Type::Array | Type::ArrayIndef => {
+                Self(d.array_iter_with(ctx)?.collect::<Result<_, _>>()?)
+            }
             _ => Self(vec![d.decode_with::<C, T>(ctx)?]),
         })
     }
@@ -135,7 +141,11 @@ impl Timestamp {
 }
 
 impl<C> Encode<C> for Timestamp {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), encode::Error<W::Error>> {
+    fn encode<W: Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
         e.tag(Tag::Timestamp)?.u64(
             self.0
                 .duration_since(UNIX_EPOCH)
@@ -156,7 +166,7 @@ impl<'b, C> Decode<'b, C> for Timestamp {
         Ok(Self(
             UNIX_EPOCH
                 .checked_add(Duration::from_secs(secs))
-                .ok_or(decode::Error::message(
+                .ok_or_else(|| decode::Error::message(
                     "duration value can not represent system time",
                 ))?,
         ))

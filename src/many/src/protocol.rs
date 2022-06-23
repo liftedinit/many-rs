@@ -90,7 +90,7 @@ impl<'d, C> Decode<'d, C> for Attribute {
                 let (id, arguments) = arr
                     .as_slice()
                     .split_first()
-                    .ok_or(minicbor::decode::Error::message("Invalid empty attribute."))?;
+                    .ok_or_else(|| minicbor::decode::Error::message("Invalid empty attribute."))?;
 
                 match id {
                     CborAny::Int(i) if i <= &i64::from(u32::MAX) => Ok(Self {

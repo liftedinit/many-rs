@@ -977,7 +977,11 @@ fn read_write() {
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 
 impl<L: Encode<C>, R: Encode<C>, C> Encode<C> for Either<L, R> {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), encode::Error<W::Error>> {
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut Encoder<W>,
+        ctx: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
         match self {
             Either::Left(l) => e.encode_with(l, ctx)?,
             Either::Right(r) => e.encode_with(r, ctx)?,

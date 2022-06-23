@@ -87,7 +87,11 @@ impl std::ops::Sub<u32> for EventId {
 }
 
 impl<C> Encode<C> for EventId {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), encode::Error<W::Error>> {
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
         e.bytes(&self.0)?;
         Ok(())
     }

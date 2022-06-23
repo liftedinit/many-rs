@@ -174,7 +174,11 @@ impl Display for TokenAmount {
 }
 
 impl<C> Encode<C> for TokenAmount {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), encode::Error<W::Error>> {
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
         use num_traits::cast::ToPrimitive;
 
         // Encode efficiently.
