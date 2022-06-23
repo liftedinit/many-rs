@@ -1,5 +1,6 @@
+use crate::message::error::Reason;
 use crate::server::module::EmptyReturn;
-use crate::types::VecOrSingle;
+use crate::types::{Either, VecOrSingle};
 use crate::{Identity, ManyError};
 use many_macros::many_module;
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
@@ -16,9 +17,10 @@ pub mod features;
     PartialOrd,
     Eq,
     PartialEq,
-    strum_macros::EnumString,
     strum_macros::AsRefStr,
     strum_macros::Display,
+    strum_macros::EnumIter,
+    strum_macros::EnumString,
 )]
 #[repr(u8)]
 #[strum(serialize_all = "camelCase")]
@@ -163,6 +165,9 @@ pub struct Account {
 
     #[n(2)]
     pub features: features::FeatureSet,
+
+    #[n(3)]
+    pub disabled: Option<Either<bool, Reason<u64>>>,
 }
 
 impl Account {
@@ -181,7 +186,16 @@ impl Account {
             description,
             roles,
             features,
+            disabled: None,
         }
+    }
+
+    /// Disable the account, providing a reason or not.
+    pub fn disable(&mut self, reason: Option<Reason<u64>>) {
+        self.disabled = Some(match reason {
+            None => Either::Left(true),
+            Some(e) => Either::Right(e),
+        })
     }
 
     pub fn set_description(&mut self, desc: Option<impl ToString>) {
@@ -215,7 +229,7 @@ impl Account {
             let cp = role;
             match role.try_into() {
                 Ok(r) => {
-                    first = Some(r);
+                    first.get_or_insert(r);
                     if self.has_role(id, r) {
                         return Ok(());
                     }
@@ -245,7 +259,7 @@ impl Account {
     }
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct CreateArgs {
     #[n(0)]
@@ -265,7 +279,7 @@ pub struct CreateReturn {
     pub id: Identity,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct SetDescriptionArgs {
     #[n(0)]
@@ -277,7 +291,7 @@ pub struct SetDescriptionArgs {
 
 pub type SetDescriptionReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct ListRolesArgs {
     #[n(0)]
@@ -291,7 +305,7 @@ pub struct ListRolesReturn {
     pub roles: BTreeSet<Role>,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct GetRolesArgs {
     #[n(0)]
@@ -308,7 +322,7 @@ pub struct GetRolesReturn {
     pub roles: BTreeMap<Identity, BTreeSet<Role>>,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct AddRolesArgs {
     #[n(0)]
@@ -320,7 +334,7 @@ pub struct AddRolesArgs {
 
 pub type AddRolesReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct RemoveRolesArgs {
     #[n(0)]
@@ -332,7 +346,7 @@ pub struct RemoveRolesArgs {
 
 pub type RemoveRolesReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct InfoArgs {
     #[n(0)]
@@ -350,18 +364,21 @@ pub struct InfoReturn {
 
     #[n(2)]
     pub features: features::FeatureSet,
+
+    #[n(3)]
+    pub disabled: Option<Either<bool, Reason<u64>>>,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
-pub struct DeleteArgs {
+pub struct DisableArgs {
     #[n(0)]
     pub account: Identity,
 }
 
-pub type DeleteReturn = EmptyReturn;
+pub type DisableReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct AddFeaturesArgs {
     #[n(0)]
@@ -417,8 +434,9 @@ pub trait AccountModuleBackend: Send {
     /// Returns the information related to an account.
     fn info(&self, sender: &Identity, args: InfoArgs) -> Result<InfoReturn, ManyError>;
 
-    /// Delete an account.
-    fn delete(&mut self, sender: &Identity, args: DeleteArgs) -> Result<DeleteReturn, ManyError>;
+    /// Disable or delete an account.
+    fn disable(&mut self, sender: &Identity, args: DisableArgs)
+        -> Result<DisableReturn, ManyError>;
 
     /// Add additional features to an account.
     fn add_features(
@@ -472,6 +490,7 @@ mod module_tests {
                     description: account.description.clone(),
                     roles: account.roles.clone(),
                     features: account.features.clone(),
+                    disabled: None,
                 })
             }
         });
@@ -490,7 +509,7 @@ mod module_tests {
                 })
             }
         });
-        mock.expect_delete().returning({
+        mock.expect_disable().returning({
             let account_map = Arc::clone(&account_map);
             move |sender, args| {
                 let mut account_map = account_map.write().unwrap();
@@ -587,14 +606,14 @@ mod module_tests {
         assert!(call_module(
             2,
             &module,
-            "account.delete",
+            "account.disable",
             format!(r#"{{ 0: "{}" }}"#, id),
         )
         .is_err());
         assert!(call_module(
             1,
             &module,
-            "account.delete",
+            "account.disable",
             format!(r#"{{ 0: "{}" }}"#, id.with_subresource_id(9999).unwrap()),
         )
         .is_err());
@@ -602,7 +621,7 @@ mod module_tests {
         assert!(call_module(
             1,
             &module,
-            "account.delete",
+            "account.disable",
             format!(r#"{{ 0: "{}" }}"#, id),
         )
         .is_ok());

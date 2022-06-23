@@ -1,6 +1,8 @@
 // TODO: Implement a SubresourceId type. Best way here is to use num-* crates.
 use crate::cose_helpers::public_key;
 use crate::message::ManyError;
+use ::serde::de::Error;
+use ::serde::{Serialize, Serializer};
 use coset::{CborSerializable, CoseKey};
 use minicbor::data::Type;
 use minicbor::encode::Write;
@@ -51,20 +53,27 @@ impl Identity {
         }
     }
 
+    #[inline]
     pub const fn is_anonymous(&self) -> bool {
         self.0.is_anonymous()
     }
+
+    #[inline]
     pub const fn is_public_key(&self) -> bool {
         self.0.is_public_key()
     }
+
+    #[inline]
     pub const fn is_subresource(&self) -> bool {
         self.0.is_subresource()
     }
 
+    #[inline]
     pub const fn subresource_id(&self) -> Option<u32> {
         self.0.subresource_id()
     }
 
+    #[inline]
     pub fn with_subresource_id(&self, subid: u32) -> Result<Self, ManyError> {
         if subid > MAX_SUBRESOURCE_ID {
             Err(ManyError::invalid_identity_subid())
@@ -73,6 +82,7 @@ impl Identity {
         }
     }
 
+    #[inline]
     pub const fn with_subresource_id_unchecked(&self, subid: u32) -> Self {
         if let Some(h) = self.0.hash() {
             Self(InnerIdentity::subresource_unchecked(h, subid))
@@ -81,10 +91,12 @@ impl Identity {
         }
     }
 
+    #[inline]
     pub const fn can_sign(&self) -> bool {
         self.is_public_key() || self.is_subresource()
     }
 
+    #[inline]
     pub const fn can_be_source(&self) -> bool {
         self.is_anonymous() || self.is_public_key() || self.is_subresource()
     }
@@ -159,6 +171,24 @@ impl PartialEq<&str> for Identity {
     }
 }
 
+impl PartialEq<Option<Identity>> for Identity {
+    fn eq(&self, other: &Option<Identity>) -> bool {
+        match other {
+            Some(o) => o == self,
+            None => self.is_anonymous(),
+        }
+    }
+}
+
+impl PartialEq<Identity> for Option<Identity> {
+    fn eq(&self, other: &Identity) -> bool {
+        match self {
+            Some(s) => other == s,
+            None => other.is_anonymous(),
+        }
+    }
+}
+
 impl Debug for Identity {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Identity")
@@ -225,6 +255,19 @@ impl<'b> Decode<'b> for Identity {
     }
 }
 
+impl Serialize for Identity {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(self.to_string().as_str())
+        } else {
+            serializer.serialize_bytes(self.to_vec().as_slice())
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for Identity {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -236,6 +279,34 @@ impl<'de> Deserialize<'de> for Identity {
 
             fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
                 formatter.write_str("identity string or bytes")
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Identity::from_str(v.as_str()).map_err(E::custom)
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Identity::from_str(v).map_err(E::custom)
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Identity::from_bytes(v).map_err(E::custom)
+            }
+
+            fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Identity::from_bytes(v.as_ref()).map_err(E::custom)
             }
 
             fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
@@ -482,6 +553,11 @@ impl InnerIdentity {
 
 impl std::fmt::Display for InnerIdentity {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.is_anonymous() {
+            // Special case this.
+            return write!(f, "maa");
+        }
+
         let data = self.to_vec();
         let mut crc = crc_any::CRCu16::crc16();
         crc.digest(&data);
@@ -619,6 +695,7 @@ pub mod tests {
     use super::testing::identity;
     use crate::types::identity::cose::tests::{ecdsa_256_identity, eddsa_identity};
     use crate::Identity;
+    use serde_test::{assert_tokens, Configure, Token};
     use std::str::FromStr;
 
     #[test]
@@ -628,6 +705,11 @@ pub mod tests {
         let a2 = Identity::from_str(&a_str).unwrap();
 
         assert_eq!(a, a2);
+    }
+
+    #[test]
+    fn can_read_anonymous_short() {
+        assert_eq!(Identity::from_str("maa"), Ok(Identity::anonymous()));
     }
 
     #[test]
@@ -729,5 +811,30 @@ pub mod tests {
     fn matches_key() {
         let id = eddsa_identity();
         assert!(id.identity.matches_key(id.key.as_ref()));
+    }
+
+    #[test]
+    fn serde_anonymous() {
+        let id = Identity::anonymous();
+        assert_tokens(&id.readable(), &[Token::String("maa")]);
+        assert_tokens(&id.compact(), &[Token::Bytes(&[0])]);
+    }
+
+    #[test]
+    fn serde_pub_key() {
+        let id = ecdsa_256_identity().identity;
+        assert_tokens(
+            &id.readable(),
+            &[Token::String(
+                "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf",
+            )],
+        );
+        assert_tokens(
+            &id.compact(),
+            &[Token::Bytes(&[
+                1, 132, 209, 73, 162, 9, 88, 81, 212, 153, 75, 10, 129, 43, 159, 125, 140, 66, 165,
+                172, 246, 68, 3, 30, 159, 41, 73, 183, 110,
+            ])],
+        );
     }
 }

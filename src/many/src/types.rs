@@ -1,5 +1,5 @@
 use crate::protocol::AttributeId;
-use crate::{Identity, ManyError};
+use crate::ManyError;
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
@@ -9,8 +9,12 @@ use std::ops::{Bound, RangeBounds, Shl};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub mod blockchain;
+pub mod either;
+pub mod events;
 pub mod identity;
 pub mod ledger;
+
+pub use either::Either;
 
 /// A deterministic (fixed point) percent value that can be multiplied with
 /// numbers and rounded down.
@@ -326,25 +330,6 @@ impl<'b, T: Decode<'b>> Decode<'b> for CborRange<T> {
     }
 }
 
-#[derive(Clone, Debug, Default, Encode, Decode, PartialEq)]
-#[cbor(map)]
-pub struct TransactionFilter {
-    #[n(0)]
-    pub account: Option<VecOrSingle<Identity>>,
-
-    #[n(1)]
-    pub kind: Option<VecOrSingle<ledger::TransactionKind>>,
-
-    #[n(2)]
-    pub symbol: Option<VecOrSingle<Identity>>,
-
-    #[n(3)]
-    pub id_range: Option<CborRange<ledger::TransactionId>>,
-
-    #[n(4)]
-    pub date_range: Option<CborRange<Timestamp>>,
-}
-
 #[derive(Clone, Debug, PartialEq)]
 #[must_use]
 pub enum SortOrder {
@@ -581,4 +566,28 @@ fn attribute_related_index_encode_5() {
         "[16, [17, [18, [19, 20]]]]"
     );
     assert_eq!(minicbor::decode::<AttributeRelatedIndex>(&b).unwrap(), i);
+}
+
+#[test]
+fn either_works() {
+    type EitherTest = Either<bool, u32>;
+
+    assert_eq!(
+        minicbor::decode::<EitherTest>(&[0]).unwrap(),
+        EitherTest::Right(0)
+    );
+    assert_eq!(
+        minicbor::decode::<EitherTest>(&[0xF4]).unwrap(),
+        EitherTest::Left(false)
+    );
+    assert_eq!(
+        minicbor::decode::<EitherTest>(&[0x1A, 0x00, 0x0F, 0x42, 0x40]).unwrap(),
+        EitherTest::Right(1_000_000)
+    );
+
+    assert_eq!(
+        &minicbor::to_vec(EitherTest::Right(1_000_000)).unwrap(),
+        &[0x1A, 0x00, 0x0F, 0x42, 0x40]
+    );
+    assert_eq!(&minicbor::to_vec(EitherTest::Left(true)).unwrap(), &[0xF5]);
 }
