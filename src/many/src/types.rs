@@ -166,9 +166,9 @@ impl<'b, C> Decode<'b, C> for Timestamp {
         Ok(Self(
             UNIX_EPOCH
                 .checked_add(Duration::from_secs(secs))
-                .ok_or_else(|| decode::Error::message(
-                    "duration value can not represent system time",
-                ))?,
+                .ok_or_else(|| {
+                    decode::Error::message("duration value can not represent system time")
+                })?,
         ))
     }
 }

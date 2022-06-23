@@ -193,9 +193,11 @@ impl<'b, C> Decode<'b, C> for ResponseMessage {
                     let secs = d.u64()?;
                     let timestamp = std::time::UNIX_EPOCH
                         .checked_add(Duration::from_secs(secs))
-                        .ok_or_else(|| minicbor::decode::Error::message(
-                            "duration value can not represent system time",
-                        ))?;
+                        .ok_or_else(|| {
+                            minicbor::decode::Error::message(
+                                "duration value can not represent system time",
+                            )
+                        })?;
                     builder.timestamp(timestamp)
                 }
                 Some(ResponseMessageCborKey::Attributes) => builder.attributes(d.decode()?),
