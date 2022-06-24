@@ -21,13 +21,13 @@ struct ManyModuleAttributes {
 
 #[derive(Debug, Default, Deserialize)]
 struct EndpointManyAttribute {
-    allow_anonymous: Option<bool>,
+    deny_anonymous: Option<bool>,
     check_webauthn: Option<bool>,
 }
 
 impl EndpointManyAttribute {
-    pub fn allow_anonymous(&self) -> bool {
-        self.allow_anonymous == Some(true)
+    pub fn deny_anonymous(&self) -> bool {
+        self.deny_anonymous == Some(true)
     }
 
     pub fn check_webauthn(&self) -> bool {
@@ -48,7 +48,7 @@ impl EndpointManyAttribute {
         }
 
         Ok(Self {
-            allow_anonymous: either(self.allow_anonymous, other.allow_anonymous)?,
+            deny_anonymous: either(self.deny_anonymous, other.deny_anonymous)?,
             check_webauthn: either(self.check_webauthn, other.check_webauthn)?,
         })
     }
@@ -58,14 +58,14 @@ impl syn::parse::Parse for EndpointManyAttribute {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let arg_name: Ident = input.parse()?;
 
-        if arg_name == "allow_anonymous" {
+        if arg_name == "deny_anonymous" {
             Ok(Self {
-                allow_anonymous: Some(true),
+                deny_anonymous: Some(true),
                 check_webauthn: None,
             })
         } else if arg_name == "check_webauthn" {
             Ok(Self {
-                allow_anonymous: None,
+                deny_anonymous: None,
                 check_webauthn: Some(true),
             })
         } else {
@@ -261,16 +261,41 @@ impl Endpoint {
             None => name,
         };
 
-        if let Some((_, ty)) = &self.arg {
+        let check_anonymous = if self.metadata.deny_anonymous() {
             quote_spanned! { span =>
-                #ep => {
-                    minicbor::decode::<'_, #ty>(data)
-                        .map_err(|e| ManyError::deserialization_error(e.to_string()))?;
+                if message.from.unwrap_or_default().is_anonymous() {
+                    return Err(ManyError::sender_cannot_be_anonymous());
                 }
             }
         } else {
-            quote! {
-                #ep => {}
+            quote! { {} }
+        };
+
+        let check_webauthn = if self.metadata.check_webauthn() {
+            quote_spanned! { span => {
+                let protected = std::collections::BTreeMap::from_iter(envelope.protected.header.rest.clone().into_iter());
+                if !protected.contains_key(&coset::Label::Text("webauthn".to_string())) {
+                    return Err( ManyError::non_webauthn_request_denied(&method))
+                }
+            }}
+        } else {
+            quote! { {} }
+        };
+
+        let check_ty = if let Some((_, ty)) = &self.arg {
+            quote_spanned! { span =>
+                minicbor::decode::<'_, #ty>(data)
+                    .map_err(|e| ManyError::deserialization_error(e.to_string()))?;
+            }
+        } else {
+            quote! { {} }
+        };
+
+        quote_spanned! { span =>
+            #ep => {
+                #check_anonymous
+                #check_webauthn
+                #check_ty
             }
         }
     }
@@ -404,7 +429,11 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         .iter()
         .map(|e| e.validate_endpoint_pat(&namespace));
     let validate = quote! {
-        fn validate(&self, message: & #many ::message::RequestMessage) -> Result<(),  #many ::ManyError> {
+        fn validate(
+            &self,
+            message: & #many ::message::RequestMessage,
+            envelope: & coset::CoseSign1,
+        ) -> Result<(),  #many ::ManyError> {
             let method = message.method.as_str();
             let data = message.data.as_slice();
             match method {
@@ -413,45 +442,6 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
                 _ => return Err( #many ::ManyError::invalid_method_name(method.to_string())),
             };
             Ok(())
-        }
-    };
-
-    let ns = namespace.clone();
-    let webauthn_endpoints = endpoints
-        .iter()
-        .filter_map(|e| {
-            if e.metadata.check_webauthn() {
-                Some(e.name.clone())
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<String>>();
-
-    let validate_envelope = if !webauthn_endpoints.is_empty() {
-        let field_names = webauthn_endpoints.iter().map(|e| match &ns {
-            Some(namespace) => format!("{}.{}", namespace, e),
-            None => e.to_string(),
-        });
-
-        quote! {
-            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
-                let method = message.method.as_str();
-                if vec![#(#field_names),*].contains(&method) {
-                    let unprotected =
-                        std::collections::BTreeMap::from_iter(envelope.unprotected.rest.clone().into_iter());
-                    if !unprotected.contains_key(&coset::Label::Text("webauthn".to_string())) {
-                        return Err( #many ::ManyError::non_webauthn_request_denied(&method))
-                    }
-                }
-                Ok(())
-            }
-        }
-    } else {
-        quote! {
-            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
-                Ok(())
-            }
         }
     };
 
@@ -537,8 +527,6 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             fn info(&self) -> & #many ::server::module::ManyModuleInfo {
                 & #info_ident
             }
-
-            #validate_envelope
 
             #validate
 

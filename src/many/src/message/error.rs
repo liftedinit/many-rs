@@ -138,6 +138,8 @@ many_error! {
             => r#"Identity kind "{actual}" was not recognized."#,
      -103: InvalidIdentitySubResourceId as invalid_identity_subid()
             => "Invalid Subresource ID. Subresource IDs are 31 bits.",
+     -104: SenderCannotBeAnonymous as sender_cannot_be_anonymous()
+            => "Invalid Identity; the sender cannot be anonymous.",
 
      // HSM-related errors
      -200: HSMInitError as hsm_init_error(details)

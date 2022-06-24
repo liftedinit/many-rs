@@ -29,6 +29,7 @@ pub trait IdStoreModuleBackend: Send {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::server::module::testutils::call_module_envelope;
     use crate::{
         server::module::testutils::call_module_cbor,
         types::identity::{cose::testsutils::generate_random_eddsa_identity, testing::identity},
@@ -61,9 +62,21 @@ mod tests {
             .return_const(Ok(ret.clone()));
 
         let module = super::IdStoreModule::new(Arc::new(Mutex::new(mock)));
+        let mut envelope = coset::CoseSign1::default();
+        envelope
+            .protected
+            .header
+            .rest
+            .push((coset::Label::Text("webauthn".to_string()), true.into()));
         let store_returns: StoreReturns = minicbor::decode(
-            &call_module_cbor(1, &module, "idstore.store", minicbor::to_vec(data).unwrap())
-                .unwrap(),
+            &call_module_envelope(
+                1,
+                &module,
+                "idstore.store",
+                minicbor::to_vec(data).unwrap(),
+                &envelope,
+            )
+            .unwrap(),
         )
         .unwrap();
 

@@ -94,14 +94,12 @@ pub trait ManyModule: Sync + Send + Debug {
     fn info(&self) -> &ManyModuleInfo;
 
     /// Verify that a message is well formed (ACLs, arguments, etc).
-    fn validate(&self, _message: &RequestMessage) -> Result<(), ManyError> {
-        Ok(())
-    }
-
-    fn validate_envelope(
+    /// This method has access to the envelope so it can validate COSE headers
+    /// or other properties.
+    fn validate(
         &self,
-        _envelope: &coset::CoseSign1,
         _message: &RequestMessage,
+        _envelope: &coset::CoseSign1,
     ) -> Result<(), ManyError> {
         Ok(())
     }
@@ -136,6 +134,16 @@ pub(crate) mod testutils {
         endpoint: impl ToString,
         payload: Vec<u8>,
     ) -> Result<Vec<u8>, ManyError> {
+        call_module_envelope(key, module, endpoint, payload, &coset::CoseSign1::default())
+    }
+
+    pub fn call_module_envelope(
+        key: u32,
+        module: &'_ impl ManyModule,
+        endpoint: impl ToString,
+        payload: Vec<u8>,
+        envelope: &coset::CoseSign1,
+    ) -> Result<Vec<u8>, ManyError> {
         let mut message = RequestMessage::default()
             .with_method(endpoint.to_string())
             .with_data(payload);
@@ -146,7 +154,7 @@ pub(crate) mod testutils {
             message
         };
 
-        module.validate(&message)?;
+        module.validate(&message, envelope)?;
         let response = smol::block_on(async { module.execute(message).await })?;
         response.data
     }
