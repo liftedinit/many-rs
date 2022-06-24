@@ -4,11 +4,12 @@ use quote::{quote, quote_spanned};
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
 use syn::parse::ParseStream;
+use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::PathArguments::AngleBracketed;
 use syn::{
-    AngleBracketedGenericArguments, FnArg, GenericArgument, Pat, PatType, ReturnType, TraitItem,
-    TraitItemMethod, Type, TypePath,
+    AngleBracketedGenericArguments, FnArg, GenericArgument, Pat, PatType, ReturnType, Token,
+    TraitItem, TraitItemMethod, Type, TypePath,
 };
 
 #[derive(Deserialize)]
@@ -182,12 +183,16 @@ impl Endpoint {
             .into_iter()
             .partition(|attr| attr.path.is_ident("many"));
 
-        let metadata = meta_attrs
-            .into_iter()
-            .filter(|attr| attr.path.is_ident("many"))
-            .try_fold(EndpointManyAttribute::default(), |meta, attr| {
-                meta.merge(attr.parse_args()?)
-            })?;
+        let metadata =
+            meta_attrs
+                .into_iter()
+                .try_fold(EndpointManyAttribute::default(), |meta, attr| {
+                    let list: Punctuated<EndpointManyAttribute, Token![,]> =
+                        attr.parse_args_with(Punctuated::parse_terminated)?;
+
+                    list.into_iter()
+                        .try_fold(meta, EndpointManyAttribute::merge)
+                })?;
 
         Ok(Self {
             metadata,
