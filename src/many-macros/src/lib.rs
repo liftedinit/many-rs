@@ -3,6 +3,7 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, quote_spanned};
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
+use syn::parse::ParseStream;
 use syn::spanned::Spanned;
 use syn::PathArguments::AngleBracketed;
 use syn::{
@@ -18,9 +19,65 @@ struct ManyModuleAttributes {
     pub many_crate: Option<String>,
 }
 
+#[derive(Debug, Default, Deserialize)]
+struct EndpointManyAttribute {
+    allow_anonymous: Option<bool>,
+    check_webauthn: Option<bool>,
+}
+
+impl EndpointManyAttribute {
+    pub fn allow_anonymous(&self) -> bool {
+        self.allow_anonymous == Some(true)
+    }
+
+    pub fn check_webauthn(&self) -> bool {
+        self.check_webauthn == Some(true)
+    }
+
+    pub fn merge(self, other: Self) -> syn::Result<Self> {
+        fn either<T: quote::ToTokens>(a: Option<T>, b: Option<T>) -> syn::Result<Option<T>> {
+            match (a, b) {
+                (None, None) => Ok(None),
+                (Some(val), None) | (None, Some(val)) => Ok(Some(val)),
+                (Some(a), Some(b)) => {
+                    let mut error = syn::Error::new_spanned(a, "redundant attribute argument");
+                    error.combine(syn::Error::new_spanned(b, "note: first one here"));
+                    Err(error)
+                }
+            }
+        }
+
+        Ok(Self {
+            allow_anonymous: either(self.allow_anonymous, other.allow_anonymous)?,
+            check_webauthn: either(self.check_webauthn, other.check_webauthn)?,
+        })
+    }
+}
+
+impl syn::parse::Parse for EndpointManyAttribute {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let arg_name: Ident = input.parse()?;
+
+        if arg_name == "allow_anonymous" {
+            Ok(Self {
+                allow_anonymous: Some(true),
+                check_webauthn: None,
+            })
+        } else if arg_name == "check_webauthn" {
+            Ok(Self {
+                allow_anonymous: None,
+                check_webauthn: Some(true),
+            })
+        } else {
+            Err(syn::Error::new_spanned(arg_name, "unsupported attribute"))
+        }
+    }
+}
+
 #[derive(Debug)]
 struct Endpoint {
     pub attributes: Vec<syn::Attribute>,
+    pub metadata: EndpointManyAttribute,
     pub name: String,
     pub func: Ident,
     pub span: Span,
@@ -33,7 +90,7 @@ struct Endpoint {
 }
 
 impl Endpoint {
-    pub fn new(item: &TraitItemMethod) -> Result<Self, (String, Span)> {
+    pub fn new(item: &TraitItemMethod) -> syn::Result<Self> {
         let signature = &item.sig;
 
         let func = signature.ident.clone();
@@ -46,17 +103,17 @@ impl Endpoint {
 
         let mut inputs = signature.inputs.iter();
         let receiver = inputs.next().ok_or_else(|| {
-            (
-                "Must have at least 1 argument".to_string(),
+            syn::Error::new(
                 signature.span(),
+                "Must have at least 1 argument".to_string(),
             )
         })?;
         let is_mut = if let FnArg::Receiver(r) = receiver {
             r.mutability.is_some()
         } else {
-            return Err((
-                "Function in trait must have a receiver".to_string(),
+            return Err(syn::Error::new(
                 receiver.span(),
+                "Function in trait must have a receiver".to_string(),
             ));
         };
 
@@ -75,7 +132,10 @@ impl Endpoint {
                 arg = None;
             }
             (_, _) => {
-                return Err(("Must have 2 or 3 arguments".to_string(), signature.span()));
+                return Err(syn::Error::new(
+                    signature.span(),
+                    "Must have 2 or 3 arguments".to_string(),
+                ));
             }
         }
 
@@ -110,14 +170,28 @@ impl Endpoint {
         }
 
         if ret_type.is_none() {
-            return Err((
-                "Must have a result return type.".to_string(),
+            return Err(syn::Error::new(
                 signature.output.span(),
+                "Must have a result return type.".to_string(),
             ));
         }
 
+        let (meta_attrs, attributes): (Vec<syn::Attribute>, Vec<syn::Attribute>) = item
+            .attrs
+            .clone()
+            .into_iter()
+            .partition(|attr| attr.path.is_ident("many"));
+
+        let metadata = meta_attrs
+            .into_iter()
+            .filter(|attr| attr.path.is_ident("many"))
+            .try_fold(EndpointManyAttribute::default(), |meta, attr| {
+                meta.merge(attr.parse_args()?)
+            })?;
+
         Ok(Self {
-            attributes: item.attrs.clone(),
+            metadata,
+            attributes,
             name,
             func,
             span: signature.span(),
@@ -178,6 +252,82 @@ impl Endpoint {
             #a fn #func(#s #sender #arg) -> Result< #ret_type, ManyError > #block
         }
     }
+
+    pub fn validate_endpoint_pat(&self, namespace: &Option<String>) -> TokenStream {
+        let span = self.span;
+        let name = self.name.as_str().to_camel_case();
+        let ep = match namespace {
+            Some(ref namespace) => format!("{}.{}", namespace, name),
+            None => name,
+        };
+
+        if let Some((_, ty)) = &self.arg {
+            quote_spanned! { span =>
+                #ep => {
+                    minicbor::decode::<'_, #ty>(data)
+                        .map_err(|e| ManyError::deserialization_error(e.to_string()))?;
+                }
+            }
+        } else {
+            quote! {
+                #ep => {}
+            }
+        }
+    }
+
+    pub fn execute_endpoint_pat(&self, namespace: &Option<String>) -> TokenStream {
+        let span = self.span;
+        let name = self.name.as_str().to_camel_case();
+        let ep = match namespace {
+            Some(ref namespace) => format!("{}.{}", namespace, name),
+            None => name,
+        };
+        let ep_ident = &self.func;
+
+        let backend_decl = if self.is_mut {
+            quote! { let mut backend = self.backend.lock().unwrap(); }
+        } else {
+            quote! { let backend = self.backend.lock().unwrap(); }
+        };
+
+        let call = match (self.has_sender, self.arg.is_some(), self.is_async) {
+            (false, true, false) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ) ) }
+            }
+            (false, true, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ).await ) }
+            }
+            (true, true, false) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )? ) ) }
+            }
+            (true, true, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )? ).await ) }
+            }
+            (false, false, false) => quote_spanned! { span => encode( backend . #ep_ident ( ) ) },
+            (false, false, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( ).await ) }
+            }
+            (true, false, false) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default() ) ) }
+            }
+            (true, false, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default() ).await ) }
+            }
+        };
+
+        quote_spanned! { span =>
+            #ep => {
+                #backend_decl
+                #call
+            }
+        }
+    }
+}
+
+impl quote::ToTokens for Endpoint {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        tokens.extend(self.to_decl())
+    }
 }
 
 #[allow(clippy::too_many_lines)]
@@ -220,63 +370,39 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
     let endpoints: Vec<Endpoint> = tr
         .items
         .iter()
-        .filter_map(|item| match item {
-            TraitItem::Method(m) => Some(m),
-            _ => None,
+        .filter_map(|item| {
+            if let TraitItem::Method(m) = item {
+                Some(Endpoint::new(m))
+            } else {
+                None
+            }
         })
-        .map(Endpoint::new)
-        .collect::<Result<_, (String, Span)>>()
-        .map_err(|(msg, span)| syn::Error::new(span, msg))?;
+        .collect::<syn::Result<_>>()?;
 
     let trait_ = {
         let attributes = tr.attrs.iter();
-        let endpoints = endpoints.iter().map(|x| x.to_decl());
         quote! {
             #(#attributes)*
             #vis trait #trait_ident: Send {
                 #(#endpoints)*
-
-                fn validate_(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
-                    Ok(())
-                }
             }
         }
     };
 
-    let ns = namespace.clone();
     let endpoint_strings: Vec<String> = endpoints
         .iter()
-        .map(move |e| {
+        .map(|e| {
             let name = e.name.as_str().to_camel_case();
-            match ns {
+            match &namespace {
                 Some(ref namespace) => format!("{}.{}", namespace, name),
                 None => name,
             }
         })
         .collect();
 
-    let ns = namespace.clone();
-    let validate_endpoint_pat = endpoints.iter().map(|e| {
-        let span = e.span;
-        let name = e.name.as_str().to_camel_case();
-        let ep = match ns {
-            Some(ref namespace) => format!("{}.{}", namespace, name),
-            None => name,
-        };
-
-        if let Some((_, ty)) = &e.arg {
-            quote_spanned! { span =>
-                #ep => {
-                    minicbor::decode::<'_, #ty>(data)
-                        .map_err(|e| ManyError::deserialization_error(e.to_string()))?;
-                }
-            }
-        } else {
-            quote! {
-                #ep => {}
-            }
-        }
-    });
+    let validate_endpoint_pat = endpoints
+        .iter()
+        .map(|e| e.validate_endpoint_pat(&namespace));
     let validate = quote! {
         fn validate(&self, message: & #many ::message::RequestMessage) -> Result<(),  #many ::ManyError> {
             let method = message.method.as_str();
@@ -290,50 +416,46 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         }
     };
 
-    let validate_envelope = quote! {
-        fn validate_envelope(
-            &self,
-            envelope: &coset::CoseSign1,
-            message: & #many ::message::RequestMessage
-        ) -> Result<(), #many ::ManyError> {
-            self.backend.lock().unwrap().validate_(envelope, message)
+    let ns = namespace.clone();
+    let webauthn_endpoints = endpoints
+        .iter()
+        .filter_map(|e| {
+            if e.metadata.check_webauthn() {
+                Some(e.name.clone())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<String>>();
+
+    let validate_envelope = if !webauthn_endpoints.is_empty() {
+        let field_names = webauthn_endpoints.iter().map(|e| match &ns {
+            Some(namespace) => format!("{}.{}", namespace, e),
+            None => e.to_string(),
+        });
+
+        quote! {
+            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
+                let method = message.method.as_str();
+                if vec![#(#field_names),*].contains(&method) {
+                    let unprotected =
+                        std::collections::BTreeMap::from_iter(envelope.unprotected.rest.clone().into_iter());
+                    if !unprotected.contains_key(&coset::Label::Text("webauthn".to_string())) {
+                        return Err( #many ::ManyError::non_webauthn_request_denied(&method))
+                    }
+                }
+                Ok(())
+            }
+        }
+    } else {
+        quote! {
+            fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
+                Ok(())
+            }
         }
     };
 
-    let ns = namespace;
-    let execute_endpoint_pat = endpoints.iter().map(|e| {
-        let span = e.span;
-        let name = e.name.as_str().to_camel_case();
-        let ep = match ns {
-            Some(ref namespace) => format!("{}.{}", namespace, name),
-            None => name,
-        };
-        let ep_ident = &e.func;
-
-        let backend_decl = if e.is_mut {
-            quote! { let mut backend = self.backend.lock().unwrap(); }
-        } else {
-            quote! { let backend = self.backend.lock().unwrap(); }
-        };
-
-        let call = match (e.has_sender, e.arg.is_some(), e.is_async) {
-            (false, true, false) => quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ) ) },
-            (false, true, true) => quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ).await ) },
-            (true, true, false) => quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )? ) ) },
-            (true, true, true) => quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )? ).await ) },
-            (false, false, false) => quote_spanned! { span => encode( backend . #ep_ident ( ) ) },
-            (false, false, true) => quote_spanned! { span => encode( backend . #ep_ident ( ).await ) },
-            (true, false, false) => quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default() ) ) },
-            (true, false, true) => quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default() ).await ) },
-        };
-
-        quote_spanned! { span =>
-            #ep => {
-                #backend_decl
-                #call
-            }
-        }
-    });
+    let execute_endpoint_pat = endpoints.iter().map(|e| e.execute_endpoint_pat(&namespace));
     let execute = quote! {
         async fn execute(
             &self,
