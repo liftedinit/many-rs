@@ -451,6 +451,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
     };
 
     let execute_endpoint_pat = endpoints.iter().map(|e| e.execute_endpoint_pat(&namespace));
+
     let execute = quote! {
         async fn execute(
             &self,
