@@ -242,9 +242,9 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             fn validate_envelope(&self, envelope: &coset::CoseSign1, message: & #many ::message::RequestMessage) -> Result<(), #many ::ManyError> {
                 let method = message.method.as_str();
                 if vec![#(#field_names),*].contains(&method) {
-                    let unprotected =
-                        std::collections::BTreeMap::from_iter(envelope.unprotected.rest.clone().into_iter());
-                    if !unprotected.contains_key(&coset::Label::Text("webauthn".to_string())) {
+                    let protected =
+                        std::collections::BTreeMap::from_iter(envelope.protected.header.rest.clone().into_iter());
+                    if !protected.contains_key(&coset::Label::Text("webauthn".to_string())) {
                         return Err( #many ::ManyError::non_webauthn_request_denied(&method))
                     }
                 }
