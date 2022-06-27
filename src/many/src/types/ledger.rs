@@ -173,8 +173,12 @@ impl Display for TokenAmount {
     }
 }
 
-impl Encode for TokenAmount {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+impl<C> Encode<C> for TokenAmount {
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
         use num_traits::cast::ToPrimitive;
 
         // Encode efficiently.
@@ -187,13 +191,13 @@ impl Encode for TokenAmount {
     }
 }
 
-impl<'b> Decode<'b> for TokenAmount {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> Decode<'b, C> for TokenAmount {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         // Decode either.
         match d.datatype()? {
             Type::Tag => {
                 if d.tag()? != Tag::PosBignum {
-                    return Err(minicbor::decode::Error::Message("Invalid tag."));
+                    return Err(minicbor::decode::Error::message("Invalid tag."));
                 }
 
                 let bytes = d.bytes()?.to_vec();

@@ -218,10 +218,11 @@ impl std::fmt::Display for Identity {
     }
 }
 
-impl Encode for Identity {
+impl<C> Encode<C> for Identity {
     fn encode<W: Write>(
         &self,
         e: &mut Encoder<W>,
+        _: &mut C,
     ) -> Result<(), minicbor::encode::Error<W::Error>> {
         e.tag(minicbor::data::Tag::Unassigned(10000))?
             .bytes(&self.to_vec())?;
@@ -229,8 +230,8 @@ impl Encode for Identity {
     }
 }
 
-impl<'b> Decode<'b> for Identity {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> Decode<'b, C> for Identity {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         let mut is_tagged = false;
         // Check all the tags.
         while d.datatype()? == Type::Tag {
@@ -243,7 +244,7 @@ impl<'b> Decode<'b> for Identity {
             Type::String => Self::from_str(d.str()?),
             _ => {
                 if !is_tagged {
-                    return Err(minicbor::decode::Error::Message(
+                    return Err(minicbor::decode::Error::message(
                         "identities need to be tagged",
                     ));
                 }
@@ -251,7 +252,7 @@ impl<'b> Decode<'b> for Identity {
                 Self::try_from(d.bytes()?)
             }
         }
-        .map_err(|_e| minicbor::decode::Error::Message("Could not decode identity from bytes"))
+        .map_err(|_e| minicbor::decode::Error::message("Could not decode identity from bytes"))
     }
 }
 

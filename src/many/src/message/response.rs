@@ -97,8 +97,8 @@ impl ResponseMessage {
     }
 }
 
-impl Encode for ResponseMessage {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for ResponseMessage {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         e.tag(Tag::Unassigned(10002))?;
         let l = 2
             + if self.from.is_anonymous() { 0 } else { 1 }
@@ -154,10 +154,10 @@ impl Encode for ResponseMessage {
     }
 }
 
-impl<'b> Decode<'b> for ResponseMessage {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> Decode<'b, C> for ResponseMessage {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         if d.tag()? != Tag::Unassigned(10002) {
-            return Err(minicbor::decode::Error::Message(
+            return Err(minicbor::decode::Error::message(
                 "Invalid tag, expected 10002 for a message.",
             ));
         };
@@ -187,15 +187,17 @@ impl<'b> Decode<'b> for ResponseMessage {
                     // Some logic applies.
                     let t = d.tag()?;
                     if t != minicbor::data::Tag::Timestamp {
-                        return Err(minicbor::decode::Error::Message("Invalid tag."));
+                        return Err(minicbor::decode::Error::message("Invalid tag."));
                     }
 
                     let secs = d.u64()?;
                     let timestamp = std::time::UNIX_EPOCH
                         .checked_add(Duration::from_secs(secs))
-                        .ok_or(minicbor::decode::Error::Message(
-                            "duration value can not represent system time",
-                        ))?;
+                        .ok_or_else(|| {
+                            minicbor::decode::Error::message(
+                                "duration value can not represent system time",
+                            )
+                        })?;
                     builder.timestamp(timestamp)
                 }
                 Some(ResponseMessageCborKey::Attributes) => builder.attributes(d.decode()?),
@@ -210,6 +212,6 @@ impl<'b> Decode<'b> for ResponseMessage {
 
         builder
             .build()
-            .map_err(|_e| minicbor::decode::Error::Message("could not build"))
+            .map_err(|_e| minicbor::decode::Error::message("could not build"))
     }
 }

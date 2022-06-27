@@ -86,15 +86,19 @@ impl std::ops::Sub<u32> for EventId {
     }
 }
 
-impl Encode for EventId {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+impl<C> Encode<C> for EventId {
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
         e.bytes(&self.0)?;
         Ok(())
     }
 }
 
-impl<'b> Decode<'b> for EventId {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> Decode<'b, C> for EventId {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         Ok(EventId(ByteVec::from(d.bytes()?.to_vec())))
     }
 }
@@ -172,16 +176,16 @@ macro_rules! define_event_kind {
             }
         }
 
-        impl Encode for EventKind {
-            fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
-                Into::<AttributeRelatedIndex>::into(*self).encode(e)
+        impl<C> Encode<C> for EventKind {
+            fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), encode::Error<W::Error>> {
+                Into::<AttributeRelatedIndex>::into(*self).encode(e, ctx)
             }
         }
 
-        impl<'b> Decode<'b> for EventKind {
-            fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+        impl<'b, C> Decode<'b, C> for EventKind {
+            fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
                 TryFrom::try_from(d.decode::<AttributeRelatedIndex>()?)
-                    .map_err(|_| minicbor::decode::Error::Message("Invalid attribute index"))
+                    .map_err(|_| minicbor::decode::Error::message("Invalid attribute index"))
             }
         }
     }
@@ -296,10 +300,11 @@ macro_rules! replace_expr {
 
 macro_rules! encode_event_info {
     ( $( $sname: ident { $( $idx: literal => $name: ident : $type: ty, )* }, )* ) => {
-        impl Encode for EventInfo {
+        impl<C> Encode<C> for EventInfo {
             fn encode<W: encode::Write>(
                 &self,
                 e: &mut Encoder<W>,
+                _: &mut C,
             ) -> Result<(), encode::Error<W::Error>> {
                 match self {
                     $(  EventInfo :: $sname { $( $name, )* } => {
@@ -313,14 +318,14 @@ macro_rules! encode_event_info {
             }
         }
 
-        impl<'b> Decode<'b> for EventInfo {
-            fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-                let mut len = d.map()?.ok_or(minicbor::decode::Error::Message(
+        impl<'b, C> Decode<'b, C> for EventInfo {
+            fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
+                let mut len = d.map()?.ok_or(minicbor::decode::Error::message(
                     "Invalid event type.",
                 ))?;
 
                 if d.u8()? != 0 {
-                    return Err(minicbor::decode::Error::Message(
+                    return Err(minicbor::decode::Error::message(
                         "EventKind should be the first item.",
                     ));
                 }
@@ -333,18 +338,18 @@ macro_rules! encode_event_info {
                             match d.u32()? {
                                 $( $idx => $name = Some(d.decode()?), )*
 
-                                x => return Err(minicbor::decode::Error::UnknownVariant(x)),
+                                x => return Err(minicbor::decode::Error::unknown_variant(x)),
                             }
                             len -= 1;
                         }
 
-                        $( let $name: $type = $name.ok_or(minicbor::decode::Error::MissingValue($idx, stringify!($name)))?; )*
+                        $( let $name: $type = $name.ok_or(minicbor::decode::Error::missing_value($idx))?; )*
 
                         Ok(EventInfo :: $sname {
                             $( $name, )*
                         })
                     }, )*
-                    _ => Err(minicbor::decode::Error::Message("Unsupported event kind"))
+                    _ => Err(minicbor::decode::Error::message("Unsupported event kind"))
                 }
             }
         }
@@ -371,10 +376,11 @@ macro_rules! define_multisig_event {
             }
         }
 
-        impl Encode for AccountMultisigTransaction {
+        impl<C> Encode<C> for AccountMultisigTransaction {
             fn encode<W: encode::Write>(
                 &self,
                 e: &mut Encoder<W>,
+                _: &mut C,
             ) -> Result<(), encode::Error<W::Error>> {
                 match self {
                     $(
@@ -390,17 +396,17 @@ macro_rules! define_multisig_event {
             }
         }
 
-        impl<'b> Decode<'b> for AccountMultisigTransaction {
-            fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
-                let len = d.map()?.ok_or(minicbor::decode::Error::Message(
+        impl<'b, C> Decode<'b, C> for AccountMultisigTransaction {
+            fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
+                let len = d.map()?.ok_or(minicbor::decode::Error::message(
                     "Invalid event type.",
                 ))?;
 
                 if len != 2 {
-                    return Err(minicbor::decode::Error::Message("Transactions must have 2 values"));
+                    return Err(minicbor::decode::Error::message("Transactions must have 2 values"));
                 }
                 if d.u8()? != 0 {
-                    return Err(minicbor::decode::Error::Message(
+                    return Err(minicbor::decode::Error::message(
                         "EventKind should be the first item.",
                     ));
                 }
@@ -410,13 +416,13 @@ macro_rules! define_multisig_event {
                     $(  EventKind :: $name => {
                         let _: $arg;  // We do this to remove a macro error for not using $arg.
                         if d.u8()? != 1 {
-                            Err(minicbor::decode::Error::Message("Invalid field index"))
+                            Err(minicbor::decode::Error::message("Invalid field index"))
                         } else {
                             Ok(Self :: $name(d.decode()?))
                         }
                     }, )?
                     )*
-                    _ => return Err(minicbor::decode::Error::Message("Unsupported transaction kind"))
+                    _ => return Err(minicbor::decode::Error::message("Unsupported transaction kind"))
                 }
             }
         }

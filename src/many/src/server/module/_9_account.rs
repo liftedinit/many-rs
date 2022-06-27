@@ -37,17 +37,17 @@ impl PartialEq<&str> for Role {
     }
 }
 
-impl Encode for Role {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+impl<C> Encode<C> for Role {
+    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), encode::Error<W::Error>> {
         e.str(self.as_ref())?;
         Ok(())
     }
 }
 
-impl<'b> Decode<'b> for Role {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+impl<'b, C> Decode<'b, C> for Role {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
         let role = d.str()?;
-        std::str::FromStr::from_str(role).map_err(|_| decode::Error::Message("Invalid role"))
+        std::str::FromStr::from_str(role).map_err(|_| decode::Error::message("Invalid role"))
     }
 }
 

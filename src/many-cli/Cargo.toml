@@ -22,7 +22,7 @@ cbor-diag = "0.1.9"
 clap = { version = "3.0.0-rc.9", features = [ "derive" ] }
 coset = "0.3"
 hex = "0.4.3"
-minicbor = { version = "0.12.0", features = ["derive", "half", "std"] }
+minicbor = { version = "0.18.0", features = ["derive", "half", "std"] }
 rpassword = "6.0"
 tracing = "0.1.29"
 tracing-subscriber = "0.2.24"

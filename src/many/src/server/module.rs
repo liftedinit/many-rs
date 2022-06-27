@@ -40,16 +40,16 @@ reexport_module!(
 #[derive(Debug, PartialEq)]
 pub struct EmptyReturn;
 
-impl minicbor::Encode for EmptyReturn {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> minicbor::Encode<C> for EmptyReturn {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         // We encode nothing as a null so it's a value.
         e.null()?;
         Ok(())
     }
 }
 
-impl<'b> minicbor::Decode<'b> for EmptyReturn {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> minicbor::Decode<'b, C> for EmptyReturn {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         // Nothing to do. Skip a value if there's one, but don't error if there's none.
         let _ = d.skip();
         Ok(Self)
@@ -59,16 +59,16 @@ impl<'b> minicbor::Decode<'b> for EmptyReturn {
 #[derive(Debug, PartialEq)]
 pub struct EmptyArg;
 
-impl minicbor::Encode for EmptyArg {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> minicbor::Encode<C> for EmptyArg {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         // We encode nothing as a null so it's a value.
         e.null()?;
         Ok(())
     }
 }
 
-impl<'b> minicbor::Decode<'b> for EmptyArg {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> minicbor::Decode<'b, C> for EmptyArg {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         // Nothing to do. Skip a value if there's one, but don't error if there's none.
         let _ = d.skip();
         Ok(Self)

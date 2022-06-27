@@ -170,12 +170,12 @@ impl SubmitTransactionArgs {
 }
 
 /// Memo decoder. Check if the memo is less than or equal to the maximum allowed size
-fn decode_memo(d: &mut minicbor::Decoder) -> Result<Option<String>, minicbor::decode::Error> {
+fn decode_memo<C>(d: &mut minicbor::Decoder, _: &mut C) -> Result<Option<String>, minicbor::decode::Error> {
     match d.datatype()? {
         Type::String => {
             let memo = d.str()?;
             if memo.as_bytes().len() > MULTISIG_MEMO_DATA_MAX_SIZE {
-                return Err(minicbor::decode::Error::Message("Memo size over limit"));
+                return Err(minicbor::decode::Error::message("Memo size over limit"));
             }
             Ok(Some(String::from(memo)))
         }
@@ -188,12 +188,12 @@ fn decode_memo(d: &mut minicbor::Decoder) -> Result<Option<String>, minicbor::de
 }
 
 /// Data decoder. Check if the data is less than or equal to the maximum allowed size
-fn decode_data(d: &mut minicbor::Decoder) -> Result<Option<ByteVec>, minicbor::decode::Error> {
+fn decode_data<C>(d: &mut minicbor::Decoder, _: &mut C) -> Result<Option<ByteVec>, minicbor::decode::Error> {
     match d.datatype()? {
         Type::Bytes => {
             let data = d.bytes()?;
             if data.len() > MULTISIG_MEMO_DATA_MAX_SIZE {
-                return Err(minicbor::decode::Error::Message("Data size over limit"));
+                return Err(minicbor::decode::Error::message("Data size over limit"));
             }
             Ok(Some(data.to_vec().into()))
         }
@@ -236,8 +236,8 @@ pub enum MultisigTransactionState {
     Expired = 4,
 }
 
-impl Encode for MultisigTransactionState {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+impl<C> Encode<C> for MultisigTransactionState {
+    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), encode::Error<W::Error>> {
         e.u8(match self {
             MultisigTransactionState::Pending => 0,
             MultisigTransactionState::ExecutedAutomatically => 1,
@@ -249,15 +249,15 @@ impl Encode for MultisigTransactionState {
     }
 }
 
-impl<'b> Decode<'b> for MultisigTransactionState {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> Decode<'b, C> for MultisigTransactionState {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         match d.u32()? {
             0 => Ok(Self::Pending),
             1 => Ok(Self::ExecutedAutomatically),
             2 => Ok(Self::ExecutedManually),
             3 => Ok(Self::Withdrawn),
             4 => Ok(Self::Expired),
-            x => Err(minicbor::decode::Error::UnknownVariant(x)),
+            x => Err(minicbor::decode::Error::unknown_variant(x)),
         }
     }
 }
@@ -409,7 +409,7 @@ mod tests {
         let enc = minicbor::to_vec(&tx).unwrap();
         let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
         assert!(dec.is_err());
-        assert_eq!(dec.unwrap_err().to_string(), "Memo size over limit");
+        assert_eq!(dec.unwrap_err().to_string(), "decode error: Memo size over limit");
     }
 
     #[test]
@@ -433,6 +433,6 @@ mod tests {
         let enc = minicbor::to_vec(&tx).unwrap();
         let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
         assert!(dec.is_err());
-        assert_eq!(dec.unwrap_err().to_string(), "Data size over limit");
+        assert_eq!(dec.unwrap_err().to_string(), "decode error: Data size over limit");
     }
 }
