@@ -408,12 +408,13 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             }
         })
         .collect::<syn::Result<_>>()?;
+    let supertraits = tr.supertraits.iter();
 
     let trait_ = {
         let attributes = tr.attrs.iter();
         quote! {
             #(#attributes)*
-            #vis trait #trait_ident: Send {
+            #vis trait #trait_ident: #(#supertraits +)* {
                 #(#endpoints)*
             }
         }
