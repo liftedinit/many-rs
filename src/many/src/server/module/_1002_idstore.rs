@@ -14,9 +14,10 @@ pub use get::*;
 pub use store::*;
 pub use types::*;
 
-#[many_module(name = IdStoreModule, id = 1002, namespace = idstore, many_crate = crate, drop_non_webauthn = [store])]
+#[many_module(name = IdStoreModule, id = 1002, namespace = idstore, many_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait IdStoreModuleBackend: Send {
+    #[many(check_webauthn, deny_anonymous)]
     fn store(&mut self, sender: &Identity, args: StoreArgs) -> Result<StoreReturns, ManyError>;
     fn get_from_recall_phrase(
         &self,
@@ -28,6 +29,7 @@ pub trait IdStoreModuleBackend: Send {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::server::module::testutils::call_module_envelope;
     use crate::{
         server::module::testutils::call_module_cbor,
         types::identity::{cose::testsutils::generate_random_eddsa_identity, testing::identity},
@@ -60,9 +62,21 @@ mod tests {
             .return_const(Ok(ret.clone()));
 
         let module = super::IdStoreModule::new(Arc::new(Mutex::new(mock)));
+        let mut envelope = coset::CoseSign1::default();
+        envelope
+            .protected
+            .header
+            .rest
+            .push((coset::Label::Text("webauthn".to_string()), true.into()));
         let store_returns: StoreReturns = minicbor::decode(
-            &call_module_cbor(1, &module, "idstore.store", minicbor::to_vec(data).unwrap())
-                .unwrap(),
+            &call_module_envelope(
+                1,
+                &module,
+                "idstore.store",
+                minicbor::to_vec(data).unwrap(),
+                &envelope,
+            )
+            .unwrap(),
         )
         .unwrap();
 

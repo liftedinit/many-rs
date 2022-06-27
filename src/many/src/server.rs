@@ -275,13 +275,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                 })
                 .and_then(|(message, maybe_module)| {
                     if let Some(ref m) = maybe_module {
-                        m.validate_envelope(&envelope, &message)?;
-                    }
-                    Ok((message, maybe_module))
-                })
-                .and_then(|(message, maybe_module)| {
-                    if let Some(ref m) = maybe_module {
-                        m.validate(&message)?;
+                        m.validate(&message, &envelope)?;
                     }
                     Ok((message, maybe_module))
                 })
