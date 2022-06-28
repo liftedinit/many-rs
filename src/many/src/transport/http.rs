@@ -1,5 +1,4 @@
-use crate::transport::{HandlerExecutorAdapter, LowLevelManyRequestHandler, ManyRequestHandler};
-use crate::types::identity::cose::CoseKeyIdentity;
+use crate::transport::LowLevelManyRequestHandler;
 use anyhow::anyhow;
 use coset::{CoseSign1, TaggedCborSerializable};
 use std::fmt::Debug;
@@ -18,12 +17,6 @@ const READ_BUFFER_LEN: usize = 1024 * 1024 * 2;
 pub struct HttpServer<E: LowLevelManyRequestHandler> {
     executor: E,
     term_signal: Arc<AtomicBool>,
-}
-
-impl<H: ManyRequestHandler> HttpServer<HandlerExecutorAdapter<H>> {
-    pub fn simple(identity: CoseKeyIdentity, handler: H) -> Self {
-        Self::new(HandlerExecutorAdapter::new(handler, identity))
-    }
 }
 
 impl<E: LowLevelManyRequestHandler> HttpServer<E> {

@@ -20,7 +20,7 @@ pub trait KvStoreCommandsModuleBackend: Send {
 mod tests {
     use super::*;
     use crate::server::module::testutils::call_module_cbor;
-    use crate::types::identity::tests::identity;
+    use crate::types::identity::testing::identity;
     use minicbor::bytes::ByteVec;
     use mockall::predicate;
     use std::sync::{Arc, Mutex};

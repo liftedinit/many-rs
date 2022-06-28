@@ -20,7 +20,7 @@ mod tests {
         str::FromStr,
         sync::{Arc, Mutex},
     };
-    use crate::types::identity::tests::identity;
+    use crate::types::identity::testing::identity;
     use mockall::predicate;
     use crate::{server::module::testutils::call_module_cbor, types::ledger::TokenAmount};
     use super::*;

@@ -1,5 +1,4 @@
 use crate::message::{ManyError, RequestMessage, ResponseMessage};
-use crate::types::identity::cose::CoseKeyIdentity;
 use async_trait::async_trait;
 use coset::CoseSign1;
 use std::fmt::Debug;
@@ -9,36 +8,6 @@ pub mod http;
 #[async_trait]
 pub trait LowLevelManyRequestHandler: Send + Sync + Debug {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String>;
-}
-
-#[derive(Debug)]
-pub struct HandlerExecutorAdapter<H: ManyRequestHandler + Debug> {
-    handler: H,
-    identity: CoseKeyIdentity,
-}
-
-impl<H: ManyRequestHandler + Debug> HandlerExecutorAdapter<H> {
-    pub fn new(handler: H, identity: CoseKeyIdentity) -> Self {
-        Self { handler, identity }
-    }
-}
-
-#[async_trait]
-impl<H: ManyRequestHandler + Debug> LowLevelManyRequestHandler for HandlerExecutorAdapter<H> {
-    async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
-        let request = crate::message::decode_request_from_cose_sign1(envelope, None)
-            .and_then(|message| self.handler.validate(&message).map(|_| message));
-
-        let response = match request {
-            Ok(x) => match self.handler.execute(x).await {
-                Err(e) => ResponseMessage::error(&self.identity.identity, e),
-                Ok(x) => x,
-            },
-            Err(e) => ResponseMessage::error(&self.identity.identity, e),
-        };
-
-        crate::message::encode_cose_sign1_from_response(response, &self.identity)
-    }
 }
 
 /// A simpler version of the [ManyRequestHandler] which only deals with methods and payloads.

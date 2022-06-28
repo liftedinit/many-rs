@@ -21,15 +21,15 @@ impl AsRef<[u8]> for AsyncToken {
     }
 }
 
-impl Encode for AsyncToken {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for AsyncToken {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         e.bytes(&self.0)?;
         Ok(())
     }
 }
 
-impl<'b> Decode<'b> for AsyncToken {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> Decode<'b, C> for AsyncToken {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         Ok(Self(d.bytes()?.to_vec()))
     }
 }
@@ -147,15 +147,15 @@ impl StatusReturn {
     }
 }
 
-impl Encode for StatusReturn {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for StatusReturn {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         if let StatusReturn::Done { response } = self {
             e.map(2)?;
             e.u8(1)?.bytes(
                 response
                     .clone()
                     .to_bytes()
-                    .map_err(|_err| Error::Message("Response could not be encoded."))?
+                    .map_err(|_err| Error::message("Response could not be encoded."))?
                     .as_ref(),
             )?
         } else {
@@ -168,8 +168,8 @@ impl Encode for StatusReturn {
     }
 }
 
-impl<'b> Decode<'b> for StatusReturn {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> Decode<'b, C> for StatusReturn {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         let len = d.map()?;
         let mut i = 0;
 
@@ -190,10 +190,10 @@ impl<'b> Decode<'b> for StatusReturn {
                     1 => {
                         result = Some(d.bytes()?);
                     }
-                    x => return Err(minicbor::decode::Error::UnknownVariant(u32::from(x))),
+                    x => return Err(minicbor::decode::Error::unknown_variant(u32::from(x))),
                 },
 
-                _ => return Err(minicbor::decode::Error::Message("Invalid key type.")),
+                _ => return Err(minicbor::decode::Error::message("Invalid key type.")),
             }
 
             i += 1;
@@ -204,17 +204,17 @@ impl<'b> Decode<'b> for StatusReturn {
 
         Self::from_kind(
             key.map_or(Err("Invalid variant."), Ok)
-                .map_err(minicbor::decode::Error::Message)?,
+                .map_err(minicbor::decode::Error::message)?,
             match result {
                 Some(result) => Some(ResponseMessage::from_bytes(result).map_err(|_| {
-                    minicbor::decode::Error::Message(
+                    minicbor::decode::Error::message(
                         "Invalid result type, expected ResponseMessage.",
                     )
                 })?),
                 _ => None,
             },
         )
-        .map_err(|_| minicbor::decode::Error::Message("Invalid variant or result."))
+        .map_err(|_| minicbor::decode::Error::message("Invalid variant or result."))
     }
 }
 
@@ -233,7 +233,7 @@ mod tests {
     use crate::protocol::{Attribute, AttributeSet};
     use crate::server::module::_8_async::attributes::ASYNC;
     use crate::server::module::testutils::call_module_cbor;
-    use crate::types::identity::tests::identity;
+    use crate::types::identity::testing::identity;
     use mockall::predicate;
     use proptest::prelude::*;
     use std::sync::{Arc, Mutex};

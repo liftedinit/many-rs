@@ -23,7 +23,8 @@ macro_rules! reexport_module {
 reexport_module!(
     base: _0_base;
     blockchain: _1_blockchain;
-    ledger: _2_ledger + _4_ledger_transactions + _6_ledger_commands;
+    ledger: _2_ledger + _6_ledger_commands;
+    events: _4_events;
     kvstore: _3_kvstore + _7_kvstore_commands;
     r#async: _8_async;
     account: _9_account;
@@ -36,39 +37,38 @@ reexport_module!(
 /// Empty returns are empty semantically (unit type), but we don't want to break CBOR
 /// decoders so we use a null value instead.
 /// We expect decoders to skip the value anyway.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct EmptyReturn;
 
-impl minicbor::Encode for EmptyReturn {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> minicbor::Encode<C> for EmptyReturn {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         // We encode nothing as a null so it's a value.
         e.null()?;
         Ok(())
     }
 }
 
-impl<'b> minicbor::Decode<'b> for EmptyReturn {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> minicbor::Decode<'b, C> for EmptyReturn {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         // Nothing to do. Skip a value if there's one, but don't error if there's none.
         let _ = d.skip();
         Ok(Self)
     }
 }
 
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, PartialEq)]
 pub struct EmptyArg;
 
-impl minicbor::Encode for EmptyArg {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> minicbor::Encode<C> for EmptyArg {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         // We encode nothing as a null so it's a value.
         e.null()?;
         Ok(())
     }
 }
 
-impl<'b> minicbor::Decode<'b> for EmptyArg {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> minicbor::Decode<'b, C> for EmptyArg {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         // Nothing to do. Skip a value if there's one, but don't error if there's none.
         let _ = d.skip();
         Ok(Self)
@@ -94,14 +94,12 @@ pub trait ManyModule: Sync + Send + Debug {
     fn info(&self) -> &ManyModuleInfo;
 
     /// Verify that a message is well formed (ACLs, arguments, etc).
-    fn validate(&self, _message: &RequestMessage) -> Result<(), ManyError> {
-        Ok(())
-    }
-
-    fn validate_envelope(
+    /// This method has access to the envelope so it can validate COSE headers
+    /// or other properties.
+    fn validate(
         &self,
-        _envelope: &coset::CoseSign1,
         _message: &RequestMessage,
+        _envelope: &coset::CoseSign1,
     ) -> Result<(), ManyError> {
         Ok(())
     }
@@ -113,7 +111,7 @@ pub trait ManyModule: Sync + Send + Debug {
 #[cfg(test)]
 pub(crate) mod testutils {
     use crate::message::RequestMessage;
-    use crate::types::identity::tests;
+    use crate::types::identity::testing::identity;
     use crate::{ManyError, ManyModule};
 
     pub fn call_module(
@@ -136,17 +134,27 @@ pub(crate) mod testutils {
         endpoint: impl ToString,
         payload: Vec<u8>,
     ) -> Result<Vec<u8>, ManyError> {
+        call_module_envelope(key, module, endpoint, payload, &coset::CoseSign1::default())
+    }
+
+    pub fn call_module_envelope(
+        key: u32,
+        module: &'_ impl ManyModule,
+        endpoint: impl ToString,
+        payload: Vec<u8>,
+        envelope: &coset::CoseSign1,
+    ) -> Result<Vec<u8>, ManyError> {
         let mut message = RequestMessage::default()
             .with_method(endpoint.to_string())
             .with_data(payload);
 
         message = if key > 0 {
-            message.with_from(tests::identity(key))
+            message.with_from(identity(key))
         } else {
             message
         };
 
-        module.validate(&message)?;
+        module.validate(&message, envelope)?;
         let response = smol::block_on(async { module.execute(message).await })?;
         response.data
     }

@@ -27,10 +27,11 @@ impl Debug for CborAny {
     }
 }
 
-impl Encode for CborAny {
+impl<C> Encode<C> for CborAny {
     fn encode<W: Write>(
         &self,
         e: &mut Encoder<W>,
+        _: &mut C,
     ) -> Result<(), minicbor::encode::Error<W::Error>> {
         match self {
             CborAny::Bool(b) => {
@@ -60,8 +61,8 @@ impl Encode for CborAny {
     }
 }
 
-impl<'d> Decode<'d> for CborAny {
-    fn decode(d: &mut Decoder<'d>) -> Result<Self, minicbor::decode::Error> {
+impl<'d, C> Decode<'d, C> for CborAny {
+    fn decode(d: &mut Decoder<'d>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         match d.datatype()? {
             Type::Bool => Ok(CborAny::Bool(d.bool()?)),
             Type::U8
@@ -84,10 +85,7 @@ impl<'d> Decode<'d> for CborAny {
                     minicbor::decode::Error,
                 >>()?))
             }
-            x => Err(minicbor::decode::Error::TypeMismatch(
-                x,
-                "invalid attribute type.",
-            )),
+            x => Err(minicbor::decode::Error::type_mismatch(x)),
         }
     }
 }

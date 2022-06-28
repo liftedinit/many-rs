@@ -1,8 +1,10 @@
+use anyhow::anyhow;
 use clap::{ArgGroup, Parser};
-use coset::CborSerializable;
+use coset::{CborSerializable, CoseSign1};
 use many::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
 use many::message::{
-    encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
+    decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
+    RequestMessageBuilder, ResponseMessage,
 };
 use many::server::module::ledger;
 use many::server::module::r#async::attributes::AsyncAttribute;
@@ -83,9 +85,14 @@ struct HsmIdOpt {
 #[clap(
     group(
         ArgGroup::new("hsm")
-        .multiple(true)
-        .args(&["module", "slot", "keyid"])
-        .requires_all(&["module", "slot", "keyid"])
+            .multiple(true)
+            .args(&["module", "slot", "keyid"])
+            .requires_all(&["module", "slot", "keyid"])
+    ),
+    group(
+        ArgGroup::new("action")
+            .args(&["server", "hex", "base64"])
+            .required(true)
     )
 )]
 struct MessageOpt {
@@ -97,13 +104,22 @@ struct MessageOpt {
     #[clap(long)]
     timestamp: Option<String>,
 
+    /// The server to connect to.
+    #[clap(long)]
+    server: Option<url::Url>,
+
     /// If true, prints out the hex value of the message bytes.
-    #[clap(long, conflicts_with("base64"))]
+    #[clap(long)]
     hex: bool,
 
     /// If true, prints out the base64 value of the message bytes.
-    #[clap(long, conflicts_with("hex"))]
+    #[clap(long)]
     base64: bool,
+
+    /// If used, send the message from hexadecimal to the server and wait for
+    /// the response.
+    #[clap(long, requires("server"))]
+    from_hex: Option<String>,
 
     /// Show the async token and exit right away. By default, will poll for the
     /// result of the async operation.
@@ -113,10 +129,6 @@ struct MessageOpt {
     /// The identity to send it to.
     #[clap(long)]
     to: Option<Identity>,
-
-    /// The server to connect to.
-    #[clap(long)]
-    server: Option<url::Url>,
 
     /// HSM PKCS#11 module path
     #[clap(long, conflicts_with("pem"))]
@@ -131,7 +143,7 @@ struct MessageOpt {
     keyid: Option<String>,
 
     /// The method to call.
-    method: String,
+    method: Option<String>,
 
     /// The content of the message itself (its payload).
     data: Option<String>,
@@ -238,6 +250,24 @@ fn message(
 ) -> Result<(), anyhow::Error> {
     let client = ManyClient::new(s, to, key).unwrap();
     let response = client.call_raw(method, &data)?;
+
+    show_response(response, client, r#async)
+}
+
+fn message_from_hex(
+    s: Url,
+    to: Identity,
+    key: CoseKeyIdentity,
+    hex: String,
+    r#async: bool,
+) -> Result<(), anyhow::Error> {
+    let client = ManyClient::new(s.clone(), to, key).unwrap();
+
+    let data = hex::decode(hex)?;
+    let envelope = CoseSign1::from_slice(&data).map_err(|e| anyhow!(e))?;
+
+    let cose_sign1 = ManyClient::send_envelope(s, envelope)?;
+    let response = decode_response_from_cose_sign1(cose_sign1, None).map_err(|e| anyhow!(e))?;
 
     show_response(response, client, r#async)
 }
@@ -362,7 +392,20 @@ fn main() {
                 .map_or(vec![], |d| cbor_diag::parse_diag(&d).unwrap().to_bytes());
 
             if let Some(s) = o.server {
-                match message(s, to_identity, key, o.method, data, o.r#async) {
+                let result = if let Some(hex) = o.from_hex {
+                    message_from_hex(s, to_identity, key, hex, o.r#async)
+                } else {
+                    message(
+                        s,
+                        to_identity,
+                        key,
+                        o.method.expect("--method is required"),
+                        data,
+                        o.r#async,
+                    )
+                };
+
+                match result {
                     Ok(()) => {}
                     Err(err) => {
                         error!(
@@ -380,7 +423,7 @@ fn main() {
                     .version(1)
                     .from(from_identity)
                     .to(to_identity)
-                    .method(o.method)
+                    .method(o.method.expect("--method is required"))
                     .data(data)
                     .build()
                     .unwrap();

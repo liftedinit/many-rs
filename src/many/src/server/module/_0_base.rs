@@ -49,8 +49,8 @@ impl Status {
     }
 }
 
-impl Encode for Status {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>) -> Result<(), Error<W::Error>> {
+impl<C> Encode<C> for Status {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         #[rustfmt::skip]
         e.begin_map()?
             .u8(0)?.u8(self.version)?
@@ -83,8 +83,8 @@ impl Encode for Status {
     }
 }
 
-impl<'b> Decode<'b> for Status {
-    fn decode(d: &mut Decoder<'b>) -> Result<Self, minicbor::decode::Error> {
+impl<'b, C> Decode<'b, C> for Status {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         let mut builder = StatusBuilder::default();
         let len = d.map()?;
         let mut i = 0;
@@ -103,7 +103,7 @@ impl<'b> Decode<'b> for Status {
                         2 => {
                             let bytes = d.bytes()?;
                             let key: CoseKey = CoseKey::from_slice(bytes).map_err(|_e| {
-                                minicbor::decode::Error::Message("Invalid cose key.")
+                                minicbor::decode::Error::message("Invalid cose key.")
                             })?;
                             builder.public_key(key)
                         }
@@ -131,7 +131,7 @@ impl<'b> Decode<'b> for Status {
         builder
             .extras(extras)
             .build()
-            .map_err(|_e| minicbor::decode::Error::Message("could not build"))
+            .map_err(|_e| minicbor::decode::Error::message("could not build"))
     }
 }
 

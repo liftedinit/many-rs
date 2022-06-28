@@ -20,7 +20,7 @@ pub trait KvStoreModuleBackend: Send {
 mod tests {
     use super::*;
     use crate::server::module::testutils::{call_module, call_module_cbor};
-    use crate::types::identity::tests::identity;
+    use crate::types::identity::testing::identity;
     use minicbor::bytes::ByteVec;
     use mockall::predicate;
     use std::sync::{Arc, Mutex};
@@ -29,7 +29,7 @@ mod tests {
     fn info() {
         let mut mock = MockKvStoreModuleBackend::new();
         mock.expect_info()
-            .with(predicate::eq(tests::identity(1)), predicate::eq(InfoArg {}))
+            .with(predicate::eq(identity(1)), predicate::eq(InfoArg {}))
             .times(1)
             .return_const(Ok(InfoReturns {
                 hash: ByteVec::from(vec![9u8; 8]),
@@ -48,7 +48,7 @@ mod tests {
         };
         let mut mock = MockKvStoreModuleBackend::new();
         mock.expect_get()
-        .with(predicate::eq(tests::identity(1)), predicate::eq(data.clone()))
+        .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
         .times(1).returning(|_id, _args| {
             Ok(GetReturns {
                 value: Some(ByteVec::from(vec![1, 2, 3, 4])),

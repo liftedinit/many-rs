@@ -33,7 +33,7 @@ mod tests {
     use super::*;
     use crate::{
         server::module::testutils::{call_module, call_module_cbor},
-        types::identity::tests::identity,
+        types::identity::testing::identity,
         types::{ledger::TokenAmount, VecOrSingle},
     };
     use minicbor::bytes::ByteVec;
@@ -55,7 +55,7 @@ mod tests {
         let mut mock = MockLedgerModuleBackend::new();
         mock.expect_info()
             .with(
-                predicate::eq(tests::identity(1)),
+                predicate::eq(identity(1)),
                 predicate::eq(InfoArgs {}),
             )
             .times(1)
@@ -86,7 +86,7 @@ mod tests {
         let mut mock = MockLedgerModuleBackend::new();
         mock.expect_balance()
             .with(
-                predicate::eq(tests::identity(1)),
+                predicate::eq(identity(1)),
                 predicate::eq(data.clone()),
             )
             .times(1)
