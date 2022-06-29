@@ -233,7 +233,7 @@ macro_rules! define_event_info_symbol {
 macro_rules! define_event_info_is_about {
     (@check_id $id: ident) => {};
     (@check_id $id: ident $name: ident id $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        if $name.is_some() && $name == $id {
+        if $id.is_some() && $name == $id {
             return true;
         }
         define_event_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
