@@ -233,7 +233,13 @@ macro_rules! define_event_info_symbol {
 macro_rules! define_event_info_is_about {
     (@check_id $id: ident) => {};
     (@check_id $id: ident $name: ident id $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        if $id.is_some() && $name == $id {
+        if $name == $id {
+            return true;
+        }
+        define_event_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
+    };
+    (@check_id $id: ident $name: ident id_non_null $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if $name.is_some() && $name == $id {
             return true;
         }
         define_event_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
@@ -496,7 +502,7 @@ define_event! {
     [9, 1, 3]   AccountMultisigExecute (module::account::features::multisig::ExecuteArgs) {
         1     | account:                Identity                                [ id ],
         2     | token:                  ByteVec,
-        3     | executer:               Option<Identity>                        [ id ],
+        3     | executer:               Option<Identity>                        [ id_non_null ],
         4     | response:               ResponseMessage,
     },
     [9, 1, 4]   AccountMultisigWithdraw (module::account::features::multisig::WithdrawArgs) {
