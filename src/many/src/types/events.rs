@@ -637,6 +637,22 @@ mod test {
     }
 
     #[test]
+    fn event_info_is_about_null() {
+        let i0 = Identity::public_key_raw([0; 28]);
+        let i01 = i0.with_subresource_id_unchecked(1);
+        let token = Vec::new().into();
+
+        let s0 = EventInfo::AccountMultisigExecute {
+            account: i01,
+            token,
+            executer: None,
+            response: Default::default(),
+        };
+        assert!(s0.is_about(&i01));
+        assert!(!s0.is_about(&Identity::anonymous()));
+    }
+
+    #[test]
     fn event_info_symbol() {
         let i0 = Identity::public_key_raw([0; 28]);
         let i1 = Identity::public_key_raw([1; 28]);
