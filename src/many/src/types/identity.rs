@@ -471,6 +471,11 @@ impl InnerIdentity {
             return Err(ManyError::invalid_identity_prefix(value[0..0].to_string()));
         }
 
+        // Prevent subtract with overflow in the next block
+        if value.len() < 3 {
+            return Err(ManyError::invalid_identity());
+        }
+
         if &value[1..] == "aa" || &value[1..] == "aaaa" {
             Ok(Self::anonymous())
         } else {
@@ -837,5 +842,12 @@ pub mod tests {
                 172, 246, 68, 3, 30, 159, 41, 73, 183, 110,
             ])],
         );
+    }
+
+    #[test]
+    fn from_str_overflow() {
+        assert!(Identity::from_str("m").is_err());
+        assert!(Identity::from_str("ma").is_err());
+        assert!(Identity::from_str("maa").is_ok());
     }
 }
