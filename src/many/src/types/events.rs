@@ -238,6 +238,12 @@ macro_rules! define_event_info_is_about {
         }
         define_event_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
     };
+    (@check_id $id: ident $name: ident id_non_null $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if $name.is_some() && $name == $id {
+            return true;
+        }
+        define_event_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
+    };
     (@check_id $id: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
         define_event_info_is_about!(@check_id $id $( $name $( $tag )*, )* )
     };
@@ -496,7 +502,7 @@ define_event! {
     [9, 1, 3]   AccountMultisigExecute (module::account::features::multisig::ExecuteArgs) {
         1     | account:                Identity                                [ id ],
         2     | token:                  ByteVec,
-        3     | executer:               Option<Identity>                        [ id ],
+        3     | executer:               Option<Identity>                        [ id_non_null ],
         4     | response:               ResponseMessage,
     },
     [9, 1, 4]   AccountMultisigWithdraw (module::account::features::multisig::WithdrawArgs) {
@@ -628,6 +634,22 @@ mod test {
         assert!(s0.is_about(&i01));
         assert!(!s0.is_about(&i1));
         assert!(!s0.is_about(&i11));
+    }
+
+    #[test]
+    fn event_info_is_about_null() {
+        let i0 = Identity::public_key_raw([0; 28]);
+        let i01 = i0.with_subresource_id_unchecked(1);
+        let token = Vec::new().into();
+
+        let s0 = EventInfo::AccountMultisigExecute {
+            account: i01,
+            token,
+            executer: None,
+            response: Default::default(),
+        };
+        assert!(s0.is_about(&i01));
+        assert!(!s0.is_about(&Identity::anonymous()));
     }
 
     #[test]
