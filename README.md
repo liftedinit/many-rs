@@ -25,7 +25,21 @@ Features
 
 # Installation
 
-1. Install Rust using [rustup](https://rustup.rs/)
+1. Update your package database
+```shell
+# Ubuntu
+$ sudo apt update
+
+# CentOS
+$ sudo yum update
+
+# Archlinux
+$ sudo pacman -Syu
+
+# macOS
+$ brew update
+```
+2. Install Rust using [rustup](https://rustup.rs/)
 ```shell
 # Ubuntu/CentOS
 $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -37,7 +51,7 @@ $ sudo pacman -S rustup
 # macOS
 $ brew install rustup-init
 ```
-2. Install build dependencies
+3. Install build dependencies
 ```shell
 # Ubuntu
 $ sudo apt install build-essential pkg-config clang libssl-dev libsofthsm2
@@ -48,13 +62,13 @@ $ sudo yum install clang gcc softhsm git pkgconf
 # Archlinux
 $ sudo pacman -S clang gcc softhsm git pkgconf
 ```
-3. Build `many-rs`
+4. Build `many-rs`
 ```shell
 $ git clone https://github.com/liftedinit/many-rs.git
 $ cd many-rs
 $ cargo build
 ```
-4. Run tests
+5. Run tests
 ```shell
 $ cargo test
 ```
