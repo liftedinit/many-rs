@@ -83,7 +83,3 @@ $ ./target/debug/many message --server https://alberto.app/api 'status' '{}'
 4. Commit your changes (`git commit -am 'Add some fooBar'`)
 5. Push to the branch (`git push origin feature/fooBar`)
 6. Create a new Pull Request
-
-# Social
-
-![twitter](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2Fliftedinit)
