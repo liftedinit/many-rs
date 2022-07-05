@@ -74,8 +74,9 @@ $ cargo test
 ```
 
 # Usage example
+Below are some examples of how to use the `many` CLI.
 
-- Get the MANY ID of some Ed25519 private key
+## Retrieve the MANY ID of a key
 ```shell
 # Generate a new Ed25519 key
 $ openssl genpkey -algorithm Ed25519 -out id1.pem
@@ -85,7 +86,7 @@ $ ./target/debug/many id id1.pem
 mafdzlw6ktmpncikho6wwswzej7rpja7fgtbn33xzwkfngdygc
 ```
 
-- Retrieve the status of a running MANY server
+## Retrieve the status of a running MANY server
 ```shell
 $ ./target/debug/many message --server https://alberto.app/api 'status' '{}'
 {_
