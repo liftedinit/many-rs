@@ -27,16 +27,23 @@ Features
 
 1. Install Rust using [rustup](https://rustup.rs/)
 ```shell
+# Ubuntu
 $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-# Choose 1) Proceed with installation (default)
-
-# Configure your current shell
 $ source $HOME/.cargo/env
+
+# Archlinux
+$ sudo pacman -S rustup
+
+# macOS
+$ brew install rustup-init
 ```
 2. Install build dependencies
 ```shell
 # Ubuntu
 $ sudo apt install build-essential pkg-config clang libssl-dev libsofthsm2
+
+# Archlinux
+$ sudo pacman -S clang gcc softhsm git pkgconf
 ```
 3. Build `many-rs`
 ```shell
