@@ -35,9 +35,6 @@ $ sudo yum update
 
 # Archlinux
 $ sudo pacman -Syu
-
-# macOS
-$ brew update
 ```
 2. Install Rust using [rustup](https://rustup.rs/)
 ```shell
@@ -54,6 +51,9 @@ $ sudo yum install clang gcc softhsm git pkgconf
 
 # Archlinux
 $ sudo pacman -S clang gcc softhsm git pkgconf
+
+# macOS
+$ git # and follow the instructions
 ```
 4. Build `many-rs`
 ```shell
