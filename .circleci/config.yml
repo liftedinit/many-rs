@@ -1,0 +1,264 @@
+version: 2.1
+
+orbs:
+  codecov: codecov/codecov@3.2.3
+  rust: circleci/rust@1.6.0
+  detect: circleci/os-detect@0.3.0
+
+rust_cache_path: &rust_cache_path
+  paths:
+    - ~/.cargo
+    - target/
+
+executors:
+  linux2004:
+    machine:
+      image: ubuntu-2004:current
+  linux2204:
+    machine:
+      image: ubuntu-2204:current
+  macos:
+    macos:
+      xcode: 13.4.1
+
+jobs:
+  lint:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-build-{{ arch }}-
+      - rust/install:
+          version: nightly
+      - rust/format:
+          nightly-toolchain: true
+          with_cache: false
+      - rust/clippy:
+          flags: --all-targets --all-features -- -D clippy::all
+          with_cache: false
+
+  build:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-build-{{ arch }}-
+      - rust/install:
+          version: nightly
+      - rust/build:
+          crate: --all-features
+          with_cache: false
+      - save_cache:
+          key: v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
+  test:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-test-{{ arch }}-
+            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-build-{{ arch }}-
+      - rust/install:
+          version: nightly
+      - rust/test:
+          package: --lib --all-targets --all-features
+      - rust/test:
+          package: --all-features --doc
+      - save_cache:
+          key: v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
+  coverage:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-many-rs-coverage-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-coverage-{{ arch }}-
+            - v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-test-{{ arch }}-
+            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-build-{{ arch }}-
+      - rust/install:
+          version: nightly
+      - run:
+          name: install llvm-tools-preview
+          command: rustup component add llvm-tools-preview
+      - run:
+          name: install grcov
+          command: cargo install grcov --root target/
+      - run:
+          name: generate test coverage
+          command: RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="coverage/lcov-%p-%m.profraw" cargo test --lib --all-targets --all-features
+      - run:
+          name: generate coverage report
+          command: target/bin/grcov coverage --binary-path target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o coverage/report.lcov
+      - codecov/upload:
+          file: coverage/report.lcov
+      - save_cache:
+          key: v1-many-rs-coverage-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
+  create:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - detect/init
+      - rust/install:
+          version: nightly
+      - rust/build:
+          release: true
+          with_cache: false
+      - run: mkdir -p artifacts
+      - run:
+          name: creating release archive
+          command: file target/release/* | grep 'executable\|shared object' | cut -d ':' -f 1 | xargs tar czvf artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
+      - run:
+          name: creating release shasum
+          command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
+      - persist_to_workspace:
+          root: artifacts
+          paths:
+            - "*.tar.gz"
+            - "*.txt"
+  publish:
+    parameters:
+      pre-release:
+        type: boolean
+        default: false
+    docker:
+      - image: cibuilds/github:0.10
+    steps:
+      - attach_workspace:
+          at: ~/project/artifacts
+      - when:
+          condition:
+            not: << parameters.pre-release >>
+          steps:
+            - run:
+                name: publish pre-release
+                command: ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
+      - when:
+          condition: << parameters.pre-release >>
+          steps:
+            - run:
+                name: publish pre-release
+                command: ghr -prerelease -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
+  audit:
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-ghjobs-audit-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-ghjobs-audit-{{ arch }}-
+      - run:
+          name: install cargo-audit
+          command: cargo install cargo-audit
+      - run:
+          name: cargo audit
+          command: cargo audit
+      - save_cache:
+          key: v1-ghjobs-audit-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
+
+workflows:
+  ci:
+    jobs:
+      - lint:
+          name: lint-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004]
+      - build:
+          name: build-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004, linux2204, macos]
+      - test:
+          name: test-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004, linux2204, macos]
+          requires:
+            - build-v<< matrix.os >>
+      - coverage:
+          name: coverage-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004]
+          requires:
+            - test-v<< matrix.os >>
+  release:
+    jobs:
+      - create:
+          name: create-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004, linux2204, macos]
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+$/
+                - /^\d+\.\d+\.\d+-.*-rc.*$/
+                - /^\d+\.\d+\.\d+-pre.*$/
+      - publish:
+          name: publish
+          pre-release: false
+          context:
+            - GITHUB_CREDS
+          requires:
+            - create
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^\d+\.\d+\.\d+$/
+      - publish:
+          name: publish-pre-release
+          pre-release: true
+          context:
+            - GITHUB_CREDS
+          requires:
+            - create
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+-.*-rc.*$/
+                - /^\d+\.\d+\.\d+-pre.*$/
+  security:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - main
+    jobs:
+      - audit
