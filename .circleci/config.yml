@@ -186,6 +186,9 @@ jobs:
 
 workflows:
   ci:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - lint:
           name: lint-v<< matrix.os >>
@@ -212,6 +215,9 @@ workflows:
           requires:
             - test-v<< matrix.os >>
   release:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - create:
           name: create-v<< matrix.os >>
@@ -253,12 +259,9 @@ workflows:
                 - /^\d+\.\d+\.\d+-.*-rc.*$/
                 - /^\d+\.\d+\.\d+-pre.*$/
   security:
-    triggers:
-      - schedule:
-          cron: "0 0 * * *"
-          filters:
-            branches:
-              only:
-                - main
+    when:
+      and:
+        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+        - equal: [ "Audit", << pipeline.schedule.name >> ]
     jobs:
       - audit
