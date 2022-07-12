@@ -67,7 +67,6 @@ jobs:
         type: executor
     executor: << parameters.os >>
     environment:
-      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
       SOFTHSM2_CONF: /tmp/softhsm2.conf
     steps:
       - checkout
@@ -212,6 +211,10 @@ commands:
                   sudo apt -y install build-essential pkg-config clang libssl-dev libsofthsm2
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
+            - run:
+                name: exporting linux environment variable
+                command: |
+                  echo 'export PKCS11_SOFTHSM2_MODULE=/usr/lib/softhsm/libsofthsm2.so' >> $BASH_ENV
 
   macos-dep:
     description: install macos dependencies
@@ -227,10 +230,12 @@ commands:
                 name: installing macos dependencies
                 command: |
                   brew install softhsm
-                  ln -s /usr/local/lib/softhsm /usr/lib/softhsm
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
-
+            - run:
+                name: exporting macos environment variable
+                command: |
+                  echo 'export PKCS11_SOFTHSM2_MODULE=/usr/local/lib/softhsm/libsofthsm2.so' >> $BASH_ENV
 workflows:
   ci:
     when:
