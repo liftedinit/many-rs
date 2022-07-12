@@ -80,8 +80,10 @@ jobs:
           version: nightly
       - rust/test:
           package: --lib --all-targets --all-features
+          with_cache: false
       - rust/test:
           package: --all-features --doc
+          with_cache: false
       - save_cache:
           key: v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
@@ -259,7 +261,7 @@ workflows:
           name: build-v<< matrix.os >>
           matrix:
             parameters:
-              os: [linux2004, linux2204, macos]
+              os: [linux2004, macos]
       - test:
           pre-steps:
             - linux-dep:
@@ -269,7 +271,7 @@ workflows:
           name: test-v<< matrix.os >>
           matrix:
             parameters:
-              os: [linux2004, linux2204, macos]
+              os: [linux2004, macos]
           requires:
             - build-v<< matrix.os >>
       - coverage:
@@ -298,7 +300,7 @@ workflows:
           name: create-v<< matrix.os >>
           matrix:
             parameters:
-              os: [linux2004, linux2204, macos]
+              os: [linux2004, macos]
           filters:
             branches:
               ignore: /.*/
