@@ -61,12 +61,13 @@ jobs:
       - save_cache:
           key: v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
-  test:
+  test-linux:
     parameters:
       os:
         type: executor
     executor: << parameters.os >>
     environment:
+      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
       SOFTHSM2_CONF: /tmp/softhsm2.conf
     steps:
       - checkout
@@ -78,27 +79,33 @@ jobs:
             - v1-many-rs-build-{{ arch }}-
       - rust/install:
           version: nightly
-      - when:
-          condition:
-            matches: { pattern: "^linux.*$", value: << parameters.os >> }
-          steps:
-            - rust/test:
-                package: --lib --all-targets --all-features
-                with_cache: false
-      - when:
-          condition:
-            equal: [macos, << parameters.os >>]
-          steps:
-            - rust/test:
-                package: --lib --all-targets --features default,client,raw,testing,trace_error_creation
-                with_cache: false
-      - when:
-          condition:
-            matches: { pattern: "^linux.*$", value: << parameters.os >> }
-          steps:
-            - rust/test:
-                package: --all-features --doc
-                with_cache: false
+      - rust/test:
+          package: --lib --all-targets --all-features
+          with_cache: false
+      - rust/test:
+          package: --all-features --doc
+          with_cache: false
+      - save_cache:
+          key: v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
+  test-macos:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-test-{{ arch }}-
+            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-build-{{ arch }}-
+      - rust/install:
+          version: nightly
+      - rust/test:
+          package: --lib --all-targets --features default,client,raw,testing,trace_error_creation
+          with_cache: false
       - save_cache:
           key: v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
@@ -228,31 +235,7 @@ commands:
                   sudo apt -y install build-essential pkg-config clang libssl-dev libsofthsm2
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
-            - run:
-                name: exporting linux environment variable
-                command: |
-                  echo 'export PKCS11_SOFTHSM2_MODULE=/usr/lib/softhsm/libsofthsm2.so' >> $BASH_ENV
 
-  macos-dep:
-    description: install macos dependencies
-    parameters:
-      os:
-        type: string
-    steps:
-      - when:
-          condition:
-            equal: [macos, << parameters.os >>]
-          steps:
-            - run:
-                name: installing macos dependencies
-                command: |
-                  brew install softhsm
-                  mkdir /tmp/tokens
-                  echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
-            - run:
-                name: exporting macos environment variable
-                command: |
-                  echo 'export PKCS11_SOFTHSM2_MODULE=/usr/local/lib/softhsm/libsofthsm2.so' >> $BASH_ENV
 workflows:
   ci:
     when:
@@ -277,23 +260,29 @@ workflows:
           matrix:
             parameters:
               os: [linux2004, macos]
-      - test:
+      - test-linux:
           pre-steps:
             - linux-dep:
                 os: << matrix.os >>
+          name: test-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004]
+          requires:
+            - build-v<< matrix.os >>
+      - test-macos:
+          pre-steps:
             - macos-dep:
                 os: << matrix.os >>
           name: test-v<< matrix.os >>
           matrix:
             parameters:
-              os: [linux2004, macos]
+              os: [macos]
           requires:
             - build-v<< matrix.os >>
       - coverage:
           pre-steps:
             - linux-dep:
-                os: << matrix.os >>
-            - macos-dep:
                 os: << matrix.os >>
           name: coverage-v<< matrix.os >>
           matrix:
