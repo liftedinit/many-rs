@@ -103,6 +103,7 @@ jobs:
             - v1-many-rs-build-{{ arch }}-
       - rust/install:
           version: nightly
+      # There are issues with HSM and macos testing (Segfault 11). Disable HSM testing on macos for now.
       - rust/test:
           package: --lib --all-targets --features default,client,raw,testing,trace_error_creation
           with_cache: false
@@ -218,8 +219,8 @@ jobs:
 
 # Re-usable commands
 commands:
-  linux-dep:
-    description: install linux dependencies
+  install-deps:
+    description: install << parameters.os>> dependencies
     parameters:
       os:
         type: string
@@ -244,7 +245,7 @@ workflows:
     jobs:
       - lint:
           pre-steps:
-            - linux-dep:
+            - install-deps:
                 os: << matrix.os >>
           name: lint-v<< matrix.os >>
           matrix:
@@ -252,7 +253,7 @@ workflows:
               os: [linux2004]
       - build:
           pre-steps:
-            - linux-dep:
+            - install-deps:
                 os: << matrix.os >>
           name: build-v<< matrix.os >>
           matrix:
@@ -260,7 +261,7 @@ workflows:
               os: [linux2004, macos]
       - test-linux:
           pre-steps:
-            - linux-dep:
+            - install-deps:
                 os: << matrix.os >>
           name: test-v<< matrix.os >>
           matrix:
@@ -277,7 +278,7 @@ workflows:
             - build-v<< matrix.os >>
       - coverage:
           pre-steps:
-            - linux-dep:
+            - install-deps:
                 os: << matrix.os >>
           name: coverage-v<< matrix.os >>
           matrix:
@@ -292,7 +293,7 @@ workflows:
     jobs:
       - create:
           pre-steps:
-            - linux-dep:
+            - install-deps:
                 os: << matrix.os >>
           name: create-v<< matrix.os >>
           matrix:
@@ -303,9 +304,10 @@ workflows:
               ignore: /.*/
             tags:
               only:
-                - /^\d+\.\d+\.\d+$/
-                - /^\d+\.\d+\.\d+-.*-rc.*$/
-                - /^\d+\.\d+\.\d+-pre.*$/
+                - /^\d+\.\d+\.\d+$/                 # e.g., 0.1.1, 1.0.0
+                - /^\d+\.\d+\.\d+-(alpha|beta)$/    # e.g., 0.1.1-alpha, 2.3.1-beta
+                - /^\d+\.\d+\.\d+-.*-rc.*$/         # e.g., 0.1.1-alpha-rc1, 1.3.4-beta-rc4
+                - /^\d+\.\d+\.\d+-pre.*$/           # e.g., 0.1.1-prealpha-3, 1.5.6-prealpha-8
       - publish:
           name: publish
           pre-release: false
@@ -318,7 +320,8 @@ workflows:
               ignore: /.*/
             tags:
               only:
-                - /^\d+\.\d+\.\d+$/
+                - /^\d+\.\d+\.\d+$/                 # e.g., 0.1.1, 1.0.0
+                - /^\d+\.\d+\.\d+-(alpha|beta)$/    # e.g., 0.1.1-alpha, 2.3.1-beta
       - publish:
           name: publish-pre-release
           pre-release: true
@@ -331,8 +334,8 @@ workflows:
               ignore: /.*/
             tags:
               only:
-                - /^\d+\.\d+\.\d+-.*-rc.*$/
-                - /^\d+\.\d+\.\d+-pre.*$/
+                - /^\d+\.\d+\.\d+-.*-rc.*$/         # e.g., 0.1.1-alpha-rc1, 1.3.4-beta-rc4
+                - /^\d+\.\d+\.\d+-pre.*$/           # e.g., 0.1.1-prealpha-3, 1.5.6-prealpha-8
   security:
     when:
       and:
