@@ -184,6 +184,7 @@ jobs:
           key: v1-ghjobs-audit-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
 
+# Re-usable commands
 commands:
   linux-dep:
     description: install linux dependencies
