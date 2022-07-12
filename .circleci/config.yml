@@ -78,12 +78,27 @@ jobs:
             - v1-many-rs-build-{{ arch }}-
       - rust/install:
           version: nightly
-      - rust/test:
-          package: --lib --all-targets --all-features
-          with_cache: false
-      - rust/test:
-          package: --all-features --doc
-          with_cache: false
+      - when:
+          condition:
+            matches: { pattern: "^linux.*$", value: << parameters.os >> }
+          steps:
+            - rust/test:
+                package: --lib --all-targets --all-features
+                with_cache: false
+      - when:
+          condition:
+            equal: [macos, << parameters.os >>]
+          steps:
+            - rust/test:
+                package: --lib --all-targets --features default,client,raw,testing,trace_error_creation
+                with_cache: false
+      - when:
+          condition:
+            matches: { pattern: "^linux.*$", value: << parameters.os >> }
+          steps:
+            - rust/test:
+                package: --all-features --doc
+                with_cache: false
       - save_cache:
           key: v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
