@@ -184,6 +184,37 @@ jobs:
           key: v1-ghjobs-audit-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
 
+commands:
+  linux-dep:
+    description: install linux dependencies
+    parameters:
+      os:
+        type: string
+    steps:
+      - when:
+          condition:
+            matches: { pattern: "^linux.*$", value: << parameters.os >> }
+          steps:
+            - run:
+                name: installing linux dependencies
+                command: |
+                  sudo apt -y update
+                  sudo apt -y install build-essential pkg-config clang libssl-dev libsofthsm2
+
+  macos-dep:
+    description: install macos dependencies
+    parameters:
+      os:
+        type: string
+    steps:
+      - when:
+          condition:
+            equal: [macos, << parameters.os >>]
+          steps:
+            - run:
+                name: installing macos dependencies
+                command: brew install softhsm
+
 workflows:
   ci:
     when:
@@ -191,16 +222,29 @@ workflows:
         equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - lint:
+          pre-steps:
+            - linux-dep:
+                os: << matrix.os >>
           name: lint-v<< matrix.os >>
           matrix:
             parameters:
               os: [linux2004]
       - build:
+          pre-steps:
+            - linux-dep:
+                os: << matrix.os >>
+            - macos-dep:
+                os: << matrix.os >>
           name: build-v<< matrix.os >>
           matrix:
             parameters:
               os: [linux2004, linux2204, macos]
       - test:
+          pre-steps:
+            - linux-dep:
+                os: << matrix.os >>
+            - macos-dep:
+                os: << matrix.os >>
           name: test-v<< matrix.os >>
           matrix:
             parameters:
@@ -208,6 +252,11 @@ workflows:
           requires:
             - build-v<< matrix.os >>
       - coverage:
+          pre-steps:
+            - linux-dep:
+                os: << matrix.os >>
+            - macos-dep:
+                os: << matrix.os >>
           name: coverage-v<< matrix.os >>
           matrix:
             parameters:
@@ -220,6 +269,11 @@ workflows:
         equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - create:
+          pre-steps:
+            - linux-dep:
+                os: << matrix.os >>
+            - macos-dep:
+                os: << matrix.os >>
           name: create-v<< matrix.os >>
           matrix:
             parameters:
@@ -243,7 +297,8 @@ workflows:
             branches:
               ignore: /.*/
             tags:
-              only: /^\d+\.\d+\.\d+$/
+              only:
+                - /^\d+\.\d+\.\d+$/
       - publish:
           name: publish-pre-release
           pre-release: true
