@@ -254,8 +254,6 @@ workflows:
           pre-steps:
             - linux-dep:
                 os: << matrix.os >>
-            - macos-dep:
-                os: << matrix.os >>
           name: build-v<< matrix.os >>
           matrix:
             parameters:
@@ -271,9 +269,6 @@ workflows:
           requires:
             - build-v<< matrix.os >>
       - test-macos:
-          pre-steps:
-            - macos-dep:
-                os: << matrix.os >>
           name: test-v<< matrix.os >>
           matrix:
             parameters:
@@ -298,8 +293,6 @@ workflows:
       - create:
           pre-steps:
             - linux-dep:
-                os: << matrix.os >>
-            - macos-dep:
                 os: << matrix.os >>
           name: create-v<< matrix.os >>
           matrix:
