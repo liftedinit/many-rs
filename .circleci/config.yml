@@ -31,8 +31,8 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
-            - v1-many-rs-build-{{ arch }}-
+            - {{ .Environment.CACHE_VERSION }}-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - {{ .Environment.CACHE_VERSION }}-many-rs-build-{{ arch }}-
       - rust/install:
           version: nightly
       - rust/format:
@@ -51,15 +51,15 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
-            - v1-many-rs-build-{{ arch }}-
+            - {{ .Environment.CACHE_VERSION }}-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - {{ .Environment.CACHE_VERSION }}-many-rs-build-{{ arch }}-
       - rust/install:
           version: nightly
       - rust/build:
           crate: --all-features
           with_cache: false
       - save_cache:
-          key: v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+          key: {{ .Environment.CACHE_VERSION }}-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
   test-linux:
     parameters:
@@ -73,10 +73,10 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
-            - v1-many-rs-test-{{ arch }}-
-            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
-            - v1-many-rs-build-{{ arch }}-
+            - {{ .Environment.CACHE_VERSION }}-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - {{ .Environment.CACHE_VERSION }}-many-rs-test-{{ arch }}-
+            - {{ .Environment.CACHE_VERSION }}-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - {{ .Environment.CACHE_VERSION }}-many-rs-build-{{ arch }}-
       - rust/install:
           version: nightly
       - rust/test:
@@ -86,7 +86,7 @@ jobs:
           package: --all-features --doc
           with_cache: false
       - save_cache:
-          key: v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+          key: {{ .Environment.CACHE_VERSION }}-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
   test-macos:
     parameters:
@@ -97,10 +97,10 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
-            - v1-many-rs-test-{{ arch }}-
-            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
-            - v1-many-rs-build-{{ arch }}-
+            - {{ .Environment.CACHE_VERSION }}-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - {{ .Environment.CACHE_VERSION }}-many-rs-test-{{ arch }}-
+            - {{ .Environment.CACHE_VERSION }}-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - {{ .Environment.CACHE_VERSION }}-many-rs-build-{{ arch }}-
       - rust/install:
           version: nightly
       # There are issues with HSM and macos testing (Segfault 11). Disable HSM testing on macos for now.
@@ -108,7 +108,7 @@ jobs:
           package: --all-targets --features default,client,raw,testing,trace_error_creation
           with_cache: false
       - save_cache:
-          key: v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+          key: {{ .Environment.CACHE_VERSION }}-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
   coverage:
     parameters:
@@ -122,12 +122,8 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v1-many-rs-coverage-{{ arch }}-{{ checksum "Cargo.lock" }}
-            - v1-many-rs-coverage-{{ arch }}-
-            - v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
-            - v1-many-rs-test-{{ arch }}-
-            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
-            - v1-many-rs-build-{{ arch }}-
+            - {{ .Environment.CACHE_VERSION }}-many-rs-coverage-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - {{ .Environment.CACHE_VERSION }}-many-rs-coverage-{{ arch }}-
       - rust/install:
           version: nightly
       - run:
@@ -148,7 +144,7 @@ jobs:
       - codecov/upload:
           file: coverage/report.lcov
       - save_cache:
-          key: v1-many-rs-coverage-{{ arch }}-{{ checksum "Cargo.lock" }}
+          key: {{ .Environment.CACHE_VERSION }}-many-rs-coverage-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
   create:
     parameters:
@@ -205,8 +201,8 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v1-ghjobs-audit-{{ arch }}-{{ checksum "Cargo.lock" }}
-            - v1-ghjobs-audit-{{ arch }}-
+            - {{ .Environment.CACHE_VERSION }}-ghjobs-audit-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - {{ .Environment.CACHE_VERSION }}-ghjobs-audit-{{ arch }}-
       - run:
           name: install cargo-audit
           command: cargo install cargo-audit
@@ -214,7 +210,7 @@ jobs:
           name: cargo audit
           command: cargo audit
       - save_cache:
-          key: v1-ghjobs-audit-{{ arch }}-{{ checksum "Cargo.lock" }}
+          key: {{ .Environment.CACHE_VERSION }}-ghjobs-audit-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
 
 # Re-usable commands
