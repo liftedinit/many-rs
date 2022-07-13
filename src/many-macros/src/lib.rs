@@ -235,7 +235,7 @@ impl Endpoint {
             quote! {}
         };
         let sender = if *has_sender {
-            Some(quote! {, sender: &Identity })
+            Some(quote! {, sender: &Address })
         } else {
             None
         };
@@ -364,7 +364,10 @@ impl quote::ToTokens for Endpoint {
 fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream, syn::Error> {
     let attrs: ManyModuleAttributes = from_tokenstream(attr)?;
     let many = Ident::new(
-        attrs.many_crate.as_ref().map_or("many", String::as_str),
+        attrs
+            .many_crate
+            .as_ref()
+            .map_or("many-server", String::as_str),
         attr.span(),
     );
 

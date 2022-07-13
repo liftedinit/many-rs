@@ -1,0 +1,42 @@
+[package]
+name = "many-identity"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+asn1 = { version = "0.8", default-features = false }
+base32 = "0.4.0"
+crc-any = "2.4.3"
+cryptoki = { version = "0.3", features = ["generate-bindings"] }
+coset = "0.3.2"
+ed25519 = { version = "1.2.0", features = [ "std" ] }
+ed25519-dalek = { version = "1.0.1", features = [ "std" ] }
+hex = "0.4.3"
+many-error = { path = "../many-error", version = "0.1.0" }
+minicbor = "0.18.0"
+once_cell = "1.10"
+p256 = { version = "0.9.0", features = [ "pem", "ecdsa", "std" ] }
+pkcs8 = { version = "0.8", features = [ "pem", "std", "encryption" ] }
+rand = "0.7.3"
+serde = "1.0.139"
+sha2 = "0.10.2"
+sha3 = "0.10.1"
+signature = "1.3"
+static_assertions = "1.1.0"
+tracing = "0.1.29"
+
+[dev-dependencies]
+many-identity = { path = ".", features = [ "serde", "testing" ] }
+proptest = "1.0.0"
+serde_test = "1.0.139"
+
+[features]
+default = ["cose", "minicbor"]
+cose = []
+hsm_test = []
+minicbor = []
+raw = []
+serde = []
+testing = []

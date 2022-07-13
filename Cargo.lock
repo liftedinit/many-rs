@@ -1368,73 +1368,15 @@ name = "many"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "asn1",
- "async-trait",
- "backtrace",
- "base32",
- "base64",
- "cbor-diag",
- "coset",
- "crc-any",
- "cryptoki",
- "derive_builder",
- "ecdsa",
- "ed25519",
- "ed25519-dalek",
- "fixed",
- "hex",
- "json",
- "lazy_static",
- "many",
- "many-macros",
- "minicbor",
- "mockall",
- "num-bigint",
- "num-derive",
- "num-traits",
- "once_cell",
- "openssh-keys",
- "p256",
- "pem",
- "pkcs8 0.8.0",
- "proptest",
- "rand 0.7.3",
- "rand 0.8.5",
- "regex",
- "reqwest",
- "ring",
- "ring-compat",
- "semver",
- "serde",
- "serde_json",
- "serde_test",
- "sha2 0.10.2",
- "sha3",
- "signature",
- "simple_asn1",
- "smol",
- "static_assertions",
- "strum",
- "strum_macros",
- "thiserror",
- "tiny_http",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "many-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
  "atty",
  "base64",
  "cbor-diag",
  "clap 3.1.18",
  "coset",
  "hex",
- "many",
  "many-client",
+ "many-identity",
+ "many-server",
  "minicbor",
  "rpassword",
  "tokio",
@@ -1461,7 +1403,7 @@ dependencies = [
  "fixed",
  "hex",
  "lazy_static",
- "many",
+ "many-server",
  "minicbor",
  "num-bigint",
  "num-derive",
@@ -1476,13 +1418,53 @@ dependencies = [
  "ring",
  "ring-compat",
  "serde",
- "sha3",
+ "sha3 0.9.1",
  "signature",
  "simple_asn1",
  "static_assertions",
  "thiserror",
  "tiny_http",
  "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "many-error"
+version = "0.1.0"
+dependencies = [
+ "minicbor",
+ "num-bigint",
+ "num-derive",
+ "num-traits",
+ "regex",
+]
+
+[[package]]
+name = "many-identity"
+version = "0.1.0"
+dependencies = [
+ "asn1",
+ "base32",
+ "coset",
+ "crc-any",
+ "cryptoki",
+ "ed25519",
+ "ed25519-dalek",
+ "hex",
+ "many-error",
+ "many-identity",
+ "minicbor",
+ "once_cell",
+ "p256",
+ "pkcs8 0.8.0",
+ "proptest",
+ "rand 0.7.3",
+ "serde",
+ "serde_test",
+ "sha2 0.10.2",
+ "sha3 0.10.1",
+ "signature",
+ "static_assertions",
  "tracing",
 ]
 
@@ -1496,6 +1478,67 @@ dependencies = [
  "serde",
  "serde_tokenstream",
  "syn",
+]
+
+[[package]]
+name = "many-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "asn1",
+ "async-trait",
+ "backtrace",
+ "base32",
+ "base64",
+ "cbor-diag",
+ "coset",
+ "crc-any",
+ "cryptoki",
+ "derive_builder",
+ "ecdsa",
+ "ed25519",
+ "ed25519-dalek",
+ "fixed",
+ "hex",
+ "json",
+ "lazy_static",
+ "many-error",
+ "many-identity",
+ "many-macros",
+ "many-server",
+ "minicbor",
+ "mockall",
+ "num-bigint",
+ "num-derive",
+ "num-traits",
+ "once_cell",
+ "openssh-keys",
+ "p256",
+ "pem",
+ "pkcs8 0.8.0",
+ "proptest",
+ "rand 0.7.3",
+ "rand 0.8.5",
+ "regex",
+ "reqwest",
+ "ring",
+ "ring-compat",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_test",
+ "sha2 0.10.2",
+ "sha3 0.9.1",
+ "signature",
+ "simple_asn1",
+ "smol",
+ "static_assertions",
+ "strum",
+ "strum_macros",
+ "thiserror",
+ "tiny_http",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2183,9 +2226,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.5.6"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d83f127d94bdbcda4c8cc2e50f6f84f4b611f69c902699ca385a39c3a75f9ff1"
+checksum = "4c4eb3267174b8c6c2f654116623910a0fef09c4753f8dd83db29c48a0df988b"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -2203,9 +2246,9 @@ dependencies = [
 
 [[package]]
 name = "regex-syntax"
-version = "0.6.26"
+version = "0.6.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49b3de9ec5dc0a3417da371aab17d729997c15010e7fd24ff707773a33bddb64"
+checksum = "a3f87b73ce11b1619a3c6332f45341e0047173771e8b8b73f87bfeefb7b56244"
 
 [[package]]
 name = "remove_dir_all"
@@ -2407,18 +2450,18 @@ checksum = "f97841a747eef040fcd2e7b3b9a220a7205926e60488e673d9e4926d27772ce5"
 
 [[package]]
 name = "serde"
-version = "1.0.137"
+version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61ea8d54c77f8315140a05f4c7237403bf38b72704d031543aa1d16abbf517d1"
+checksum = "0171ebb889e45aa68b44aee0859b3eede84c6f5f5c228e6f140c0b2a0a46cad6"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.137"
+version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f26faba0c3959972377d3b2d306ee9f71faee9714294e41bb777f83f88578be"
+checksum = "dc1d3230c1de7932af58ad8ffbe1d784bd55efd5a9d84ac24f69c72d83543dfb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2438,9 +2481,9 @@ dependencies = [
 
 [[package]]
 name = "serde_test"
-version = "1.0.137"
+version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe196827aea34242c314d2f0dd49ed00a129225e80dda71b0dbf65d54d25628d"
+checksum = "cc933653ac6800dd970d54829f0646dcfd078bcaae7fbd19c6e58a584564a5de"
 dependencies = [
  "serde",
 ]
@@ -2502,6 +2545,16 @@ dependencies = [
  "digest 0.9.0",
  "keccak",
  "opaque-debug",
+]
+
+[[package]]
+name = "sha3"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "881bf8156c87b6301fc5ca6b27f11eeb2761224c7081e69b409d5a1951a70c86"
+dependencies = [
+ "digest 0.10.3",
+ "keccak",
 ]
 
 [[package]]
