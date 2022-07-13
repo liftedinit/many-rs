@@ -138,10 +138,7 @@ jobs:
           command: cargo install grcov --root target/
       - run:
           name: generate test coverage
-          command: cargo test --lib --all-targets --all-features
-          environment:
-            RUSTFLAGS: "-C instrument-coverage"
-            LLVM_PROFILE_FILE: "coverage/lcov-%p-%m.profraw"
+          command: RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="coverage/lcov-%p-%m.profraw" cargo test --lib --all-targets --all-features
       - run:
           name: generate coverage report
           command: target/bin/grcov coverage --binary-path target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o coverage/report.lcov
