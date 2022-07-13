@@ -80,7 +80,7 @@ jobs:
       - rust/install:
           version: nightly
       - rust/test:
-          package: --lib --all-targets --all-features
+          package: --all-targets --all-features
           with_cache: false
       - rust/test:
           package: --all-features --doc
@@ -105,7 +105,7 @@ jobs:
           version: nightly
       # There are issues with HSM and macos testing (Segfault 11). Disable HSM testing on macos for now.
       - rust/test:
-          package: --lib --all-targets --features default,client,raw,testing,trace_error_creation
+          package: --all-targets --features default,client,raw,testing,trace_error_creation
           with_cache: false
       - save_cache:
           key: v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
@@ -138,7 +138,10 @@ jobs:
           command: cargo install grcov --root target/
       - run:
           name: generate test coverage
-          command: RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="coverage/lcov-%p-%m.profraw" cargo test --lib --all-targets --all-features
+          command: cargo test --all-targets --all-features
+          environment:
+            RUSTFLAGS: "-C instrument-coverage"
+            LLVM_PROFILE_FILE: "coverage/lcov-%p-%m.profraw"
       - run:
           name: generate coverage report
           command: target/bin/grcov coverage --binary-path target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o coverage/report.lcov
