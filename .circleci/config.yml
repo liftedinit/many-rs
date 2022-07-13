@@ -140,7 +140,7 @@ jobs:
             LLVM_PROFILE_FILE: "coverage/lcov-%p-%m.profraw"
       - run:
           name: generate coverage report
-          command: target/bin/grcov coverage --binary-path target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o coverage/report.lcov
+          command: target/bin/grcov src -b target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o coverage/report.lcov
       - codecov/upload:
           file: coverage/report.lcov
       - save_cache:
