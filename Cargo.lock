@@ -18,15 +18,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
-name = "aead"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b613b8e1e3cf911a086f53f03bf286f52fd7a7258e4fa606f0ef220d39d8877"
-dependencies = [
- "generic-array",
-]
-
-[[package]]
 name = "aes"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1371,12 +1362,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "json"
-version = "0.12.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
-
-[[package]]
 name = "keccak"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1459,7 +1444,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "backtrace",
  "base32",
  "base64",
  "coset",
@@ -1479,21 +1463,16 @@ dependencies = [
  "num-bigint",
  "num-derive",
  "num-traits",
- "openssh-keys",
  "p256",
  "pem",
  "pkcs8 0.8.0",
  "rand 0.8.5",
  "regex",
  "reqwest",
- "ring",
- "ring-compat",
  "serde",
  "sha3 0.9.1",
  "signature",
- "simple_asn1",
  "static_assertions",
- "thiserror",
  "tiny_http",
  "tokio",
  "tracing",
@@ -1504,7 +1483,6 @@ name = "many-error"
 version = "0.1.0"
 dependencies = [
  "minicbor",
- "num-bigint",
  "num-derive",
  "num-traits",
  "regex",
@@ -1610,7 +1588,6 @@ dependencies = [
  "backtrace",
  "base32",
  "base64",
- "cbor-diag",
  "coset",
  "crc-any",
  "cryptoki",
@@ -1620,22 +1597,18 @@ dependencies = [
  "ed25519-dalek",
  "fixed",
  "hex",
- "json",
  "lazy_static",
  "many-error",
  "many-identity",
  "many-macros",
  "many-modules",
  "many-protocol",
- "many-server",
  "many-types",
  "minicbor",
- "mockall",
  "num-bigint",
  "num-derive",
  "num-traits",
  "once_cell",
- "openssh-keys",
  "p256",
  "pem",
  "pkcs8 0.8.0",
@@ -1644,21 +1617,16 @@ dependencies = [
  "rand 0.8.5",
  "regex",
  "reqwest",
- "ring",
- "ring-compat",
  "semver",
  "serde",
  "serde_json",
- "serde_test",
  "sha2 0.10.2",
  "sha3 0.9.1",
  "signature",
- "simple_asn1",
  "smol",
  "static_assertions",
  "strum",
  "strum_macros",
- "thiserror",
  "tiny_http",
  "tokio",
  "tracing",
@@ -1696,17 +1664,6 @@ name = "matches"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
-
-[[package]]
-name = "md-5"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b5a279bb9607f9f53c22d496eade00d138d1bdcccd07d74650387cf94942a15"
-dependencies = [
- "block-buffer 0.9.0",
- "digest 0.9.0",
- "opaque-debug",
-]
 
 [[package]]
 name = "memchr"
@@ -1924,19 +1881,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
-name = "openssh-keys"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7249a699cdeea261ac73f1bf9350777cb867324f44373aafb5a287365bf1771"
-dependencies = [
- "base64",
- "byteorder",
- "md-5",
- "sha2 0.9.9",
- "thiserror",
-]
-
-[[package]]
 name = "openssl"
 version = "0.10.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1996,16 +1940,6 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "sha2 0.9.9",
-]
-
-[[package]]
-name = "p384"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f23bc88c404ccc881c8a1ad62ba5cd7d336a64ecbf46de4874f2ad955f67b157"
-dependencies = [
- "ecdsa",
- "elliptic-curve",
 ]
 
 [[package]]
@@ -2438,39 +2372,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ring"
-version = "0.16.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3053cf52e236a3ed746dfc745aa9cacf1b791d846bdaf412f60a8d7d6e17c8fc"
-dependencies = [
- "cc",
- "libc",
- "once_cell",
- "spin",
- "untrusted",
- "web-sys",
- "winapi",
-]
-
-[[package]]
-name = "ring-compat"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d14976b5cc21a752139864e8dbc357270d0518294c29583d9670c0eb840cb856"
-dependencies = [
- "aead",
- "digest 0.9.0",
- "ecdsa",
- "ed25519",
- "generic-array",
- "opaque-debug",
- "p256",
- "p384",
- "ring",
- "zeroize",
-]
-
-[[package]]
 name = "rpassword"
 version = "6.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2744,18 +2645,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple_asn1"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8eb4ea60fb301dc81dfc113df680571045d375ab7345d171c5dc7d7e13107a80"
-dependencies = [
- "chrono",
- "num-bigint",
- "num-traits",
- "thiserror",
-]
-
-[[package]]
 name = "slab"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2794,12 +2683,6 @@ dependencies = [
  "libc",
  "winapi",
 ]
-
-[[package]]
-name = "spin"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spki"
@@ -2935,26 +2818,6 @@ name = "textwrap"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1141d4d61095b28419e22cb0bbf02755f5e54e0526f97f1e3d1d160e60885fb"
-
-[[package]]
-name = "thiserror"
-version = "1.0.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd829fe32373d27f76265620b5309d0340cb8550f523c1dda251d6298069069a"
-dependencies = [
- "thiserror-impl",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0396bc89e626244658bef819e22d0cc459e795a5ebe878e6ec336d1674a8d79a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "thread_local"
@@ -3175,12 +3038,6 @@ name = "unicode-xid"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "957e51f3646910546462e67d5f7599b9e4fb8acdd304b087a6494730f9eebf04"
-
-[[package]]
-name = "untrusted"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 
 [[package]]
 name = "url"
