@@ -79,6 +79,7 @@ jobs:
             - v1-many-rs-build-{{ arch }}-
       - rust/install:
           version: nightly
+      - run: cargo clean -p many_types
       - rust/test:
           package: --lib --all-targets --all-features
           with_cache: false
