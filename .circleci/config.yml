@@ -93,9 +93,6 @@ jobs:
       os:
         type: executor
     executor: << parameters.os >>
-    environment:
-      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
-      SOFTHSM2_CONF: /tmp/softhsm2.conf
     steps:
       - checkout
       - restore_cache:
@@ -107,7 +104,7 @@ jobs:
       - rust/install:
           version: nightly
       - rust/test:
-          package: --lib --all-features --doc
+          package: --all-features --doc
           with_cache: false
       - rust/test:
           package: --all-features --doc
