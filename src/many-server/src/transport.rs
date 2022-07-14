@@ -1,6 +1,7 @@
-use crate::message::{ManyError, RequestMessage, ResponseMessage};
 use async_trait::async_trait;
 use coset::CoseSign1;
+use many_error::ManyError;
+use many_protocol::{RequestMessage, ResponseMessage};
 use std::fmt::Debug;
 
 pub mod http;

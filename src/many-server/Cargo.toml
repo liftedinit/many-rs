@@ -25,12 +25,15 @@ derive_builder = "0.10.2"
 ecdsa = "0.12.4"
 ed25519 = { version = "1.2.0", features = [ "std" ] }
 ed25519-dalek = { version = "1.0.1", features = [ "std" ] }
-fixed = "1.11.0"
+fixed = "1.16.0"
 hex = "0.4.3"
 json = "0.12"
 lazy_static = "1.4.0"
 many-error = { path = "../many-error", version = "0.1.0" }
 many-identity = { path = "../many-identity", version = "0.1.0", features = ["cose", "raw"] }
+many-modules = { path = "../many-modules", version = "0.1.0" }
+many-protocol = { path = "../many-protocol", version = "0.1.0" }
+many-types = { path = "../many-types", version = "0.1.0" }
 minicbor = { version = "0.18.0", features = ["derive", "half", "std"] }
 num-bigint = "0.4.3"
 num-derive = "0.3.3"

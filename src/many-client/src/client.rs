@@ -1,10 +1,10 @@
 use coset::{CoseSign1, TaggedCborSerializable};
-use many_server::message::{
+use many_identity::CoseKeyIdentity;
+use many_modules::base::Status;
+use many_protocol::{
     decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
     RequestMessageBuilder, ResponseMessage,
 };
-use many_server::server::module::base::Status;
-use many_server::types::identity::CoseKeyIdentity;
 use many_server::{Address, ManyError};
 use minicbor::Encode;
 use reqwest::{IntoUrl, Url};

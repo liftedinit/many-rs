@@ -3,16 +3,16 @@ use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
 use many_client::ManyClient;
 use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
-use many_server::message::{
+use many_identity::{Address, CoseKeyIdentity};
+use many_modules::ledger;
+use many_modules::r#async::attributes::AsyncAttribute;
+use many_modules::r#async::{StatusArgs, StatusReturn};
+use many_protocol::{
     decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
     RequestMessageBuilder, ResponseMessage,
 };
-use many_server::server::module::ledger;
-use many_server::server::module::r#async::attributes::AsyncAttribute;
-use many_server::server::module::r#async::{StatusArgs, StatusReturn};
 use many_server::transport::http::HttpServer;
-use many_server::types::identity::CoseKeyIdentity;
-use many_server::{Address, ManyServer};
+use many_server::ManyServer;
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;

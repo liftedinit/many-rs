@@ -1,16 +1,14 @@
-use crate::message::{RequestMessage, ResponseMessage};
-use crate::protocol::Attribute;
-use crate::server::module::{base, ManyModule, ManyModuleInfo};
 use crate::transport::LowLevelManyRequestHandler;
-use crate::ManyError;
 use async_trait::async_trait;
 use coset::CoseSign1;
+use many_error::ManyError;
 use many_identity::CoseKeyIdentity;
+use many_modules::{base, ManyModule, ManyModuleInfo};
+use many_protocol::attributes::Attribute;
+use many_protocol::{ManyUrl, RequestMessage, ResponseMessage};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
-
-pub mod module;
 
 /// Validate that the timestamp of a message is within a timeout, either in the future
 /// or the past.
@@ -44,11 +42,12 @@ fn _validate_time(
     Ok(())
 }
 
-pub type ManyUrl = reqwest::Url;
+trait ManyServerFallback: LowLevelManyRequestHandler + many_modules::base::BaseModuleBackend {}
 
-trait ManyServerFallback: LowLevelManyRequestHandler + base::BaseModuleBackend {}
-
-impl<M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static> ManyServerFallback for M {}
+impl<M: LowLevelManyRequestHandler + many_modules::base::BaseModuleBackend + 'static>
+    ManyServerFallback for M
+{
+}
 
 #[derive(Debug, Clone)]
 pub struct ManyModuleList {}
@@ -100,7 +99,7 @@ impl ManyServer {
 
     pub fn set_fallback_module<M>(&mut self, module: M) -> &mut Self
     where
-        M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static,
+        M: LowLevelManyRequestHandler + many_modules::base::BaseModuleBackend + 'static,
     {
         self.fallback = Some(Arc::new(module));
         self
@@ -248,7 +247,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
         let request = {
             let this = self.lock().unwrap();
-            crate::message::decode_request_from_cose_sign1(
+            many_protocol::decode_request_from_cose_sign1(
                 envelope.clone(),
                 this.allowed_origins.clone(),
             )
@@ -298,7 +297,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                         Err(many_err) => ResponseMessage::error(&cose_id.identity, id, many_err),
                     };
                     response.from = cose_id.identity;
-                    crate::message::encode_cose_sign1_from_response(response, &cose_id)
+                    many_protocol::encode_cose_sign1_from_response(response, &cose_id)
                 }
                 (None, Some(fb)) => {
                     LowLevelManyRequestHandler::execute(fb.as_ref(), envelope).await
@@ -309,12 +308,12 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                         id,
                         ManyError::could_not_route_message(),
                     );
-                    crate::message::encode_cose_sign1_from_response(response, &cose_id)
+                    many_protocol::encode_cose_sign1_from_response(response, &cose_id)
                 }
             },
             Err(response) => {
                 let this = self.lock().unwrap();
-                crate::message::encode_cose_sign1_from_response(response, &this.identity)
+                many_protocol::encode_cose_sign1_from_response(response, &this.identity)
             }
         }
     }
@@ -326,14 +325,13 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
-    use crate::message::{
-        decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
-        RequestMessageBuilder,
-    };
-    use crate::server::module::base::Status;
-    use crate::Address;
     use many_identity::cose_helpers::public_key;
     use many_identity::testsutils::generate_random_eddsa_identity;
+    use many_identity::Address;
+    use many_modules::base::Status;
+    use many_protocol::{
+        decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessageBuilder,
+    };
     use proptest::prelude::*;
 
     const ALPHA_NUM_DASH_REGEX: &str = "[a-zA-Z0-9-]";
