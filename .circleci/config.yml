@@ -300,7 +300,7 @@ workflows:
           pre-steps:
             - install-deps:
                 os: << matrix.os >>
-          name: test-v<< matrix.os >>
+          name: doctest-v<< matrix.os >>
           matrix:
             parameters:
               os: [linux2004]
