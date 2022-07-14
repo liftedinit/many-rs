@@ -49,7 +49,7 @@ impl<L, R> Either<L, R> {
     /// Return true if the value is the `Left` variant.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let values = [Left(1), Right("the right value")];
     /// assert_eq!(values[0].is_left(), true);
@@ -65,7 +65,7 @@ impl<L, R> Either<L, R> {
     /// Return true if the value is the `Right` variant.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let values = [Left(1), Right("the right value")];
     /// assert_eq!(values[0].is_right(), false);
@@ -78,7 +78,7 @@ impl<L, R> Either<L, R> {
     /// Convert the left side of `Either<L, R>` to an `Option<L>`.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let left: Either<_, ()> = Left("some value");
     /// assert_eq!(left.left(),  Some("some value"));
@@ -96,7 +96,7 @@ impl<L, R> Either<L, R> {
     /// Convert the right side of `Either<L, R>` to an `Option<R>`.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let left: Either<_, ()> = Left("some value");
     /// assert_eq!(left.right(),  None);
@@ -114,7 +114,7 @@ impl<L, R> Either<L, R> {
     /// Convert `&Either<L, R>` to `Either<&L, &R>`.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let left: Either<_, ()> = Left("some value");
     /// assert_eq!(left.as_ref(), Left(&"some value"));
@@ -132,7 +132,7 @@ impl<L, R> Either<L, R> {
     /// Convert `&mut Either<L, R>` to `Either<&mut L, &mut R>`.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// fn mutate_left(value: &mut Either<u32, u32>) {
     ///     if let Some(l) = value.as_mut().left() {
@@ -157,7 +157,7 @@ impl<L, R> Either<L, R> {
     /// Convert `Either<L, R>` to `Either<R, L>`.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let left: Either<_, ()> = Left(123);
     /// assert_eq!(left.flip(), Right(123));
@@ -176,7 +176,7 @@ impl<L, R> Either<L, R> {
     /// result in `Left`.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let left: Either<_, u32> = Left(123);
     /// assert_eq!(left.map_left(|x| x * 2), Left(246));
@@ -198,7 +198,7 @@ impl<L, R> Either<L, R> {
     /// result in `Right`.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let left: Either<_, u32> = Left(123);
     /// assert_eq!(left.map_right(|x| x * 2), Left(123));
@@ -221,7 +221,7 @@ impl<L, R> Either<L, R> {
     /// function `g` is applied.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// fn square(n: u32) -> i32 { (n * n) as i32 }
     /// fn negate(n: i32) -> i32 { -n }
@@ -248,7 +248,7 @@ impl<L, R> Either<L, R> {
     ///
     /// ```
     /// // In this example, the context is a mutable reference
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let mut result = Vec::new();
     ///
@@ -276,7 +276,7 @@ impl<L, R> Either<L, R> {
     /// Apply the function `f` on the value in the `Left` variant if it is present.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let left: Either<_, u32> = Left(123);
     /// assert_eq!(left.left_and_then::<_,()>(|x| Right(x * 2)), Right(246));
@@ -297,7 +297,7 @@ impl<L, R> Either<L, R> {
     /// Apply the function `f` on the value in the `Right` variant if it is present.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let left: Either<_, u32> = Left(123);
     /// assert_eq!(left.right_and_then(|x| Right(x * 2)), Left(123));
@@ -326,7 +326,7 @@ impl<L, R> Either<L, R> {
     /// # Examples
     ///
     /// ```
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let left: Either<&str, &str> = Left("left");
     /// assert_eq!(left.left_or("foo"), "left");
     ///
@@ -345,7 +345,7 @@ impl<L, R> Either<L, R> {
     /// # Examples
     ///
     /// ```
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let left: Either<String, u32> = Left("left".to_string());
     /// assert_eq!(left.left_or_default(), "left");
     ///
@@ -367,7 +367,7 @@ impl<L, R> Either<L, R> {
     /// # Examples
     ///
     /// ```
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let left: Either<String, u32> = Left("3".to_string());
     /// assert_eq!(left.left_or_else(|_| unreachable!()), "3");
     ///
@@ -395,7 +395,7 @@ impl<L, R> Either<L, R> {
     /// # Examples
     ///
     /// ```
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let right: Either<&str, &str> = Right("right");
     /// assert_eq!(right.right_or("foo"), "right");
     ///
@@ -414,7 +414,7 @@ impl<L, R> Either<L, R> {
     /// # Examples
     ///
     /// ```
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let left: Either<String, u32> = Left("left".to_string());
     /// assert_eq!(left.right_or_default(), u32::default());
     ///
@@ -436,7 +436,7 @@ impl<L, R> Either<L, R> {
     /// # Examples
     ///
     /// ```
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let left: Either<String, u32> = Left("3".to_string());
     /// assert_eq!(left.right_or_else(|x| x.parse().unwrap()), 3);
     ///
@@ -458,7 +458,7 @@ impl<L, R> Either<L, R> {
     /// # Examples
     ///
     /// ```
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let left: Either<_, ()> = Left(3);
     /// assert_eq!(left.unwrap_left(), 3);
     /// ```
@@ -468,7 +468,7 @@ impl<L, R> Either<L, R> {
     /// When `Either` is a `Right` value
     ///
     /// ```should_panic
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let right: Either<(), _> = Right(3);
     /// right.unwrap_left();
     /// ```
@@ -489,7 +489,7 @@ impl<L, R> Either<L, R> {
     /// # Examples
     ///
     /// ```
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let right: Either<(), _> = Right(3);
     /// assert_eq!(right.unwrap_right(), 3);
     /// ```
@@ -499,7 +499,7 @@ impl<L, R> Either<L, R> {
     /// When `Either` is a `Left` value
     ///
     /// ```should_panic
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let left: Either<_, ()> = Left(3);
     /// left.unwrap_right();
     /// ```
@@ -518,7 +518,7 @@ impl<L, R> Either<L, R> {
     /// # Examples
     ///
     /// ```
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let left: Either<_, ()> = Left(3);
     /// assert_eq!(left.expect_left("value was Right"), 3);
     /// ```
@@ -528,7 +528,7 @@ impl<L, R> Either<L, R> {
     /// When `Either` is a `Right` value
     ///
     /// ```should_panic
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let right: Either<(), _> = Right(3);
     /// right.expect_left("value was Right");
     /// ```
@@ -547,7 +547,7 @@ impl<L, R> Either<L, R> {
     /// # Examples
     ///
     /// ```
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let right: Either<(), _> = Right(3);
     /// assert_eq!(right.expect_right("value was Left"), 3);
     /// ```
@@ -557,7 +557,7 @@ impl<L, R> Either<L, R> {
     /// When `Either` is a `Left` value
     ///
     /// ```should_panic
-    /// # use many_server::types::either::*;
+    /// # use many_types::either::*;
     /// let left: Either<_, ()> = Left(3);
     /// left.expect_right("value was Right");
     /// ```
@@ -578,7 +578,7 @@ impl<T, L, R> Either<(T, L), (T, R)> {
     /// Here, the homogeneous type is the first element of the pairs.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     /// let left: Either<_, (u32, String)> = Left((123, vec![0]));
     /// assert_eq!(left.factor_first().0, 123);
     ///
@@ -599,7 +599,7 @@ impl<T, L, R> Either<(L, T), (R, T)> {
     /// Here, the homogeneous type is the second element of the pairs.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     /// let left: Either<_, (String, u32)> = Left((vec![0], 123));
     /// assert_eq!(left.factor_second().1, 123);
     ///
@@ -618,7 +618,7 @@ impl<T> Either<T, T> {
     /// Extract the value of an either over two equivalent types.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let left: Either<_, u32> = Left(123);
     /// assert_eq!(left.into_inner(), 123);
@@ -634,7 +634,7 @@ impl<T> Either<T, T> {
     /// corresponding variant.
     ///
     /// ```
-    /// use many_server::types::either::*;
+    /// use many_types::either::*;
     ///
     /// let value: Either<_, i32> = Right(42);
     ///

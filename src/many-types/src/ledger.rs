@@ -25,8 +25,8 @@ impl TransactionFee {
     /// Calculates the actual fees of a transaction. The returned amount is the
     /// fees calculated, and not (amount + fees).
     /// ```
-    /// use many_server::types::ledger::{TokenAmount, TransactionFee};
-    /// use many_server::types::Percent;
+    /// use many_types::ledger::{TokenAmount, TransactionFee};
+    /// use many_types::Percent;
     /// let fees = TransactionFee {
     ///   fixed: Some(1000u64.into()),
     ///   percent: Some(Percent::new(0, 0x800000)),
