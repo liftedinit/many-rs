@@ -88,6 +88,33 @@ jobs:
       - save_cache:
           key: v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
           <<: *rust_cache_path
+  doctest-linux:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    environment:
+      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      SOFTHSM2_CONF: /tmp/softhsm2.conf
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-test-{{ arch }}-
+            - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-many-rs-build-{{ arch }}-
+      - rust/install:
+          version: nightly
+      - rust/test:
+          package: --lib --all-features --doc
+          with_cache: false
+      - rust/test:
+          package: --all-features --doc
+          with_cache: false
+      - save_cache:
+          key: v1-many-rs-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
   test-macos:
     parameters:
       os:
@@ -260,6 +287,16 @@ workflows:
             parameters:
               os: [linux2004, macos]
       - test-linux:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: test-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004]
+          requires:
+            - build-v<< matrix.os >>
+      - doctest-linux:
           pre-steps:
             - install-deps:
                 os: << matrix.os >>
