@@ -34,7 +34,6 @@ jobs:
             - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
             - v1-many-rs-build-{{ arch }}-
       - rust/install:
-          version: nightly
       - rust/format:
           nightly-toolchain: true
           with_cache: false
@@ -54,8 +53,6 @@ jobs:
             - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
             - v1-many-rs-build-{{ arch }}-
       - rust/install:
-          version: nightly
-      - run: cargo clean -p many_types
       - rust/build:
           crate: --all-features
           with_cache: false
@@ -79,7 +76,6 @@ jobs:
             - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
             - v1-many-rs-build-{{ arch }}-
       - rust/install:
-          version: nightly
       - rust/test:
           package: --lib --all-targets --all-features
           with_cache: false
@@ -103,7 +99,6 @@ jobs:
             - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
             - v1-many-rs-build-{{ arch }}-
       - rust/install:
-          version: nightly
       # There are issues with HSM and macos testing (Segfault 11). Disable HSM testing on macos for now.
       - rust/test:
           package: --lib --all-targets --features default,client,raw,testing,trace_error_creation
@@ -130,7 +125,6 @@ jobs:
             - v1-many-rs-build-{{ arch }}-{{ checksum "Cargo.lock" }}
             - v1-many-rs-build-{{ arch }}-
       - rust/install:
-          version: nightly
       - run:
           name: install llvm-tools-preview
           command: rustup component add llvm-tools-preview
@@ -160,7 +154,6 @@ jobs:
       - checkout
       - detect/init
       - rust/install:
-          version: nightly
       - rust/build:
           release: true
           with_cache: false
