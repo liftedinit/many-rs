@@ -1,5 +1,6 @@
 # many-rs
-![ci](https://img.shields.io/github/workflow/status/liftedinit/many-rs/CI)
+![ci](https://img.shields.io/circleci/build/gh/liftedinit/many-rs)
+![coverage](https://img.shields.io/codecov/c/gh/liftedinit/many-rs)
 ![license](https://img.shields.io/github/license/liftedinit/many-rs)
 
 Rust libraries for the [MANY protocol](https://github.com/many-protocol).
