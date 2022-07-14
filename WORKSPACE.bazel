@@ -1,0 +1,163 @@
+#load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+#http_archive(
+#    name = "rules_rust",
+#    sha256 = "7fb9b4fe1a6fb4341bdf7c623e619460ecc0f52d5061cc56abc750111fba8a87",
+#    urls = [
+#        "https://github.com/bazelbuild/rules_rust/releases/download/0.7.0/rules_rust-v0.7.0.tar.gz",
+#        "https://mirror.bazel.build/github.com/bazelbuild/rules_rust/releases/download/0.7.0/rules_rust-v0.7.0.tar.gz",
+#    ],
+#)
+
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+git_repository(
+    name = "rules_rust",
+    commit = "6b54feb0fff69a3abdd49c6cabdbe735f1f756ba",
+    remote = "https://github.com/bazelbuild/rules_rust.git",
+    shallow_since = "1657805893 +0200",
+)
+
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
+
+rules_rust_dependencies()
+
+# TODO: Sync with rust-toolchain.toml somehow?
+# Note: `llvm-tools-preview` is installed automatically
+rust_register_toolchains(
+    edition = "2021",
+    version = "1.61.0",
+)
+
+load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
+
+crate_universe_dependencies()
+
+load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository", "render_config", "splicing_config")
+
+crates_repository(
+    name = "crate_index",
+    cargo_lockfile = "//:Cargo.Bazel.lock",
+    lockfile = "//:cargo-bazel-lock.json",
+    packages = {
+        "anyhow": crate.spec(version = "1.0.57"),
+        "asn1": crate.spec(
+            default_features = False,
+            version = "0.8",
+        ),
+        "async-trait": crate.spec(version = "0.1.51"),
+        "atty": crate.spec(version = "0.2.14"),
+        "backtrace": crate.spec(version = "0.3"),  # optional = True
+        "base32": crate.spec(version = "0.4.0"),
+        "base64": crate.spec(version = "0.13.0"),
+        "cbor-diag": crate.spec(version = "0.1.9"),
+        "clap": crate.spec(
+            features = ["derive"],
+            version = "3.0.14",
+        ),
+        "coset": crate.spec(version = "0.3"),
+        "crc-any": crate.spec(version = "2.4.0"),
+        "cryptoki": crate.spec(
+            features = ["generate-bindings"],
+            version = "0.3",
+        ),
+        "derive_builder": crate.spec(version = "0.10.2"),
+        "ecdsa": crate.spec(version = "0.12.4"),
+        "ed25519": crate.spec(
+            features = ["std"],
+            version = "1.2.0",
+        ),
+        "ed25519-dalek": crate.spec(
+            features = ["std"],
+            version = "1.0.1",
+        ),
+        "fixed": crate.spec(version = "1.11.0"),
+        "hex": crate.spec(version = "0.4.3"),
+        "inflections": crate.spec(version = "1.1.1"),
+        "json": crate.spec(version = "0.12"),
+        "lazy_static": crate.spec(version = "1.4.0"),
+        "minicbor": crate.spec(
+            features = [
+                "derive",
+                "half",
+                "std",
+            ],
+            version = "0.18.0",
+        ),
+        "mockall": crate.spec(version = "0.11"),  # dev-dep
+        "num-derive": crate.spec(version = "0.3.3"),
+        "num-traits": crate.spec(version = "0.2.14"),
+        "num-bigint": crate.spec(version = "0.4.3"),
+        "once_cell": crate.spec(version = "1.10"),
+        "openssh-keys": crate.spec(version = "0.5.0"),
+        "p256": crate.spec(
+            features = [
+                "pem",
+                "ecdsa",
+                "std",
+            ],
+            version = "0.9.0",
+        ),
+        "pem": crate.spec(version = "1.0.0"),  # optional = True
+        "pkcs8": crate.spec(
+            features = [
+                "encryption",
+                "pem",
+                "std",
+            ],
+            version = "0.8",
+        ),
+        "proc-macro2": crate.spec(version = "1.0.36"),
+        "proptest": crate.spec(version = "1.0.0"),  # dev-dep
+        "quote": crate.spec(version = "1.0.14"),
+        "rand": crate.spec(version = "0.8.4"),
+        # Version compatible with ed25519-dalek
+        "rand_07": crate.spec(
+            package = "rand",
+            version = "0.7",
+        ),
+        "regex": crate.spec(version = "1.5.4"),
+        "reqwest": crate.spec(
+            features = ["blocking"],
+            version = "0.11.5",
+        ),
+        "ring": crate.spec(version = "0.16"),
+        "ring-compat": crate.spec(version = "0.3.2"),
+        "rpassword": crate.spec(version = "6.0"),
+        "semver": crate.spec(version = "1.0"),  # dev-dep
+        "serde": crate.spec(version = "1.0.134"),
+        "serde_json": crate.spec(version = "1.0"),
+        "serde_test": crate.spec(version = "1.0.137"),  # dev-dep
+        "serde_tokenstream": crate.spec(version = "0.1.3"),
+        "sha2": crate.spec(version = "0.10"),
+        "sha3": crate.spec(version = "0.9.1"),
+        "simple_asn1": crate.spec(version = "0.5.4"),
+        "signature": crate.spec(version = "1.3"),
+        "smol": crate.spec(version = "1.2.5"),  # dev-dep
+        "static_assertions": crate.spec(version = "1.1.0"),
+        "strum": crate.spec(version = "0.24.0"),
+        "strum_macros": crate.spec(version = "0.24"),
+        "syn": crate.spec(version = "1.0.86"),
+        "thiserror": crate.spec(version = "1.0.29"),
+        "tiny_http": crate.spec(version = "0.9.0"),
+        "tokio": crate.spec(
+            features = ["full"],
+            version = "1.12.0",
+        ),
+        "tracing": crate.spec(version = "0.1.29"),
+        "tracing-subscriber": crate.spec(version = "0.2.24"),
+        "url": crate.spec(version = "2.2.2"),
+    },
+    # Setting the default package name to `""` forces the use of the macros defined in this repository
+    # to always use the root package when looking for dependencies or aliases. This should be considered
+    # optional as the repository also exposes aliases for easy access to all dependencies.
+    render_config = render_config(
+        default_package_name = "",
+    ),
+    splicing_config = splicing_config(
+        resolver_version = "2",
+    ),
+)
+
+load("@crate_index//:defs.bzl", "crate_repositories")
+
+crate_repositories()

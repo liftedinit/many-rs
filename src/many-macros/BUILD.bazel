@@ -1,0 +1,16 @@
+load("@rules_rust//rust:defs.bzl", "rust_proc_macro")
+
+package(default_visibility = ["//src/many:__pkg__"])
+
+rust_proc_macro(
+    name = "many-macros",
+    srcs = ["src/lib.rs"],
+    deps = [
+        "@crate_index//:inflections",
+        "@crate_index//:proc-macro2",
+        "@crate_index//:quote",
+        "@crate_index//:serde",
+        "@crate_index//:serde_tokenstream",
+        "@crate_index//:syn",
+    ],
+)

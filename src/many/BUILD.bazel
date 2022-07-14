@@ -1,0 +1,83 @@
+load("@rules_rust//rust:defs.bzl", "rust_doc_test", "rust_library", "rust_test")
+
+package(default_visibility = [
+    "//src/many-cli:__pkg__",
+    "//src/many-client:__pkg__",
+])
+
+rust_library(
+    name = "many",
+    srcs = glob(include = ["src/**/*.rs"]),
+    proc_macro_deps = [
+        "//src/many-macros",
+        "@crate_index//:async-trait",
+        "@crate_index//:num-derive",
+        "@crate_index//:strum_macros",
+    ],
+    deps = [
+        "@crate_index//:anyhow",
+        "@crate_index//:asn1",
+        "@crate_index//:backtrace",
+        "@crate_index//:base32",
+        "@crate_index//:base64",
+        "@crate_index//:coset",
+        "@crate_index//:crc-any",
+        "@crate_index//:cryptoki",
+        "@crate_index//:derive_builder",
+        "@crate_index//:ecdsa",
+        "@crate_index//:ed25519",
+        "@crate_index//:ed25519-dalek",
+        "@crate_index//:fixed",
+        "@crate_index//:hex",
+        "@crate_index//:json",
+        "@crate_index//:lazy_static",
+        "@crate_index//:minicbor",
+        "@crate_index//:num-bigint",
+        "@crate_index//:num-traits",
+        "@crate_index//:once_cell",
+        "@crate_index//:openssh-keys",
+        "@crate_index//:p256",
+        "@crate_index//:pem",
+        "@crate_index//:pkcs8",
+        "@crate_index//:rand",
+        "@crate_index//:regex",
+        "@crate_index//:reqwest",
+        "@crate_index//:ring",
+        "@crate_index//:ring-compat",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+        "@crate_index//:sha2",
+        "@crate_index//:sha3",
+        "@crate_index//:signature",
+        "@crate_index//:simple_asn1",
+        "@crate_index//:static_assertions",
+        "@crate_index//:strum",
+        "@crate_index//:thiserror",
+        "@crate_index//:tiny_http",
+        "@crate_index//:tokio",
+        "@crate_index//:tracing",
+    ],
+)
+
+rust_test(
+    name = "many_test",
+    aliases = {
+        "@crate_index//:rand_07": "rand_07",
+    },
+    crate = ":many",
+    crate_features = ["testing"],
+    deps = [
+        "@crate_index//:cbor-diag",
+        "@crate_index//:mockall",
+        "@crate_index//:proptest",
+        "@crate_index//:rand_07",
+        "@crate_index//:semver",
+        "@crate_index//:serde_test",
+        "@crate_index//:smol",
+    ],
+)
+
+rust_doc_test(
+    name = "many_doc_test",
+    crate = ":many",
+)
