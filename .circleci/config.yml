@@ -1,0 +1,341 @@
+version: 2.1
+
+orbs:
+  codecov: codecov/codecov@3.2.3
+  rust: circleci/rust@1.6.0
+  detect: circleci/os-detect@0.3.0
+
+rust_cache_path: &rust_cache_path
+  paths:
+    - ~/.cargo
+    - target/
+
+executors:
+  linux2004:
+    machine:
+      image: ubuntu-2004:current
+  linux2204:
+    machine:
+      image: ubuntu-2204:current
+  macos:
+    macos:
+      xcode: 13.4.1
+
+jobs:
+  lint:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - many-rs-{{ .Environment.CACHE_VERSION }}-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - many-rs-{{ .Environment.CACHE_VERSION }}-build-{{ arch }}-
+      - rust/install:
+          version: nightly
+      - rust/format:
+          nightly-toolchain: true
+          with_cache: false
+      - rust/clippy:
+          flags: --all-targets --all-features -- -D clippy::all
+          with_cache: false
+
+  build:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - many-rs-{{ .Environment.CACHE_VERSION }}-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - many-rs-{{ .Environment.CACHE_VERSION }}-build-{{ arch }}-
+      - rust/install:
+          version: nightly
+      - rust/build:
+          crate: --all-features
+          with_cache: false
+      - save_cache:
+          key: many-rs-{{ .Environment.CACHE_VERSION }}-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
+  test-linux:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    environment:
+      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      SOFTHSM2_CONF: /tmp/softhsm2.conf
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - many-rs-{{ .Environment.CACHE_VERSION }}-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - many-rs-{{ .Environment.CACHE_VERSION }}-test-{{ arch }}-
+            - many-rs-{{ .Environment.CACHE_VERSION }}-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - many-rs-{{ .Environment.CACHE_VERSION }}-build-{{ arch }}-
+      - rust/install:
+          version: nightly
+      - rust/test:
+          package: --all-targets --all-features
+          with_cache: false
+      - rust/test:
+          package: --all-features --doc
+          with_cache: false
+      - save_cache:
+          key: many-rs-{{ .Environment.CACHE_VERSION }}-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
+  test-macos:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - many-rs-{{ .Environment.CACHE_VERSION }}-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - many-rs-{{ .Environment.CACHE_VERSION }}-test-{{ arch }}-
+            - many-rs-{{ .Environment.CACHE_VERSION }}-build-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - many-rs-{{ .Environment.CACHE_VERSION }}-build-{{ arch }}-
+      - rust/install:
+          version: nightly
+      # There are issues with HSM and macos testing (Segfault 11). Disable HSM testing on macos for now.
+      - rust/test:
+          package: --all-targets --features default,client,raw,testing,trace_error_creation
+          with_cache: false
+      - save_cache:
+          key: many-rs-{{ .Environment.CACHE_VERSION }}-test-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
+  coverage:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    environment:
+      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      SOFTHSM2_CONF: /tmp/softhsm2.conf
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - many-rs-{{ .Environment.CACHE_VERSION }}-coverage-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - many-rs-{{ .Environment.CACHE_VERSION }}-coverage-{{ arch }}-
+      - rust/install:
+          version: nightly
+      - run:
+          name: install llvm-tools-preview
+          command: rustup component add llvm-tools-preview
+      - run:
+          name: install grcov
+          command: cargo install grcov --root target/
+      - run:
+          name: generate test coverage
+          command: cargo test --all-targets --all-features
+          environment:
+            RUSTFLAGS: "-C instrument-coverage"
+            LLVM_PROFILE_FILE: "coverage/lcov-%p-%m.profraw"
+      - run:
+          name: generate coverage report
+          command: target/bin/grcov src -b target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o coverage/report.lcov
+      - codecov/upload:
+          file: coverage/report.lcov
+      - save_cache:
+          key: many-rs-{{ .Environment.CACHE_VERSION }}-coverage-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
+  create:
+    parameters:
+      os:
+        type: executor
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - detect/init
+      - rust/install:
+          version: nightly
+      - rust/build:
+          release: true
+          with_cache: false
+      - run: mkdir -p artifacts
+      - run:
+          name: creating release archive
+          command: file target/release/* | grep 'executable\|shared object' | cut -d ':' -f 1 | xargs tar czvf artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
+      - run:
+          name: creating release shasum
+          command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
+      - persist_to_workspace:
+          root: artifacts
+          paths:
+            - "*.tar.gz"
+            - "*.txt"
+  publish:
+    parameters:
+      pre-release:
+        type: boolean
+        default: false
+    docker:
+      - image: cibuilds/github:0.10
+    steps:
+      - attach_workspace:
+          at: ~/project/artifacts
+      - when:
+          condition:
+            not: << parameters.pre-release >>
+          steps:
+            - run:
+                name: publish pre-release
+                command: ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
+      - when:
+          condition: << parameters.pre-release >>
+          steps:
+            - run:
+                name: publish pre-release
+                command: ghr -prerelease -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
+  audit:
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - many-rs-{{ .Environment.CACHE_VERSION }}-audit-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - many-rs-{{ .Environment.CACHE_VERSION }}-audit-{{ arch }}-
+      - run:
+          name: install cargo-audit
+          command: cargo install cargo-audit
+      - run:
+          name: cargo audit
+          command: cargo audit
+      - save_cache:
+          key: many-rs-{{ .Environment.CACHE_VERSION }}-audit-{{ arch }}-{{ checksum "Cargo.lock" }}
+          <<: *rust_cache_path
+
+# Re-usable commands
+commands:
+  install-deps:
+    description: install << parameters.os>> dependencies
+    parameters:
+      os:
+        type: string
+    steps:
+      - when:
+          condition:
+            matches: { pattern: "^linux.*$", value: << parameters.os >> }
+          steps:
+            - run:
+                name: installing linux dependencies
+                command: |
+                  sudo apt -y update
+                  sudo apt -y install build-essential pkg-config clang libssl-dev libsofthsm2
+                  mkdir /tmp/tokens
+                  echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
+
+workflows:
+  ci:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - lint:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: lint-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004]
+      - build:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: build-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004, macos]
+      - test-linux:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: test-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004]
+          requires:
+            - build-v<< matrix.os >>
+      - test-macos:
+          name: test-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [macos]
+          requires:
+            - build-v<< matrix.os >>
+      - coverage:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: coverage-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004]
+          requires:
+            - test-v<< matrix.os >>
+  release:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - create:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: create-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2004, macos]
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+$/                 # e.g., 0.1.1, 1.0.0
+                - /^\d+\.\d+\.\d+-(alpha|beta)$/    # e.g., 0.1.1-alpha, 2.3.1-beta
+                - /^\d+\.\d+\.\d+-.*-rc.*$/         # e.g., 0.1.1-alpha-rc1, 1.3.4-beta-rc4
+                - /^\d+\.\d+\.\d+-pre.*$/           # e.g., 0.1.1-prealpha-3, 1.5.6-prealpha-8
+      - publish:
+          name: publish
+          pre-release: false
+          context:
+            - GITHUB_CREDS
+          requires:
+            - create
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+$/                 # e.g., 0.1.1, 1.0.0
+                - /^\d+\.\d+\.\d+-(alpha|beta)$/    # e.g., 0.1.1-alpha, 2.3.1-beta
+      - publish:
+          name: publish-pre-release
+          pre-release: true
+          context:
+            - GITHUB_CREDS
+          requires:
+            - create
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+-.*-rc.*$/         # e.g., 0.1.1-alpha-rc1, 1.3.4-beta-rc4
+                - /^\d+\.\d+\.\d+-pre.*$/           # e.g., 0.1.1-prealpha-3, 1.5.6-prealpha-8
+  security:
+    when:
+      and:
+        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+        - equal: [ "Audit", << pipeline.schedule.name >> ]
+    jobs:
+      - audit
