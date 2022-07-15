@@ -1,5 +1,5 @@
 {
-  "checksum": "587520c9b563e9cbaf23eed4d3397e13f941e64eae4ba259832afe9bf43d3c2a",
+  "checksum": "82b9b6179b51d381a73c8dd28dc5f4e166bde6abfad99753bee5c27a2996650f",
   "crates": {
     "addr2line 0.17.0": {
       "name": "addr2line",
@@ -2673,13 +2673,13 @@
       },
       "license": "MIT"
     },
-    "clap 3.2.11": {
+    "clap 3.2.12": {
       "name": "clap",
-      "version": "3.2.11",
+      "version": "3.2.12",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap/3.2.11/download",
-          "sha256": "d646c7ade5eb07c4aa20e907a922750df0c448892513714fd3e4acbc7130829f"
+          "url": "https://crates.io/api/v1/crates/clap/3.2.12/download",
+          "sha256": "ab8b79fe3946ceb4a0b1c080b4018992b8d27e9ff363644c1c9b6387c854614d"
         }
       },
       "targets": [
@@ -2772,7 +2772,7 @@
           ],
           "selects": {}
         },
-        "version": "3.2.11"
+        "version": "3.2.12"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -4295,7 +4295,7 @@
               "target": "cbor_diag"
             },
             {
-              "id": "clap 3.2.11",
+              "id": "clap 3.2.12",
               "target": "clap"
             },
             {
@@ -17905,7 +17905,7 @@
   "binary_crates": [
     "bindgen 0.59.2",
     "cc 1.0.73",
-    "clap 3.2.11",
+    "clap 3.2.12",
     "minicbor 0.18.0",
     "wait-timeout 0.2.0"
   ],

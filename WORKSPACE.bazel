@@ -12,9 +12,8 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 git_repository(
     name = "rules_rust",
-    commit = "6b54feb0fff69a3abdd49c6cabdbe735f1f756ba",
+    commit = "e83d5f3c77d2b41a0ad2fb9c5a0fb1dfb5e912a7",
     remote = "https://github.com/bazelbuild/rules_rust.git",
-    shallow_since = "1657805893 +0200",
 )
 
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
@@ -152,9 +151,6 @@ crates_repository(
     # optional as the repository also exposes aliases for easy access to all dependencies.
     render_config = render_config(
         default_package_name = "",
-    ),
-    splicing_config = splicing_config(
-        resolver_version = "2",
     ),
 )
 
