@@ -160,7 +160,7 @@ struct ServerOpt {
     addr: SocketAddr,
 
     /// The name to give the server.
-    #[clap(long, short, default_value = "many-server-server")]
+    #[clap(long, short, default_value = "many-server")]
     name: String,
 }
 

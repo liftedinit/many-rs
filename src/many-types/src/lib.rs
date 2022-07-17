@@ -7,6 +7,7 @@ use std::fmt::{Debug, Formatter};
 use std::ops::{Bound, RangeBounds, Shl};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+pub mod attributes;
 pub mod blockchain;
 pub mod cbor;
 pub mod either;
@@ -15,10 +16,8 @@ pub mod identity {
 }
 pub mod ledger;
 
+use crate::attributes::AttributeId;
 pub use either::Either;
-
-/// An attribute ID.
-pub type AttributeId = u32;
 
 /// A deterministic (fixed point) percent value that can be multiplied with
 /// numbers and rounded down.

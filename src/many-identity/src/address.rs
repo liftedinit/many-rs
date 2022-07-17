@@ -1,4 +1,3 @@
-use coset::CborSerializable;
 use many_error::ManyError;
 use sha3::digest::generic_array::typenum::Unsigned;
 use sha3::digest::OutputSizeUser;
@@ -13,10 +12,10 @@ mod minicbor;
 #[cfg(feature = "serde")]
 mod serde;
 
-#[cfg(feature = "cose")]
+#[cfg(feature = "coset")]
 mod cose;
 
-#[cfg(feature = "cose")]
+#[cfg(feature = "coset")]
 pub use cose::*;
 
 /// Subresource IDs are 31 bit integers.
@@ -26,8 +25,8 @@ const MAX_IDENTITY_BYTE_LEN: usize = 32;
 const SHA_OUTPUT_SIZE: usize = <Sha3_224 as OutputSizeUser>::OutputSize::USIZE;
 pub type PublicKeyHash = [u8; SHA_OUTPUT_SIZE];
 
-/// An identity in the TBD-Verse. This could be a server, network, user, DAO, automated
-/// process, etc.
+/// An identity address in the ManyVerse. This could be a server, network, user, DAO,
+/// automated process, etc.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[must_use]
 pub struct Address(InnerAddress);
@@ -89,19 +88,23 @@ impl Address {
         self.is_anonymous() || self.is_public_key() || self.is_subresource()
     }
 
+    #[inline]
     pub const fn can_be_dest(&self) -> bool {
         self.is_public_key() || self.is_subresource()
     }
 
+    #[inline]
     pub fn to_vec(self) -> Vec<u8> {
         self.0.to_vec()
     }
 
+    #[inline]
     pub fn to_byte_array(self) -> [u8; MAX_IDENTITY_BYTE_LEN] {
         self.0.to_byte_array()
     }
 
     /// Check that another identity matches this one, ignoring any subresouce IDs.
+    #[inline]
     pub fn matches(&self, other: &Address) -> bool {
         if self.is_anonymous() {
             other.is_anonymous()
@@ -112,9 +115,10 @@ impl Address {
     }
 }
 
-#[cfg(feature = "cose")]
+#[cfg(feature = "coset")]
 impl Address {
     pub fn public_key(key: &coset::CoseKey) -> Self {
+        use coset::CborSerializable;
         let pk = Sha3_224::digest(
             &crate::cose_helpers::public_key(key)
                 .unwrap()
@@ -125,6 +129,7 @@ impl Address {
     }
 
     pub fn subresource(key: &coset::CoseKey, subid: u32) -> Result<Self, ManyError> {
+        use coset::CborSerializable;
         if subid > MAX_SUBRESOURCE_ID {
             Err(ManyError::invalid_identity_subid())
         } else {

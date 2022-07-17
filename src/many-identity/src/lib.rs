@@ -2,14 +2,14 @@ use many_error::ManyError;
 
 mod address;
 
-#[cfg(feature = "cose")]
+#[cfg(feature = "coset")]
 pub mod cose_helpers;
 
-#[cfg(feature = "cose")]
+#[cfg(feature = "coset")]
 mod identity;
 
 pub use address::Address;
-#[cfg(feature = "cose")]
+#[cfg(feature = "coset")]
 pub use identity::*;
 
 pub mod hsm;

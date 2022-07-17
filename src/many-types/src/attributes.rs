@@ -1,12 +1,14 @@
+use crate::cbor::CborAny;
 use many_error::ManyError;
-use many_types::cbor::CborAny;
-use many_types::AttributeId;
 use minicbor::data::Type;
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt::Debug;
+
+/// An attribute ID.
+pub type AttributeId = u32;
 
 #[derive(Encode, Decode, Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq)]
 #[cbor(transparent)]
@@ -165,7 +167,7 @@ impl<'d, C> Decode<'d, C> for Attribute {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use many_types::cbor::tests::arb_cbor;
+    use crate::cbor::tests::arb_cbor;
     use proptest::prelude::*;
 
     prop_compose! {

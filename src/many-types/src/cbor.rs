@@ -90,6 +90,7 @@ impl<'d, C> Decode<'d, C> for CborAny {
     }
 }
 
+#[cfg(feature = "proptest")]
 pub mod tests {
     use super::CborAny;
     use proptest::prelude::*;

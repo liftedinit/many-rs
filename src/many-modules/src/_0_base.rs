@@ -4,7 +4,7 @@ use derive_builder::Builder;
 use many_identity::cose_helpers::public_key;
 use many_identity::Address;
 use many_macros::many_module;
-use many_protocol::attributes::AttributeSet;
+use many_types::attributes::AttributeSet;
 use many_types::cbor::CborAny;
 use minicbor::data::Type;
 use minicbor::encode::{Error, Write};
@@ -150,7 +150,7 @@ pub trait BaseModuleBackend: Send {
 mod tests {
     use crate::testutils::call_module;
     use many_identity::testsutils::generate_random_eddsa_identity;
-    use many_protocol::attributes::Attribute;
+    use many_types::attributes::Attribute;
     use std::sync::{Arc, Mutex};
 
     use super::*;

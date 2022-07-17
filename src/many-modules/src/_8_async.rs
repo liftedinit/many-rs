@@ -51,7 +51,7 @@ impl std::fmt::Debug for AsyncToken {
 pub mod attributes {
     use crate::r#async::AsyncToken;
     use many_error::ManyError;
-    use many_protocol::attributes::{Attribute, AttributeSet, TryFromAttributeSet};
+    use many_types::attributes::{Attribute, AttributeSet, TryFromAttributeSet};
     use many_types::cbor::CborAny;
 
     pub const ASYNC: Attribute = Attribute::id(1);
@@ -228,7 +228,7 @@ mod tests {
     use super::*;
     use crate::r#async::attributes::ASYNC;
     use crate::testutils::call_module_cbor;
-    use many_protocol::attributes::{Attribute, AttributeSet, TryFromAttributeSet};
+    use many_types::attributes::{Attribute, AttributeSet, TryFromAttributeSet};
     use many_types::cbor::CborAny;
     use mockall::predicate;
     use proptest::prelude::*;

@@ -1,6 +1,6 @@
-use crate::attributes::{Attribute, AttributeSet};
 use derive_builder::Builder;
 use many_identity::Address;
+use many_types::attributes::{Attribute, AttributeSet};
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};

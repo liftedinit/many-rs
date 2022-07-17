@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use many_error::ManyError;
-use many_protocol::attributes::Attribute;
 use many_protocol::{RequestMessage, ResponseMessage};
+use many_types::attributes::Attribute;
 use minicbor::encode::{Error, Write};
 use minicbor::{Decoder, Encoder};
 use std::fmt::Debug;

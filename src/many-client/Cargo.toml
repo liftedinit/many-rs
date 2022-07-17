@@ -47,5 +47,3 @@ tiny_http = "0.9.0"
 [features]
 default = []
 client = []
-# Whether to run hsm tests. This is disabled by default and only used in cargo test.
-hsm_test = []

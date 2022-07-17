@@ -485,7 +485,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
     };
 
     Ok(quote! {
-        #( #vis const #attr_ident: many_protocol::attributes::Attribute = many_protocol::attributes::Attribute::id(#attr_id); )*
+        #( #vis const #attr_ident: many_types::attributes::Attribute = many_types::attributes::Attribute::id(#attr_id); )*
 
         #vis struct #info_ident;
         impl std::ops::Deref for #info_ident {
