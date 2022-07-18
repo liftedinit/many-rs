@@ -36,34 +36,13 @@ The dependency graph between the crates in this repository looks like this:
 
 ```mermaid
 graph TD;
-  many-client --> many-identity;
-  many-client --> many-modules;
-  many-client --> many-protocol;
-  many-client --> many-server;
-  many-identity --> many-error;
-  many-identity --> many-identity;
-  many-modules --> many-error;
-  many-modules --> many-identity;
-  many-modules --> many-macros;
-  many-modules --> many-protocol;
-  many-modules --> many-types;
-  many-modules --> many-identity;
-  many-protocol --> many-error;
-  many-protocol --> many-identity;
-  many-protocol --> many-types;
-  many-server --> many-error;
-  many-server --> many-identity;
-  many-server --> many-modules;
-  many-server --> many-protocol;
-  many-server --> many-types;
-  many-server --> many-macros;
-  many-types --> many-error;
-  many-types --> many-identity;
-  many --> many-client;
-  many --> many-identity;
-  many --> many-modules;
-  many --> many-protocol;
-  many --> many-server;
+  many-client --> many-identity & many-modules & many-protocol & many-server;
+  many-identity --> many-error & many-identity;
+  many-modules --> many-error & many-identity & many-macros & many-protocol & many-types & many-identity;
+  many-protocol --> many-error & many-identity & many-types;
+  many-server --> many-error & many-identity & many-modules & many-protocol & many-types & many-macros;
+  many-types --> many-error & many-identity;
+  many --> many-client & many-identity & many-modules & many-protocol & many-server;
 ```
 
 * `many`([crates](https://crates.io/crate/many), [docs](https://docs.rs/many))

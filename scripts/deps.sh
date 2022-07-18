@@ -6,9 +6,7 @@ echo 'graph TD;'
 for x in "$(dirname "$0")"/../src/*/Cargo.toml
 do
     pkg_name="$(basename "$(dirname "$x")")"
-    for dep in $(cat "$x" | grep -oE '^many-?[^ ]*')
-    do
-        echo "  $pkg_name --> $dep;"
-    done
 
+    deps="$(grep -oE '^many-?[^ ]*' "$x" | tr '\n' '&' | sed 's/&$//' | sed 's/&/ & /g')"
+    [ "$deps" ] && echo "  $pkg_name --> $deps;"
 done
