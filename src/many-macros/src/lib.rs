@@ -6,18 +6,14 @@ use serde_tokenstream::from_tokenstream;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::PathArguments::AngleBracketed;
-use syn::{
-    AngleBracketedGenericArguments, FnArg, GenericArgument, Pat, PatType, ReturnType, Token,
-    TraitItem, TraitItemMethod, Type, TypePath,
-};
+use syn::{FnArg, Pat, PatType, ReturnType, Token, TraitItem, TraitItemMethod, Type, TypePath};
 
 #[derive(Deserialize)]
 struct ManyModuleAttributes {
     pub id: Option<u32>,
     pub name: Option<String>,
     pub namespace: Option<String>,
-    pub many_crate: Option<String>,
+    pub many_modules_crate: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -84,7 +80,7 @@ struct Endpoint {
     pub span: Span,
     pub is_async: bool,
     pub is_mut: bool,
-    pub has_sender: bool,
+    pub sender: Option<(Box<Pat>, Box<Type>)>,
     pub arg: Option<(Box<Pat>, Box<Type>)>,
     pub ret_type: Box<Type>,
     pub block: Option<syn::Block>,
@@ -98,7 +94,7 @@ impl Endpoint {
         let name = func.to_string();
         let is_async = signature.asyncness.is_some();
 
-        let mut has_sender = false;
+        let sender: Option<(Box<Pat>, Box<Type>)>;
         let arg: Option<(Box<Pat>, Box<Type>)>;
         let mut ret_type: Option<Box<Type>> = None;
 
@@ -122,14 +118,23 @@ impl Endpoint {
         let maybe_argument = inputs.next();
 
         match (maybe_identity, maybe_argument) {
-            (_id, Some(FnArg::Typed(PatType { ty, pat, .. }))) => {
-                has_sender = true;
+            (
+                Some(FnArg::Typed(PatType {
+                    ty: id_ty,
+                    pat: id_pat,
+                    ..
+                })),
+                Some(FnArg::Typed(PatType { ty, pat, .. })),
+            ) => {
+                sender = Some((id_pat.clone(), id_ty.clone()));
                 arg = Some((pat.clone(), ty.clone()));
             }
             (Some(FnArg::Typed(PatType { ty, pat, .. })), None) => {
+                sender = None;
                 arg = Some((pat.clone(), ty.clone()));
             }
             (None, None) => {
+                sender = None;
                 arg = None;
             }
             (_, _) => {
@@ -154,18 +159,7 @@ impl Endpoint {
                         .join("::")
                         == "std::result::Result"
                 {
-                    if let AngleBracketed(AngleBracketedGenericArguments { ref args, .. }) =
-                        segments[0].arguments
-                    {
-                        ret_type = Some(
-                            args.iter()
-                                .find_map(|x| match x {
-                                    GenericArgument::Type(t) => Some(Box::new(t.clone())),
-                                    _ => None,
-                                })
-                                .unwrap(),
-                        );
-                    }
+                    ret_type = Some(ty.clone());
                 }
             }
         }
@@ -202,7 +196,7 @@ impl Endpoint {
             span: signature.span(),
             is_async,
             is_mut,
-            has_sender,
+            sender,
             arg,
             ret_type: ret_type.unwrap(),
             block: item.default.clone(),
@@ -217,7 +211,7 @@ impl Endpoint {
             func,
             is_async,
             is_mut,
-            has_sender,
+            sender,
             arg,
             ret_type,
             block,
@@ -234,10 +228,10 @@ impl Endpoint {
         } else {
             quote! {}
         };
-        let sender = if *has_sender {
-            Some(quote! {, sender: &Identity })
+        let sender = if let Some((name, ty)) = sender {
+            quote! {, #name: #ty}
         } else {
-            None
+            quote! {}
         };
         let attributes = attributes.iter();
         let block = if let Some(b) = block {
@@ -254,7 +248,7 @@ impl Endpoint {
 
         quote! {
             #(#attributes)*
-            #a fn #func(#s #sender #arg) -> Result< #ret_type, ManyError > #block
+            #a fn #func(#s #sender #arg) -> #ret_type #block
         }
     }
 
@@ -269,7 +263,7 @@ impl Endpoint {
         let check_anonymous = if self.metadata.deny_anonymous() {
             quote_spanned! { span =>
                 if message.from.unwrap_or_default().is_anonymous() {
-                    return Err(ManyError::sender_cannot_be_anonymous());
+                    return Err(many_error::ManyError::sender_cannot_be_anonymous());
                 }
             }
         } else {
@@ -280,7 +274,7 @@ impl Endpoint {
             quote_spanned! { span => {
                 let protected = std::collections::BTreeMap::from_iter(envelope.protected.header.rest.clone().into_iter());
                 if !protected.contains_key(&coset::Label::Text("webauthn".to_string())) {
-                    return Err( ManyError::non_webauthn_request_denied(&method))
+                    return Err( many_error::ManyError::non_webauthn_request_denied(&method))
                 }
             }}
         } else {
@@ -290,7 +284,7 @@ impl Endpoint {
         let check_ty = if let Some((_, ty)) = &self.arg {
             quote_spanned! { span =>
                 minicbor::decode::<'_, #ty>(data)
-                    .map_err(|e| ManyError::deserialization_error(e.to_string()))?;
+                    .map_err(|e| many_error::ManyError::deserialization_error(e.to_string()))?;
             }
         } else {
             quote! { {} }
@@ -320,7 +314,7 @@ impl Endpoint {
             quote! { let backend = self.backend.lock().unwrap(); }
         };
 
-        let call = match (self.has_sender, self.arg.is_some(), self.is_async) {
+        let call = match (self.sender.is_some(), self.arg.is_some(), self.is_async) {
             (false, true, false) => {
                 quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ) ) }
             }
@@ -363,8 +357,11 @@ impl quote::ToTokens for Endpoint {
 #[allow(clippy::too_many_lines)]
 fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream, syn::Error> {
     let attrs: ManyModuleAttributes = from_tokenstream(attr)?;
-    let many = Ident::new(
-        attrs.many_crate.as_ref().map_or("many", String::as_str),
+    let many_modules = Ident::new(
+        attrs
+            .many_modules_crate
+            .as_ref()
+            .map_or("many_modules", String::as_str),
         attr.span(),
     );
 
@@ -437,15 +434,15 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
     let validate = quote! {
         fn validate(
             &self,
-            message: & #many ::message::RequestMessage,
+            message: & many_protocol::RequestMessage,
             envelope: & coset::CoseSign1,
-        ) -> Result<(),  #many ::ManyError> {
+        ) -> Result<(), many_error::ManyError> {
             let method = message.method.as_str();
             let data = message.data.as_slice();
             match method {
                 #(#validate_endpoint_pat)*
 
-                _ => return Err( #many ::ManyError::invalid_method_name(method.to_string())),
+                _ => return Err( many_error::ManyError::invalid_method_name(method.to_string())),
             };
             Ok(())
         }
@@ -456,9 +453,9 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
     let execute = quote! {
         async fn execute(
             &self,
-            message:  #many ::message::RequestMessage,
-        ) -> Result< #many ::message::ResponseMessage,  #many ::ManyError> {
-            use  #many ::ManyError;
+            message: many_protocol::RequestMessage,
+        ) -> Result<many_protocol::ResponseMessage, many_error::ManyError> {
+            use many_error::ManyError;
             fn decode<'a, T: minicbor::Decode<'a, ()>>(data: &'a [u8]) -> Result<T, ManyError> {
                 minicbor::decode(data).map_err(|e| ManyError::deserialization_error(e.to_string()))
             }
@@ -473,7 +470,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
                 _ => Err(ManyError::internal_server_error()),
             }?;
 
-            Ok( #many ::message::ResponseMessage::from_request(
+            Ok( many_protocol::ResponseMessage::from_request(
                 &message,
                 &message.to,
                 Ok(result),
@@ -488,14 +485,14 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
     };
 
     Ok(quote! {
-        #( #vis const #attr_ident:  #many ::protocol::Attribute =  #many ::protocol::Attribute::id(#attr_id); )*
+        #( #vis const #attr_ident: many_types::attributes::Attribute = many_types::attributes::Attribute::id(#attr_id); )*
 
         #vis struct #info_ident;
         impl std::ops::Deref for #info_ident {
-            type Target =  #many ::server::module::ManyModuleInfo;
+            type Target =  #many_modules ::ManyModuleInfo;
 
-            fn deref(&self) -> & #many ::server::module::ManyModuleInfo {
-                use  #many ::server::module::ManyModuleInfo;
+            fn deref(&self) -> & #many_modules ::ManyModuleInfo {
+                use #many_modules ::ManyModuleInfo;
                 static ONCE: std::sync::Once = std::sync::Once::new();
                 static mut VALUE: *mut ManyModuleInfo = 0 as *mut ManyModuleInfo;
 
@@ -530,8 +527,8 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         }
 
         #[async_trait::async_trait]
-        impl<T: #trait_ident>  #many ::ManyModule for #struct_ident<T> {
-            fn info(&self) -> & #many ::server::module::ManyModuleInfo {
+        impl<T: #trait_ident>  #many_modules ::ManyModule for #struct_ident<T> {
+            fn info(&self) -> & #many_modules ::ManyModuleInfo {
                 & #info_ident
             }
 
