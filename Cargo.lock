@@ -1640,6 +1640,7 @@ dependencies = [
  "hex",
  "many-error",
  "many-identity",
+ "many-types",
  "minicbor",
  "num-bigint",
  "num-derive",
