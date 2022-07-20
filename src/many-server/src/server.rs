@@ -445,7 +445,7 @@ mod tests {
             encode_cose_sign1_from_request(request, &CoseKeyIdentity::anonymous()).unwrap()
         }
 
-        let server = ManyServer::new("test-server", CoseKeyIdentity::anonymous(), None);
+        let server = ManyServer::simple("test-server", CoseKeyIdentity::anonymous(), None, None);
         let timestamp = SystemTime::now();
         let now = Arc::new(RwLock::new(timestamp.clone()));
         let get_now = {
@@ -454,13 +454,17 @@ mod tests {
         };
 
         // timestamp is now, so this should be fairly close to it and should pass.
-        assert!(smol::block_on(server.execute(create_request(timestamp, 0))).is_ok());
+        let response_e = smol::block_on(server.execute(create_request(timestamp, 0))).unwrap();
+        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        assert!(response.data.is_ok());
 
         // Set time to present.
         {
             server.lock().unwrap().set_time_fn(get_now);
         }
-        assert!(smol::block_on(server.execute(create_request(timestamp, 1))).is_ok());
+        let response_e = smol::block_on(server.execute(create_request(timestamp, 1))).unwrap();
+        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        assert!(response.data.is_ok());
 
         // Set time to 10 minutes past.
         {
@@ -473,5 +477,14 @@ mod tests {
             response.data.unwrap_err().code(),
             ManyError::timestamp_out_of_range().code()
         );
+
+        // Set request timestamp 10 minutes in the past.
+        let response_e = smol::block_on(server.execute(create_request(
+            timestamp.sub(Duration::from_secs(60 * 60 * 10)),
+            3,
+        )))
+        .unwrap();
+        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        assert!(response.data.is_ok());
     }
 }
