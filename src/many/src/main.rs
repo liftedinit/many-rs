@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
 use many_client::ManyClient;
+use many_error::ManyError;
 use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_identity::{Address, CoseKeyIdentity};
 use many_modules::ledger;
@@ -17,7 +18,7 @@ use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use tracing::{error, info, level_filters::LevelFilter, trace};
 use url::Url;
 
@@ -100,9 +101,9 @@ struct MessageOpt {
     #[clap(long)]
     pem: Option<PathBuf>,
 
-    /// Timestamp.
+    /// Timestamp (in seconds since epoch).
     #[clap(long)]
-    timestamp: Option<String>,
+    timestamp: Option<u64>,
 
     /// The server to connect to.
     #[clap(long)]
@@ -246,10 +247,32 @@ fn message(
     key: CoseKeyIdentity,
     method: String,
     data: Vec<u8>,
+    timestamp: Option<SystemTime>,
     r#async: bool,
 ) -> Result<(), anyhow::Error> {
-    let client = ManyClient::new(s, to, key).unwrap();
-    let response = client.call_raw(method, &data)?;
+    let client = ManyClient::new(s, to, key.clone()).unwrap();
+
+    let mut nonce = [0u8; 16];
+    rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut nonce);
+
+    let mut builder = many_protocol::RequestMessageBuilder::default();
+    builder
+        .version(1)
+        .from(key.identity)
+        .to(to)
+        .method(method)
+        .data(data)
+        .nonce(nonce.to_vec());
+
+    if let Some(ts) = timestamp {
+        builder.timestamp(ts);
+    }
+
+    let message: RequestMessage = builder
+        .build()
+        .map_err(|_| ManyError::internal_server_error())?;
+
+    let response = client.send_message(message)?;
 
     show_response(response, client, r#async)
 }
@@ -387,6 +410,12 @@ fn main() {
             let from_identity = key.identity;
             let to_identity = o.to.unwrap_or_default();
 
+            let timestamp = o.timestamp.map(|secs| {
+                SystemTime::UNIX_EPOCH
+                    .checked_add(Duration::new(secs, 0))
+                    .expect("Invalid timestamp")
+            });
+
             let data = o
                 .data
                 .map_or(vec![], |d| cbor_diag::parse_diag(&d).unwrap().to_bytes());
@@ -401,6 +430,7 @@ fn main() {
                         key,
                         o.method.expect("--method is required"),
                         data,
+                        timestamp,
                         o.r#async,
                     )
                 };

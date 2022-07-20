@@ -447,10 +447,10 @@ mod tests {
 
         let server = ManyServer::simple("test-server", CoseKeyIdentity::anonymous(), None, None);
         let timestamp = SystemTime::now();
-        let now = Arc::new(RwLock::new(timestamp.clone()));
+        let now = Arc::new(RwLock::new(timestamp));
         let get_now = {
             let n = now.clone();
-            move || Ok(n.read().unwrap().clone())
+            move || Ok(*n.read().unwrap())
         };
 
         // timestamp is now, so this should be fairly close to it and should pass.
