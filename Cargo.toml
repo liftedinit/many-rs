@@ -4,6 +4,7 @@ members = [
     "src/many-client",
     "src/many-error",
     "src/many-identity",
+    "src/many-identity-ed25519",
     "src/many-macros",
     "src/many-modules",
     "src/many-protocol",

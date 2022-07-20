@@ -5,14 +5,13 @@ use std::collections::BTreeMap;
 
 use coset::cbor::value::Value;
 use coset::iana::Algorithm;
-use coset::CborSerializable;
 use coset::CoseKeySet;
 use coset::CoseSign1;
 use coset::CoseSign1Builder;
 use coset::HeaderBuilder;
 use coset::Label;
+use coset::{CborSerializable, CoseKey};
 pub use many_error::ManyError;
-use many_identity::cose_helpers::public_key;
 use many_identity::{Address, CoseKeyIdentity, CoseKeyIdentitySignature};
 use minicbor::Decode;
 pub use request::RequestMessage;
@@ -24,6 +23,8 @@ use sha2::Digest;
 use signature::{Signature, Signer, Verifier};
 
 pub type ManyUrl = reqwest::Url;
+
+pub fn public_key(key: &CoseKey) -> Result<Address, String> {}
 
 pub fn decode_request_from_cose_sign1(
     sign1: CoseSign1,

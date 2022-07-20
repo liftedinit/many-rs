@@ -1518,6 +1518,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "many-identity-ed25519"
+version = "0.1.0"
+dependencies = [
+ "asn1",
+ "base32",
+ "coset",
+ "crc-any",
+ "cryptoki",
+ "ed25519",
+ "ed25519-dalek",
+ "hex",
+ "many-error",
+ "many-identity",
+ "minicbor",
+ "once_cell",
+ "p256",
+ "pkcs8 0.8.0",
+ "proptest",
+ "rand 0.7.3",
+ "serde",
+ "serde_test",
+ "sha2 0.10.2",
+ "sha3 0.10.1",
+ "signature",
+ "static_assertions",
+ "tracing",
+]
+
+[[package]]
 name = "many-macros"
 version = "0.1.0"
 dependencies = [
