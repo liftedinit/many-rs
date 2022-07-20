@@ -37,10 +37,10 @@ The dependency graph between the crates in this repository looks like this:
 ```mermaid
 graph TD;
   many-client --> many-identity & many-modules & many-protocol & many-server;
-  many-identity --> many-error & many-identity;
-  many-modules --> many-error & many-identity & many-macros & many-protocol & many-types & many-identity;
+  many-identity --> many-error;
+  many-modules --> many-error & many-identity & many-macros & many-protocol & many-types;
   many-protocol --> many-error & many-identity & many-types;
-  many-server --> many-error & many-identity & many-modules & many-protocol & many-types & many-macros;
+  many-server --> many-error & many-identity & many-macros & many-modules & many-protocol & many-types;
   many-types --> many-error & many-identity;
   many --> many-client & many-identity & many-modules & many-protocol & many-server;
 ```
