@@ -469,5 +469,9 @@ mod tests {
         let response_e = smol::block_on(server.execute(create_request(timestamp, 2))).unwrap();
         let response = decode_response_from_cose_sign1(response_e, None).unwrap();
         assert!(response.data.is_err());
+        assert_eq!(
+            response.data.unwrap_err().code(),
+            ManyError::timestamp_out_of_range().code()
+        );
     }
 }
