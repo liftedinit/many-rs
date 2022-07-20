@@ -7,6 +7,7 @@ use many_modules::{base, ManyModule, ManyModuleInfo};
 use many_protocol::{ManyUrl, RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
@@ -42,19 +43,16 @@ fn _validate_time(
     Ok(())
 }
 
-trait ManyServerFallback: LowLevelManyRequestHandler + many_modules::base::BaseModuleBackend {}
+trait ManyServerFallback: LowLevelManyRequestHandler + base::BaseModuleBackend {}
 
-impl<M: LowLevelManyRequestHandler + many_modules::base::BaseModuleBackend + 'static>
-    ManyServerFallback for M
-{
-}
+impl<M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static> ManyServerFallback for M {}
 
 #[derive(Debug, Clone)]
 pub struct ManyModuleList {}
 
 pub const MANYSERVER_DEFAULT_TIMEOUT: u64 = 300;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct ManyServer {
     modules: Vec<Arc<dyn ManyModule + Send>>,
     method_cache: BTreeSet<String>,
@@ -64,6 +62,8 @@ pub struct ManyServer {
     timeout: u64,
     fallback: Option<Arc<dyn ManyServerFallback + Send + 'static>>,
     allowed_origins: Option<Vec<ManyUrl>>,
+
+    time_fn: Option<Arc<dyn Fn() -> Result<SystemTime, ManyError> + Send + Sync>>,
 }
 
 impl ManyServer {
@@ -97,9 +97,20 @@ impl ManyServer {
         }))
     }
 
+    pub fn set_timeout(&mut self, timeout_in_secs: u64) {
+        self.timeout = timeout_in_secs;
+    }
+
+    pub fn set_time_fn<T>(&mut self, time_fn: T)
+    where
+        T: Fn() -> Result<SystemTime, ManyError> + Send + Sync + 'static,
+    {
+        self.time_fn = Some(Arc::new(time_fn));
+    }
+
     pub fn set_fallback_module<M>(&mut self, module: M) -> &mut Self
     where
-        M: LowLevelManyRequestHandler + many_modules::base::BaseModuleBackend + 'static,
+        M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static,
     {
         self.fallback = Some(Arc::new(module));
         self
@@ -166,6 +177,12 @@ impl ManyServer {
             .iter()
             .find(|x| x.info().endpoints.contains(&message.method))
             .cloned()
+    }
+}
+
+impl Debug for ManyServer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ManyServer").finish()
     }
 }
 
@@ -260,8 +277,13 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 
             request
                 .and_then(|message| {
+                    let now = this
+                        .time_fn
+                        .as_ref()
+                        .map_or_else(|| Ok(SystemTime::now()), |f| f())?;
+
                     id = message.id;
-                    _validate_time(&message, SystemTime::now(), this.timeout)?;
+                    _validate_time(&message, now, this.timeout)?;
                     Ok(message)
                 })
                 .and_then(|message| {
@@ -322,6 +344,8 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 #[cfg(test)]
 mod tests {
     use semver::{BuildMetadata, Prerelease, Version};
+    use std::ops::Sub;
+    use std::sync::RwLock;
     use std::time::Duration;
 
     use super::*;
@@ -407,5 +431,60 @@ mod tests {
         assert!(_validate_time(&request, timestamp - Duration::from_secs(101), 100).is_err());
         // NOT okay with the future too much
         assert!(_validate_time(&request, timestamp + Duration::from_secs(101), 100).is_err());
+    }
+
+    #[test]
+    fn server_manages_time() {
+        fn create_request(timestamp: SystemTime, nonce: u8) -> CoseSign1 {
+            let request: RequestMessage = RequestMessageBuilder::default()
+                .method("status".to_string())
+                .timestamp(timestamp)
+                .nonce(nonce.to_le_bytes().to_vec())
+                .build()
+                .unwrap();
+            encode_cose_sign1_from_request(request, &CoseKeyIdentity::anonymous()).unwrap()
+        }
+
+        let server = ManyServer::simple("test-server", CoseKeyIdentity::anonymous(), None, None);
+        let timestamp = SystemTime::now();
+        let now = Arc::new(RwLock::new(timestamp));
+        let get_now = {
+            let n = now.clone();
+            move || Ok(*n.read().unwrap())
+        };
+
+        // timestamp is now, so this should be fairly close to it and should pass.
+        let response_e = smol::block_on(server.execute(create_request(timestamp, 0))).unwrap();
+        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        assert!(response.data.is_ok());
+
+        // Set time to present.
+        {
+            server.lock().unwrap().set_time_fn(get_now);
+        }
+        let response_e = smol::block_on(server.execute(create_request(timestamp, 1))).unwrap();
+        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        assert!(response.data.is_ok());
+
+        // Set time to 10 minutes past.
+        {
+            *now.write().unwrap() = timestamp.sub(Duration::from_secs(60 * 60 * 10));
+        }
+        let response_e = smol::block_on(server.execute(create_request(timestamp, 2))).unwrap();
+        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        assert!(response.data.is_err());
+        assert_eq!(
+            response.data.unwrap_err().code(),
+            ManyError::timestamp_out_of_range().code()
+        );
+
+        // Set request timestamp 10 minutes in the past.
+        let response_e = smol::block_on(server.execute(create_request(
+            timestamp.sub(Duration::from_secs(60 * 60 * 10)),
+            3,
+        )))
+        .unwrap();
+        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        assert!(response.data.is_ok());
     }
 }
