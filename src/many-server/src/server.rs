@@ -42,12 +42,9 @@ fn _validate_time(
     Ok(())
 }
 
-trait ManyServerFallback: LowLevelManyRequestHandler + many_modules::base::BaseModuleBackend {}
+trait ManyServerFallback: LowLevelManyRequestHandler + base::BaseModuleBackend {}
 
-impl<M: LowLevelManyRequestHandler + many_modules::base::BaseModuleBackend + 'static>
-    ManyServerFallback for M
-{
-}
+impl<M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static> ManyServerFallback for M {}
 
 #[derive(Debug, Clone)]
 pub struct ManyModuleList {}
@@ -64,6 +61,7 @@ pub struct ManyServer {
     timeout: u64,
     fallback: Option<Arc<dyn ManyServerFallback + Send + 'static>>,
     allowed_origins: Option<Vec<ManyUrl>>,
+    time: Option<SystemTime>,
 }
 
 impl ManyServer {
@@ -97,9 +95,17 @@ impl ManyServer {
         }))
     }
 
+    pub fn set_timeout(&mut self, timeout_in_secs: u64) {
+        self.timeout = timeout_in_secs;
+    }
+
+    pub fn set_time(&mut self, time: SystemTime) {
+        self.time = Some(time);
+    }
+
     pub fn set_fallback_module<M>(&mut self, module: M) -> &mut Self
     where
-        M: LowLevelManyRequestHandler + many_modules::base::BaseModuleBackend + 'static,
+        M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static,
     {
         self.fallback = Some(Arc::new(module));
         self
@@ -257,11 +263,12 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
         let response = {
             let this = self.lock().unwrap();
             let cose_id = this.identity.clone();
+            let now = this.time.unwrap_or_else(SystemTime::now);
 
             request
                 .and_then(|message| {
                     id = message.id;
-                    _validate_time(&message, SystemTime::now(), this.timeout)?;
+                    _validate_time(&message, now, this.timeout)?;
                     Ok(message)
                 })
                 .and_then(|message| {
@@ -322,6 +329,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 #[cfg(test)]
 mod tests {
     use semver::{BuildMetadata, Prerelease, Version};
+    use std::ops::Sub;
     use std::time::Duration;
 
     use super::*;
@@ -407,5 +415,41 @@ mod tests {
         assert!(_validate_time(&request, timestamp - Duration::from_secs(101), 100).is_err());
         // NOT okay with the future too much
         assert!(_validate_time(&request, timestamp + Duration::from_secs(101), 100).is_err());
+    }
+
+    #[test]
+    fn server_manages_time() {
+        fn create_request(timestamp: SystemTime, nonce: u8) -> CoseSign1 {
+            let request: RequestMessage = RequestMessageBuilder::default()
+                .method("status".to_string())
+                .timestamp(timestamp)
+                .nonce(nonce.to_le_bytes().to_vec())
+                .build()
+                .unwrap();
+            encode_cose_sign1_from_request(request, &CoseKeyIdentity::anonymous()).unwrap()
+        }
+
+        let server = ManyServer::new("test-server", CoseKeyIdentity::anonymous(), None);
+        let timestamp = SystemTime::now();
+
+        // timestamp is now, so this should be fairly close to it and should pass.
+        assert!(smol::block_on(server.execute(create_request(timestamp, 0))).is_ok());
+
+        // Set time to present.
+        {
+            server.lock().unwrap().set_time(timestamp);
+        }
+        assert!(smol::block_on(server.execute(create_request(timestamp, 1))).is_ok());
+
+        // Set time to 10 minutes past.
+        {
+            server
+                .lock()
+                .unwrap()
+                .set_time(timestamp.sub(Duration::from_secs(60 * 60 * 10)));
+        }
+        let response_e = smol::block_on(server.execute(create_request(timestamp, 2))).unwrap();
+        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        assert!(response.data.is_err());
     }
 }
