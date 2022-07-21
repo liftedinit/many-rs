@@ -11,6 +11,44 @@ use std::collections::BTreeMap;
 
 mod cose_helpers;
 
+/// Build an EdDSA CoseKey
+///
+/// # Arguments
+///
+/// * `x` - Public key
+/// * `d` - Private key
+fn eddsa_cose_key(x: Vec<u8>, d: Option<Vec<u8>>) -> CoseKey {
+    let mut params: Vec<(Label, Value)> = Vec::from([
+        (
+            Label::Int(coset::iana::OkpKeyParameter::Crv as i64),
+            Value::from(coset::iana::EllipticCurve::Ed25519 as u64),
+        ),
+        (
+            Label::Int(coset::iana::OkpKeyParameter::X as i64),
+            Value::Bytes(x),
+        ),
+    ]);
+    let mut key_ops: BTreeSet<KeyOperation> =
+        BTreeSet::from([KeyOperation::Assigned(coset::iana::KeyOperation::Verify)]);
+
+    if let Some(d) = d {
+        params.push((
+            Label::Int(coset::iana::OkpKeyParameter::D as i64),
+            Value::Bytes(d),
+        ));
+        key_ops.insert(KeyOperation::Assigned(coset::iana::KeyOperation::Sign));
+    }
+
+    // The CoseKeyBuilder is too limited to be used here
+    CoseKey {
+        kty: KeyType::Assigned(coset::iana::KeyType::OKP),
+        alg: Some(Algorithm::Assigned(coset::iana::Algorithm::EdDSA)),
+        key_ops,
+        params,
+        ..Default::default()
+    }
+}
+
 /// A namespace to keep [many_identity::Address] functions organized here.
 pub struct Ed25519Address;
 
@@ -38,6 +76,8 @@ struct Ed25519IdentityInner {
 }
 
 impl Ed25519IdentityInner {
+    pub fn from_points<X: AsRef<[u8]>, D: AsRef<[u8]>>(x: X, d: D) -> Result<Self, String> {}
+
     pub fn from_key(key: CoseKey) -> Result<Self, String> {
         let address = Ed25519Address::public_key(&key);
 
