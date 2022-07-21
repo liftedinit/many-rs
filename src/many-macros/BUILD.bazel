@@ -1,6 +1,6 @@
 load("@rules_rust//rust:defs.bzl", "rust_proc_macro")
 
-package(default_visibility = ["//src/many:__pkg__"])
+package(default_visibility = ["//src/many-modules:__pkg__"])
 
 rust_proc_macro(
     name = "many-macros",

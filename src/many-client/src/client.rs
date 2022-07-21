@@ -1,11 +1,11 @@
 use coset::{CoseSign1, TaggedCborSerializable};
-use many::message::{
+use many_identity::CoseKeyIdentity;
+use many_modules::base::Status;
+use many_protocol::{
     decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
     RequestMessageBuilder, ResponseMessage,
 };
-use many::server::module::base::Status;
-use many::types::identity::CoseKeyIdentity;
-use many::{Identity, ManyError};
+use many_server::{Address, ManyError};
 use minicbor::Encode;
 use reqwest::{IntoUrl, Url};
 use std::fmt::Formatter;
@@ -13,7 +13,7 @@ use std::fmt::Formatter;
 #[derive(Clone)]
 pub struct ManyClient {
     pub id: CoseKeyIdentity,
-    pub to: Identity,
+    pub to: Address,
     url: Url,
 }
 
@@ -28,7 +28,7 @@ impl std::fmt::Debug for ManyClient {
 }
 
 impl ManyClient {
-    pub fn new<S: IntoUrl>(url: S, to: Identity, id: CoseKeyIdentity) -> Result<Self, String> {
+    pub fn new<S: IntoUrl>(url: S, to: Address, id: CoseKeyIdentity) -> Result<Self, String> {
         Ok(Self {
             id,
             to,

@@ -1,0 +1,44 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+package(default_visibility = [
+    "//src/many:__pkg__",
+    "//src/many-client:__pkg__",
+    "//src/many-modules:__pkg__",
+    "//src/many-protocol:__pkg__",
+    "//src/many-server:__pkg__",
+    "//src/many-types:__pkg__",
+])
+
+rust_library(
+    name = "many-identity",
+    srcs = glob(include = ["src/**/*.rs"]),
+    crate_features = [
+        "coset",
+        "minicbor",
+    ],
+    proc_macro_deps = [
+        "@crate_index//:num-derive",
+    ],
+    deps = [
+        "//src/many-error",
+        "@crate_index//:asn1",
+        "@crate_index//:base32",
+        "@crate_index//:coset",
+        "@crate_index//:crc-any",
+        "@crate_index//:cryptoki",
+        "@crate_index//:ed25519",
+        "@crate_index//:ed25519-dalek",
+        "@crate_index//:hex",
+        "@crate_index//:minicbor",
+        "@crate_index//:once_cell",
+        "@crate_index//:p256",
+        "@crate_index//:pkcs8",
+        "@crate_index//:rand_07",
+        "@crate_index//:serde",
+        "@crate_index//:sha2",
+        "@crate_index//:sha3",
+        "@crate_index//:signature",
+        "@crate_index//:static_assertions",
+        "@crate_index//:tracing",
+    ],
+)

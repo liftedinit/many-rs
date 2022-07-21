@@ -1,0 +1,24 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+package(default_visibility = [
+    "//src/many:__pkg__",
+    "//src/many-identity:__pkg__",
+    "//src/many-modules:__pkg__",
+    "//src/many-protocol:__pkg__",
+    "//src/many-server:__pkg__",
+    "//src/many-types:__pkg__",
+])
+
+rust_library(
+    name = "many-error",
+    srcs = glob(include = ["src/**/*.rs"]),
+    crate_features = ["minicbor"],
+    proc_macro_deps = [
+        "@crate_index//:num-derive",
+    ],
+    deps = [
+        "@crate_index//:minicbor",
+        "@crate_index//:num-traits",
+        "@crate_index//:regex",
+    ],
+)

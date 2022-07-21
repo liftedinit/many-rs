@@ -1,0 +1,30 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+package(default_visibility = [
+    "//src/many:__pkg__",
+    "//src/many-client:__pkg__",
+    "//src/many-identity:__pkg__",
+    "//src/many-server:__pkg__",
+])
+
+rust_library(
+    name = "many-modules",
+    srcs = glob(include = ["src/**/*.rs"]),
+    proc_macro_deps = [
+        "//src/many-macros",
+        "@crate_index//:async-trait",
+        "@crate_index//:strum_macros",
+    ],
+    deps = [
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-protocol",
+        "//src/many-types",
+        "@crate_index//:coset",
+        "@crate_index//:derive_builder",
+        "@crate_index//:hex",
+        "@crate_index//:minicbor",
+        "@crate_index//:num-bigint",
+        "@crate_index//:strum",
+    ],
+)

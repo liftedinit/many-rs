@@ -1,7 +1,12 @@
 [workspace]
 members = [
     "src/many",
-    "src/many-cli",
     "src/many-client",
+    "src/many-error",
+    "src/many-identity",
     "src/many-macros",
+    "src/many-modules",
+    "src/many-protocol",
+    "src/many-server",
+    "src/many-types",
 ]
