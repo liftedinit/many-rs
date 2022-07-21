@@ -23,7 +23,6 @@ anyhow = "1.0.57"
 atty = "0.2.14"
 base64 = "0.13.0"
 cbor-diag = "0.1.9"
-chrono = "0.4.19"
 clap = { version = "3.0.0-rc.9", features = [ "derive" ] }
 coset = "0.3"
 hex = "0.4.3"
