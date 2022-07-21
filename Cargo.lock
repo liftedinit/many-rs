@@ -1484,10 +1484,12 @@ dependencies = [
 name = "many-error"
 version = "0.1.0"
 dependencies = [
+ "backtrace",
  "minicbor",
  "num-derive",
  "num-traits",
  "regex",
+ "tracing",
 ]
 
 [[package]]
