@@ -26,7 +26,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - cargo-${CACHE_VERSION}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
           version: nightly
       - run:
@@ -62,7 +62,7 @@ jobs:
           crate: --all-features
           with_cache: false
       - save_cache:
-          key: cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+          key: cargo-${CACHE_VERSION}-{{ arch }}-{{ checksum "Cargo.lock" }}
           paths:
             - ~/.cargo/bin/
             - ~/.cargo/registry/index/
@@ -82,7 +82,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - cargo-${CACHE_VERSION}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
           version: nightly
       - run:
