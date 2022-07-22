@@ -26,7 +26,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - cargo-build-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
           version: nightly
       - rust/format:
@@ -56,7 +56,7 @@ jobs:
           crate: --all-features
           with_cache: false
       - save_cache:
-          key: cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+          key: cargo-build-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
           paths:
             - ~/.cargo/bin/
             - ~/.cargo/registry/index/
@@ -76,7 +76,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - cargo-coverage-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
           version: nightly
       - run:
@@ -93,6 +93,14 @@ jobs:
           command: grcov src -b target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o coverage/report.lcov
       - codecov/upload:
           file: coverage/report.lcov
+      - save_cache:
+          key: cargo-cache-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+          paths:
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+            - target/
   create:
     parameters:
       os:
