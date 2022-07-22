@@ -19,6 +19,7 @@ jobs:
       os:
         type: executor
     executor: << parameters.os >>
+    working_directory: ~/project/repo
     environment:
       PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
       SOFTHSM2_CONF: /tmp/softhsm2.conf
@@ -68,6 +69,7 @@ jobs:
       os:
         type: executor
     executor: << parameters.os >>
+    working_directory: ~/project/repo
     environment:
       PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
       SOFTHSM2_CONF: /tmp/softhsm2.conf
