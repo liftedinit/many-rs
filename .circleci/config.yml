@@ -48,7 +48,7 @@ jobs:
                 with_cache: false
       - rust/build:
           crate: --all-features
-            with_cache: false
+          with_cache: false
       - save_cache:
           key: 'cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}'
           paths:
