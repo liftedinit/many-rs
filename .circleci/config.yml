@@ -73,14 +73,6 @@ jobs:
       SOFTHSM2_CONF: /tmp/softhsm2.conf
     steps:
       - checkout
-#      - rust/install:
-#          version: nightly
-      - run:
-          name: install llvm-tools-preview
-          command: rustup component add llvm-tools-preview
-      - run:
-          name: install grcov
-          command: cargo install grcov --root target/
       - restore_cache:
           keys:
             - cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
@@ -103,8 +95,6 @@ jobs:
     steps:
       - checkout
       - detect/init
-      - rust/install:
-          version: nightly
       - rust/build:
           release: true
           with_cache: false
@@ -174,6 +164,20 @@ commands:
                   sudo DEBIAN_FRONTEND=noninteractive apt -y install build-essential pkg-config clang libssl-dev libsofthsm2
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
+            - rust/install:
+                version: nightly
+            - run:
+                name: install llvm-tools-preview
+                command: rustup component add llvm-tools-preview
+            - run:
+                name: install grcov
+                command: cargo install grcov --root target/
+      - when:
+          condition:
+            equal: ["macos", << parameters.os >> ]
+          steps:
+            - rust/install:
+                version: nightly
 
 workflows:
   ci:
