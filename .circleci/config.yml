@@ -25,7 +25,7 @@ jobs:
           version: nightly
       - restore_cache:
           keys:
-            - 'cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}'
+            - cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/format:
           with_cache: false
       - rust/clippy:
@@ -33,7 +33,8 @@ jobs:
           with_cache: false
       - when:
           condition:
-            equal: [ "linux2204", << parameters.os >> ]
+            not:
+              equal: [ "macos", << parameters.os >> ]
           steps:
             - checkout
             - rust/test:
@@ -53,7 +54,7 @@ jobs:
           crate: --all-features
           with_cache: false
       - save_cache:
-          key: 'cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}'
+          key: cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
           paths:
             - ~/.cargo/bin/
             - ~/.cargo/registry/index/
@@ -70,8 +71,8 @@ jobs:
       SOFTHSM2_CONF: /tmp/softhsm2.conf
     steps:
       - checkout
-      - rust/install:
-          version: nightly
+#      - rust/install:
+#          version: nightly
       - run:
           name: install llvm-tools-preview
           command: rustup component add llvm-tools-preview
@@ -80,7 +81,7 @@ jobs:
           command: cargo install grcov --root target/
       - restore_cache:
           keys:
-            - 'cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}'
+            - cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - run:
           name: generate test coverage
           command: cargo test --all-targets --all-features
