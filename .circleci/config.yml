@@ -94,7 +94,7 @@ jobs:
       - codecov/upload:
           file: coverage/report.lcov
       - save_cache:
-          key: cargo-cache-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+          key: cargo-coverage-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
           paths:
             - ~/.cargo/bin/
             - ~/.cargo/registry/index/
