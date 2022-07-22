@@ -7,17 +7,9 @@ orbs:
 
 executors:
   linux2204:
-    parameters:
-      id:
-        type: string
-        default: "linux"
     machine:
       image: ubuntu-2204:current
   macos:
-    parameters:
-      id:
-        type: string
-        default: "macos"
     macos:
       xcode: 13.4.1
 
@@ -25,7 +17,7 @@ jobs:
   lint-test-build:
     parameters:
       os:
-        type: executor
+        type: string
     executor: << parameters.os >>
     environment:
       PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
@@ -44,7 +36,7 @@ jobs:
           with_cache: false
       - when:
           condition:
-            equal: [ "linux", << parameters.os.parameters.id >> ]
+            equal: [ "linux2204", << parameters.os >> ]
           steps:
             - checkout
             - rust/test:
@@ -52,7 +44,7 @@ jobs:
                 with_cache: false
       - when:
           condition:
-            equal: [ "macos", << parameters.os.parameters.id >> ]
+            equal: [ "macos", << parameters.os >> ]
           steps:
             - rust/test:
                 package: --all-targets --features default,client,raw,testing,trace_error_creation
@@ -74,7 +66,7 @@ jobs:
   coverage:
     parameters:
       os:
-        type: executor
+        type: string
     executor: << parameters.os >>
     working_directory: ~/project/repo
     environment:
@@ -104,7 +96,7 @@ jobs:
   create:
     parameters:
       os:
-        type: executor
+        type: string
     executor: << parameters.os >>
     steps:
       - checkout
