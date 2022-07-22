@@ -176,7 +176,7 @@ workflows:
         equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - lint-test-build:
-          pre-step:
+          pre-steps:
             - install-deps:
                 os: << matrix.os >>
           name: lint-test-build-v<< matrix.os >>
