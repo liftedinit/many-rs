@@ -19,6 +19,9 @@ jobs:
       os:
         type: executor
     executor: << parameters.os >>
+    environment:
+      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      SOFTHSM2_CONF: /tmp/softhsm2.conf
     steps:
       - checkout
       - rust/install:
@@ -33,8 +36,7 @@ jobs:
           with_cache: false
       - when:
           condition:
-            not:
-              equal: [ "macos", << parameters.os >> ]
+              equal: [ "linux2204", << parameters.os >> ]
           steps:
             - checkout
             - rust/test:
@@ -209,7 +211,7 @@ workflows:
           name: create-v<< matrix.os >>
           matrix:
             parameters:
-              os: [linux2204, macos]
+              os: [linux2204]
           filters:
             branches:
               ignore: /.*/
