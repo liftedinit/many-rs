@@ -29,23 +29,24 @@ jobs:
       - rust/clippy:
           flags: --all-targets --all-features -- -D clippy::all
           with_cache: false
-      - rust/test:
-          package: --all-targets --all-features
-          with_cache: false
       - when:
           condition:
-            matches: { pattern: "^linux.*$", value: << parameters.os >> }
+            equal: [ "linux2204", << parameters.os >> ]
           steps:
+            - checkout
             - rust/test:
-                package: --all-features --doc
+                package: --all-targets --all-features
                 with_cache: false
       - when:
           condition:
-            equal: ["macos", << parameters.os >>]
+            equal: [ "macos", << parameters.os >> ]
           steps:
             - rust/test:
                 package: --all-targets --features default,client,raw,testing,trace_error_creation
                 with_cache: false
+      - rust/test:
+          package: --all-features --doc
+          with_cache: false
       - rust/build:
           crate: --all-features
           with_cache: false
