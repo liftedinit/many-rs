@@ -19,17 +19,22 @@ jobs:
       os:
         type: executor
     executor: << parameters.os >>
-    working_directory: ~/project/repo
     environment:
       PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
       SOFTHSM2_CONF: /tmp/softhsm2.conf
     steps:
       - checkout
-      - rust/install:
-          version: nightly
       - restore_cache:
           keys:
             - cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+      - rust/install:
+          version: nightly
+      - run:
+          name: install llvm-tools-preview
+          command: rustup component add llvm-tools-preview
+      - run:
+          name: install grcov
+          command: cargo install grcov --root target/
       - rust/format:
           with_cache: false
       - rust/clippy:
@@ -78,6 +83,8 @@ jobs:
       - restore_cache:
           keys:
             - cargo-{{ .Environment.CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+      - rust/install:
+          version: nightly
       - run:
           name: generate test coverage
           command: cargo test --all-targets --all-features
@@ -166,20 +173,6 @@ commands:
                   sudo DEBIAN_FRONTEND=noninteractive apt -y install build-essential pkg-config clang libssl-dev libsofthsm2
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
-            - rust/install:
-                version: nightly
-            - run:
-                name: install llvm-tools-preview
-                command: rustup component add llvm-tools-preview
-            - run:
-                name: install grcov
-                command: cargo install grcov --root target/
-      - when:
-          condition:
-            equal: ["macos", << parameters.os >> ]
-          steps:
-            - rust/install:
-                version: nightly
 
 workflows:
   ci:
