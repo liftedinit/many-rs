@@ -7,9 +7,17 @@ orbs:
 
 executors:
   linux2204:
+    parameters:
+      id:
+        type: string
+        default: "linux"
     machine:
       image: ubuntu-2204:current
   macos:
+    parameters:
+      id:
+        type: string
+        default: "macos"
     macos:
       xcode: 13.4.1
 
@@ -36,7 +44,7 @@ jobs:
           with_cache: false
       - when:
           condition:
-              equal: [ "linux2204", << parameters.os >> ]
+            equal: [ "linux", << parameters.os.id >> ]
           steps:
             - checkout
             - rust/test:
@@ -44,7 +52,7 @@ jobs:
                 with_cache: false
       - when:
           condition:
-            equal: [ "macos", << parameters.os >> ]
+            equal: [ "macos", << parameters.os.id >> ]
           steps:
             - rust/test:
                 package: --all-targets --features default,client,raw,testing,trace_error_creation
