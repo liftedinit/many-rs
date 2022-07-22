@@ -44,7 +44,7 @@ jobs:
           with_cache: false
       - when:
           condition:
-            equal: [ "linux", << parameters.os.id >> ]
+            equal: [ "linux", << parameters.os.parameters.id >> ]
           steps:
             - checkout
             - rust/test:
@@ -52,7 +52,7 @@ jobs:
                 with_cache: false
       - when:
           condition:
-            equal: [ "macos", << parameters.os.id >> ]
+            equal: [ "macos", << parameters.os.parameters.id >> ]
           steps:
             - rust/test:
                 package: --all-targets --features default,client,raw,testing,trace_error_creation
