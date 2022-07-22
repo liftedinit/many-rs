@@ -1,7 +1,7 @@
 # many-rs
-![ci](https://img.shields.io/circleci/build/gh/liftedinit/many-rs)
-![coverage](https://img.shields.io/codecov/c/gh/liftedinit/many-rs)
-![license](https://img.shields.io/github/license/liftedinit/many-rs)
+[![ci](https://img.shields.io/circleci/build/gh/liftedinit/many-rs)](https://app.circleci.com/pipelines/gh/liftedinit/many-rs)
+[![coverage](https://img.shields.io/codecov/c/gh/liftedinit/many-rs)](https://app.codecov.io/gh/liftedinit/many-rs)
+[![license](https://img.shields.io/github/license/liftedinit/many-rs)](https://github.com/liftedinit/many-rs/blob/main/LICENSE)
 
 Rust libraries for the [MANY protocol](https://github.com/many-protocol).
 
@@ -37,10 +37,10 @@ The dependency graph between the crates in this repository looks like this:
 ```mermaid
 graph TD;
   many-client --> many-identity & many-modules & many-protocol & many-server;
-  many-identity --> many-error & many-identity;
-  many-modules --> many-error & many-identity & many-macros & many-protocol & many-types & many-identity;
+  many-identity --> many-error;
+  many-modules --> many-error & many-identity & many-macros & many-protocol & many-types;
   many-protocol --> many-error & many-identity & many-types;
-  many-server --> many-error & many-identity & many-modules & many-protocol & many-types & many-macros;
+  many-server --> many-error & many-identity & many-macros & many-modules & many-protocol & many-types;
   many-types --> many-error & many-identity;
   many --> many-client & many-identity & many-modules & many-protocol & many-server;
 ```
