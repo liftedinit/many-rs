@@ -38,7 +38,6 @@ jobs:
           condition:
             equal: [ "linux2204", << parameters.os >> ]
           steps:
-            - checkout
             - rust/test:
                 package: --all-targets --all-features
                 with_cache: false
