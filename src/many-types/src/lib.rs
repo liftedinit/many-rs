@@ -5,6 +5,7 @@ use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Bound, RangeBounds, Shl};
+use std::time::SystemTime;
 
 pub mod attributes;
 pub mod blockchain;
@@ -136,6 +137,14 @@ impl Timestamp {
                     ManyError::unknown("duration value can not represent system time".to_string())
                 })?,
         ))
+    }
+
+    pub fn from_system_time(t: SystemTime) -> Self {
+        Self(t)
+    }
+
+    pub fn as_system_time(&self) -> SystemTime {
+        self.0
     }
 }
 

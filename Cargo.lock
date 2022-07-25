@@ -1431,6 +1431,7 @@ dependencies = [
  "many-modules",
  "many-protocol",
  "many-server",
+ "many-types",
  "minicbor",
  "rand 0.8.5",
  "rpassword",
