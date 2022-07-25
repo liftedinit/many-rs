@@ -2,11 +2,11 @@ use crate::RequestMessage;
 use derive_builder::Builder;
 use many_identity::Address;
 use many_types::attributes::{Attribute, AttributeSet};
+use many_types::Timestamp;
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use num_derive::{FromPrimitive, ToPrimitive};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[derive(FromPrimitive, ToPrimitive)]
 #[repr(i8)]
@@ -32,8 +32,8 @@ pub struct ResponseMessage {
     pub data: Result<Vec<u8>, super::ManyError>,
 
     /// An optional timestamp for this response. If [None] this will be filled
-    /// with [SystemTime::now()]
-    pub timestamp: Option<SystemTime>,
+    /// with [Timestamp::now()]
+    pub timestamp: Option<Timestamp>,
 
     pub id: Option<u64>,
     pub attributes: AttributeSet,
@@ -132,13 +132,7 @@ impl<C> Encode<C> for ResponseMessage {
         };
 
         e.i8(ResponseMessageCborKey::Timestamp as i8)?;
-        let timestamp = self.timestamp.unwrap_or_else(SystemTime::now);
-        e.tag(minicbor::data::Tag::Timestamp)?.u64(
-            timestamp
-                .duration_since(UNIX_EPOCH)
-                .expect("Time flew backward")
-                .as_secs(),
-        )?;
+        e.encode(self.timestamp.unwrap_or_else(Timestamp::now))?;
 
         if let Some(ref id) = self.id {
             e.i8(ResponseMessageCborKey::Id as i8)?.u64(*id)?;
@@ -182,23 +176,7 @@ impl<'b, C> Decode<'b, C> for ResponseMessage {
                     Type::Map => builder.data(Err(d.decode()?)),
                     _ => &mut builder,
                 },
-                Some(ResponseMessageCborKey::Timestamp) => {
-                    // Some logic applies.
-                    let t = d.tag()?;
-                    if t != minicbor::data::Tag::Timestamp {
-                        return Err(minicbor::decode::Error::message("Invalid tag."));
-                    }
-
-                    let secs = d.u64()?;
-                    let timestamp = std::time::UNIX_EPOCH
-                        .checked_add(Duration::from_secs(secs))
-                        .ok_or_else(|| {
-                            minicbor::decode::Error::message(
-                                "duration value can not represent system time",
-                            )
-                        })?;
-                    builder.timestamp(timestamp)
-                }
+                Some(ResponseMessageCborKey::Timestamp) => builder.timestamp(d.decode()?),
                 Some(ResponseMessageCborKey::Attributes) => builder.attributes(d.decode()?),
                 _ => &mut builder,
             };

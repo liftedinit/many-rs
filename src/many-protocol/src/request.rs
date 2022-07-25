@@ -1,11 +1,11 @@
 use derive_builder::Builder;
 use many_identity::Address;
 use many_types::attributes::{Attribute, AttributeSet};
+use many_types::Timestamp;
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use num_derive::{FromPrimitive, ToPrimitive};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[derive(FromPrimitive, ToPrimitive)]
 #[repr(i8)]
@@ -31,8 +31,8 @@ pub struct RequestMessage {
     pub data: Vec<u8>,
 
     /// An optional timestamp for this request. If [None] this will be filled
-    /// with [SystemTime::now()]
-    pub timestamp: Option<SystemTime>,
+    /// with [Timestamp::now()]
+    pub timestamp: Option<Timestamp>,
 
     pub id: Option<u64>,
     pub nonce: Option<Vec<u8>>,
@@ -138,13 +138,7 @@ impl<C> Encode<C> for RequestMessage {
         }
 
         e.i8(RequestMessageCborKey::Timestamp as i8)?;
-        let timestamp = self.timestamp.unwrap_or_else(SystemTime::now);
-        e.tag(minicbor::data::Tag::Timestamp)?.u64(
-            timestamp
-                .duration_since(UNIX_EPOCH)
-                .expect("Time flew backward")
-                .as_secs(),
-        )?;
+        e.encode(self.timestamp.unwrap_or_else(Timestamp::now))?;
 
         if let Some(ref id) = self.id {
             e.i8(RequestMessageCborKey::Id as i8)?.u64(*id)?;
@@ -197,23 +191,7 @@ impl<'b, C> Decode<'b, C> for RequestMessage {
                 Some(RequestMessageCborKey::To) => builder.to(d.decode()?),
                 Some(RequestMessageCborKey::Endpoint) => builder.method(d.decode()?),
                 Some(RequestMessageCborKey::Argument) => builder.data(d.bytes()?.to_vec()),
-                Some(RequestMessageCborKey::Timestamp) => {
-                    // Some logic applies.
-                    let t = d.tag()?;
-                    if t != minicbor::data::Tag::Timestamp {
-                        return Err(minicbor::decode::Error::message("Invalid tag."));
-                    }
-
-                    let secs = d.u64()?;
-                    let timestamp = std::time::UNIX_EPOCH
-                        .checked_add(Duration::from_secs(secs))
-                        .ok_or_else(|| {
-                            minicbor::decode::Error::message(
-                                "duration value can not represent system time",
-                            )
-                        })?;
-                    builder.timestamp(timestamp)
-                }
+                Some(RequestMessageCborKey::Timestamp) => builder.timestamp(d.decode()?),
                 Some(RequestMessageCborKey::Id) => builder.id(d.u64()?),
                 Some(RequestMessageCborKey::Nonce) => builder.nonce(d.bytes()?.to_vec()),
                 Some(RequestMessageCborKey::Attributes) => builder.attributes(d.decode()?),
