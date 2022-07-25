@@ -24,7 +24,7 @@ fn _validate_time(
     let ts = message
         .timestamp
         .ok_or_else(|| ManyError::required_field_missing("timestamp".to_string()))?
-        .as_system_time();
+        .as_system_time()?;
 
     // Get the absolute time difference.
     let (early, later) = if ts < now { (ts, now) } else { (now, ts) };
@@ -418,7 +418,7 @@ mod tests {
             .to(Address::anonymous())
             .method("status".to_string())
             .data("null".as_bytes().to_vec())
-            .timestamp(Timestamp::from_system_time(timestamp))
+            .timestamp(Timestamp::from_system_time(timestamp).unwrap())
             .build()
             .unwrap();
 
@@ -440,7 +440,7 @@ mod tests {
         fn create_request(timestamp: SystemTime, nonce: u8) -> CoseSign1 {
             let request: RequestMessage = RequestMessageBuilder::default()
                 .method("status".to_string())
-                .timestamp(Timestamp::from_system_time(timestamp))
+                .timestamp(Timestamp::from_system_time(timestamp).unwrap())
                 .nonce(nonce.to_le_bytes().to_vec())
                 .build()
                 .unwrap();

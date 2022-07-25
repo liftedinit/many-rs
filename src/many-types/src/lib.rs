@@ -115,7 +115,7 @@ where
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
 #[must_use]
-pub struct Timestamp(std::time::SystemTime);
+pub struct Timestamp(u64);
 
 impl Timestamp {
     pub fn now() -> Self {
@@ -128,33 +128,41 @@ impl Timestamp {
         .expect("Time flew all around")
     }
 
-    pub fn new(secs: u64) -> Result<Self, ManyError> {
-        Ok(Self(
-            std::time::UNIX_EPOCH
-                .checked_add(std::time::Duration::new(secs, 0))
-                .ok_or_else(|| {
-                    ManyError::unknown("duration value can not represent system time".to_string())
-                })?,
-        ))
+    pub const fn new(secs: u64) -> Result<Self, ManyError> {
+        Ok(Self(secs))
     }
 
-    pub fn from_system_time(t: std::time::SystemTime) -> Self {
-        Self(t)
+    pub fn from_system_time(t: std::time::SystemTime) -> Result<Self, ManyError> {
+        let d = t.duration_since(std::time::UNIX_EPOCH).map_err(|_| {
+            ManyError::unknown("duration value can not represent system time".to_string())
+        })?;
+        Ok(Self(d.as_secs()))
     }
 
-    pub fn as_system_time(&self) -> std::time::SystemTime {
+    pub fn as_system_time(&self) -> Result<std::time::SystemTime, ManyError> {
+        std::time::UNIX_EPOCH
+            .checked_add(std::time::Duration::new(self.0, 0))
+            .ok_or_else(|| {
+                ManyError::unknown("duration value can not represent system time".to_string())
+            })
+    }
+
+    pub fn secs(&self) -> u64 {
         self.0
+    }
+}
+
+impl std::ops::Add<u64> for Timestamp {
+    type Output = Timestamp;
+
+    fn add(self, rhs: u64) -> Self::Output {
+        Timestamp::new(self.0.add(&rhs)).unwrap()
     }
 }
 
 impl<C> Encode<C> for Timestamp {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
-        e.tag(Tag::Timestamp)?.u64(
-            self.0
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("Time flew backward")
-                .as_secs(),
-        )?;
+        e.tag(Tag::Timestamp)?.u64(self.0)?;
         Ok(())
     }
 }
@@ -166,13 +174,7 @@ impl<'b, C> Decode<'b, C> for Timestamp {
         }
 
         let secs = d.u64()?;
-        Ok(Self(
-            std::time::UNIX_EPOCH
-                .checked_add(std::time::Duration::from_secs(secs))
-                .ok_or_else(|| {
-                    decode::Error::message("duration value can not represent system time")
-                })?,
-        ))
+        Ok(Self(secs))
     }
 }
 
