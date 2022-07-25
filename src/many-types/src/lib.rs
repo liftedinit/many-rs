@@ -5,7 +5,6 @@ use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Bound, RangeBounds, Shl};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub mod attributes;
 pub mod blockchain;
@@ -112,16 +111,17 @@ where
     }
 }
 
+/// NOTE: DO NOT ADD Default TO THIS TYPE.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
 #[must_use]
-pub struct Timestamp(pub SystemTime);
+pub struct Timestamp(std::time::SystemTime);
 
 impl Timestamp {
     pub fn now() -> Self {
         Self::new(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
                 .expect("Time flew backward")
                 .as_secs(),
         )
@@ -130,12 +130,20 @@ impl Timestamp {
 
     pub fn new(secs: u64) -> Result<Self, ManyError> {
         Ok(Self(
-            UNIX_EPOCH
-                .checked_add(Duration::new(secs, 0))
+            std::time::UNIX_EPOCH
+                .checked_add(std::time::Duration::new(secs, 0))
                 .ok_or_else(|| {
                     ManyError::unknown("duration value can not represent system time".to_string())
                 })?,
         ))
+    }
+
+    pub fn from_system_time(t: std::time::SystemTime) -> Self {
+        Self(t)
+    }
+
+    pub fn as_system_time(&self) -> std::time::SystemTime {
+        self.0
     }
 }
 
@@ -143,7 +151,7 @@ impl<C> Encode<C> for Timestamp {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         e.tag(Tag::Timestamp)?.u64(
             self.0
-                .duration_since(UNIX_EPOCH)
+                .duration_since(std::time::UNIX_EPOCH)
                 .expect("Time flew backward")
                 .as_secs(),
         )?;
@@ -159,24 +167,12 @@ impl<'b, C> Decode<'b, C> for Timestamp {
 
         let secs = d.u64()?;
         Ok(Self(
-            UNIX_EPOCH
-                .checked_add(Duration::from_secs(secs))
+            std::time::UNIX_EPOCH
+                .checked_add(std::time::Duration::from_secs(secs))
                 .ok_or_else(|| {
                     decode::Error::message("duration value can not represent system time")
                 })?,
         ))
-    }
-}
-
-impl From<SystemTime> for Timestamp {
-    fn from(t: SystemTime) -> Self {
-        Self(t)
-    }
-}
-
-impl From<Timestamp> for SystemTime {
-    fn from(t: Timestamp) -> SystemTime {
-        t.0
     }
 }
 

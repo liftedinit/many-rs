@@ -23,7 +23,8 @@ fn _validate_time(
     }
     let ts = message
         .timestamp
-        .ok_or_else(|| ManyError::required_field_missing("timestamp".to_string()))?;
+        .ok_or_else(|| ManyError::required_field_missing("timestamp".to_string()))?
+        .as_system_time();
 
     // Get the absolute time difference.
     let (early, later) = if ts < now { (ts, now) } else { (now, ts) };
@@ -356,6 +357,7 @@ mod tests {
     use many_protocol::{
         decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessageBuilder,
     };
+    use many_types::Timestamp;
     use proptest::prelude::*;
 
     const ALPHA_NUM_DASH_REGEX: &str = "[a-zA-Z0-9-]";
@@ -416,7 +418,7 @@ mod tests {
             .to(Address::anonymous())
             .method("status".to_string())
             .data("null".as_bytes().to_vec())
-            .timestamp(timestamp)
+            .timestamp(Timestamp::from_system_time(timestamp))
             .build()
             .unwrap();
 
@@ -438,7 +440,7 @@ mod tests {
         fn create_request(timestamp: SystemTime, nonce: u8) -> CoseSign1 {
             let request: RequestMessage = RequestMessageBuilder::default()
                 .method("status".to_string())
-                .timestamp(timestamp)
+                .timestamp(Timestamp::from_system_time(timestamp))
                 .nonce(nonce.to_le_bytes().to_vec())
                 .build()
                 .unwrap();
