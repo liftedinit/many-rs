@@ -5,7 +5,6 @@ use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Bound, RangeBounds, Shl};
-use std::time::SystemTime;
 
 pub mod attributes;
 pub mod blockchain;
@@ -139,11 +138,11 @@ impl Timestamp {
         ))
     }
 
-    pub fn from_system_time(t: SystemTime) -> Self {
+    pub fn from_system_time(t: std::time::SystemTime) -> Self {
         Self(t)
     }
 
-    pub fn as_system_time(&self) -> SystemTime {
+    pub fn as_system_time(&self) -> std::time::SystemTime {
         self.0
     }
 }
