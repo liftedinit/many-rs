@@ -266,7 +266,7 @@ fn message(
         .nonce(nonce.to_vec());
 
     if let Some(ts) = timestamp {
-        builder.timestamp(Timestamp::from_system_time(ts));
+        builder.timestamp(Timestamp::from_system_time(ts)?);
     }
 
     let message: RequestMessage = builder
