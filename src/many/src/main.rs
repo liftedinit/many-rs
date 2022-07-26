@@ -14,6 +14,7 @@ use many_protocol::{
 };
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
+use many_types::Timestamp;
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -265,7 +266,7 @@ fn message(
         .nonce(nonce.to_vec());
 
     if let Some(ts) = timestamp {
-        builder.timestamp(ts);
+        builder.timestamp(Timestamp::from_system_time(ts)?);
     }
 
     let message: RequestMessage = builder
