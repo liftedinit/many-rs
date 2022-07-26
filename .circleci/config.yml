@@ -176,7 +176,7 @@ commands:
                 name: installing linux dependencies
                 command: |
                   sudo DEBIAN_FRONTEND=noninteractive apt -y update
-                  sudo DEBIAN_FRONTEND=noninteractive apt -y install build-essential pkg-config clang libssl-dev libsofthsm2
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install build-essential ca-certificates pkg-config clang libssl-dev libsofthsm2
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
             - run:
