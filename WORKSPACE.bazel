@@ -1,19 +1,12 @@
-#load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-#http_archive(
-#    name = "rules_rust",
-#    sha256 = "7fb9b4fe1a6fb4341bdf7c623e619460ecc0f52d5061cc56abc750111fba8a87",
-#    urls = [
-#        "https://github.com/bazelbuild/rules_rust/releases/download/0.7.0/rules_rust-v0.7.0.tar.gz",
-#        "https://mirror.bazel.build/github.com/bazelbuild/rules_rust/releases/download/0.7.0/rules_rust-v0.7.0.tar.gz",
-#    ],
-#)
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-
-git_repository(
+http_archive(
     name = "rules_rust",
-    commit = "e83d5f3c77d2b41a0ad2fb9c5a0fb1dfb5e912a7",
-    remote = "https://github.com/bazelbuild/rules_rust.git",
+    sha256 = "05e15e536cc1e5fd7b395d044fc2dabf73d2b27622fbc10504b7e48219bb09bc",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_rust/releases/download/0.8.1/rules_rust-v0.8.1.tar.gz",
+        "https://github.com/bazelbuild/rules_rust/releases/download/0.8.1/rules_rust-v0.8.1.tar.gz",
+    ],
 )
 
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
@@ -24,12 +17,17 @@ rules_rust_dependencies()
 # Note: `llvm-tools-preview` is installed automatically
 rust_register_toolchains(
     edition = "2021",
-    version = "1.61.0",
+    version = "1.62.1",
 )
 
 load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
 
 crate_universe_dependencies()
+
+# Generate `rust-analyser` "rust-project.json"
+load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
+
+rust_analyzer_dependencies()
 
 load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository", "render_config", "splicing_config")
 
