@@ -1,6 +1,14 @@
 use std::collections::HashMap;
 
+use many_protocol::RequestMessage;
+
 pub type MockEntries = HashMap<String, toml::Value>;
+
+/// Parses a string
+pub fn parse_str(string: &str) -> Result<MockEntries, Box<dyn std::error::Error>> {
+    let result: MockEntries = toml::from_str(string)?;
+    Ok(result)
+}
 
 /// Reads and parses the mockfile provided by the mockfile_arg parameter, or from a default path
 pub fn parse_mockfile(
@@ -19,8 +27,47 @@ pub fn parse_mockfile(
             "".to_string()
         }
     };
-    let result: MockEntries = toml::from_str(&contents)?;
-    Ok(result)
+    parse_str(&contents)
+}
+
+/// Prepares a RequestMessage to fill a mocked response
+fn load_request(request: &RequestMessage) -> HashMap<&'static str, String> {
+    HashMap::from([
+        (
+            r#""?\$\{id\}"?"#,
+            serde_json::to_string(&request.id).unwrap_or_default(),
+        ),
+        (
+            r#""?\$\{version\}"?"#,
+            serde_json::to_string(&request.version).unwrap_or_default(),
+        ),
+        (
+            r#""?\$\{attributes\}"?"#,
+            serde_json::ser::to_string(&request.attributes).unwrap_or_default(),
+        ),
+        (
+            r#""?\$\{nonce\}"?"#,
+            serde_json::to_string(&request.nonce).unwrap_or_default(),
+        ),
+        (
+            r#""?\$\{data\}"?"#,
+            serde_json::to_string(&request.data).unwrap_or_default(),
+        ),
+        (r#""?\$\{method\}"?"#, request.method.clone()),
+        (
+            r#""?\$\{timestamp\}"?"#,
+            serde_json::to_string(&request.timestamp).unwrap_or_default(),
+        ),
+    ])
+}
+
+/// Replaces placeholders with RequestMessage information
+pub fn fill_placeholders(request: &RequestMessage, response: String) -> String {
+    let map = load_request(request);
+    map.iter().fold(response, |acc, (key, value)| {
+        let re = regex::Regex::new(key).unwrap();
+        re.replace_all(&acc, value).to_string()
+    })
 }
 
 #[cfg(test)]
