@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-pub type MockEntries = HashMap<String, String>;
+pub type MockEntries = HashMap<String, toml::Value>;
 
 /// Reads and parses the mockfile provided by the mockfile_arg parameter, or from a default path
 pub fn parse_mockfile(
@@ -27,12 +27,28 @@ pub fn parse_mockfile(
 mod tests {
     use crate::{parse_mockfile, MockEntries};
 
-    const EXAMPLE_TOML: &'static str = r#""/home" = "response""#;
+    const SIMPLE_TOML: &'static str = r#""/home" = "response""#;
+    const COMPLEX_TOML: &'static str = r#"
+    home = { complex = "toml", with = [ "many", "entries" ] }
+
+    [and]
+    more = "to see"
+    "#;
 
     #[test]
-    fn test_parser() {
-        let example: MockEntries = toml::from_str(EXAMPLE_TOML).unwrap();
-        assert_eq!(example["/home"], "response");
+    fn test_parser_simple() {
+        let example: MockEntries = toml::from_str(SIMPLE_TOML).unwrap();
+        assert_eq!(example["/home"], "response".into());
+    }
+
+    #[test]
+    fn test_parser_complex() {
+        let example: MockEntries = toml::from_str(COMPLEX_TOML).unwrap();
+        let home = example["home"].as_table().unwrap();
+        let and = example["and"].as_table().unwrap();
+        assert_eq!(home["complex"], "toml".into());
+        assert_eq!(home["with"], vec!["many", "entries"].into());
+        assert_eq!(and["more"], "to see".into());
     }
 
     #[test]
