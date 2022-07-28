@@ -1539,7 +1539,10 @@ dependencies = [
 name = "many-mock"
 version = "0.1.0"
 dependencies = [
+ "many-protocol",
+ "regex",
  "serde",
+ "serde_json",
  "toml",
 ]
 

@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use coset::CoseSign1;
 use many_error::ManyError;
 use many_identity::CoseKeyIdentity;
-use many_mock::MockEntries;
+use many_mock::{fill_placeholders, MockEntries};
 use many_modules::{base, ManyModule, ManyModuleInfo};
 use many_protocol::{ManyUrl, RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
@@ -331,8 +331,9 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                     let this = self.lock().unwrap();
                     let response =
                         if let Some(mock_response) = this.mock_entries.get(&message.method) {
-                            let response = serde_json::ser::to_string(mock_response)
-                                .unwrap_or_default()
+                            let response_unfilled =
+                                serde_json::to_string(mock_response).unwrap_or_default();
+                            let response = fill_placeholders(&message, response_unfilled)
                                 .as_bytes()
                                 .to_vec();
                             ResponseMessage {
@@ -359,6 +360,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 
 #[cfg(test)]
 mod tests {
+    use many_mock::parse_str;
     use semver::{BuildMetadata, Prerelease, Version};
     use std::ops::Sub;
     use std::sync::RwLock;
@@ -426,17 +428,21 @@ mod tests {
 
     #[test]
     fn mock_entry() {
+        let response_toml = r#"
+        foo = { version = "${version}", data = "${data}" }
+        "#;
         let server = ManyServer::simple(
             "test-server",
             CoseKeyIdentity::anonymous(),
-            MockEntries::from([("foo".into(), "bar".into())]),
+            parse_str(response_toml).unwrap(),
             None,
             None,
         );
+        let data = "some-data".as_bytes();
 
         let request: RequestMessage = RequestMessageBuilder::default()
             .method("foo".to_string())
-            .data("null".as_bytes().to_vec())
+            .data(data.to_vec())
             .build()
             .unwrap();
 
@@ -445,7 +451,11 @@ mod tests {
         let response_e = smol::block_on(server.execute(envelope)).unwrap();
         let response = decode_response_from_cose_sign1(response_e, None).unwrap();
         assert!(response.data.is_ok());
-        assert_eq!(response.data.unwrap(), "\"bar\"".as_bytes().to_vec());
+        let byte_vec = response.data.unwrap();
+        let response_str = std::str::from_utf8(byte_vec.as_slice()).unwrap();
+        let response_value: serde_json::Value = serde_json::from_str(response_str).unwrap();
+        assert_eq!(response_value["version"], serde_json::Value::Null);
+        assert_eq!(response_value["data"].as_array().unwrap(), data);
     }
 
     #[test]
