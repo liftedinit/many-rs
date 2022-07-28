@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use coset::CoseSign1;
 use many_error::ManyError;
 use many_identity::CoseKeyIdentity;
+use many_mock::{fill_placeholders, MockEntries};
 use many_modules::{base, ManyModule, ManyModuleInfo};
 use many_protocol::{ManyUrl, RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
@@ -65,12 +66,15 @@ pub struct ManyServer {
     allowed_origins: Option<Vec<ManyUrl>>,
 
     time_fn: Option<Arc<dyn Fn() -> Result<SystemTime, ManyError> + Send + Sync>>,
+
+    mock_entries: MockEntries,
 }
 
 impl ManyServer {
     pub fn simple<N: ToString>(
         name: N,
         identity: CoseKeyIdentity,
+        mock_entries: MockEntries,
         version: Option<String>,
         allow: Option<Vec<ManyUrl>>,
     ) -> Arc<Mutex<Self>> {
@@ -79,6 +83,7 @@ impl ManyServer {
             let mut s2 = s.lock().unwrap();
             s2.version = version;
             s2.add_module(base::BaseModule::new(s.clone()));
+            s2.mock_entries = mock_entries;
         }
 
         s
@@ -189,7 +194,12 @@ impl Debug for ManyServer {
 
 impl base::BaseModuleBackend for ManyServer {
     fn endpoints(&self) -> Result<base::Endpoints, ManyError> {
-        let mut endpoints: BTreeSet<String> = self.method_cache.iter().cloned().collect();
+        let mut endpoints: BTreeSet<String> = self
+            .method_cache
+            .iter()
+            .cloned()
+            .chain(self.mock_entries.keys().cloned())
+            .collect();
 
         if let Some(fb) = &self.fallback {
             endpoints = endpoints
@@ -276,40 +286,32 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
             let this = self.lock().unwrap();
             let cose_id = this.identity.clone();
 
-            request
-                .and_then(|message| {
-                    let now = this
-                        .time_fn
-                        .as_ref()
-                        .map_or_else(|| Ok(SystemTime::now()), |f| f())?;
+            (|| {
+                let message = request?;
 
-                    id = message.id;
-                    _validate_time(&message, now, this.timeout)?;
-                    Ok(message)
-                })
-                .and_then(|message| {
-                    this.validate_id(&message)?;
-                    Ok(message)
-                })
-                .map(|message| {
-                    let maybe_module = this.find_module(&message);
-                    (message, maybe_module)
-                })
-                .and_then(|(message, maybe_module)| {
-                    if let Some(ref m) = maybe_module {
-                        m.validate(&message, &envelope)?;
-                    }
-                    Ok((message, maybe_module))
-                })
-                .map(|(message, maybe_module)| {
-                    (
-                        cose_id.clone(),
-                        message,
-                        maybe_module,
-                        this.fallback.clone(),
-                    )
-                })
-                .map_err(|many_err| ResponseMessage::error(&cose_id.identity, id, many_err))
+                let now = this
+                    .time_fn
+                    .as_ref()
+                    .map_or_else(|| Ok(SystemTime::now()), |f| f())?;
+
+                id = message.id;
+
+                _validate_time(&message, now, this.timeout)?;
+                this.validate_id(&message)?;
+
+                let maybe_module = this.find_module(&message);
+                if let Some(ref m) = maybe_module {
+                    m.validate(&message, &envelope)?;
+                }
+
+                Ok((
+                    cose_id.clone(),
+                    message,
+                    maybe_module,
+                    this.fallback.clone(),
+                ))
+            })()
+            .map_err(|many_err: ManyError| ResponseMessage::error(&cose_id.identity, id, many_err))
         };
 
         match response {
@@ -326,11 +328,25 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                     LowLevelManyRequestHandler::execute(fb.as_ref(), envelope).await
                 }
                 (None, None) => {
-                    let response = ResponseMessage::error(
-                        &cose_id.identity,
-                        id,
-                        ManyError::could_not_route_message(),
-                    );
+                    let this = self.lock().unwrap();
+                    let response =
+                        if let Some(mock_response) = this.mock_entries.get(&message.method) {
+                            let response_unfilled =
+                                serde_json::to_string(mock_response).unwrap_or_default();
+                            let response = fill_placeholders(&message, response_unfilled)
+                                .as_bytes()
+                                .to_vec();
+                            ResponseMessage {
+                                data: Ok(response),
+                                ..Default::default()
+                            }
+                        } else {
+                            ResponseMessage::error(
+                                &cose_id.identity,
+                                id,
+                                ManyError::could_not_route_message(),
+                            )
+                        };
                     many_protocol::encode_cose_sign1_from_response(response, &cose_id)
                 }
             },
@@ -344,6 +360,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 
 #[cfg(test)]
 mod tests {
+    use many_mock::parse_str;
     use semver::{BuildMetadata, Prerelease, Version};
     use std::ops::Sub;
     use std::sync::RwLock;
@@ -378,7 +395,7 @@ mod tests {
         #[test]
         fn simple_status(name in "\\PC*", version in arb_semver()) {
             let id = generate_random_eddsa_identity();
-            let server = ManyServer::simple(name.clone(), id.clone(), Some(version.to_string()), None);
+            let server = ManyServer::simple(name.clone(), id.clone(), MockEntries::new(), Some(version.to_string()), None);
 
             // Test status() using a message instead of a direct call
             //
@@ -407,6 +424,38 @@ mod tests {
             assert_eq!(status.timeout, Some(MANYSERVER_DEFAULT_TIMEOUT));
             assert_eq!(status.extras, BTreeMap::new());
         }
+    }
+
+    #[test]
+    fn mock_entry() {
+        let response_toml = r#"
+        foo = { version = "${version}", data = "${data}" }
+        "#;
+        let server = ManyServer::simple(
+            "test-server",
+            CoseKeyIdentity::anonymous(),
+            parse_str(response_toml).unwrap(),
+            None,
+            None,
+        );
+        let data = "some-data".as_bytes();
+
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .method("foo".to_string())
+            .data(data.to_vec())
+            .build()
+            .unwrap();
+
+        let envelope =
+            encode_cose_sign1_from_request(request, &CoseKeyIdentity::anonymous()).unwrap();
+        let response_e = smol::block_on(server.execute(envelope)).unwrap();
+        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        assert!(response.data.is_ok());
+        let byte_vec = response.data.unwrap();
+        let response_str = std::str::from_utf8(byte_vec.as_slice()).unwrap();
+        let response_value: serde_json::Value = serde_json::from_str(response_str).unwrap();
+        assert_eq!(response_value["version"], serde_json::Value::Null);
+        assert_eq!(response_value["data"].as_array().unwrap(), data);
     }
 
     #[test]
@@ -447,7 +496,13 @@ mod tests {
             encode_cose_sign1_from_request(request, &CoseKeyIdentity::anonymous()).unwrap()
         }
 
-        let server = ManyServer::simple("test-server", CoseKeyIdentity::anonymous(), None, None);
+        let server = ManyServer::simple(
+            "test-server",
+            CoseKeyIdentity::anonymous(),
+            MockEntries::new(),
+            None,
+            None,
+        );
         let timestamp = SystemTime::now();
         let now = Arc::new(RwLock::new(timestamp));
         let get_now = {

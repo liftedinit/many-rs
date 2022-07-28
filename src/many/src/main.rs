@@ -5,6 +5,7 @@ use many_client::ManyClient;
 use many_error::ManyError;
 use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_identity::{Address, CoseKeyIdentity};
+use many_mock::parse_mockfile;
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
@@ -164,6 +165,10 @@ struct ServerOpt {
     /// The name to give the server.
     #[clap(long, short, default_value = "many-server")]
     name: String,
+
+    /// The path to a mockfile containing mock responses
+    #[clap(long, short)]
+    mockfile: Option<String>,
 }
 
 #[derive(Parser)]
@@ -472,12 +477,15 @@ fn main() {
         }
         SubCommand::Server(o) => {
             let pem = std::fs::read_to_string(&o.pem).expect("Could not read PEM file.");
+            let mock_entries =
+                parse_mockfile(o.mockfile.as_deref()).expect("Error reading from the mockfile");
             let key = CoseKeyIdentity::from_pem(&pem)
                 .expect("Could not generate identity from PEM file.");
 
             let many = ManyServer::simple(
                 o.name,
                 key,
+                mock_entries,
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
                 None,
             );
