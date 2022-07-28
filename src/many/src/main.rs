@@ -477,7 +477,7 @@ fn main() {
         }
         SubCommand::Server(o) => {
             let pem = std::fs::read_to_string(&o.pem).expect("Could not read PEM file.");
-            let _mock_entries =
+            let mock_entries =
                 parse_mockfile(o.mockfile.as_deref()).expect("Error reading from the mockfile");
             let key = CoseKeyIdentity::from_pem(&pem)
                 .expect("Could not generate identity from PEM file.");
@@ -485,6 +485,7 @@ fn main() {
             let many = ManyServer::simple(
                 o.name,
                 key,
+                mock_entries,
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
                 None,
             );
