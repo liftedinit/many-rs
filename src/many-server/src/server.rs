@@ -331,8 +331,12 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                     let this = self.lock().unwrap();
                     let response =
                         if let Some(mock_response) = this.mock_entries.get(&message.method) {
+                            let response = serde_json::ser::to_string(mock_response)
+                                .unwrap_or_default()
+                                .as_bytes()
+                                .to_vec();
                             ResponseMessage {
-                                data: Ok(mock_response.clone().as_bytes().to_vec()),
+                                data: Ok(response),
                                 ..Default::default()
                             }
                         } else {
@@ -425,7 +429,7 @@ mod tests {
         let server = ManyServer::simple(
             "test-server",
             CoseKeyIdentity::anonymous(),
-            MockEntries::from([("foo".to_string(), "bar".to_string())]),
+            MockEntries::from([("foo".into(), "bar".into())]),
             None,
             None,
         );
@@ -441,7 +445,7 @@ mod tests {
         let response_e = smol::block_on(server.execute(envelope)).unwrap();
         let response = decode_response_from_cose_sign1(response_e, None).unwrap();
         assert!(response.data.is_ok());
-        assert_eq!(response.data.unwrap(), "bar".as_bytes().to_vec());
+        assert_eq!(response.data.unwrap(), "\"bar\"".as_bytes().to_vec());
     }
 
     #[test]
