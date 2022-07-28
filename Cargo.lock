@@ -1615,6 +1615,7 @@ dependencies = [
  "many-error",
  "many-identity",
  "many-macros",
+ "many-mock",
  "many-modules",
  "many-protocol",
  "many-types",
