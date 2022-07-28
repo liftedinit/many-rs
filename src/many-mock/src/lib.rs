@@ -27,8 +27,8 @@ pub fn parse_mockfile(
 mod tests {
     use crate::{parse_mockfile, MockEntries};
 
-    const SIMPLE_TOML: &'static str = r#""/home" = "response""#;
-    const COMPLEX_TOML: &'static str = r#"
+    const SIMPLE_TOML: &str = r#""/home" = "response""#;
+    const COMPLEX_TOML: &str = r#"
     home = { complex = "toml", with = [ "many", "entries" ] }
 
     [and]
