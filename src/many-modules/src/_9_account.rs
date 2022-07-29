@@ -250,9 +250,17 @@ impl Account {
     }
 
     pub fn remove_role<R: Into<Role>>(&mut self, id: &Address, role: R) -> bool {
-        self.roles
-            .get_mut(id)
-            .map_or(false, |v| v.remove(&role.into()))
+        let v = self.roles.get_mut(id);
+        match v {
+            Some(v) => {
+                let result = v.remove(&role.into());
+                if v.is_empty() {
+                    self.roles.remove(id);
+                }
+                result
+            }
+            None => false
+        }
     }
 
     pub fn get_roles(&self, id: &Address) -> BTreeSet<Role> {
@@ -661,4 +669,22 @@ fn needs_role() {
     assert!(account
         .needs_role(&Address::public_key_raw([1; 28]), [Role::Owner])
         .is_err());
+}
+
+#[test]
+fn remove_empty_role() {
+    let owner = Address::public_key_raw([0; 28]);
+    let mut account = Account::create(
+        &owner,
+        CreateArgs {
+            description: None,
+            roles: None,
+            features: Default::default(),
+        },
+    );
+    account.add_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit);
+    assert!(account.has_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit));
+
+    account.remove_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit);
+    assert!(!account.roles.contains_key(&Address::public_key_raw([1; 28])));
 }
