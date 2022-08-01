@@ -1476,7 +1476,7 @@ dependencies = [
  "sha3 0.9.1",
  "signature",
  "static_assertions",
- "tiny_http",
+ "tiny_http 0.10.0",
  "tokio",
  "tracing",
 ]
@@ -1631,7 +1631,7 @@ dependencies = [
  "static_assertions",
  "strum",
  "strum_macros",
- "tiny_http",
+ "tiny_http 0.9.0",
  "tokio",
  "tracing",
 ]
@@ -1861,6 +1861,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19e64526ebdee182341572e50e9ad03965aa510cd94427a4549448f285e957a1"
 dependencies = [
  "hermit-abi",
+ "libc",
+]
+
+[[package]]
+name = "num_threads"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2819ce041d2ee131036f4fc9d6ae7ae125a3a40e97ba64d04fe799ad9dabbb44"
+dependencies = [
  "libc",
 ]
 
@@ -2837,6 +2846,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "time"
+version = "0.3.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74b7cc93fc23ba97fde84f7eea56c55d1ba183f495c6715defdfc7b9cb8c870f"
+dependencies = [
+ "itoa",
+ "js-sys",
+ "libc",
+ "num_threads",
+ "time-macros",
+]
+
+[[package]]
+name = "time-macros"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42657b1a6f4d817cda8e7a0ace261fe0cc946cf3a80314390b22cc61ae080792"
+
+[[package]]
 name = "tiny_http"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2846,6 +2874,19 @@ dependencies = [
  "chrono",
  "chunked_transfer",
  "log",
+ "url",
+]
+
+[[package]]
+name = "tiny_http"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5f8734c6d6943ad6df6b588d228a87b4af184998bcffa268ceddf05c2055a8c"
+dependencies = [
+ "ascii",
+ "chunked_transfer",
+ "log",
+ "time",
  "url",
 ]
 
