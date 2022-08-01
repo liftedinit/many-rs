@@ -1473,7 +1473,7 @@ dependencies = [
  "regex",
  "reqwest",
  "serde",
- "sha3 0.9.1",
+ "sha3 0.10.1",
  "signature",
  "static_assertions",
  "tiny_http 0.11.0",
