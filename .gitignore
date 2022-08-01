@@ -106,3 +106,4 @@ dist
 .DS_Store
 .idea/
 target/
+src/many-modules/proptest-regressions
