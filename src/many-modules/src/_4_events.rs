@@ -737,7 +737,7 @@ mod test {
                         AccountMultisigTransaction::AccountMultisigSubmit(
                             module::account::features::multisig::SubmitTransactionArgs {
                                 account: Address::public_key_raw([2; 28]),
-                                memo: Some(memo2),
+                                memo: Some(memo2.into()),
                                 transaction: Box::new(AccountMultisigTransaction::Send(module::ledger::SendArgs {
                                     from: Some(Address::public_key_raw([2; 28])),
                                     to: Address::public_key_raw([3; 28]),
