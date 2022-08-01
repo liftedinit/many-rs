@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use coset::CoseSign1;
 use many_error::ManyError;
 use many_identity::CoseKeyIdentity;
-use many_mock::{fill_placeholders, MockEntries};
+#[cfg(feature = "mock")]
+use many_mock::fill_placeholders;
 use many_modules::{base, ManyModule, ManyModuleInfo};
 use many_protocol::{ManyUrl, RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
@@ -67,14 +68,14 @@ pub struct ManyServer {
 
     time_fn: Option<Arc<dyn Fn() -> Result<SystemTime, ManyError> + Send + Sync>>,
 
-    mock_entries: MockEntries,
+    mock_entries: BTreeMap<String, toml::Value>,
 }
 
 impl ManyServer {
     pub fn simple<N: ToString>(
         name: N,
         identity: CoseKeyIdentity,
-        mock_entries: MockEntries,
+        mock_entries: BTreeMap<String, toml::Value>,
         version: Option<String>,
         allow: Option<Vec<ManyUrl>>,
     ) -> Arc<Mutex<Self>> {
@@ -333,9 +334,12 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                         if let Some(mock_response) = this.mock_entries.get(&message.method) {
                             let response_unfilled =
                                 serde_json::to_string(mock_response).unwrap_or_default();
+                            #[cfg(feature = "mock")]
                             let response = fill_placeholders(&message, response_unfilled)
                                 .as_bytes()
                                 .to_vec();
+                            #[cfg(not(feature = "mock"))]
+                            let response = response_unfilled.as_bytes().to_vec();
                             ResponseMessage {
                                 data: Ok(response),
                                 ..Default::default()
@@ -360,7 +364,6 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 
 #[cfg(test)]
 mod tests {
-    use many_mock::parse_str;
     use semver::{BuildMetadata, Prerelease, Version};
     use std::ops::Sub;
     use std::sync::RwLock;
@@ -395,7 +398,7 @@ mod tests {
         #[test]
         fn simple_status(name in "\\PC*", version in arb_semver()) {
             let id = generate_random_eddsa_identity();
-            let server = ManyServer::simple(name.clone(), id.clone(), MockEntries::new(), Some(version.to_string()), None);
+            let server = ManyServer::simple(name.clone(), id.clone(), BTreeMap::new(), Some(version.to_string()), None);
 
             // Test status() using a message instead of a direct call
             //
@@ -427,6 +430,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "mock")]
     fn mock_entry() {
         let response_toml = r#"
         foo = { version = "${version}", data = "${data}" }
@@ -434,7 +438,7 @@ mod tests {
         let server = ManyServer::simple(
             "test-server",
             CoseKeyIdentity::anonymous(),
-            parse_str(response_toml).unwrap(),
+            toml::from_str(response_toml).unwrap(),
             None,
             None,
         );
@@ -499,7 +503,7 @@ mod tests {
         let server = ManyServer::simple(
             "test-server",
             CoseKeyIdentity::anonymous(),
-            MockEntries::new(),
+            BTreeMap::new(),
             None,
             None,
         );

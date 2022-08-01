@@ -5,7 +5,8 @@ use many_client::ManyClient;
 use many_error::ManyError;
 use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_identity::{Address, CoseKeyIdentity};
-use many_mock::{parse_mockfile, MockEntries};
+#[cfg(feature = "mock")]
+use many_mock::parse_mockfile;
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
@@ -16,6 +17,7 @@ use many_protocol::{
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
 use many_types::Timestamp;
+use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -167,8 +169,9 @@ struct ServerOpt {
     name: String,
 
     /// The path to a mockfile containing mock responses
+    #[cfg(feature = "mock")]
     #[clap(long, short, value_parser = parse_mockfile)]
-    mockfile: Option<MockEntries>,
+    mockfile: Option<BTreeMap<String, toml::Value>>,
 }
 
 #[derive(Parser)]
@@ -477,7 +480,10 @@ fn main() {
         }
         SubCommand::Server(o) => {
             let pem = std::fs::read_to_string(&o.pem).expect("Could not read PEM file.");
+            #[cfg(feature = "mock")]
             let mock_entries = o.mockfile.unwrap_or_default();
+            #[cfg(not(feature = "mock"))]
+            let mock_entries = BTreeMap::new();
             let key = CoseKeyIdentity::from_pem(&pem)
                 .expect("Could not generate identity from PEM file.");
 

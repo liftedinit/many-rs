@@ -12,11 +12,14 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 name = "many"
 path = "src/main.rs"
 
+[features]
+mock = ["many-server/mock", "dep:many-mock"]
+
 [dependencies]
 many-client = { path = "../many-client", version = "0.1.0" }
 many-error = { path = "../many-error", version = "0.1.0" }
 many-identity = { path = "../many-identity", version = "0.1.0", features = ["coset"] }
-many-mock = { path = "../many-mock", version = "0.1.0" }
+many-mock = { path = "../many-mock", version = "0.1.0", optional = true }
 many-modules = { path = "../many-modules", version = "0.1.0" }
 many-protocol = { path = "../many-protocol", version = "0.1.0" }
 many-types = { path = "../many-types", version = "0.1.0" }
@@ -35,3 +38,4 @@ tracing = "0.1.29"
 tracing-subscriber = "0.2.24"
 tokio = { version = "1.12.0", features = [ "full" ] }
 url = "2.2.2"
+toml = "0.5"

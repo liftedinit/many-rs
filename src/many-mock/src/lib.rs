@@ -1,13 +1,8 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use many_protocol::RequestMessage;
 
-pub type MockEntries = HashMap<String, toml::Value>;
-
-/// Re-export to be used in crates that don't have toml as dependency
-pub fn parse_str(s: &str) -> Result<MockEntries, toml::de::Error> {
-    toml::from_str(s)
-}
+pub(crate) type MockEntries = BTreeMap<String, toml::Value>;
 
 /// Reads and parses the mockfile provided by the mockfile_arg parameter, or from a default path
 pub fn parse_mockfile(mockfile_arg: &str) -> Result<MockEntries, String> {
@@ -21,8 +16,8 @@ pub fn parse_mockfile(mockfile_arg: &str) -> Result<MockEntries, String> {
 }
 
 /// Prepares a RequestMessage to fill a mocked response
-fn load_request(request: &RequestMessage) -> HashMap<&'static str, String> {
-    HashMap::from([
+fn load_request(request: &RequestMessage) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
         (
             r#""\$\{id\}""#,
             serde_json::to_string(&request.id).unwrap_or_default(),
