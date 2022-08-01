@@ -168,10 +168,14 @@ struct ServerOpt {
     #[clap(long, short, default_value = "many-server")]
     name: String,
 
-    /// The path to a mockfile containing mock responses
     #[cfg(feature = "mock")]
-    #[clap(long, short, value_parser = parse_mockfile)]
-    mockfile: Option<BTreeMap<String, toml::Value>>,
+    /// The path to a mockfile containing mock responses.
+    /// Default is mockfile.toml, gives an error if the file does not exist
+    #[clap(long, short, value_parser = parse_mockfile, default_value = "mockfile.toml")]
+    mockfile: BTreeMap<String, toml::Value>,
+    #[cfg(not(feature = "mock"))]
+    #[clap(skip)]
+    mockfile: BTreeMap<String, toml::Value>,
 }
 
 #[derive(Parser)]
@@ -480,17 +484,13 @@ fn main() {
         }
         SubCommand::Server(o) => {
             let pem = std::fs::read_to_string(&o.pem).expect("Could not read PEM file.");
-            #[cfg(feature = "mock")]
-            let mock_entries = o.mockfile.unwrap_or_default();
-            #[cfg(not(feature = "mock"))]
-            let mock_entries = BTreeMap::new();
             let key = CoseKeyIdentity::from_pem(&pem)
                 .expect("Could not generate identity from PEM file.");
 
             let many = ManyServer::simple(
                 o.name,
                 key,
-                mock_entries,
+                o.mockfile,
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
                 None,
             );
