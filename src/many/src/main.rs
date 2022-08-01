@@ -5,7 +5,7 @@ use many_client::ManyClient;
 use many_error::ManyError;
 use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_identity::{Address, CoseKeyIdentity};
-use many_mock::parse_mockfile;
+use many_mock::{parse_mockfile, MockEntries};
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
@@ -167,8 +167,8 @@ struct ServerOpt {
     name: String,
 
     /// The path to a mockfile containing mock responses
-    #[clap(long, short)]
-    mockfile: Option<String>,
+    #[clap(long, short, value_parser = parse_mockfile)]
+    mockfile: Option<MockEntries>,
 }
 
 #[derive(Parser)]
@@ -477,8 +477,7 @@ fn main() {
         }
         SubCommand::Server(o) => {
             let pem = std::fs::read_to_string(&o.pem).expect("Could not read PEM file.");
-            let mock_entries =
-                parse_mockfile(o.mockfile.as_deref()).expect("Error reading from the mockfile");
+            let mock_entries = o.mockfile.unwrap_or_default();
             let key = CoseKeyIdentity::from_pem(&pem)
                 .expect("Could not generate identity from PEM file.");
 
