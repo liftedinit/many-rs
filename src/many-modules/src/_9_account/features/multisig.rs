@@ -30,7 +30,7 @@ impl<S, C> Encode<C> for Memo<S> where S: AsRef<str> {
 impl<C> Decode<'_, C> for Memo<String> {
     fn decode(d: &mut Decoder<'_>, _: &mut C) -> Result<Self, decode::Error> {
         let s = d.str()?;
-        if s.len() > MULTISIG_MEMO_DATA_MAX_SIZE {
+        if s.as_bytes().len() > MULTISIG_MEMO_DATA_MAX_SIZE {
             return Err(decode::Error::message("Memo size over limit"));
         }
         Ok(Memo(s.into()))
@@ -41,16 +41,28 @@ impl<C> Decode<'_, C> for Memo<String> {
 impl<'b, C> Decode<'b, C> for Memo<&'b str> {
     fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
         let s = d.str()?;
-        if s.len() > MULTISIG_MEMO_DATA_MAX_SIZE {
+        if s.as_bytes().len() > MULTISIG_MEMO_DATA_MAX_SIZE {
             return Err(decode::Error::message("Memo size over limit"));
         }
         Ok(Memo(s))
     }
 }
 
-impl<S: AsRef<str>> From<S> for Memo<S> {
-    fn from(f: S) -> Memo<S> {
-        Memo(f)
+impl TryFrom<String> for Memo<String> {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s.as_str().as_bytes().len() > MULTISIG_MEMO_DATA_MAX_SIZE {
+            return Err(format!("Memo size over limit {}", s.as_str().as_bytes().len()));
+        }
+        Ok(Memo(s))
+    }
+}
+
+impl Memo<String> {
+    // USED ONLY IN TESTS! NEVER REMOVE THIS GUARD! MEMOS SHOULDN'T BE PRODUCED FROM LARGE STRINGS
+    #[cfg(test)]
+    pub fn new(s: String) -> Self {
+        Memo(s)
     }
 }
 
@@ -294,7 +306,7 @@ impl<'b, C> Decode<'b, C> for MultisigTransactionState {
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]
-    pub memo: Option<String>,
+    pub memo: Option<Memo<String>>,
 
     #[n(1)]
     pub transaction: AccountMultisigTransaction,
@@ -411,7 +423,7 @@ pub trait AccountMultisigModuleBackend: Send {
 #[cfg(test)]
 mod tests {
     use super::SubmitTransactionArgs;
-    use crate::account::features::multisig::MULTISIG_MEMO_DATA_MAX_SIZE;
+    use crate::account::features::multisig::{MULTISIG_MEMO_DATA_MAX_SIZE, Memo};
     use crate::account::DisableArgs;
     use crate::events::AccountMultisigTransaction;
     use many_identity::testing::identity;
@@ -420,7 +432,7 @@ mod tests {
     fn memo_size() {
         let mut tx = SubmitTransactionArgs {
             account: identity(1),
-            memo: Some(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE]).unwrap().into()),
+            memo: Some(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE]).unwrap().try_into().unwrap()),
             transaction: Box::new(AccountMultisigTransaction::AccountDisable(DisableArgs {
                 account: identity(1),
             })),
@@ -433,7 +445,7 @@ mod tests {
         let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
         assert!(dec.is_ok());
 
-        tx.memo = Some(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE + 1]).unwrap().into());
+        tx.memo = Some(Memo::new(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE + 1]).unwrap()));
         let enc = minicbor::to_vec(&tx).unwrap();
         let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
         assert!(dec.is_err());
