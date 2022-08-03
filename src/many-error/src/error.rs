@@ -45,6 +45,8 @@ macro_rules! many_error {
                         $v => Self::$name,
                     )*
                     x if x >= 0 => Self::ApplicationSpecific(x as u32),
+                    // TODO: need to clarify whether `x <= -10000` or `x <= 0 && x % 10000 == 0`
+                    x if x <= -10000 => Self::AttributeSpecific(x as i32),
                     _ => Self::Unknown,
                 }
             }
