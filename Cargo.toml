@@ -10,4 +10,5 @@ members = [
     "src/many-protocol",
     "src/many-server",
     "src/many-types",
+    "src/integration-tests",
 ]
