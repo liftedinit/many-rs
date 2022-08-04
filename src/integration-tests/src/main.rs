@@ -9,8 +9,8 @@ use std::{
 
 #[derive(Clone, Debug)]
 struct Environment {
-    key: CoseKeyIdentity,
     finish_server: Arc<AtomicBool>,
+    client: ManyClient,
 }
 
 fn main() {
@@ -30,15 +30,17 @@ fn main() {
     thread::spawn(move || {
         server.bind("0.0.0.0:8000").unwrap();
     });
-    let environment = Environment { key, finish_server };
+    let address = Address::anonymous();
+    let client = ManyClient::new("http://0.0.0.0:8000/", address, key).unwrap();
+    let environment = Environment {
+        finish_server,
+        client,
+    };
 
     rspec::run(&rspec::suite("Integration tests", environment, |suite| {
         suite.context("Mock API", |ctx| {
             ctx.example("should answer with a JSON", |ex| {
-                let address = Address::anonymous();
-                let client =
-                    ManyClient::new("http://0.0.0.0:8000/", address, ex.key.clone()).unwrap();
-                let result = client.call("object", ()).unwrap();
+                let result = ex.client.call("object", ()).unwrap();
                 let json_string = String::from_utf8(result.data.unwrap())
                     .expect("Should be a valid UTF-8 string");
                 let json: serde_json::Value =
@@ -55,10 +57,7 @@ fn main() {
             });
 
             ctx.example("should answer with a string", |ex| {
-                let address = Address::anonymous();
-                let client =
-                    ManyClient::new("http://0.0.0.0:8000/", address, ex.key.clone()).unwrap();
-                let result = client.call("simplefield", ()).unwrap();
+                let result = ex.client.call("simplefield", ()).unwrap();
                 let json_string = String::from_utf8(result.data.unwrap())
                     .expect("Should be a valid UTF-8 string");
                 let json: serde_json::Value =
