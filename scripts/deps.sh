@@ -7,6 +7,8 @@ for x in "$(dirname "$0")"/../src/*/Cargo.toml
 do
     pkg_name="$(basename "$(dirname "$x")")"
 
-    deps="$(grep -oE '^many-?[^ ]*' "$x" | grep -v "^$pkg_name\$" | sort -u | tr '\n' '&' | sed 's/&$//' | sed 's/&/ & /g')"
-    [ "$deps" ] && echo "  $pkg_name --> $deps;"
+    deps="$(grep -oE '^many-?[^ =]*' "$x" | grep -v "^$pkg_name\$" | sort -u)"
+    for dep in $deps; do
+        echo "  $dep --> $pkg_name;"
+    done
 done
