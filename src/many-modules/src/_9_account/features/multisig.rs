@@ -1,6 +1,6 @@
 use crate::account::features::{Feature, FeatureId, TryCreateFeature};
 use crate::account::Role;
-use crate::events::AccountMultisigTransaction;
+use crate::events::{AccountMultisigTransaction, EventId};
 use crate::ledger::SendArgs;
 use crate::EmptyReturn;
 use many_error::ManyError;
@@ -9,7 +9,7 @@ use many_macros::many_module;
 use many_protocol::ResponseMessage;
 use many_types::cbor::CborAny;
 use many_types::ledger::TokenAmount;
-use many_types::Timestamp;
+use many_types::{Timestamp, CborRange, SortOrder};
 use minicbor::bytes::ByteVec;
 use minicbor::data::Type;
 use minicbor::{encode, decode, Decode, Decoder, Encode, Encoder};
@@ -252,6 +252,17 @@ pub struct InfoArgs {
     pub token: ByteVec,
 }
 
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[cbor(map)]
+pub struct FilterByState {
+    #[n(0)]
+    pub transaction_state: MultisigTransactionState,
+    #[n(1)]
+    pub range: Option<CborRange<EventId>>,
+    #[n(2)]
+    pub order: Option<SortOrder>,
+}
+
 #[derive(Clone, Debug, Default, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct ApproverInfo {
@@ -330,6 +341,13 @@ pub struct InfoReturn {
     pub state: MultisigTransactionState,
 }
 
+#[derive(Debug, Clone, Encode, Decode)]
+#[cbor(map)]
+pub struct FilterByStateReturn {
+    #[n(0)]
+    pub transactions: Vec<InfoReturn>,
+}
+
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct SetDefaultsArgs {
@@ -390,6 +408,11 @@ pub trait AccountMultisigModuleBackend: Send {
         args: SubmitTransactionArgs,
     ) -> Result<SubmitTransactionReturn, ManyError>;
     fn multisig_info(&self, sender: &Address, args: InfoArgs) -> Result<InfoReturn, ManyError>;
+    fn multisig_filter_by_state(
+        &self,
+        sender: &Address,
+        args: FilterByState
+    ) -> Result<FilterByStateReturn, ManyError>;
     fn multisig_set_defaults(
         &mut self,
         sender: &Address,
