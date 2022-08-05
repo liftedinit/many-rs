@@ -64,20 +64,6 @@ rust_library(
     deps = MANY_IDENTITY_DEPS,
 )
 
-rust_library(
-    name = "many-identity-for-self-test",
-    srcs = glob(include = ["src/**/*.rs"]),
-    crate_features = [
-        "coset",
-        "minicbor",
-        "serde",
-        "testing",
-    ],
-    crate_name = MANY_IDENTITY_CRATE_NAME_SANE,
-    proc_macro_deps = MANY_IDENTITY_PROC_MACRO_DEPS,
-    deps = MANY_IDENTITY_DEPS,
-)
-
 rust_test(
     name = "many-identity-test",
     crate = ":many-identity",
