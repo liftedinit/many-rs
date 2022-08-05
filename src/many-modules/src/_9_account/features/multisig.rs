@@ -28,11 +28,8 @@ impl<S, C> Encode<C> for Memo<S> where S: AsRef<str> {
 }
 
 impl<C> Decode<'_, C> for Memo<String> {
-    fn decode(d: &mut Decoder<'_>, _: &mut C) -> Result<Self, decode::Error> {
-        let s = d.str()?;
-        if s.as_bytes().len() > MULTISIG_MEMO_DATA_MAX_SIZE {
-            return Err(decode::Error::message("Memo size over limit"));
-        }
+    fn decode(d: &mut Decoder<'_>, ctx: &mut C) -> Result<Self, decode::Error> {
+        let Memo(s): Memo<&str> = Memo::decode(d, ctx)?;
         Ok(Memo(s.into()))
     }
 }
