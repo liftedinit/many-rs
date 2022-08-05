@@ -9,38 +9,45 @@ package(default_visibility = [
     "//src/many-types:__pkg__",
 ])
 
+MANY_IDENTITY_DEPS = [
+    "//src/many-error",
+    "@crate_index//:asn1",
+    "@crate_index//:base32",
+    "@crate_index//:coset",
+    "@crate_index//:crc-any",
+    "@crate_index//:cryptoki",
+    "@crate_index//:ed25519",
+    "@crate_index//:ed25519-dalek",
+    "@crate_index//:hex",
+    "@crate_index//:minicbor",
+    "@crate_index//:once_cell",
+    "@crate_index//:p256",
+    "@crate_index//:pkcs8",
+    "@crate_index//:rand_07",
+    "@crate_index//:serde",
+    "@crate_index//:sha2",
+    "@crate_index//:sha3",
+    "@crate_index//:signature",
+    "@crate_index//:static_assertions",
+    "@crate_index//:tracing",
+]
+
+MANY_IDENTITY_PROC_MACRO_DEPS = [
+    "@crate_index//:num-derive",
+]
+
+MANY_IDENTITY_CRATE_NAME = "many-identity"
+MANY_IDENTITY_CRATE_NAME_SANE = MANY_IDENTITY_CRATE_NAME.replace("-", "_")
+
 rust_library(
-    name = "many-identity",
+    name = MANY_IDENTITY_CRATE_NAME,
     srcs = glob(include = ["src/**/*.rs"]),
     crate_features = [
         "coset",
         "minicbor",
     ],
-    proc_macro_deps = [
-        "@crate_index//:num-derive",
-    ],
-    deps = [
-        "//src/many-error",
-        "@crate_index//:asn1",
-        "@crate_index//:base32",
-        "@crate_index//:coset",
-        "@crate_index//:crc-any",
-        "@crate_index//:cryptoki",
-        "@crate_index//:ed25519",
-        "@crate_index//:ed25519-dalek",
-        "@crate_index//:hex",
-        "@crate_index//:minicbor",
-        "@crate_index//:once_cell",
-        "@crate_index//:p256",
-        "@crate_index//:pkcs8",
-        "@crate_index//:rand_07",
-        "@crate_index//:serde",
-        "@crate_index//:sha2",
-        "@crate_index//:sha3",
-        "@crate_index//:signature",
-        "@crate_index//:static_assertions",
-        "@crate_index//:tracing",
-    ],
+    proc_macro_deps = MANY_IDENTITY_PROC_MACRO_DEPS,
+    deps = MANY_IDENTITY_DEPS,
 )
 
 rust_library(
@@ -52,32 +59,9 @@ rust_library(
         "raw",
         "testing",
     ],
-    crate_name = "many_identity",
-    proc_macro_deps = [
-        "@crate_index//:num-derive",
-    ],
-    deps = [
-        "//src/many-error",
-        "@crate_index//:asn1",
-        "@crate_index//:base32",
-        "@crate_index//:coset",
-        "@crate_index//:crc-any",
-        "@crate_index//:cryptoki",
-        "@crate_index//:ed25519",
-        "@crate_index//:ed25519-dalek",
-        "@crate_index//:hex",
-        "@crate_index//:minicbor",
-        "@crate_index//:once_cell",
-        "@crate_index//:p256",
-        "@crate_index//:pkcs8",
-        "@crate_index//:rand_07",
-        "@crate_index//:serde",
-        "@crate_index//:sha2",
-        "@crate_index//:sha3",
-        "@crate_index//:signature",
-        "@crate_index//:static_assertions",
-        "@crate_index//:tracing",
-    ],
+    crate_name = MANY_IDENTITY_CRATE_NAME_SANE,
+    proc_macro_deps = MANY_IDENTITY_PROC_MACRO_DEPS,
+    deps = MANY_IDENTITY_DEPS,
 )
 
 rust_library(
@@ -89,37 +73,14 @@ rust_library(
         "serde",
         "testing",
     ],
-    crate_name = "many_identity",
-    proc_macro_deps = [
-        "@crate_index//:num-derive",
-    ],
-    deps = [
-        "//src/many-error",
-        "@crate_index//:asn1",
-        "@crate_index//:base32",
-        "@crate_index//:coset",
-        "@crate_index//:crc-any",
-        "@crate_index//:cryptoki",
-        "@crate_index//:ed25519",
-        "@crate_index//:ed25519-dalek",
-        "@crate_index//:hex",
-        "@crate_index//:minicbor",
-        "@crate_index//:once_cell",
-        "@crate_index//:p256",
-        "@crate_index//:pkcs8",
-        "@crate_index//:rand_07",
-        "@crate_index//:serde",
-        "@crate_index//:sha2",
-        "@crate_index//:sha3",
-        "@crate_index//:signature",
-        "@crate_index//:static_assertions",
-        "@crate_index//:tracing",
-    ],
+    crate_name = MANY_IDENTITY_CRATE_NAME_SANE,
+    proc_macro_deps = MANY_IDENTITY_PROC_MACRO_DEPS,
+    deps = MANY_IDENTITY_DEPS,
 )
 
 rust_test(
     name = "many-identity-test",
-    crate = ":many-identity-for-self-test",
+    crate = ":many-identity",
     crate_features = [
         "coset",
         "minicbor",
@@ -129,5 +90,5 @@ rust_test(
     deps = [
         "@crate_index//:proptest",
         "@crate_index//:serde_test",
-    ]
+    ],
 )

@@ -7,50 +7,47 @@ package(default_visibility = [
     "//src/many-server:__pkg__",
 ])
 
+MANY_TYPES_DEPS = [
+    "//src/many-error",
+    "@crate_index//:coset",
+    "@crate_index//:fixed",
+    "@crate_index//:hex",
+    "@crate_index//:minicbor",
+    "@crate_index//:num-bigint",
+    "@crate_index//:num-traits",
+    "@crate_index//:serde",
+]
+
+MANY_TYPES_PROC_MACRO_DEPS = [
+    "@crate_index//:async-trait",
+    "@crate_index//:num-derive",
+]
+
+MANY_TYPES_CRATE_NAME = "many-types"
+MANY_TYPES_CRATE_NAME_SANE = MANY_TYPES_CRATE_NAME.replace("-", "_")
+
 rust_library(
-    name = "many-types",
+    name = MANY_TYPES_CRATE_NAME,
     srcs = glob(include = ["src/**/*.rs"]),
-    proc_macro_deps = [
-        "@crate_index//:async-trait",
-        "@crate_index//:num-derive",
-    ],
-    deps = [
-        "//src/many-error",
+    proc_macro_deps = MANY_TYPES_PROC_MACRO_DEPS,
+    deps = MANY_TYPES_DEPS + [
         "//src/many-identity",
-        "@crate_index//:coset",
-        "@crate_index//:fixed",
-        "@crate_index//:hex",
-        "@crate_index//:minicbor",
-        "@crate_index//:num-bigint",
-        "@crate_index//:num-traits",
-        "@crate_index//:serde",
     ],
 )
 
 rust_library(
     name = "many-types-for-test",
     srcs = glob(include = ["src/**/*.rs"]),
-    proc_macro_deps = [
-        "@crate_index//:async-trait",
-        "@crate_index//:num-derive",
-    ],
-    crate_name = "many_types",
-    deps = [
-        "//src/many-error",
+    crate_name = MANY_TYPES_CRATE_NAME_SANE,
+    proc_macro_deps = MANY_TYPES_PROC_MACRO_DEPS,
+    deps = MANY_TYPES_DEPS + [
         "//src/many-identity:many-identity-for-test",
-        "@crate_index//:coset",
-        "@crate_index//:fixed",
-        "@crate_index//:hex",
-        "@crate_index//:minicbor",
-        "@crate_index//:num-bigint",
-        "@crate_index//:num-traits",
-        "@crate_index//:serde",
     ],
 )
 
 rust_test(
     name = "many-types-test",
-    crate = ":many-types",
+    crate = ":"+MANY_TYPES_CRATE_NAME,
     crate_features = ["proptest"],
     deps = [
         "@crate_index//:proptest",
@@ -60,5 +57,5 @@ rust_test(
 
 rust_doc_test(
     name = "many-types-doc-test",
-    crate = ":many-types",
+    crate = ":"+MANY_TYPES_CRATE_NAME,
 )

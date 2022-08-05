@@ -7,58 +7,56 @@ package(default_visibility = [
     "//src/many-server:__pkg__",
 ])
 
+MANY_MODULES_DEPS = [
+    "//src/many-error",
+    "@crate_index//:coset",
+    "@crate_index//:derive_builder",
+    "@crate_index//:hex",
+    "@crate_index//:minicbor",
+    "@crate_index//:num-bigint",
+    "@crate_index//:strum",
+]
+
+MANY_MODULES_PROC_MACRO_DEPS = [
+    "//src/many-macros",
+    "@crate_index//:async-trait",
+    "@crate_index//:strum_macros",
+]
+
+MANY_MODULES_CRATE_NAME = "many-modules"
+MANY_MODULES_CRATE_NAME_SANE = MANY_MODULES_CRATE_NAME.replace("-", "_")
+
 rust_library(
-    name = "many-modules",
+    name = MANY_MODULES_CRATE_NAME,
     srcs = glob(include = ["src/**/*.rs"]),
-    proc_macro_deps = [
-        "//src/many-macros",
-        "@crate_index//:async-trait",
-        "@crate_index//:strum_macros",
-    ],
-    deps = [
-        "//src/many-error",
+    proc_macro_deps = MANY_MODULES_PROC_MACRO_DEPS,
+    deps = MANY_MODULES_DEPS + [
         "//src/many-identity",
         "//src/many-protocol",
         "//src/many-types",
-        "@crate_index//:coset",
-        "@crate_index//:derive_builder",
-        "@crate_index//:hex",
-        "@crate_index//:minicbor",
-        "@crate_index//:num-bigint",
-        "@crate_index//:strum",
     ],
 )
 
 rust_library(
     name = "many-modules-for-test",
     srcs = glob(include = ["src/**/*.rs"]),
-    proc_macro_deps = [
-        "//src/many-macros",
-        "@crate_index//:async-trait",
-        "@crate_index//:strum_macros",
-    ],
-    crate_name = "many_modules",
-    deps = [
-        "//src/many-error",
+    crate_name = MANY_MODULES_CRATE_NAME_SANE,
+    proc_macro_deps = MANY_MODULES_PROC_MACRO_DEPS,
+    deps = MANY_MODULES_DEPS + [
         "//src/many-identity:many-identity-for-test",
         "//src/many-protocol:many-protocol-for-test",
         "//src/many-types:many-types-for-test",
-        "@crate_index//:coset",
-        "@crate_index//:derive_builder",
-        "@crate_index//:hex",
-        "@crate_index//:minicbor",
-        "@crate_index//:num-bigint",
-        "@crate_index//:strum",
     ],
 )
 
 rust_test(
     name = "many-modules-test",
     crate = ":many-modules-for-test",
-    deps = ["@crate_index//:cbor-diag",
-            "@crate_index//:mockall",
-            "@crate_index//:once_cell",
-            "@crate_index//:proptest",
-            "@crate_index//:smol",
-    ]
+    deps = [
+        "@crate_index//:cbor-diag",
+        "@crate_index//:mockall",
+        "@crate_index//:once_cell",
+        "@crate_index//:proptest",
+        "@crate_index//:smol",
+    ],
 )
