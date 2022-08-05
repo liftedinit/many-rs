@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = [
     "//src/many:__pkg__",
@@ -33,4 +33,40 @@ rust_library(
         "@crate_index//:signature",
         "@crate_index//:tracing",
     ],
+)
+
+rust_library(
+    name = "many-protocol-for-test",
+    srcs = glob(include = ["src/**/*.rs"]),
+    proc_macro_deps = [
+        "@crate_index//:num-derive",
+    ],
+    crate_name = "many_protocol",
+    deps = [
+        "//src/many-error",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-types:many-types-for-test",
+        "@crate_index//:base64",
+        "@crate_index//:coset",
+        "@crate_index//:derive_builder",
+        "@crate_index//:hex",
+        "@crate_index//:minicbor",
+        "@crate_index//:num-bigint",
+        "@crate_index//:num-traits",
+        "@crate_index//:proptest",
+        "@crate_index//:reqwest",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+        "@crate_index//:sha2",
+        "@crate_index//:signature",
+        "@crate_index//:tracing",
+    ],
+)
+
+rust_test(
+    name = "many-protocol-test",
+    crate = ":many-protocol-for-test",
+    deps = [
+        "@crate_index//:once_cell",
+    ]
 )

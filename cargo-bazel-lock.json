@@ -1,5 +1,5 @@
 {
-  "checksum": "8ef0d7836da2ddc0f75a647e611689e3147a2503f12c2d9b16fca9fb8f8e9fdf",
+  "checksum": "011243aa9676aadc091523925c72e99e9a454a86ab5baa622f405f5f798918cf",
   "crates": {
     "addr2line 0.17.0": {
       "name": "addr2line",
@@ -499,7 +499,7 @@
               "target": "concurrent_queue"
             },
             {
-              "id": "fastrand 1.7.0",
+              "id": "fastrand 1.8.0",
               "target": "fastrand"
             },
             {
@@ -914,7 +914,7 @@
               "target": "build_script_build"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -1060,13 +1060,13 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
-    "az 1.2.0": {
+    "az 1.2.1": {
       "name": "az",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/az/1.2.0/download",
-          "sha256": "f771a5d1f5503f7f4279a30f3643d3421ba149848b89ecaaec0ea2acf04a5ac4"
+          "url": "https://crates.io/api/v1/crates/az/1.2.1/download",
+          "sha256": "7b7e4c2464d97fe331d41de9d5db0def0a96f4d823b8b32a2efd503578988973"
         }
       },
       "targets": [
@@ -1103,14 +1103,14 @@
         "deps": {
           "common": [
             {
-              "id": "az 1.2.0",
+              "id": "az 1.2.1",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "1.2.0"
+        "version": "1.2.1"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -1426,7 +1426,7 @@
               "target": "peeking_take_while"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -1462,13 +1462,13 @@
       },
       "license": "BSD-3-Clause"
     },
-    "bit-set 0.5.2": {
+    "bit-set 0.5.3": {
       "name": "bit-set",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/bit-set/0.5.2/download",
-          "sha256": "6e11e16035ea35e4e5997b393eacbf6f63983188f7a2ad25bfb13465f5ad59de"
+          "url": "https://crates.io/api/v1/crates/bit-set/0.5.3/download",
+          "sha256": "0700ddab506f33b20a03b13996eccd309a48e5ff77d0d95926aa0210fb4e95f1"
         }
       },
       "targets": [
@@ -1504,7 +1504,7 @@
           "selects": {}
         },
         "edition": "2015",
-        "version": "0.5.2"
+        "version": "0.5.3"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -1786,7 +1786,7 @@
               "target": "atomic_waker"
             },
             {
-              "id": "fastrand 1.7.0",
+              "id": "fastrand 1.8.0",
               "target": "fastrand"
             },
             {
@@ -1877,13 +1877,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "bytemuck 1.10.0": {
+    "bytemuck 1.11.0": {
       "name": "bytemuck",
-      "version": "1.10.0",
+      "version": "1.11.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/bytemuck/1.10.0/download",
-          "sha256": "c53dfa917ec274df8ed3c572698f381a24eef2efba9492d797301b72b6db408a"
+          "url": "https://crates.io/api/v1/crates/bytemuck/1.11.0/download",
+          "sha256": "a5377c8865e74a160d21f29c2d40669f53286db6eab59b88540cbb12ffc8b835"
         }
       },
       "targets": [
@@ -1906,7 +1906,7 @@
           "**"
         ],
         "edition": "2018",
-        "version": "1.10.0"
+        "version": "1.11.0"
       },
       "license": "Zlib OR Apache-2.0 OR MIT"
     },
@@ -2673,13 +2673,13 @@
       },
       "license": "MIT"
     },
-    "clap 3.2.14": {
+    "clap 3.2.15": {
       "name": "clap",
-      "version": "3.2.14",
+      "version": "3.2.15",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap/3.2.14/download",
-          "sha256": "54635806b078b7925d6e36810b1755f2a4b5b4d57560432c1ecf60bcbe10602b"
+          "url": "https://crates.io/api/v1/crates/clap/3.2.15/download",
+          "sha256": "44bbe24bbd31a185bc2c4f7c2abe80bea13a20d57ee4e55be70ac512bdc76417"
         }
       },
       "targets": [
@@ -2766,23 +2766,23 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "clap_derive 3.2.7",
+              "id": "clap_derive 3.2.15",
               "target": "clap_derive"
             }
           ],
           "selects": {}
         },
-        "version": "3.2.14"
+        "version": "3.2.15"
       },
       "license": "MIT OR Apache-2.0"
     },
-    "clap_derive 3.2.7": {
+    "clap_derive 3.2.15": {
       "name": "clap_derive",
-      "version": "3.2.7",
+      "version": "3.2.15",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap_derive/3.2.7/download",
-          "sha256": "759bf187376e1afa7b85b959e6a664a3e7a95203415dba952ad19139e798f902"
+          "url": "https://crates.io/api/v1/crates/clap_derive/3.2.15/download",
+          "sha256": "9ba52acd3b0a5c33aeada5cdaa3267cdc7c594a98731d4268cdc1532f4264cb4"
         }
       },
       "targets": [
@@ -2818,7 +2818,7 @@
               "target": "proc_macro_error"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -2833,7 +2833,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "3.2.7"
+        "version": "3.2.15"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -3700,7 +3700,7 @@
               "target": "ident_case"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -3938,7 +3938,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -4038,7 +4038,7 @@
               "target": "darling"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -4299,7 +4299,7 @@
               "target": "chrono"
             },
             {
-              "id": "clap 3.2.14",
+              "id": "clap 3.2.15",
               "target": "clap"
             },
             {
@@ -4331,7 +4331,7 @@
               "target": "ed25519_dalek"
             },
             {
-              "id": "fixed 1.16.0",
+              "id": "fixed 1.16.1",
               "target": "fixed"
             },
             {
@@ -4355,7 +4355,7 @@
               "target": "minicbor"
             },
             {
-              "id": "mockall 0.11.1",
+              "id": "mockall 0.11.2",
               "target": "mockall"
             },
             {
@@ -4387,7 +4387,7 @@
               "target": "pkcs8"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -4488,7 +4488,7 @@
               "target": "tiny_http"
             },
             {
-              "id": "tokio 1.20.0",
+              "id": "tokio 1.20.1",
               "target": "tokio"
             },
             {
@@ -5031,13 +5031,13 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
-    "fastrand 1.7.0": {
+    "fastrand 1.8.0": {
       "name": "fastrand",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/fastrand/1.7.0/download",
-          "sha256": "c3fcf0cee53519c866c09b5de1f6c56ff9d647101f81c1964fa632e148896cdf"
+          "url": "https://crates.io/api/v1/crates/fastrand/1.8.0/download",
+          "sha256": "a7a407cfaa3385c4ae6b23e84623d48c2798d06e3e6a1878f7f59f17b3f86499"
         }
       },
       "targets": [
@@ -5071,7 +5071,7 @@
           }
         },
         "edition": "2018",
-        "version": "1.7.0"
+        "version": "1.8.0"
       },
       "license": "Apache-2.0 OR MIT"
     },
@@ -5121,13 +5121,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "fixed 1.16.0": {
+    "fixed 1.16.1": {
       "name": "fixed",
-      "version": "1.16.0",
+      "version": "1.16.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/fixed/1.16.0/download",
-          "sha256": "93db1ca4ef0496cc54f43660fcb423bc16ced939b8fdd9749e7abcd5674f1803"
+          "url": "https://crates.io/api/v1/crates/fixed/1.16.1/download",
+          "sha256": "1e50e12d082af9f49314ae850d33c7e89bbe1b3f30857f747f7bed0750b068c5"
         }
       },
       "targets": [
@@ -5164,16 +5164,16 @@
         "deps": {
           "common": [
             {
-              "id": "az 1.2.0",
+              "id": "az 1.2.1",
               "target": "az",
               "alias": "az_crate"
             },
             {
-              "id": "bytemuck 1.10.0",
+              "id": "bytemuck 1.11.0",
               "target": "bytemuck"
             },
             {
-              "id": "fixed 1.16.0",
+              "id": "fixed 1.16.1",
               "target": "build_script_build"
             },
             {
@@ -5188,7 +5188,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.16.0"
+        "version": "1.16.1"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -5645,7 +5645,7 @@
         "deps": {
           "common": [
             {
-              "id": "fastrand 1.7.0",
+              "id": "fastrand 1.8.0",
               "target": "fastrand"
             },
             {
@@ -6271,7 +6271,7 @@
               "target": "slab"
             },
             {
-              "id": "tokio 1.20.0",
+              "id": "tokio 1.20.1",
               "target": "tokio"
             },
             {
@@ -6883,7 +6883,7 @@
               "target": "socket2"
             },
             {
-              "id": "tokio 1.20.0",
+              "id": "tokio 1.20.1",
               "target": "tokio"
             },
             {
@@ -6949,7 +6949,7 @@
               "target": "native_tls"
             },
             {
-              "id": "tokio 1.20.0",
+              "id": "tokio 1.20.1",
               "target": "tokio"
             },
             {
@@ -7313,13 +7313,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "js-sys 0.3.58": {
+    "js-sys 0.3.59": {
       "name": "js-sys",
-      "version": "0.3.58",
+      "version": "0.3.59",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/js-sys/0.3.58/download",
-          "sha256": "c3fac17f7123a73ca62df411b1bf727ccc805daa070338fda671c86dac1bdc27"
+          "url": "https://crates.io/api/v1/crates/js-sys/0.3.59/download",
+          "sha256": "258451ab10b34f8af53416d1fdab72c22e805f0c92a1136d59470ec0b11138b2"
         }
       },
       "targets": [
@@ -7344,14 +7344,14 @@
         "deps": {
           "common": [
             {
-              "id": "wasm-bindgen 0.2.81",
+              "id": "wasm-bindgen 0.2.82",
               "target": "wasm_bindgen"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.3.58"
+        "version": "0.3.59"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -8090,7 +8090,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -8258,13 +8258,13 @@
       },
       "license": "MIT"
     },
-    "mockall 0.11.1": {
+    "mockall 0.11.2": {
       "name": "mockall",
-      "version": "0.11.1",
+      "version": "0.11.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/mockall/0.11.1/download",
-          "sha256": "5641e476bbaf592a3939a7485fa079f427b4db21407d5ebfd5bba4e07a1f6f4c"
+          "url": "https://crates.io/api/v1/crates/mockall/0.11.2/download",
+          "sha256": "e2be9a9090bc1cac2930688fa9478092a64c6a92ddc6ae0692d46b37d9cab709"
         }
       },
       "targets": [
@@ -8319,23 +8319,23 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "mockall_derive 0.11.1",
+              "id": "mockall_derive 0.11.2",
               "target": "mockall_derive"
             }
           ],
           "selects": {}
         },
-        "version": "0.11.1"
+        "version": "0.11.2"
       },
       "license": "MIT/Apache-2.0"
     },
-    "mockall_derive 0.11.1": {
+    "mockall_derive 0.11.2": {
       "name": "mockall_derive",
-      "version": "0.11.1",
+      "version": "0.11.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/mockall_derive/0.11.1/download",
-          "sha256": "262d56735932ee0240d515656e5a7667af3af2a5b0af4da558c4cff2b2aeb0c7"
+          "url": "https://crates.io/api/v1/crates/mockall_derive/0.11.2/download",
+          "sha256": "86d702a0530a0141cf4ed147cf5ec7be6f2c187d4e37fcbefc39cf34116bfe8f"
         }
       },
       "targets": [
@@ -8364,7 +8364,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -8379,7 +8379,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.11.1"
+        "version": "0.11.2"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -8759,7 +8759,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -9375,7 +9375,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -9804,7 +9804,7 @@
           "selects": {
             "cfg(target_os = \"redox\")": [
               {
-                "id": "redox_syscall 0.2.13",
+                "id": "redox_syscall 0.2.15",
                 "target": "syscall"
               }
             ],
@@ -10725,7 +10725,7 @@
               "target": "build_script_build"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -10814,7 +10814,7 @@
               "target": "build_script_build"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -10843,13 +10843,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "proc-macro2 1.0.40": {
+    "proc-macro2 1.0.42": {
       "name": "proc-macro2",
-      "version": "1.0.40",
+      "version": "1.0.42",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/proc-macro2/1.0.40/download",
-          "sha256": "dd96a1e8ed2596c337f8eae5f24924ec83f5ad5ab21ea8e455d3566c69fbcaf7"
+          "url": "https://crates.io/api/v1/crates/proc-macro2/1.0.42/download",
+          "sha256": "c278e965f1d8cf32d6e0e96de3d3e79712178ae67986d9cf9151f51e95aac89b"
         }
       },
       "targets": [
@@ -10890,7 +10890,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "build_script_build"
             },
             {
@@ -10901,7 +10901,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "1.0.40"
+        "version": "1.0.42"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -10954,7 +10954,7 @@
         "deps": {
           "common": [
             {
-              "id": "bit-set 0.5.2",
+              "id": "bit-set 0.5.3",
               "target": "bit_set"
             },
             {
@@ -11122,7 +11122,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -11554,13 +11554,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "redox_syscall 0.2.13": {
+    "redox_syscall 0.2.15": {
       "name": "redox_syscall",
-      "version": "0.2.13",
+      "version": "0.2.15",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/redox_syscall/0.2.13/download",
-          "sha256": "62f25bc4c7e55e0b0b7a1d43fb893f4fa1361d0abe38b9ce4f323c2adfe6ef42"
+          "url": "https://crates.io/api/v1/crates/redox_syscall/0.2.15/download",
+          "sha256": "534cfe58d6a18cc17120fbf4635d53d14691c1fe4d951064df9bd326178d7d5a"
         }
       },
       "targets": [
@@ -11592,7 +11592,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.2.13"
+        "version": "0.2.15"
       },
       "license": "MIT"
     },
@@ -11928,7 +11928,7 @@
                 "target": "pin_project_lite"
               },
               {
-                "id": "tokio 1.20.0",
+                "id": "tokio 1.20.1",
                 "target": "tokio"
               },
               {
@@ -11938,7 +11938,7 @@
             ],
             "cfg(target_arch = \"wasm32\")": [
               {
-                "id": "js-sys 0.3.58",
+                "id": "js-sys 0.3.59",
                 "target": "js_sys"
               },
               {
@@ -11946,15 +11946,15 @@
                 "target": "serde_json"
               },
               {
-                "id": "wasm-bindgen 0.2.81",
+                "id": "wasm-bindgen 0.2.82",
                 "target": "wasm_bindgen"
               },
               {
-                "id": "wasm-bindgen-futures 0.4.31",
+                "id": "wasm-bindgen-futures 0.4.32",
                 "target": "wasm_bindgen_futures"
               },
               {
-                "id": "web-sys 0.3.58",
+                "id": "web-sys 0.3.59",
                 "target": "web_sys"
               }
             ],
@@ -12031,7 +12031,7 @@
           "selects": {
             "cfg(all(target_arch = \"wasm32\", target_vendor = \"unknown\", target_os = \"unknown\", target_env = \"\"))": [
               {
-                "id": "web-sys 0.3.58",
+                "id": "web-sys 0.3.59",
                 "target": "web_sys"
               }
             ],
@@ -12960,7 +12960,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -13157,7 +13157,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -14236,7 +14236,7 @@
               "target": "heck"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -14357,7 +14357,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -14420,7 +14420,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -14540,7 +14540,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "fastrand 1.7.0",
+              "id": "fastrand 1.8.0",
               "target": "fastrand"
             },
             {
@@ -14557,7 +14557,7 @@
             ],
             "cfg(target_os = \"redox\")": [
               {
-                "id": "redox_syscall 0.2.13",
+                "id": "redox_syscall 0.2.15",
                 "target": "syscall"
               }
             ],
@@ -14799,7 +14799,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -15056,13 +15056,13 @@
       },
       "license": "MIT OR Apache-2.0 OR Zlib"
     },
-    "tokio 1.20.0": {
+    "tokio 1.20.1": {
       "name": "tokio",
-      "version": "1.20.0",
+      "version": "1.20.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tokio/1.20.0/download",
-          "sha256": "57aec3cfa4c296db7255446efb4928a6be304b431a806216105542a67b6ca82e"
+          "url": "https://crates.io/api/v1/crates/tokio/1.20.1/download",
+          "sha256": "7a8325f63a7d4774dd041e363b2409ed1c5cbbd0f867795e661df066b2b0a581"
         }
       },
       "targets": [
@@ -15157,7 +15157,7 @@
               "target": "socket2"
             },
             {
-              "id": "tokio 1.20.0",
+              "id": "tokio 1.20.1",
               "target": "build_script_build"
             }
           ],
@@ -15190,7 +15190,7 @@
           ],
           "selects": {}
         },
-        "version": "1.20.0"
+        "version": "1.20.1"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -15239,7 +15239,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -15293,7 +15293,7 @@
               "target": "native_tls"
             },
             {
-              "id": "tokio 1.20.0",
+              "id": "tokio 1.20.1",
               "target": "tokio"
             }
           ],
@@ -15356,7 +15356,7 @@
               "target": "pin_project_lite"
             },
             {
-              "id": "tokio 1.20.0",
+              "id": "tokio 1.20.1",
               "target": "tokio"
             },
             {
@@ -15500,7 +15500,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -16622,13 +16622,13 @@
       },
       "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
     },
-    "wasm-bindgen 0.2.81": {
+    "wasm-bindgen 0.2.82": {
       "name": "wasm-bindgen",
-      "version": "0.2.81",
+      "version": "0.2.82",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/wasm-bindgen/0.2.81/download",
-          "sha256": "7c53b543413a17a202f4be280a7e5c62a1c69345f5de525ee64f8cfdbc954994"
+          "url": "https://crates.io/api/v1/crates/wasm-bindgen/0.2.82/download",
+          "sha256": "fc7652e3f6c4706c8d9cd54832c4a4ccb9b5336e2c3bd154d5cccfbf1c1f5f7d"
         }
       },
       "targets": [
@@ -16674,7 +16674,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "wasm-bindgen 0.2.81",
+              "id": "wasm-bindgen 0.2.82",
               "target": "build_script_build"
             }
           ],
@@ -16684,13 +16684,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "wasm-bindgen-macro 0.2.81",
+              "id": "wasm-bindgen-macro 0.2.82",
               "target": "wasm_bindgen_macro"
             }
           ],
           "selects": {}
         },
-        "version": "0.2.81"
+        "version": "0.2.82"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -16699,13 +16699,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "wasm-bindgen-backend 0.2.81": {
+    "wasm-bindgen-backend 0.2.82": {
       "name": "wasm-bindgen-backend",
-      "version": "0.2.81",
+      "version": "0.2.82",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/wasm-bindgen-backend/0.2.81/download",
-          "sha256": "5491a68ab4500fa6b4d726bd67408630c3dbe9c4fe7bda16d5c82a1fd8c7340a"
+          "url": "https://crates.io/api/v1/crates/wasm-bindgen-backend/0.2.82/download",
+          "sha256": "662cd44805586bd52971b9586b1df85cdbbd9112e4ef4d8f41559c334dc6ac3f"
         }
       },
       "targets": [
@@ -16737,15 +16737,15 @@
               "target": "bumpalo"
             },
             {
-              "id": "lazy_static 1.4.0",
-              "target": "lazy_static"
-            },
-            {
               "id": "log 0.4.17",
               "target": "log"
             },
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "once_cell 1.13.0",
+              "target": "once_cell"
+            },
+            {
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -16757,24 +16757,24 @@
               "target": "syn"
             },
             {
-              "id": "wasm-bindgen-shared 0.2.81",
+              "id": "wasm-bindgen-shared 0.2.82",
               "target": "wasm_bindgen_shared"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.2.81"
+        "version": "0.2.82"
       },
       "license": "MIT/Apache-2.0"
     },
-    "wasm-bindgen-futures 0.4.31": {
+    "wasm-bindgen-futures 0.4.32": {
       "name": "wasm-bindgen-futures",
-      "version": "0.4.31",
+      "version": "0.4.32",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/wasm-bindgen-futures/0.4.31/download",
-          "sha256": "de9a9cec1733468a8c657e57fa2413d2ae2c0129b95e87c5b72b8ace4d13f31f"
+          "url": "https://crates.io/api/v1/crates/wasm-bindgen-futures/0.4.32/download",
+          "sha256": "fa76fb221a1f8acddf5b54ace85912606980ad661ac7a503b4570ffd3a624dad"
         }
       },
       "targets": [
@@ -16803,35 +16803,35 @@
               "target": "cfg_if"
             },
             {
-              "id": "js-sys 0.3.58",
+              "id": "js-sys 0.3.59",
               "target": "js_sys"
             },
             {
-              "id": "wasm-bindgen 0.2.81",
+              "id": "wasm-bindgen 0.2.82",
               "target": "wasm_bindgen"
             }
           ],
           "selects": {
             "cfg(target_feature = \"atomics\")": [
               {
-                "id": "web-sys 0.3.58",
+                "id": "web-sys 0.3.59",
                 "target": "web_sys"
               }
             ]
           }
         },
         "edition": "2018",
-        "version": "0.4.31"
+        "version": "0.4.32"
       },
       "license": "MIT/Apache-2.0"
     },
-    "wasm-bindgen-macro 0.2.81": {
+    "wasm-bindgen-macro 0.2.82": {
       "name": "wasm-bindgen-macro",
-      "version": "0.2.81",
+      "version": "0.2.82",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/wasm-bindgen-macro/0.2.81/download",
-          "sha256": "c441e177922bc58f1e12c022624b6216378e5febc2f0533e41ba443d505b80aa"
+          "url": "https://crates.io/api/v1/crates/wasm-bindgen-macro/0.2.82/download",
+          "sha256": "b260f13d3012071dfb1512849c033b1925038373aea48ced3012c09df952c602"
         }
       },
       "targets": [
@@ -16863,24 +16863,24 @@
               "target": "quote"
             },
             {
-              "id": "wasm-bindgen-macro-support 0.2.81",
+              "id": "wasm-bindgen-macro-support 0.2.82",
               "target": "wasm_bindgen_macro_support"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.2.81"
+        "version": "0.2.82"
       },
       "license": "MIT/Apache-2.0"
     },
-    "wasm-bindgen-macro-support 0.2.81": {
+    "wasm-bindgen-macro-support 0.2.82": {
       "name": "wasm-bindgen-macro-support",
-      "version": "0.2.81",
+      "version": "0.2.82",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/wasm-bindgen-macro-support/0.2.81/download",
-          "sha256": "7d94ac45fcf608c1f45ef53e748d35660f168490c10b23704c7779ab8f5c3048"
+          "url": "https://crates.io/api/v1/crates/wasm-bindgen-macro-support/0.2.82/download",
+          "sha256": "5be8e654bdd9b79216c2929ab90721aa82faf65c48cdf08bdc4e7f51357b80da"
         }
       },
       "targets": [
@@ -16908,7 +16908,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -16920,28 +16920,28 @@
               "target": "syn"
             },
             {
-              "id": "wasm-bindgen-backend 0.2.81",
+              "id": "wasm-bindgen-backend 0.2.82",
               "target": "wasm_bindgen_backend"
             },
             {
-              "id": "wasm-bindgen-shared 0.2.81",
+              "id": "wasm-bindgen-shared 0.2.82",
               "target": "wasm_bindgen_shared"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.2.81"
+        "version": "0.2.82"
       },
       "license": "MIT/Apache-2.0"
     },
-    "wasm-bindgen-shared 0.2.81": {
+    "wasm-bindgen-shared 0.2.82": {
       "name": "wasm-bindgen-shared",
-      "version": "0.2.81",
+      "version": "0.2.82",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/wasm-bindgen-shared/0.2.81/download",
-          "sha256": "6a89911bd99e5f3659ec4acf9c4d93b0a90fe4a2a11f15328472058edc5261be"
+          "url": "https://crates.io/api/v1/crates/wasm-bindgen-shared/0.2.82/download",
+          "sha256": "6598dd0bd3c7d51095ff6531a5b23e02acdc81804e30d8f07afb77b7215a140a"
         }
       },
       "targets": [
@@ -16978,14 +16978,14 @@
         "deps": {
           "common": [
             {
-              "id": "wasm-bindgen-shared 0.2.81",
+              "id": "wasm-bindgen-shared 0.2.82",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.2.81"
+        "version": "0.2.82"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -16995,13 +16995,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "web-sys 0.3.58": {
+    "web-sys 0.3.59": {
       "name": "web-sys",
-      "version": "0.3.58",
+      "version": "0.3.59",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/web-sys/0.3.58/download",
-          "sha256": "2fed94beee57daf8dd7d51f2b15dc2bcde92d7a72304cdf662a4371008b71b90"
+          "url": "https://crates.io/api/v1/crates/web-sys/0.3.59/download",
+          "sha256": "ed055ab27f941423197eb86b2035720b1a3ce40504df082cac2ecc6ed73335a1"
         }
       },
       "targets": [
@@ -17046,18 +17046,18 @@
         "deps": {
           "common": [
             {
-              "id": "js-sys 0.3.58",
+              "id": "js-sys 0.3.59",
               "target": "js_sys"
             },
             {
-              "id": "wasm-bindgen 0.2.81",
+              "id": "wasm-bindgen 0.2.82",
               "target": "wasm_bindgen"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.3.58"
+        "version": "0.3.59"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -18004,7 +18004,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.40",
+              "id": "proc-macro2 1.0.42",
               "target": "proc_macro2"
             },
             {
@@ -18031,7 +18031,7 @@
   "binary_crates": [
     "bindgen 0.59.2",
     "cc 1.0.73",
-    "clap 3.2.14",
+    "clap 3.2.15",
     "minicbor 0.18.0",
     "wait-timeout 0.2.0"
   ],

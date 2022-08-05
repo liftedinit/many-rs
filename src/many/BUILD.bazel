@@ -10,6 +10,7 @@ rust_binary(
         "//src/many-modules",
         "//src/many-protocol",
         "//src/many-server",
+        "//src/many-types",
         "@crate_index//:anyhow",
         "@crate_index//:atty",
         "@crate_index//:base64",

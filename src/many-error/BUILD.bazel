@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = [
     "//src/many:__pkg__",
@@ -21,4 +21,9 @@ rust_library(
         "@crate_index//:num-traits",
         "@crate_index//:regex",
     ],
+)
+
+rust_test(
+    name = "many-error-test",
+    crate = ":many-error",
 )
