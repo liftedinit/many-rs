@@ -1,5 +1,5 @@
 use crate as module;
-use crate::account::features::multisig::Memo;
+use crate::account::features::multisig::{Data, Memo};
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
@@ -506,7 +506,7 @@ define_event! {
         6     | threshold:              u64,
         7     | timeout:                Timestamp,
         8     | execute_automatically:  bool,
-        9     | data:                   Option<ByteVec>,
+        9     | data:                   Option<Data>,
     },
     [9, 1, 1]   AccountMultisigApprove (module::account::features::multisig::ApproveArgs) {
         1     | account:                Address                                [ id ],
@@ -698,7 +698,7 @@ mod test {
 
         fn _create_event_info(
             memo: Memo<String>,
-            data: Vec<u8>,
+            data: Data,
             transaction: AccountMultisigTransaction,
         ) -> EventInfo {
             EventInfo::AccountMultisigSubmit {
@@ -710,7 +710,7 @@ mod test {
                 threshold: 1,
                 timeout: Timestamp::now(),
                 execute_automatically: false,
-                data: Some(data.into()),
+                data: Some(data),
             }
         }
 
@@ -732,7 +732,7 @@ mod test {
             fn submit_send(memo in string_regex("[A-Za-z0-9\\., ]{0,4000}").unwrap(), amount: u64) {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![], AccountMultisigTransaction::Send(module::ledger::SendArgs {
+                    _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::Send(module::ledger::SendArgs {
                         from: Some(Address::public_key_raw([2; 28])),
                         to: Address::public_key_raw([3; 28]),
                         symbol: Address::public_key_raw([4; 28]),
@@ -746,7 +746,7 @@ mod test {
                 let memo = memo.try_into().unwrap();
                 let memo2 = memo2.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![],
+                    _create_event_info(memo, vec![].try_into().unwrap(),
                                        AccountMultisigTransaction::AccountMultisigSubmit(
                                            module::account::features::multisig::SubmitTransactionArgs {
                                                account: Address::public_key_raw([2; 28]),
@@ -771,7 +771,7 @@ mod test {
             fn submit_set_defaults(memo in string_regex("[A-Za-z0-9\\., ]{0,4000}").unwrap()) {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![], AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
+                    _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
                         account: Address::public_key_raw([2; 28]),
                         threshold: Some(2),
                         timeout_in_secs: None,
