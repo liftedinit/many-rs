@@ -98,6 +98,10 @@ impl Data {
     fn new(b: ByteVec) -> Self {
         Data(b)
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_slice()
+    }
 }
 
 pub mod errors {
