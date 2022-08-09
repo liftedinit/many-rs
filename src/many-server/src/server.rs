@@ -276,40 +276,33 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
             let this = self.lock().unwrap();
             let cose_id = this.identity.clone();
 
-            request
-                .and_then(|message| {
-                    let now = this
-                        .time_fn
-                        .as_ref()
-                        .map_or_else(|| Ok(SystemTime::now()), |f| f())?;
+            (|| {
+                let message = request?;
 
-                    id = message.id;
-                    _validate_time(&message, now, this.timeout)?;
-                    Ok(message)
-                })
-                .and_then(|message| {
-                    this.validate_id(&message)?;
-                    Ok(message)
-                })
-                .map(|message| {
-                    let maybe_module = this.find_module(&message);
-                    (message, maybe_module)
-                })
-                .and_then(|(message, maybe_module)| {
-                    if let Some(ref m) = maybe_module {
-                        m.validate(&message, &envelope)?;
-                    }
-                    Ok((message, maybe_module))
-                })
-                .map(|(message, maybe_module)| {
-                    (
-                        cose_id.clone(),
-                        message,
-                        maybe_module,
-                        this.fallback.clone(),
-                    )
-                })
-                .map_err(|many_err| ResponseMessage::error(&cose_id.identity, id, many_err))
+                let now = this.
+                    time_fn
+                    .as_ref()
+                    .map_or_else(|| Ok(SystemTime::now()), |f| f())?;
+
+                id = message.id;
+
+                _validate_time(&message, now, this.timeout)?;
+
+                this.validate_id(&message)?;
+
+                let maybe_module = this.find_module(&message);
+                if let Some(ref m ) = maybe_module {
+                    m.validate(&message, &envelope)?;
+                };
+
+                Ok((
+                    cose_id.clone(),
+                    message,
+                    maybe_module,
+                    this.fallback.clone(),
+                ))
+            })()
+            .map_err(|many_err: ManyError| ResponseMessage::error(&cose_id.identity, id, many_err))
         };
 
         match response {
