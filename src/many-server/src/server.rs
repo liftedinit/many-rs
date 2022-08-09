@@ -279,8 +279,8 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
             (|| {
                 let message = request?;
 
-                let now = this.
-                    time_fn
+                let now = this
+                    .time_fn
                     .as_ref()
                     .map_or_else(|| Ok(SystemTime::now()), |f| f())?;
 
@@ -291,7 +291,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                 this.validate_id(&message)?;
 
                 let maybe_module = this.find_module(&message);
-                if let Some(ref m ) = maybe_module {
+                if let Some(ref m) = maybe_module {
                     m.validate(&message, &envelope)?;
                 };
 
