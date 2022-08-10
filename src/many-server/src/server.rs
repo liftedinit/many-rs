@@ -287,12 +287,13 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                 id = message.id;
 
                 _validate_time(&message, now, this.timeout)?;
+
                 this.validate_id(&message)?;
 
                 let maybe_module = this.find_module(&message);
                 if let Some(ref m) = maybe_module {
                     m.validate(&message, &envelope)?;
-                }
+                };
 
                 Ok((
                     cose_id.clone(),
