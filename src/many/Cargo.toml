@@ -13,7 +13,7 @@ name = "many"
 path = "src/main.rs"
 
 [features]
-mock = ["many-server/mock", "dep:many-mock"]
+mock = ["dep:many-mock"]
 
 [dependencies]
 many-client = { path = "../many-client", version = "0.1.0" }

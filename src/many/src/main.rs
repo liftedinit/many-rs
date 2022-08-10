@@ -6,7 +6,7 @@ use many_error::ManyError;
 use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_identity::{Address, CoseKeyIdentity};
 #[cfg(feature = "mock")]
-use many_mock::parse_mockfile;
+use many_mock::{parse_mockfile, server::ManyMockServer};
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
@@ -168,13 +168,14 @@ struct ServerOpt {
     #[clap(long, short, default_value = "many-server")]
     name: String,
 
-    #[cfg(feature = "mock")]
     /// The path to a mockfile containing mock responses.
     /// Default is mockfile.toml, gives an error if the file does not exist
+    #[cfg(feature = "mock")]
     #[clap(long, short, value_parser = parse_mockfile, default_value = "mockfile.toml")]
     mockfile: BTreeMap<String, toml::Value>,
     #[cfg(not(feature = "mock"))]
     #[clap(skip)]
+    #[allow(unused)]
     mockfile: BTreeMap<String, toml::Value>,
 }
 
@@ -489,11 +490,16 @@ fn main() {
 
             let many = ManyServer::simple(
                 o.name,
-                key,
-                o.mockfile,
+                key.clone(),
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
                 None,
             );
+            #[cfg(feature = "mock")]
+            {
+                let mut many_locked = many.lock().unwrap();
+                let mock_server = ManyMockServer::new(o.mockfile, None, key);
+                many_locked.set_fallback_module(mock_server);
+            }
             HttpServer::new(many).bind(o.addr).unwrap();
         }
         SubCommand::GetTokenId(o) => {

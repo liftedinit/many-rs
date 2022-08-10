@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 
 use many_protocol::RequestMessage;
 
+pub mod server;
+
 pub(crate) type MockEntries = BTreeMap<String, toml::Value>;
 
 /// Reads and parses the mockfile provided by the mockfile_arg parameter, or from a default path

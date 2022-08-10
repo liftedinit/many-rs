@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use cucumber::{given, then, WorldInit};
 use many_client::ManyClient;
 use many_identity::{Address, CoseKeyIdentity};
+use many_mock::server::ManyMockServer;
 use many_server::{transport::http::HttpServer, ManyServer};
 use serde_json::Value;
 
@@ -39,7 +40,12 @@ impl cucumber::World for World {
         let mocktree = many_mock::parse_mockfile(mockfile).unwrap();
         let key = CoseKeyIdentity::anonymous();
 
-        let many = ManyServer::simple("integration", key.clone(), mocktree, None, None);
+        let many = ManyServer::simple("integration", key.clone(), None, None);
+        {
+            let mut many = many.lock().unwrap();
+            let mock_server = ManyMockServer::new(mocktree, None, key.clone());
+            many.set_fallback_module(mock_server);
+        }
         let mut server = HttpServer::new(many);
 
         let finish_server = server.term_signal();

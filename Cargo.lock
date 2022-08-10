@@ -1798,10 +1798,12 @@ name = "many-mock"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "coset",
  "cucumber",
  "futures",
  "many-client",
  "many-identity",
+ "many-modules",
  "many-protocol",
  "many-server",
  "regex",
@@ -1882,7 +1884,6 @@ dependencies = [
  "many-error",
  "many-identity",
  "many-macros",
- "many-mock",
  "many-modules",
  "many-protocol",
  "many-types",
