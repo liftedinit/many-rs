@@ -11,3 +11,15 @@ serde_json = "1.0"
 toml = "0.5"
 regex = "1.5.4"
 many-protocol = { path = "../many-protocol", version = "0.1.0" }
+
+[dev-dependencies]
+cucumber = "0.13"
+async-trait = "0.1"
+futures = "0.3"
+many-client = { path = "../many-client", version = "0.1.0" }
+many-identity = { path = "../many-identity", version = "0.1.0" }
+many-server = { path = "../many-server", version = "0.1.0" }
+
+[[test]]
+name = "integration"
+harness = false
