@@ -86,7 +86,7 @@ async fn field_value(w: &mut World, field_name: String, value: String) {
         .unwrap()
         .as_map()
         .expect("Response should be a CBOR")
-        .into_iter()
+        .iter()
         .map(|(k, v)| (k.as_text().unwrap().to_string(), v.clone()))
         .collect();
     let json_value: Value = serde_json::from_str(&value).unwrap();
