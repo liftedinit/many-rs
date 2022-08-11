@@ -172,11 +172,11 @@ struct ServerOpt {
     /// Default is mockfile.toml, gives an error if the file does not exist
     #[cfg(feature = "mock")]
     #[clap(long, short, value_parser = parse_mockfile, default_value = "mockfile.toml")]
-    mockfile: BTreeMap<String, toml::Value>,
+    mockfile: BTreeMap<String, Vec<u8>>,
     #[cfg(not(feature = "mock"))]
     #[clap(skip)]
     #[allow(unused)]
-    mockfile: BTreeMap<String, toml::Value>,
+    mockfile: BTreeMap<String, Vec<u8>>,
 }
 
 #[derive(Parser)]
