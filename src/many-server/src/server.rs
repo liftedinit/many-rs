@@ -1,10 +1,10 @@
 use crate::transport::LowLevelManyRequestHandler;
 use async_trait::async_trait;
-use coset::CoseSign1;
+use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
-use many_identity::CoseKeyIdentity;
+use many_identity::{Identity, Verifier};
 use many_modules::{base, ManyModule, ManyModuleInfo};
-use many_protocol::{ManyUrl, RequestMessage, ResponseMessage};
+use many_protocol::{IdentityResolver, RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Formatter};
@@ -52,16 +52,17 @@ pub struct ManyModuleList {}
 
 pub const MANYSERVER_DEFAULT_TIMEOUT: u64 = 300;
 
-#[derive(Default)]
 pub struct ManyServer {
     modules: Vec<Arc<dyn ManyModule + Send>>,
     method_cache: BTreeSet<String>,
-    identity: CoseKeyIdentity,
+    identity: Box<dyn Identity>,
+    verifier: Box<dyn Verifier>,
+    resolver: Option<Box<dyn IdentityResolver>>,
+    public_key: Option<CoseKey>,
     name: String,
     version: Option<String>,
     timeout: u64,
     fallback: Option<Arc<dyn ManyServerFallback + Send + 'static>>,
-    allowed_origins: Option<Vec<ManyUrl>>,
 
     time_fn: Option<Arc<dyn Fn() -> Result<SystemTime, ManyError> + Send + Sync>>,
 }
@@ -69,11 +70,12 @@ pub struct ManyServer {
 impl ManyServer {
     pub fn simple<N: ToString>(
         name: N,
-        identity: CoseKeyIdentity,
+        identity: impl Identity + 'static,
+        verifier: impl Verifier + 'static,
+        public_key: Option<CoseKey>,
         version: Option<String>,
-        allow: Option<Vec<ManyUrl>>,
     ) -> Arc<Mutex<Self>> {
-        let s = Self::new(name, identity, allow);
+        let s = Self::new(name, identity, verifier, public_key);
         {
             let mut s2 = s.lock().unwrap();
             s2.version = version;
@@ -85,15 +87,22 @@ impl ManyServer {
 
     pub fn new<N: ToString>(
         name: N,
-        identity: CoseKeyIdentity,
-        allowed_origins: Option<Vec<ManyUrl>>,
+        identity: impl Identity + 'static,
+        verifier: impl Verifier + 'static,
+        public_key: Option<CoseKey>,
     ) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self {
+            modules: vec![],
             name: name.to_string(),
-            identity,
+            identity: Box::new(identity),
+            verifier: Box::new(verifier),
+            resolver: None,
+            public_key,
             timeout: MANYSERVER_DEFAULT_TIMEOUT,
-            allowed_origins,
-            ..Default::default()
+            fallback: None,
+            method_cache: Default::default(),
+            version: None,
+            time_fn: None,
         }))
     }
 
@@ -162,12 +171,12 @@ impl ManyServer {
         let to = &message.to;
 
         // Verify that the message is for this server, if it's not anonymous.
-        if to.is_anonymous() || &self.identity.identity == to {
+        if to.is_anonymous() || &self.identity.address() == to {
             Ok(())
         } else {
             Err(ManyError::unknown_destination(
                 to.to_string(),
-                self.identity.identity.to_string(),
+                self.identity.address().to_string(),
             ))
         }
     }
@@ -212,27 +221,28 @@ impl base::BaseModuleBackend for ManyServer {
         builder
             .name(self.name.clone())
             .version(1)
-            .identity(self.identity.identity)
+            .identity(self.identity.address())
             .timeout(self.timeout)
             .extras(BTreeMap::new());
 
-        if let Some(pk) = self.identity.public_key() {
-            builder.public_key(pk);
+        if let Some(ref pk) = self.public_key {
+            builder.public_key(pk.clone());
         }
+
         if let Some(sv) = self.version.clone() {
             builder.server_version(sv);
         }
 
         if let Some(fb) = &self.fallback {
             let fb_status = fb.status()?;
-            if fb_status.identity != self.identity.identity
+            if fb_status.identity != self.identity.address()
                 || fb_status.version != 1
                 || (fb_status.server_version != self.version && self.version.is_some())
             {
                 tracing::error!(
                     "fallback status differs from internal status: {} != {} || {:?} != {:?}",
                     fb_status.identity,
-                    self.identity.identity,
+                    self.identity.address(),
                     fb_status.server_version,
                     self.version
                 );
@@ -266,14 +276,15 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
             let this = self.lock().unwrap();
             many_protocol::decode_request_from_cose_sign1(
                 envelope.clone(),
-                this.allowed_origins.clone(),
+                &this.verifier,
+                this.resolver.as_ref(),
             )
         };
         let mut id = None;
 
         let response = {
             let this = self.lock().unwrap();
-            let cose_id = this.identity.clone();
+            let address = this.identity.address();
 
             request
                 .and_then(|message| {
@@ -301,41 +312,42 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                     Ok((message, maybe_module))
                 })
                 .map(|(message, maybe_module)| {
-                    (
-                        cose_id.clone(),
-                        message,
-                        maybe_module,
-                        this.fallback.clone(),
-                    )
+                    (address, message, maybe_module, this.fallback.clone())
                 })
-                .map_err(|many_err| ResponseMessage::error(&cose_id.identity, id, many_err))
+                .map_err(|many_err| ResponseMessage::error(address, id, many_err))
         };
 
         match response {
-            Ok((cose_id, message, maybe_module, fallback)) => match (maybe_module, fallback) {
+            Ok((address, message, maybe_module, fallback)) => match (maybe_module, fallback) {
                 (Some(m), _) => {
                     let mut response = match m.execute(message).await {
                         Ok(response) => response,
-                        Err(many_err) => ResponseMessage::error(&cose_id.identity, id, many_err),
+                        Err(many_err) => ResponseMessage::error(address, id, many_err),
                     };
-                    response.from = cose_id.identity;
-                    many_protocol::encode_cose_sign1_from_response(response, &cose_id)
+                    response.from = address;
+
+                    let this = self.lock().unwrap();
+                    many_protocol::encode_cose_sign1_from_response(response, &this.identity)
+                        .map_err(|e| e.to_string())
                 }
                 (None, Some(fb)) => {
                     LowLevelManyRequestHandler::execute(fb.as_ref(), envelope).await
                 }
                 (None, None) => {
-                    let response = ResponseMessage::error(
-                        &cose_id.identity,
-                        id,
-                        ManyError::could_not_route_message(),
-                    );
-                    many_protocol::encode_cose_sign1_from_response(response, &cose_id)
+                    let this = self.lock().unwrap();
+                    let identity = &this.identity;
+                    let address = identity.address();
+
+                    let response =
+                        ResponseMessage::error(address, id, ManyError::could_not_route_message());
+                    many_protocol::encode_cose_sign1_from_response(response, identity)
+                        .map_err(|e| e.to_string())
                 }
             },
             Err(response) => {
                 let this = self.lock().unwrap();
                 many_protocol::encode_cose_sign1_from_response(response, &this.identity)
+                    .map_err(|e| e.to_string())
             }
         }
     }
@@ -351,7 +363,7 @@ mod tests {
     use super::*;
     use many_identity::cose_helpers::public_key;
     use many_identity::testsutils::generate_random_eddsa_identity;
-    use many_identity::Address;
+    use many_identity::{Address, AnonymousIdentity};
     use many_modules::base::Status;
     use many_protocol::{
         decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessageBuilder,
@@ -445,7 +457,7 @@ mod tests {
             encode_cose_sign1_from_request(request, &CoseKeyIdentity::anonymous()).unwrap()
         }
 
-        let server = ManyServer::simple("test-server", CoseKeyIdentity::anonymous(), None, None);
+        let server = ManyServer::simple("test-server", AnonymousIdentity, None, None);
         let timestamp = SystemTime::now();
         let now = Arc::new(RwLock::new(timestamp));
         let get_now = {

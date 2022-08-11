@@ -1,3 +1,4 @@
+use coset::{CborSerializable, CoseKey};
 use derive_builder::Builder;
 use many_identity::Address;
 use many_types::attributes::{Attribute, AttributeSet};
@@ -139,7 +140,7 @@ impl<C> Encode<C> for RequestMessage {
 
         e.i8(RequestMessageCborKey::Timestamp as i8)?;
         let timestamp = self.timestamp.unwrap_or_else(SystemTime::now);
-        e.tag(minicbor::data::Tag::Timestamp)?.u64(
+        e.tag(Tag::Timestamp)?.u64(
             timestamp
                 .duration_since(UNIX_EPOCH)
                 .expect("Time flew backward")
@@ -200,12 +201,12 @@ impl<'b, C> Decode<'b, C> for RequestMessage {
                 Some(RequestMessageCborKey::Timestamp) => {
                     // Some logic applies.
                     let t = d.tag()?;
-                    if t != minicbor::data::Tag::Timestamp {
+                    if t != Tag::Timestamp {
                         return Err(minicbor::decode::Error::message("Invalid tag."));
                     }
 
                     let secs = d.u64()?;
-                    let timestamp = std::time::UNIX_EPOCH
+                    let timestamp = UNIX_EPOCH
                         .checked_add(Duration::from_secs(secs))
                         .ok_or_else(|| {
                             minicbor::decode::Error::message(

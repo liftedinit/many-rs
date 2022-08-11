@@ -1,7 +1,6 @@
 use crate::EmptyReturn;
 use coset::{CborSerializable, CoseKey};
 use derive_builder::Builder;
-use many_identity::cose_helpers::public_key;
 use many_identity::Address;
 use many_macros::many_module;
 use many_types::attributes::AttributeSet;
@@ -58,7 +57,7 @@ impl<C> Encode<C> for Status {
             .u8(1)?.str(self.name.as_str())?;
 
         if let Some(ref pk) = self.public_key {
-            e.u8(2)?.bytes(&public_key(pk).unwrap().to_vec().unwrap())?;
+            e.u8(2)?.bytes(&pk.clone().to_vec().unwrap())?;
         }
 
         e.u8(3)?

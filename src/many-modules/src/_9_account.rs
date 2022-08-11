@@ -74,9 +74,13 @@ impl<'it> Iterator for AccountMapIterator<'it> {
     type Item = (Address, &'it Account);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.1
-            .next()
-            .map(|(k, v)| (self.0.with_subresource_id_unchecked(*k), v))
+        self.1.next().map(|(k, v)| {
+            (
+                self.0
+                    .with_subresource_id_unchecked((*k).try_into().unwrap()),
+                v,
+            )
+        })
     }
 }
 
@@ -459,9 +463,9 @@ mod module_tests {
     // TODO: split this to get easier to maintain tests.
     #[test]
     fn module_works() {
-        let account_map = Arc::new(RwLock::new(AccountMap::new(Address::public_key_raw(
-            [0; 28],
-        ))));
+        let account_map = Arc::new(RwLock::new(AccountMap::new(unsafe {
+            Address::public_key_raw([0; 28])
+        })));
         let mut mock = MockAccountModuleBackend::new();
 
         mock.expect_create().returning({

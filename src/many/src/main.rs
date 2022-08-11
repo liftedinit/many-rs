@@ -3,14 +3,14 @@ use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
 use many_client::ManyClient;
 use many_error::ManyError;
-use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
-use many_identity::{Address, CoseKeyIdentity};
+// use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
+use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity, Identity};
+use many_identity_cose::CoseKeyIdentity;
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
 use many_protocol::{
-    decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
-    RequestMessageBuilder, ResponseMessage,
+    encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
 };
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
@@ -18,6 +18,7 @@ use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tracing::{error, info, level_filters::LevelFilter, trace};
 use url::Url;
@@ -177,7 +178,7 @@ struct GetTokenIdOpt {
 
 fn show_response(
     response: ResponseMessage,
-    client: ManyClient,
+    client: ManyClient<impl Identity>,
     r#async: bool,
 ) -> Result<(), anyhow::Error> {
     let ResponseMessage {
@@ -244,13 +245,14 @@ fn show_response(
 fn message(
     s: Url,
     to: Address,
-    key: CoseKeyIdentity,
+    key: impl Identity,
     method: String,
     data: Vec<u8>,
     timestamp: Option<SystemTime>,
     r#async: bool,
 ) -> Result<(), anyhow::Error> {
-    let client = ManyClient::new(s, to, key.clone()).unwrap();
+    let address = key.address();
+    let client = ManyClient::new(s, to, key).unwrap();
 
     let mut nonce = [0u8; 16];
     rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut nonce);
@@ -258,7 +260,7 @@ fn message(
     let mut builder = many_protocol::RequestMessageBuilder::default();
     builder
         .version(1)
-        .from(key.identity)
+        .from(address)
         .to(to)
         .method(method)
         .data(data)
@@ -280,7 +282,7 @@ fn message(
 fn message_from_hex(
     s: Url,
     to: Address,
-    key: CoseKeyIdentity,
+    key: impl Identity,
     hex: String,
     r#async: bool,
 ) -> Result<(), anyhow::Error> {
@@ -289,8 +291,9 @@ fn message_from_hex(
     let data = hex::decode(hex)?;
     let envelope = CoseSign1::from_slice(&data).map_err(|e| anyhow!(e))?;
 
-    let cose_sign1 = ManyClient::send_envelope(s, envelope)?;
-    let response = decode_response_from_cose_sign1(cose_sign1, None).map_err(|e| anyhow!(e))?;
+    let cose_sign1 = many_client::client::send_envelope(s, envelope)?;
+    let response = ResponseMessage::decode_and_verify(&cose_sign1, &AcceptAllVerifier)
+        .map_err(|e| anyhow!(e))?;
 
     show_response(response, client, r#async)
 }
@@ -339,7 +342,9 @@ fn main() {
                 println!("{}", hex::encode(&i.to_vec()));
             } else if let Ok(pem_content) = std::fs::read_to_string(&o.arg) {
                 // Create the identity from the public key hash.
-                let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().identity;
+                let mut i = many_identity_cose::CoseKeyIdentity::from_pem(&pem_content)
+                    .unwrap()
+                    .address();
                 if let Some(subid) = o.subid {
                     i = i
                         .with_subresource_id(subid)
@@ -353,81 +358,84 @@ fn main() {
             }
         }
         SubCommand::HsmId(o) => {
-            let keyid = hex::decode(o.keyid).expect("Failed to decode keyid to hex");
+            unimplemented!()
 
-            {
-                let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
-                hsm.init(o.module, keyid)
-                    .expect("Failed to initialize HSM module");
-
-                // The session will stay open until the application terminates
-                hsm.open_session(o.slot, HsmSessionType::RO, None, None)
-                    .expect("Failed to open HSM session");
-            }
-
-            let mut id = CoseKeyIdentity::from_hsm(HsmMechanismType::ECDSA)
-                .expect("Unable to create CoseKeyIdentity from HSM")
-                .identity;
-
-            if let Some(subid) = o.subid {
-                id = id
-                    .with_subresource_id(subid)
-                    .expect("Invalid subresource id");
-            }
-
-            println!("{}", id);
+            // let keyid = hex::decode(o.keyid).expect("Failed to decode keyid to hex");
+            //
+            // {
+            //     let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
+            //     hsm.init(o.module, keyid)
+            //         .expect("Failed to initialize HSM module");
+            //
+            //     // The session will stay open until the application terminates
+            //     hsm.open_session(o.slot, HsmSessionType::RO, None, None)
+            //         .expect("Failed to open HSM session");
+            // }
+            //
+            // let mut id = CoseKeyIdentity::from_hsm(HsmMechanismType::ECDSA)
+            //     .expect("Unable to create CoseKeyIdentity from HSM")
+            //     .identity;
+            //
+            // if let Some(subid) = o.subid {
+            //     id = id
+            //         .with_subresource_id(subid)
+            //         .expect("Invalid subresource id");
+            // }
+            //
+            // println!("{}", id);
         }
         SubCommand::Message(o) => {
-            let key = if let (Some(module), Some(slot), Some(keyid)) = (o.module, o.slot, o.keyid) {
-                trace!("Getting user PIN");
-                let pin = rpassword::prompt_password("Please enter the HSM user PIN: ")
-                    .expect("I/O error when reading HSM PIN");
-                let keyid = hex::decode(keyid).expect("Failed to decode keyid to hex");
-
-                {
-                    let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
-                    hsm.init(module, keyid)
-                        .expect("Failed to initialize HSM module");
-
-                    // The session will stay open until the application terminates
-                    hsm.open_session(slot, HsmSessionType::RO, Some(HsmUserType::User), Some(pin))
-                        .expect("Failed to open HSM session");
-                }
-
-                trace!("Creating CoseKeyIdentity");
-                // Only ECDSA is supported at the moment. It should be easy to add support for new EC mechanisms
-                CoseKeyIdentity::from_hsm(HsmMechanismType::ECDSA)
-                    .expect("Unable to create CoseKeyIdentity from HSM")
-            } else if o.pem.is_some() {
-                // If `pem` is not provided, use anonymous and don't sign.
-                o.pem.map_or_else(CoseKeyIdentity::anonymous, |p| {
-                    CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap()
-                })
-            } else {
-                CoseKeyIdentity::anonymous()
-            };
-
-            let from_identity = key.identity;
             let to_identity = o.to.unwrap_or_default();
-
             let timestamp = o.timestamp.map(|secs| {
                 SystemTime::UNIX_EPOCH
                     .checked_add(Duration::new(secs, 0))
                     .expect("Invalid timestamp")
             });
-
             let data = o
                 .data
                 .map_or(vec![], |d| cbor_diag::parse_diag(&d).unwrap().to_bytes());
 
+            let from_identity: Box<dyn Identity> = if let (Some(module), Some(slot), Some(keyid)) =
+                (o.module, o.slot, o.keyid)
+            {
+                // trace!("Getting user PIN");
+                // let pin = rpassword::prompt_password("Please enter the HSM user PIN: ")
+                //     .expect("I/O error when reading HSM PIN");
+                // let keyid = hex::decode(keyid).expect("Failed to decode keyid to hex");
+                //
+                // {
+                //     let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
+                //     hsm.init(module, keyid)
+                //         .expect("Failed to initialize HSM module");
+                //
+                //     // The session will stay open until the application terminates
+                //     hsm.open_session(slot, HsmSessionType::RO, Some(HsmUserType::User), Some(pin))
+                //         .expect("Failed to open HSM session");
+                // }
+
+                unimplemented!()
+
+                // trace!("Creating CoseKeyIdentity");
+                // // Only ECDSA is supported at the moment. It should be easy to add support for new EC mechanisms
+                // Box::new(
+                //     CoseKeyIdentity::from_hsm(HsmMechanismType::ECDSA)
+                //         .expect("Unable to create CoseKeyIdentity from HSM"),
+                // )
+            } else if let Some(p) = o.pem {
+                // If `pem` is not provided, use anonymous and don't sign.
+                Box::new(CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap())
+            } else {
+                Box::new(AnonymousIdentity)
+            };
+
             if let Some(s) = o.server {
                 let result = if let Some(hex) = o.from_hex {
-                    message_from_hex(s, to_identity, key, hex, o.r#async)
+                    message_from_hex(s, to_identity, from_identity, hex, o.r#async)
                 } else {
                     message(
                         s,
                         to_identity,
-                        key,
+                        from_identity,
                         o.method.expect("--method is required"),
                         data,
                         timestamp,
@@ -451,14 +459,14 @@ fn main() {
             } else {
                 let message: RequestMessage = RequestMessageBuilder::default()
                     .version(1)
-                    .from(from_identity)
+                    .from(from_identity.address())
                     .to(to_identity)
                     .method(o.method.expect("--method is required"))
                     .data(data)
                     .build()
                     .unwrap();
 
-                let cose = encode_cose_sign1_from_request(message, &key).unwrap();
+                let cose = encode_cose_sign1_from_request(message, &from_identity).unwrap();
                 let bytes = cose.to_vec().unwrap();
                 if o.hex {
                     println!("{}", hex::encode(&bytes));
@@ -477,15 +485,15 @@ fn main() {
             let many = ManyServer::simple(
                 o.name,
                 key,
-                Some(std::env!("CARGO_PKG_VERSION").to_string()),
+                AcceptAllVerifier,
                 None,
+                Some(std::env!("CARGO_PKG_VERSION").to_string()),
             );
             HttpServer::new(many).bind(o.addr).unwrap();
         }
         SubCommand::GetTokenId(o) => {
-            let client =
-                ManyClient::new(o.server, Address::anonymous(), CoseKeyIdentity::anonymous())
-                    .expect("Could not create a client");
+            let client = ManyClient::new(o.server, Address::anonymous(), AnonymousIdentity)
+                .expect("Could not create a client");
             let status = client.status().expect("Cannot get status of server");
 
             if !status.attributes.contains(&ledger::LEDGER_MODULE_ATTRIBUTE) {

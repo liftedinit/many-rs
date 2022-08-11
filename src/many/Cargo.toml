@@ -16,6 +16,7 @@ path = "src/main.rs"
 many-client = { path = "../many-client", version = "0.1.0" }
 many-error = { path = "../many-error", version = "0.1.0" }
 many-identity = { path = "../many-identity", version = "0.1.0", features = ["coset"] }
+many-identity-cose = { path = "../many-identity-cose", version = "0.1.0", features = ["ecdsa", "ed25519"] }
 many-modules = { path = "../many-modules", version = "0.1.0" }
 many-protocol = { path = "../many-protocol", version = "0.1.0" }
 many-server = { path = "../many-server", version = "0.1.0" }

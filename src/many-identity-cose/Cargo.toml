@@ -1,5 +1,5 @@
 [package]
-name = "many-identity-ed25519"
+name = "many-identity-cose"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,8 +13,8 @@ base32 = "0.4.0"
 crc-any = "2.4.3"
 cryptoki = { version = "0.3", features = ["generate-bindings"] }
 coset = { version = "0.3.2", optional = true }
-ed25519 = { version = "1.2.0", features = [ "std" ] }
-ed25519-dalek = { version = "1.0.1", features = [ "std" ] }
+ed25519 = { version = "1.2.0", features = [ "std" ], optional = true }
+ed25519-dalek = { version = "1.0.1", optional = true }
 hex = "0.4.3"
 minicbor = { version = "0.18.0", optional = true }
 once_cell = "1.10"
@@ -25,7 +25,6 @@ serde = "1.0.139"
 sha2 = "0.10.2"
 sha3 = "0.10.1"
 signature = "1.3"
-static_assertions = "1.1.0"
 tracing = "0.1.29"
 
 [dev-dependencies]
@@ -34,6 +33,8 @@ serde_test = "1.0.139"
 
 [features]
 default = ["coset", "minicbor"]
+ecdsa = []
+ed25519 = ["dep:ed25519", "dep:ed25519-dalek"]
 hsm_test = []
 raw = []
 serde = []
