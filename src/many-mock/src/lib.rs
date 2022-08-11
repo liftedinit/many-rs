@@ -45,7 +45,7 @@ where
 }
 
 /// Reads and parses the mockfile provided by the mockfile_arg parameter, or from a default path
-pub fn parse_mockfile(mockfile_arg: &str) -> Result<BTreeMap<String, Vec<u8>>, String> {
+pub fn parse_mockfile(mockfile_arg: &str) -> Result<MockEntries, String> {
     let path = std::path::Path::new(mockfile_arg);
     if !path.exists() {
         return Err(format!("File {:?} does not exist", path));
