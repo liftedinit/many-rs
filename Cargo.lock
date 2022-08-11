@@ -1694,7 +1694,6 @@ dependencies = [
  "rand 0.8.5",
  "rpassword",
  "tokio",
- "toml",
  "tracing",
  "tracing-subscriber",
  "url",
