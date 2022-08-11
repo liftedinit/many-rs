@@ -2,7 +2,6 @@ use many_error::ManyError;
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, Decode, Decoder, Encode, Encoder};
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Bound, RangeBounds, Shl};
@@ -114,7 +113,7 @@ where
 
 /// NOTE: DO NOT ADD Default TO THIS TYPE.
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
 #[must_use]
 pub struct Timestamp(u64);
 

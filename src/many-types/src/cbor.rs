@@ -1,11 +1,10 @@
 use minicbor::data::Type;
 use minicbor::encode::Write;
 use minicbor::{Decode, Decoder, Encode, Encoder};
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum CborAny {
     Bool(bool),
     Int(i64),

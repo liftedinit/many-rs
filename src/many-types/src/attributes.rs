@@ -3,7 +3,6 @@ use many_error::ManyError;
 use minicbor::data::Type;
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
-use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt::Debug;
@@ -11,9 +10,7 @@ use std::fmt::Debug;
 /// An attribute ID.
 pub type AttributeId = u32;
 
-#[derive(
-    Encode, Decode, Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize,
-)]
+#[derive(Encode, Decode, Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq)]
 #[cbor(transparent)]
 pub struct AttributeSet(#[n(0)] BTreeSet<Attribute>);
 
@@ -70,7 +67,7 @@ impl FromIterator<Attribute> for AttributeSet {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct Attribute {
     pub id: AttributeId,
     pub arguments: Vec<CborAny>,
