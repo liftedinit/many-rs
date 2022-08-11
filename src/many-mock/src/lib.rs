@@ -1,58 +1,56 @@
 use std::collections::BTreeMap;
+use std::fmt;
 
-use many_protocol::RequestMessage;
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
 
 pub mod server;
 
-pub(crate) type MockEntries = BTreeMap<String, toml::Value>;
+pub(crate) type MockEntries = BTreeMap<String, Vec<u8>>;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct MockEntriesWrapper {
+    #[serde(deserialize_with = "deserialize_entries", flatten)]
+    entries: MockEntries,
+}
+
+fn deserialize_entries<'de, D>(d: D) -> Result<MockEntries, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct MockEntriesVisitor;
+    impl<'de> Visitor<'de> for MockEntriesVisitor {
+        type Value = BTreeMap<String, Vec<u8>>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("A map from string to hex code")
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::MapAccess<'de>,
+        {
+            let mut result = BTreeMap::new();
+            while let Some((key, value)) = map.next_entry::<String, String>()? {
+                let value = hex::decode(value).map_err(|e| {
+                    serde::de::Error::custom(format!("Deserialization error: {:?}", e))
+                })?;
+                result.insert(key, value);
+            }
+            Ok(result)
+        }
+    }
+
+    d.deserialize_map(MockEntriesVisitor)
+}
 
 /// Reads and parses the mockfile provided by the mockfile_arg parameter, or from a default path
-pub fn parse_mockfile(mockfile_arg: &str) -> Result<MockEntries, String> {
+pub fn parse_mockfile(mockfile_arg: &str) -> Result<BTreeMap<String, Vec<u8>>, String> {
     let path = std::path::Path::new(mockfile_arg);
     if !path.exists() {
         return Err(format!("File {:?} does not exist", path));
     }
     let contents = std::fs::read_to_string(path).map_err(|_| "Error reading file".to_string())?;
-    toml::from_str(&contents)
-        .map_err(|e| format!("Invalid mockfile, parse errors: {:?}", e.to_string()))
-}
-
-/// Prepares a RequestMessage to fill a mocked response
-fn load_request(request: &RequestMessage) -> BTreeMap<&'static str, String> {
-    BTreeMap::from([
-        (
-            r#""\$\{id\}""#,
-            serde_json::to_string(&request.id).unwrap_or_default(),
-        ),
-        (
-            r#""\$\{version\}""#,
-            serde_json::to_string(&request.version).unwrap_or_default(),
-        ),
-        (
-            r#""\$\{attributes\}""#,
-            serde_json::ser::to_string(&request.attributes).unwrap_or_default(),
-        ),
-        (
-            r#""\$\{nonce\}""#,
-            serde_json::to_string(&request.nonce).unwrap_or_default(),
-        ),
-        (
-            r#""\$\{data\}""#,
-            serde_json::to_string(&request.data).unwrap_or_default(),
-        ),
-        (r#""\$\{method\}""#, request.method.clone()),
-        (
-            r#""\$\{timestamp\}""#,
-            serde_json::to_string(&request.timestamp).unwrap_or_default(),
-        ),
-    ])
-}
-
-/// Replaces placeholders with RequestMessage information
-pub fn fill_placeholders(request: &RequestMessage, response: String) -> String {
-    let map = load_request(request);
-    map.iter().fold(response, |acc, (key, value)| {
-        let re = regex::Regex::new(key).unwrap();
-        re.replace_all(&acc, value).to_string()
-    })
+    let parsed: MockEntriesWrapper = toml::from_str(&contents)
+        .map_err(|e| format!("Invalid mockfile, parse errors: {:?}", e.to_string()))?;
+    Ok(parsed.entries)
 }

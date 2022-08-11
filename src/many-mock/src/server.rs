@@ -5,7 +5,7 @@ use many_modules::base;
 use many_protocol::{ManyError, ManyUrl, ResponseMessage};
 use many_server::transport::LowLevelManyRequestHandler;
 
-use crate::{fill_placeholders, MockEntries};
+use crate::MockEntries;
 
 #[derive(Debug)]
 pub struct ManyMockServer {
@@ -40,9 +40,8 @@ impl LowLevelManyRequestHandler for ManyMockServer {
             .mock_entries
             .get(&message.method)
             .ok_or_else(|| "No mock entry for that".to_string())?;
-        let response = fill_placeholders(&message, serde_json::to_string(response).unwrap());
         let response = ResponseMessage {
-            data: Ok(response.as_bytes().to_vec()),
+            data: Ok(response.clone()),
             ..Default::default()
         };
         many_protocol::encode_cose_sign1_from_response(response, &id)

@@ -1798,9 +1798,11 @@ name = "many-mock"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "ciborium",
  "coset",
  "cucumber",
  "futures",
+ "hex",
  "many-client",
  "many-identity",
  "many-modules",

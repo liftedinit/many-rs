@@ -2,16 +2,16 @@ use std::{
     convert::Infallible,
     path::PathBuf,
     sync::{atomic::AtomicBool, Arc},
-    thread,
+    thread, collections::BTreeMap,
 };
 
 use async_trait::async_trait;
+use ciborium::value::Value;
 use cucumber::{given, then, WorldInit};
 use many_client::ManyClient;
 use many_identity::{Address, CoseKeyIdentity};
 use many_mock::server::ManyMockServer;
 use many_server::{transport::http::HttpServer, ManyServer};
-use serde_json::Value;
 
 #[derive(Debug, WorldInit)]
 struct World {
@@ -67,9 +67,8 @@ impl cucumber::World for World {
 #[given(regex = r#"I request "(.*)""#)]
 async fn make_request(w: &mut World, method: String) {
     let result = w.client.call(method, ()).unwrap();
-    let json_string =
-        String::from_utf8(result.data.unwrap()).expect("Should be a valid UTF-8 string");
-    let response = serde_json::from_str(&json_string).expect("Should parse to a JSON value");
+    let bytes = result.data.expect("Should have a Vec<u8>");
+    let response: Value = ciborium::de::from_reader(bytes.as_slice()).expect("Should have parsed to a cbor value");
     w.response = Some(response);
 }
 
@@ -81,12 +80,15 @@ async fn full_value(w: &mut World, value: String) {
 
 #[then(regex = r#""(.*)" should be (.*)"#)]
 async fn field_value(w: &mut World, field_name: String, value: String) {
-    let object = w
+    let object: BTreeMap<String, Value> = w
         .response
-        .as_mut()
+        .as_ref()
         .unwrap()
-        .as_object()
-        .expect("Response should be a JSON");
+        .as_map()
+        .expect("Response should be a CBOR")
+        .into_iter()
+        .map(|(k, v)| (k.as_text().unwrap().to_string(), v.clone()))
+        .collect();
     let json_value: Value = serde_json::from_str(&value).unwrap();
     assert_eq!(object[&field_name], json_value);
 }
