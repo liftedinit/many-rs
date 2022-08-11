@@ -1,8 +1,9 @@
 use std::{
+    collections::BTreeMap,
     convert::Infallible,
     path::PathBuf,
     sync::{atomic::AtomicBool, Arc},
-    thread, collections::BTreeMap,
+    thread,
 };
 
 use async_trait::async_trait;
@@ -68,7 +69,8 @@ impl cucumber::World for World {
 async fn make_request(w: &mut World, method: String) {
     let result = w.client.call(method, ()).unwrap();
     let bytes = result.data.expect("Should have a Vec<u8>");
-    let response: Value = ciborium::de::from_reader(bytes.as_slice()).expect("Should have parsed to a cbor value");
+    let response: Value =
+        ciborium::de::from_reader(bytes.as_slice()).expect("Should have parsed to a cbor value");
     w.response = Some(response);
 }
 
