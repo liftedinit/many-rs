@@ -5,8 +5,7 @@ use many_client::ManyClient;
 use many_error::ManyError;
 use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_identity::{Address, CoseKeyIdentity};
-#[cfg(feature = "mock")]
-use many_mock::{parse_mockfile, server::ManyMockServer};
+use many_mock::{parse_mockfile, server::ManyMockServer, MockEntries};
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
@@ -17,7 +16,6 @@ use many_protocol::{
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
 use many_types::Timestamp;
-use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -170,13 +168,8 @@ struct ServerOpt {
 
     /// The path to a mockfile containing mock responses.
     /// Default is mockfile.toml, gives an error if the file does not exist
-    #[cfg(feature = "mock")]
-    #[clap(long, short, value_parser = parse_mockfile, default_value = "mockfile.toml")]
-    mockfile: BTreeMap<String, Vec<u8>>,
-    #[cfg(not(feature = "mock"))]
-    #[clap(skip)]
-    #[allow(unused)]
-    mockfile: BTreeMap<String, Vec<u8>>,
+    #[clap(long, short, value_parser = parse_mockfile)]
+    mockfile: Option<MockEntries>,
 }
 
 #[derive(Parser)]
@@ -494,10 +487,10 @@ fn main() {
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
                 None,
             );
-            #[cfg(feature = "mock")]
-            {
+            let mockfile = o.mockfile.unwrap_or_default();
+            if !mockfile.is_empty() {
                 let mut many_locked = many.lock().unwrap();
-                let mock_server = ManyMockServer::new(o.mockfile, None, key);
+                let mock_server = ManyMockServer::new(mockfile, None, key);
                 many_locked.set_fallback_module(mock_server);
             }
             HttpServer::new(many).bind(o.addr).unwrap();

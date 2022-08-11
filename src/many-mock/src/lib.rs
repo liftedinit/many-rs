@@ -5,10 +5,10 @@ use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
 
 pub mod server;
 
-pub(crate) type MockEntries = BTreeMap<String, Vec<u8>>;
+pub type MockEntries = BTreeMap<String, Vec<u8>>;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct MockEntriesWrapper {
+struct MockEntriesWrapper {
     #[serde(deserialize_with = "deserialize_entries", flatten)]
     entries: MockEntries,
 }
