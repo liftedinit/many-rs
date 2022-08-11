@@ -31,9 +31,10 @@ where
         {
             let mut result = BTreeMap::new();
             while let Some((key, value)) = map.next_entry::<String, String>()? {
-                let value = hex::decode(value).map_err(|e| {
+                let value_data = cbor_diag::parse_diag(value).map_err(|e| {
                     serde::de::Error::custom(format!("Deserialization error: {:?}", e))
                 })?;
+                let value = value_data.to_bytes();
                 result.insert(key, value);
             }
             Ok(result)
