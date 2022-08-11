@@ -1913,7 +1913,6 @@ dependencies = [
  "strum_macros",
  "tiny_http",
  "tokio",
- "toml",
  "tracing",
 ]
 
