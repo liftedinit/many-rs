@@ -1,8 +1,7 @@
-use coset::CoseSign1;
+use coset::{CborSerializable, CoseKeySet, CoseSign1};
 use many_error::ManyError;
 use many_identity::{Address, Identity, Verifier};
 use std::fmt::{Debug, Formatter};
-use std::sync::Arc;
 
 mod cose_helpers;
 mod impls;
@@ -32,12 +31,11 @@ impl CoseKeyIdentity {
         }
 
         #[cfg(feature = "ecdsa")]
-        impls::ecdsa::EcDsaIdentity::from_pem(&pem).unwrap();
-        // if let Ok(result) = impls::ecdsa::EcDsaIdentity::from_pem(&pem) {
-        //     return Ok(Self {
-        //         inner: Box::new(result),
-        //     });
-        // }
+        if let Ok(result) = impls::ecdsa::EcDsaIdentity::from_pem(&pem) {
+            return Ok(Self {
+                inner: Box::new(result),
+            });
+        }
 
         Err("Algorithm unsupported.".to_string())
     }
@@ -53,8 +51,46 @@ impl Identity for CoseKeyIdentity {
     }
 }
 
-pub struct CoseKeyVerifier {
-    inner: Box<dyn Verifier>,
+fn _keyset_from_cose_sign1(envelope: &CoseSign1) -> Option<CoseKeySet> {
+    let field = "keyset".to_string();
+    envelope
+        .protected
+        .header
+        .rest
+        .iter()
+        .find(|kv| {
+            matches!(
+                kv,
+                (
+                    coset::Label::Text(field),
+                    coset::cbor::value::Value::Bytes(_)
+                )
+            )
+        })
+        .and_then(|(_, v)| CoseKeySet::from_slice(v.as_bytes().unwrap()).ok())
 }
 
-impl CoseKeyVerifier {}
+pub struct CoseKeyVerifier;
+
+impl Verifier for CoseKeyVerifier {
+    fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+        let keyid = &envelope.protected.header.key_id;
+
+        // Extract the keyset argument.
+        let keyset = _keyset_from_cose_sign1(envelope)
+            .ok_or_else(|| ManyError::unknown("Could not find keyset in headers."))?;
+
+        let key = keyset
+            .0
+            .iter()
+            .find(|key| key.key_id.eq(keyid))
+            .ok_or_else(|| ManyError::unknown("Could not find the key in keyset."))?;
+
+        #[cfg(feature = "ed25519")]
+        if let Ok(v) = impls::ed25519::Ed25519Verifier::from_key(key) {
+            return v.sign_1(envelope);
+        }
+
+        Err(ManyError::unknown("Algorithm unsupported."))
+    }
+}

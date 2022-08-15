@@ -1,5 +1,5 @@
-use coset::CoseSign1;
 use coset::CoseSign1Builder;
+use coset::{CoseKeySet, CoseSign1};
 use many_error::ManyError;
 use many_identity::{Address, Identity, Verifier};
 
@@ -15,12 +15,12 @@ pub trait IdentityResolver: Send {
     fn resolve_request(
         &self,
         envelope: &CoseSign1,
-        message: &RequestMessage,
+        request: &RequestMessage,
     ) -> Result<Address, ManyError>;
     fn resolve_response(
         &self,
         envelope: &CoseSign1,
-        message: &ResponseMessage,
+        response: &ResponseMessage,
     ) -> Result<Address, ManyError>;
 }
 
@@ -28,17 +28,17 @@ impl IdentityResolver for Box<dyn IdentityResolver> {
     fn resolve_request(
         &self,
         envelope: &CoseSign1,
-        message: &RequestMessage,
+        request: &RequestMessage,
     ) -> Result<Address, ManyError> {
-        (&**self).resolve_request(envelope, message)
+        (&**self).resolve_request(envelope, request)
     }
 
     fn resolve_response(
         &self,
         envelope: &CoseSign1,
-        message: &ResponseMessage,
+        response: &ResponseMessage,
     ) -> Result<Address, ManyError> {
-        (&**self).resolve_response(envelope, message)
+        (&**self).resolve_response(envelope, response)
     }
 }
 

@@ -66,11 +66,11 @@ fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
                 let x = x
                     .as_bytes()
                     .cloned()
-                    .ok_or_else(|| "Could not get ECDSA X parameter".to_string())?;
+                    .ok_or_else(|| ManyError::unknown("Could not get ECDSA X parameter"))?;
                 let y = y
                     .as_bytes()
                     .cloned()
-                    .ok_or_else(|| "Could not get ECDSA Y parameter".to_string())?;
+                    .ok_or_else(|| ManyError::unknown("Could not get ECDSA Y parameter"))?;
                 Ok(Some(ecdsa_cose_key((x, y), None)))
             } else {
                 Err(ManyError::unknown("Key doesn't have a public key"))
@@ -119,13 +119,13 @@ impl EcDsaIdentityInner {
         )) {
             return Err(ManyError::unknown("Key cannot sign"));
         }
-        if cose_key.kty != coset::KeyType::Assigned(coset::iana::KeyType::OKP) {
+        if cose_key.kty != coset::KeyType::Assigned(coset::iana::KeyType::EC2) {
             return Err(ManyError::unknown(format!(
                 "Wrong key type: {:?}",
                 cose_key.kty
             )));
         }
-        if cose_key.alg != Some(coset::Algorithm::Assigned(coset::iana::Algorithm::EdDSA)) {
+        if cose_key.alg != Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256)) {
             return Err(ManyError::unknown(format!(
                 "Wrong key algorihm: {:?}",
                 cose_key.alg
@@ -165,7 +165,7 @@ impl Identity for EcDsaIdentityInner {
     fn sign_1(&self, mut envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
         // Add the algorithm and key id.
         envelope.protected.header.alg =
-            Some(coset::Algorithm::Assigned(coset::iana::Algorithm::EdDSA));
+            Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256));
         envelope.protected.header.key_id = self.address.to_vec();
 
         let builder = CoseSign1Builder::new()
@@ -191,9 +191,9 @@ impl Identity for EcDsaIdentityInner {
 
 /// An Ed25519 identity that sign messages and include the public key in the
 /// protected headers.
-pub struct EdDsaIdentity(EcDsaIdentityInner);
+pub struct EcDsaIdentity(EcDsaIdentityInner);
 
-impl EdDsaIdentity {
+impl EcDsaIdentity {
     pub fn from_key(key: CoseKey) -> Result<Self, ManyError> {
         EcDsaIdentityInner::from_key(key).map(Self)
     }
@@ -210,7 +210,7 @@ impl EdDsaIdentity {
             )));
         }
 
-        let sk = p256::SecretKey::from_pkcs8_pem(pem).unwrap();
+        let sk = p256::SecretKey::from_pkcs8_pem(pem.as_ref()).unwrap();
         let pk = sk.public_key();
         let points: p256::EncodedPoint = pk.into();
 
@@ -222,7 +222,7 @@ impl EdDsaIdentity {
     }
 }
 
-impl Identity for EdDsaIdentity {
+impl Identity for EcDsaIdentity {
     fn address(&self) -> Address {
         self.0.address
     }

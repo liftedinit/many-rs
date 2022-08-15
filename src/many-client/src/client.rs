@@ -1,5 +1,6 @@
 use coset::{CoseSign1, TaggedCborSerializable};
-use many_identity::{AcceptAllVerifier, Identity};
+use many_identity::{verifiers, AcceptAllVerifier, Identity};
+use many_identity_cose::CoseKeyVerifier;
 use many_modules::base::Status;
 use many_protocol::{
     encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
@@ -14,6 +15,7 @@ pub struct ManyClient<I: Identity> {
     identity: I,
     to: Option<Address>,
     url: Url,
+    verifiers: verifiers::OneOf,
 }
 
 impl<I: Identity + std::fmt::Debug> std::fmt::Debug for ManyClient<I> {
@@ -46,10 +48,15 @@ pub fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<CoseSign1
 
 impl<I: Identity> ManyClient<I> {
     pub fn new<S: IntoUrl>(url: S, to: Address, identity: I) -> Result<Self, String> {
+        let mut verifiers = verifiers::OneOf::empty();
+        verifiers.push(verifiers::AnonymousVerifier);
+        verifiers.push(CoseKeyVerifier);
+
         Ok(Self {
             identity,
             to: Some(to),
             url: url.into_url().map_err(|e| format!("{}", e))?,
+            verifiers,
         })
     }
 
@@ -57,7 +64,7 @@ impl<I: Identity> ManyClient<I> {
         let cose = encode_cose_sign1_from_request(message, &self.identity).unwrap();
         let cose_sign1 = send_envelope(self.url.clone(), cose)?;
 
-        ResponseMessage::decode_and_verify(&cose_sign1, &AcceptAllVerifier)
+        ResponseMessage::decode_and_verify(&cose_sign1, &self.verifiers)
     }
 
     pub fn call_raw<M>(&self, method: M, argument: &[u8]) -> Result<ResponseMessage, ManyError>

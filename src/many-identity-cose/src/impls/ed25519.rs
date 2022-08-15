@@ -2,7 +2,7 @@ use coset::cbor::value::Value;
 use coset::iana::{EnumI64, OkpKeyParameter};
 use coset::{CborSerializable, CoseKey, CoseSign1, CoseSign1Builder, Label};
 use many_error::ManyError;
-use many_identity::{Address, Identity};
+use many_identity::{Address, Identity, Verifier};
 use pkcs8::der::Document;
 use sha3::{Digest, Sha3_224};
 use signature::{Signature, Signer};
@@ -98,12 +98,11 @@ impl Ed25519IdentityInner {
     ) -> Result<Self, ManyError> {
         let key = eddsa_cose_key(x.to_owned(), d.to_owned());
 
-        Self::from_key(key)
+        Self::from_key(&key)
     }
 
-    pub fn from_key(cose_key: CoseKey) -> Result<Self, ManyError> {
-        let public_key =
-            public_key(&cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
+    pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
+        let public_key = public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
         let address = address(&public_key)?;
 
         // Verify that key is valid Ed25519 (including private key).
@@ -195,7 +194,7 @@ impl Ed25519SharedIdentity {
         Ed25519IdentityInner::from_points(x, d).map(Self)
     }
 
-    pub fn from_key(key: CoseKey) -> Result<Self, ManyError> {
+    pub fn from_key(key: &CoseKey) -> Result<Self, ManyError> {
         Ed25519IdentityInner::from_key(key).map(Self)
     }
 }
@@ -215,7 +214,7 @@ impl Identity for Ed25519SharedIdentity {
 pub struct Ed25519Identity(Ed25519IdentityInner);
 
 impl Ed25519Identity {
-    pub fn from_key(key: CoseKey) -> Result<Self, ManyError> {
+    pub fn from_key(key: &CoseKey) -> Result<Self, ManyError> {
         Ed25519IdentityInner::from_key(key).map(Self)
     }
 
@@ -245,7 +244,7 @@ impl Ed25519Identity {
             keypair.public.to_bytes().to_vec(),
             Some(keypair.secret.to_bytes().to_vec()),
         );
-        Self::from_key(cose_key)
+        Self::from_key(&cose_key)
     }
 }
 
@@ -266,5 +265,25 @@ impl Identity for Ed25519Identity {
         ));
 
         self.0.sign_1(envelope)
+    }
+}
+
+pub struct Ed25519Verifier {
+    key: CoseKey,
+}
+
+impl Ed25519Verifier {
+    pub fn from_key(key: &CoseKey) -> Result<Self, ManyError> {
+        match public_key(key) {
+            Ok(Some(key)) => Ok(Self { key }),
+            Ok(None) => Err(ManyError::unknown("Not an Ed25519 key.")),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl Verifier for Ed25519Verifier {
+    fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+        todo!()
     }
 }

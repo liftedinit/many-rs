@@ -1459,6 +1459,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "many-identity",
+ "many-identity-cose",
  "many-modules",
  "many-protocol",
  "many-server",
