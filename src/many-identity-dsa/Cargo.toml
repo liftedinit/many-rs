@@ -1,5 +1,5 @@
 [package]
-name = "many-identity-cose"
+name = "many-identity-dsa"
 version = "0.1.0"
 edition = "2021"
 

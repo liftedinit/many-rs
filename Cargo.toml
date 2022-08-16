@@ -4,7 +4,7 @@ members = [
     "src/many-client",
     "src/many-error",
     "src/many-identity",
-    "src/many-identity-cose",
+    "src/many-identity-dsa",
     "src/many-identity-webauthn",
     "src/many-macros",
     "src/many-modules",

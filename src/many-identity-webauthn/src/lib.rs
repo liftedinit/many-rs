@@ -1,7 +1,7 @@
 use coset::cbor::value::Value;
 use coset::{CborSerializable, CoseKey, CoseKeySet, CoseSign1, Label};
 use many_identity::Address;
-use many_identity_cose::CoseKeyIdentity;
+use many_identity_dsa::CoseKeyIdentity;
 use many_protocol::ManyUrl;
 use minicbor::Decode;
 use serde::{Deserialize, Serialize};

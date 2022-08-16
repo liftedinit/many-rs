@@ -1,6 +1,7 @@
 use coset::{CoseSign1, TaggedCborSerializable};
-use many_identity::{verifiers, AcceptAllVerifier, Identity};
-use many_identity_cose::CoseKeyVerifier;
+use many_identity::verifiers::{AnonymousVerifier, OneOf};
+use many_identity::{verifiers, Identity};
+use many_identity_dsa::CoseKeyVerifier;
 use many_modules::base::Status;
 use many_protocol::{
     encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
@@ -8,17 +9,17 @@ use many_protocol::{
 use many_server::{Address, ManyError};
 use minicbor::Encode;
 use reqwest::{IntoUrl, Url};
-use std::fmt::Formatter;
+use std::fmt::{Debug, Formatter};
 
 #[derive(Clone)]
 pub struct ManyClient<I: Identity> {
     identity: I,
     to: Option<Address>,
     url: Url,
-    verifiers: verifiers::OneOf,
+    verifier: OneOf<AnonymousVerifier, CoseKeyVerifier>,
 }
 
-impl<I: Identity + std::fmt::Debug> std::fmt::Debug for ManyClient<I> {
+impl<I: Identity + Debug> std::fmt::Debug for ManyClient<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ManyClient")
             .field("id", &self.identity)
@@ -48,15 +49,13 @@ pub fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<CoseSign1
 
 impl<I: Identity> ManyClient<I> {
     pub fn new<S: IntoUrl>(url: S, to: Address, identity: I) -> Result<Self, String> {
-        let mut verifiers = verifiers::OneOf::empty();
-        verifiers.push(verifiers::AnonymousVerifier);
-        verifiers.push(CoseKeyVerifier);
+        let verifier = many_identity::one_of!(verifiers::AnonymousVerifier, CoseKeyVerifier);
 
         Ok(Self {
             identity,
             to: Some(to),
             url: url.into_url().map_err(|e| format!("{}", e))?,
-            verifiers,
+            verifier,
         })
     }
 
@@ -64,7 +63,7 @@ impl<I: Identity> ManyClient<I> {
         let cose = encode_cose_sign1_from_request(message, &self.identity).unwrap();
         let cose_sign1 = send_envelope(self.url.clone(), cose)?;
 
-        ResponseMessage::decode_and_verify(&cose_sign1, &self.verifiers)
+        ResponseMessage::decode_and_verify(&cose_sign1, &self.verifier)
     }
 
     pub fn call_raw<M>(&self, method: M, argument: &[u8]) -> Result<ResponseMessage, ManyError>

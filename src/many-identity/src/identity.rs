@@ -67,42 +67,60 @@ pub mod verifiers {
     use crate::{Address, Verifier};
     use coset::CoseSign1;
     use many_error::ManyError;
+    use std::fmt::{Debug, Formatter};
 
-    #[derive(Clone)]
+    #[macro_export]
+    macro_rules! one_of {
+        ( $clsName: expr $(,)? ) => {
+            $clsName
+        };
+        ( $cls: expr, $last: expr $(,)? ) => {
+            $crate::verifiers::OneOf::new($cls, $last)
+        };
+        ( $cls: expr, $last: expr, $($tail: expr),* ) => {
+            $crate::verifiers::OneOf::new(
+                $crate::verifier::OneOf::new($cls, $last),
+                one_of!($($tail),*)
+            )
+        };
+    }
+    pub use one_of;
+
     pub struct OneOf<L: Verifier, R: Verifier>(L, R);
 
-    impl OneOf {
-        pub fn empty() -> Self {
-            Self::new([])
-        }
-
-        pub fn push(&mut self, v: impl Verifier + Clone + 'static) {
-            self.0.push(Box::new(v))
+    impl<L: Verifier, R: Verifier> OneOf<L, R> {
+        pub fn new(l: L, r: R) -> Self {
+            Self(l, r)
         }
     }
 
-    impl Verifier for OneOf {
+    impl<L: Verifier, R: Verifier> Verifier for OneOf<L, R> {
+        #[inline]
         fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
-            let mut errors = Vec::with_capacity(8);
-            for v in self.0.iter() {
-                if let Err(e) = v.sign_1(envelope) {
-                    errors.push(e);
-                } else {
-                    return Ok(());
-                }
-            }
-
-            Err(ManyError::unknown(format!(
-                "Could not verify: [{}]",
-                errors
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            )))
+            self.0.sign_1(envelope).or_else(|lerr| {
+                self.1.sign_1(envelope).map_err(|rerr| {
+                    ManyError::unknown(format!("Could not verify: [{}, {}]", lerr, rerr))
+                })
+            })
         }
     }
 
+    impl<L: Verifier + Clone, R: Verifier + Clone> Clone for OneOf<L, R> {
+        fn clone(&self) -> Self {
+            Self(self.0.clone(), self.1.clone())
+        }
+    }
+
+    impl<L: Verifier + Debug, R: Verifier + Debug> Debug for OneOf<L, R> {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            f.debug_tuple("OneOf")
+                .field(&self.0)
+                .field(&self.0)
+                .finish()
+        }
+    }
+
+    #[derive(Clone, Debug)]
     pub struct AnonymousVerifier;
 
     impl Verifier for AnonymousVerifier {

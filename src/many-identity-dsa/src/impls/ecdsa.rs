@@ -1,8 +1,8 @@
 use coset::cbor::value::Value;
-use coset::iana::{EnumI64, OkpKeyParameter};
+use coset::iana::{Ec2KeyParameter, EnumI64};
 use coset::{CborSerializable, CoseKey, CoseSign1, CoseSign1Builder, Label};
 use many_error::ManyError;
-use many_identity::{Address, Identity};
+use many_identity::{Address, Identity, Verifier};
 use p256::pkcs8::FromPrivateKey;
 use pkcs8::der::Document;
 use sha3::{Digest, Sha3_224};
@@ -91,10 +91,42 @@ fn address(key: &CoseKey) -> Result<Address, ManyError> {
     Ok(unsafe { Address::public_key_raw(pk.into()) })
 }
 
+fn check_key(cose_key: &CoseKey, sign: bool, verify: bool) -> Result<(), ManyError> {
+    if sign
+        && !cose_key.key_ops.contains(&coset::KeyOperation::Assigned(
+            coset::iana::KeyOperation::Sign,
+        ))
+    {
+        return Err(ManyError::unknown("Key cannot sign"));
+    }
+    if verify
+        && !cose_key.key_ops.contains(&coset::KeyOperation::Assigned(
+            coset::iana::KeyOperation::Verify,
+        ))
+    {
+        return Err(ManyError::unknown("Key cannot verify"));
+    }
+
+    if cose_key.kty != coset::KeyType::Assigned(coset::iana::KeyType::EC2) {
+        return Err(ManyError::unknown(format!(
+            "Wrong key type: {:?}",
+            cose_key.kty
+        )));
+    }
+
+    if cose_key.alg != Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256)) {
+        return Err(ManyError::unknown(format!(
+            "Wrong key algorihm: {:?}",
+            cose_key.alg
+        )));
+    }
+    Ok(())
+}
+
 struct EcDsaIdentityInner {
     address: Address,
     public_key: CoseKey,
-    key_pair: ed25519_dalek::Keypair,
+    sk: p256::ecdsa::SigningKey,
 }
 
 impl EcDsaIdentityInner {
@@ -113,46 +145,23 @@ impl EcDsaIdentityInner {
             public_key(&cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
         let address = address(&public_key)?;
 
-        // Verify that key is valid Ed25519 (including private key).
-        if !cose_key.key_ops.contains(&coset::KeyOperation::Assigned(
-            coset::iana::KeyOperation::Sign,
-        )) {
-            return Err(ManyError::unknown("Key cannot sign"));
-        }
-        if cose_key.kty != coset::KeyType::Assigned(coset::iana::KeyType::EC2) {
-            return Err(ManyError::unknown(format!(
-                "Wrong key type: {:?}",
-                cose_key.kty
-            )));
-        }
-        if cose_key.alg != Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256)) {
-            return Err(ManyError::unknown(format!(
-                "Wrong key algorihm: {:?}",
-                cose_key.alg
-            )));
-        }
+        check_key(&cose_key, true, false)?;
 
         let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
-        let x = params
-            .get(&Label::Int(OkpKeyParameter::X.to_i64()))
-            .ok_or_else(|| ManyError::unknown("Could not find the X parameter in key"))?
-            .as_bytes()
-            .ok_or_else(|| ManyError::unknown("Could not convert the D parameter to bytes"))?
-            .as_slice();
         let d = params
-            .get(&Label::Int(OkpKeyParameter::D.to_i64()))
+            .get(&Label::Int(Ec2KeyParameter::D.to_i64()))
             .ok_or_else(|| ManyError::unknown("Could not find the D parameter in key"))?
             .as_bytes()
             .ok_or_else(|| ManyError::unknown("Could not convert the D parameter to bytes"))?
             .as_slice();
 
-        let key_pair = ed25519_dalek::Keypair::from_bytes(&vec![d, x].concat())
-            .map_err(|e| ManyError::unknown(format!("Invalid Ed25519 keypair from bytes: {e}")))?;
+        let sk = p256::SecretKey::from_bytes(d)
+            .map_err(|e| ManyError::unknown(format!("Invalid EcDSA keypair from bytes: {e}")))?;
 
         Ok(Self {
             address,
             public_key,
-            key_pair,
+            sk: sk.into(),
         })
     }
 }
@@ -180,7 +189,7 @@ impl Identity for EcDsaIdentityInner {
 
         Ok(builder
             .try_create_signature(&[], |bytes| {
-                let kp = &self.key_pair;
+                let kp = &self.sk;
                 kp.try_sign(bytes)
                     .map(|x| x.as_bytes().to_vec())
                     .map_err(ManyError::unknown)
@@ -189,11 +198,19 @@ impl Identity for EcDsaIdentityInner {
     }
 }
 
-/// An Ed25519 identity that sign messages and include the public key in the
+/// An EcDsa identity that sign messages and include the public key in the
 /// protected headers.
 pub struct EcDsaIdentity(EcDsaIdentityInner);
 
 impl EcDsaIdentity {
+    pub fn from_points(
+        x: impl ToOwned<Owned = Vec<u8>>,
+        y: impl ToOwned<Owned = Vec<u8>>,
+        d: impl ToOwned<Owned = Option<Vec<u8>>>,
+    ) -> Result<Self, ManyError> {
+        EcDsaIdentityInner::from_points(x, y, d).map(Self)
+    }
+
     pub fn from_key(key: CoseKey) -> Result<Self, ManyError> {
         EcDsaIdentityInner::from_key(key).map(Self)
     }
@@ -202,7 +219,7 @@ impl EcDsaIdentity {
         let doc = pkcs8::PrivateKeyDocument::from_pem(pem.as_ref()).unwrap();
         let decoded = doc.decode();
 
-        // Ed25519 OID
+        // EcDSA P256 OID
         if decoded.algorithm.oid != pkcs8::ObjectIdentifier::new("1.2.840.10045.2.1") {
             return Err(ManyError::unknown(format!(
                 "Invalid OID: {}",
@@ -239,5 +256,62 @@ impl Identity for EcDsaIdentity {
         ));
 
         self.0.sign_1(envelope)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct EcDsaVerifier {
+    address: Address,
+    pk: p256::ecdsa::VerifyingKey,
+}
+
+impl EcDsaVerifier {
+    pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
+        let public_key =
+            public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Key not EcDsa."))?;
+
+        check_key(&public_key, false, true)?;
+
+        let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
+        let x = params
+            .get(&Label::Int(Ec2KeyParameter::X.to_i64()))
+            .ok_or_else(|| ManyError::unknown("Could not find the X parameter in key"))?
+            .as_bytes()
+            .ok_or_else(|| ManyError::unknown("Could not convert the X parameter to bytes"))?
+            .as_slice();
+        let y = params
+            .get(&Label::Int(Ec2KeyParameter::Y.to_i64()))
+            .ok_or_else(|| ManyError::unknown("Could not find the Y parameter in key"))?
+            .as_bytes()
+            .ok_or_else(|| ManyError::unknown("Could not convert the Y parameter to bytes"))?
+            .as_slice();
+        let points = p256::EncodedPoint::from_affine_coordinates(x.into(), y.into(), false);
+        let pk = p256::ecdsa::VerifyingKey::from_encoded_point(&points)
+            .map_err(|e| ManyError::unknown(format!("Could not create a verifying key: {}", e)))?;
+
+        let address = address(cose_key)?;
+
+        Ok(Self { address, pk })
+    }
+}
+
+impl Verifier for EcDsaVerifier {
+    fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+        let address = Address::from_bytes(&envelope.protected.header.key_id)?;
+        if self.address.matches(&address) {
+            envelope.verify_signature(&[], |signature, msg| {
+                let signature = p256::ecdsa::Signature::from_der(signature)
+                    .or_else(|_| p256::ecdsa::Signature::from_bytes(signature))
+                    .map_err(|e| ManyError::could_not_verify_signature(e))?;
+                signature::Verifier::verify(&self.pk, msg, &signature)
+                    .map_err(|e| ManyError::could_not_verify_signature(e))
+            })?;
+            Ok(())
+        } else {
+            Err(ManyError::unknown(format!(
+                "Address in envelope does not match expected address. Expected: {}, Actual: {}",
+                self.address, address
+            )))
+        }
     }
 }

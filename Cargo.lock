@@ -1428,7 +1428,7 @@ dependencies = [
  "many-client",
  "many-error",
  "many-identity",
- "many-identity-cose",
+ "many-identity-dsa",
  "many-modules",
  "many-protocol",
  "many-server",
@@ -1459,7 +1459,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "many-identity",
- "many-identity-cose",
+ "many-identity-dsa",
  "many-modules",
  "many-protocol",
  "many-server",
@@ -1524,7 +1524,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "many-identity-cose"
+name = "many-identity-dsa"
 version = "0.1.0"
 dependencies = [
  "asn1",
@@ -1558,7 +1558,7 @@ dependencies = [
  "base64",
  "coset",
  "many-identity",
- "many-identity-cose",
+ "many-identity-dsa",
  "many-protocol",
  "minicbor",
  "once_cell",

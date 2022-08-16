@@ -5,7 +5,7 @@ use many_client::ManyClient;
 use many_error::ManyError;
 // use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity, Identity};
-use many_identity_cose::CoseKeyIdentity;
+use many_identity_dsa::CoseKeyIdentity;
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
@@ -18,7 +18,6 @@ use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
-use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tracing::{error, info, level_filters::LevelFilter, trace};
 use url::Url;
@@ -342,9 +341,7 @@ fn main() {
                 println!("{}", hex::encode(&i.to_vec()));
             } else if let Ok(pem_content) = std::fs::read_to_string(&o.arg) {
                 // Create the identity from the public key hash.
-                let mut i = many_identity_cose::CoseKeyIdentity::from_pem(&pem_content)
-                    .unwrap()
-                    .address();
+                let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().address();
                 if let Some(subid) = o.subid {
                     i = i
                         .with_subresource_id(subid)

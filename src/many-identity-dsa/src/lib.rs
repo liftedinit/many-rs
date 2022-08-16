@@ -2,12 +2,15 @@ use coset::{CborSerializable, CoseKeySet, CoseSign1};
 use many_error::ManyError;
 use many_identity::{Address, Identity, Verifier};
 use std::fmt::{Debug, Formatter};
+use tracing::trace;
 
-mod cose_helpers;
 mod impls;
 
 #[cfg(feature = "ed25519")]
 pub use impls::ed25519;
+
+#[cfg(feature = "ecdsa")]
+pub use impls::ecdsa;
 
 pub struct CoseKeyIdentity {
     inner: Box<dyn Identity>,
@@ -21,21 +24,40 @@ impl Debug for CoseKeyIdentity {
     }
 }
 
+macro_rules! try_initialize {
+    ($init: expr, $name: literal) => {
+        match $init {
+            Ok(result) => {
+                return Ok(Self {
+                    inner: Box::new(result),
+                });
+            }
+            Err(err) => {
+                trace!("Initialization error ({}): {}", $name, err)
+            }
+        }
+    };
+}
+
+macro_rules! try_verify {
+    ($init: expr, $envelope: ident, $name: literal) => {
+        match $init {
+            Ok(v) => {
+                return v.sign_1($envelope);
+            }
+            Err(err) => {
+                trace!("Initialization error ({}): {}", $name, err)
+            }
+        }
+    };
+}
+
 impl CoseKeyIdentity {
     pub fn from_pem(pem: impl AsRef<str>) -> Result<Self, String> {
         #[cfg(feature = "ed25519")]
-        if let Ok(result) = impls::ed25519::Ed25519Identity::from_pem(&pem) {
-            return Ok(Self {
-                inner: Box::new(result),
-            });
-        }
-
+        try_initialize!(ed25519::Ed25519Identity::from_pem(&pem), "Ed25519");
         #[cfg(feature = "ecdsa")]
-        if let Ok(result) = impls::ecdsa::EcDsaIdentity::from_pem(&pem) {
-            return Ok(Self {
-                inner: Box::new(result),
-            });
-        }
+        try_initialize!(ecdsa::EcDsaIdentity::from_pem(&pem), "EcDSA");
 
         Err("Algorithm unsupported.".to_string())
     }
@@ -52,7 +74,6 @@ impl Identity for CoseKeyIdentity {
 }
 
 fn _keyset_from_cose_sign1(envelope: &CoseSign1) -> Option<CoseKeySet> {
-    let field = "keyset".to_string();
     envelope
         .protected
         .header
@@ -62,14 +83,15 @@ fn _keyset_from_cose_sign1(envelope: &CoseSign1) -> Option<CoseKeySet> {
             matches!(
                 kv,
                 (
-                    coset::Label::Text(field),
+                    coset::Label::Text(name),
                     coset::cbor::value::Value::Bytes(_)
-                )
+                ) if name == "keyset"
             )
         })
         .and_then(|(_, v)| CoseKeySet::from_slice(v.as_bytes().unwrap()).ok())
 }
 
+#[derive(Clone)]
 pub struct CoseKeyVerifier;
 
 impl Verifier for CoseKeyVerifier {
@@ -87,10 +109,25 @@ impl Verifier for CoseKeyVerifier {
             .ok_or_else(|| ManyError::unknown("Could not find the key in keyset."))?;
 
         #[cfg(feature = "ed25519")]
-        if let Ok(v) = impls::ed25519::Ed25519Verifier::from_key(key) {
-            return v.sign_1(envelope);
-        }
+        try_verify!(ed25519::Ed25519Verifier::from_key(key), envelope, "ed25519");
+
+        #[cfg(feature = "ecdsa")]
+        try_verify!(ecdsa::EcDsaVerifier::from_key(key), envelope, "ecdsa");
 
         Err(ManyError::unknown("Algorithm unsupported."))
+    }
+}
+
+impl Debug for CoseKeyVerifier {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut x = f.debug_tuple("CoseKeyVerifier");
+
+        #[cfg(feature = "ecdsa")]
+        x.field(&"ecdsa");
+
+        #[cfg(feature = "ed25519")]
+        x.field(&"ed25519");
+
+        x.finish()
     }
 }

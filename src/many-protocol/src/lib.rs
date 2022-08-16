@@ -1,5 +1,5 @@
+use coset::CoseSign1;
 use coset::CoseSign1Builder;
-use coset::{CoseKeySet, CoseSign1};
 use many_error::ManyError;
 use many_identity::{Address, Identity, Verifier};
 
@@ -98,7 +98,6 @@ fn encode_cose_sign1_from_payload(
     identity: &impl Identity,
 ) -> Result<CoseSign1, ManyError> {
     let sign1 = CoseSign1Builder::default().payload(payload).build();
-    // TODO: replace this with ManyError, not map_err.
     identity.sign_1(sign1)
 }
 

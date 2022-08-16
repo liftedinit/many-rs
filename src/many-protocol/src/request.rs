@@ -1,4 +1,3 @@
-use coset::CoseKeySet;
 use derive_builder::Builder;
 use many_identity::Address;
 use many_types::attributes::{Attribute, AttributeSet};

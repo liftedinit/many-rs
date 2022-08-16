@@ -156,7 +156,7 @@ impl Address {
     /// about it.
     ///
     /// To use this method without unsafe code, use an utility function available
-    /// in a separate crate (like many-identity-cose) or in the testing utilities
+    /// in a separate crate (like many-identity-dsa) or in the testing utilities
     /// available here to create a bogus address.
     #[inline(always)]
     pub unsafe fn public_key_raw(hash: PublicKeyHash) -> Self {
@@ -169,7 +169,7 @@ impl Address {
     /// directly without thinking a bit more about it.
     ///
     /// To use this method without unsafe code, use an utility function available
-    /// in a separate crate (like many-identity-cose) or in the testing utilities
+    /// in a separate crate (like many-identity-dsa) or in the testing utilities
     /// available here to create a bogus address.
     #[inline(always)]
     #[allow(dead_code)]
