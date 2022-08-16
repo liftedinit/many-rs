@@ -2,7 +2,7 @@ use crate::transport::LowLevelManyRequestHandler;
 use async_trait::async_trait;
 use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
-use many_identity::{Identity, Verifier};
+use many_identity::{AcceptAllVerifier, Identity, Verifier};
 use many_modules::{base, ManyModule, ManyModuleInfo};
 use many_protocol::{IdentityResolver, RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
@@ -68,13 +68,19 @@ pub struct ManyServer {
 }
 
 impl ManyServer {
-    pub fn simple<N: ToString>(
-        name: N,
+    /// Create a test server. This should never be used in prod.
+    #[cfg(feature = "testing")]
+    pub fn test(identity: impl Identity + 'static) -> Arc<Mutex<Self>> {
+        Self::simple("test-many-server", identity, AcceptAllVerifier, None)
+    }
+
+    pub fn simple(
+        name: impl ToString,
         identity: impl Identity + 'static,
         verifier: impl Verifier + 'static,
-        public_key: Option<CoseKey>,
         version: Option<String>,
     ) -> Arc<Mutex<Self>> {
+        let public_key = identity.public_key();
         let s = Self::new(name, identity, verifier, public_key);
         {
             let mut s2 = s.lock().unwrap();
@@ -356,17 +362,16 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 #[cfg(test)]
 mod tests {
     use semver::{BuildMetadata, Prerelease, Version};
-    use std::ops::Sub;
     use std::sync::RwLock;
     use std::time::Duration;
 
     use super::*;
-    use many_identity::cose_helpers::public_key;
-    use many_identity::testsutils::generate_random_eddsa_identity;
-    use many_identity::{Address, AnonymousIdentity};
+    use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity};
+    use many_identity_dsa::ed25519::generate_random_ed25519_identity;
     use many_modules::base::Status;
     use many_protocol::{
-        decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessageBuilder,
+        decode_response_from_cose_sign1_no_resolve, encode_cose_sign1_from_request,
+        RequestMessageBuilder,
     };
     use proptest::prelude::*;
 
@@ -387,16 +392,19 @@ mod tests {
     proptest! {
         #[test]
         fn simple_status(name in "\\PC*", version in arb_semver()) {
-            let id = generate_random_eddsa_identity();
-            let server = ManyServer::simple(name.clone(), id.clone(), Some(version.to_string()), None);
+            let server_id = generate_random_ed25519_identity();
+            let id = generate_random_ed25519_identity();
+            let server_address = server_id.address();
+            let server_public_key = server_id.public_key();
+            let server = ManyServer::simple(&name, server_id, AcceptAllVerifier, Some(version.to_string()));
 
             // Test status() using a message instead of a direct call
             //
             // This will test other ManyServer methods as well
             let request: RequestMessage = RequestMessageBuilder::default()
                 .version(1)
-                .from(id.identity)
-                .to(id.identity)
+                .from(id.address())
+                .to(server_address)
                 .method("status".to_string())
                 .data("null".as_bytes().to_vec())
                 .build()
@@ -404,14 +412,14 @@ mod tests {
 
             let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
             let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
-            let response_message = decode_response_from_cose_sign1(response, None).unwrap();
+            let response_message = decode_response_from_cose_sign1_no_resolve(&response, None, &AcceptAllVerifier).unwrap();
 
             let status: Status = minicbor::decode(&response_message.data.unwrap()).unwrap();
 
             assert_eq!(status.version, 1);
             assert_eq!(status.name, name);
-            assert_eq!(status.public_key, Some(public_key(&id.key.unwrap()).unwrap()));
-            assert_eq!(status.identity, id.identity);
+            assert_eq!(status.public_key, Some(server_public_key));
+            assert_eq!(status.identity, server_address);
             assert!(status.attributes.has_id(0));
             assert_eq!(status.server_version, Some(version.to_string()));
             assert_eq!(status.timeout, Some(MANYSERVER_DEFAULT_TIMEOUT));
@@ -454,10 +462,10 @@ mod tests {
                 .nonce(nonce.to_le_bytes().to_vec())
                 .build()
                 .unwrap();
-            encode_cose_sign1_from_request(request, &CoseKeyIdentity::anonymous()).unwrap()
+            encode_cose_sign1_from_request(request, &AnonymousIdentity).unwrap()
         }
 
-        let server = ManyServer::simple("test-server", AnonymousIdentity, None, None);
+        let server = ManyServer::test(AnonymousIdentity);
         let timestamp = SystemTime::now();
         let now = Arc::new(RwLock::new(timestamp));
         let get_now = {
@@ -467,7 +475,9 @@ mod tests {
 
         // timestamp is now, so this should be fairly close to it and should pass.
         let response_e = smol::block_on(server.execute(create_request(timestamp, 0))).unwrap();
-        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        let response =
+            decode_response_from_cose_sign1_no_resolve(&response_e, None, &AcceptAllVerifier)
+                .unwrap();
         assert!(response.data.is_ok());
 
         // Set time to present.
@@ -475,15 +485,19 @@ mod tests {
             server.lock().unwrap().set_time_fn(get_now);
         }
         let response_e = smol::block_on(server.execute(create_request(timestamp, 1))).unwrap();
-        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        let response =
+            decode_response_from_cose_sign1_no_resolve(&response_e, None, &AcceptAllVerifier)
+                .unwrap();
         assert!(response.data.is_ok());
 
         // Set time to 10 minutes past.
         {
-            *now.write().unwrap() = timestamp.sub(Duration::from_secs(60 * 60 * 10));
+            *now.write().unwrap() = timestamp - Duration::from_secs(60 * 60 * 10);
         }
         let response_e = smol::block_on(server.execute(create_request(timestamp, 2))).unwrap();
-        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        let response =
+            decode_response_from_cose_sign1_no_resolve(&response_e, None, &AcceptAllVerifier)
+                .unwrap();
         assert!(response.data.is_err());
         assert_eq!(
             response.data.unwrap_err().code(),
@@ -492,11 +506,13 @@ mod tests {
 
         // Set request timestamp 10 minutes in the past.
         let response_e = smol::block_on(server.execute(create_request(
-            timestamp.sub(Duration::from_secs(60 * 60 * 10)),
+            timestamp - Duration::from_secs(60 * 60 * 10),
             3,
         )))
         .unwrap();
-        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        let response =
+            decode_response_from_cose_sign1_no_resolve(&response_e, None, &AcceptAllVerifier)
+                .unwrap();
         assert!(response.data.is_ok());
     }
 }

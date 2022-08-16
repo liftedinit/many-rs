@@ -1,10 +1,11 @@
 //! An Identity is a signer that also has an address on the MANY protocol.
 use crate::Address;
-use coset::CoseSign1;
+use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
 
 pub trait Identity: Send {
     fn address(&self) -> Address;
+    fn public_key(&self) -> Option<CoseKey>;
     fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError>;
 }
 
@@ -18,6 +19,10 @@ pub struct AnonymousIdentity;
 impl Identity for AnonymousIdentity {
     fn address(&self) -> Address {
         Address::anonymous()
+    }
+
+    fn public_key(&self) -> Option<CoseKey> {
+        None
     }
 
     fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
@@ -40,16 +45,28 @@ impl Verifier for AnonymousIdentity {
 
 /// Accept ALL envelopes.
 #[cfg(feature = "testing")]
-pub struct AcceptAllVerifier;
-impl Verifier for AcceptAllVerifier {
-    fn sign_1(&self, _envelope: &CoseSign1) -> Result<(), ManyError> {
-        Ok(())
+mod testing {
+    use crate::Verifier;
+
+    pub struct AcceptAllVerifier;
+
+    impl Verifier for AcceptAllVerifier {
+        fn sign_1(&self, _envelope: &coset::CoseSign1) -> Result<(), many_error::ManyError> {
+            Ok(())
+        }
     }
 }
+
+#[cfg(feature = "testing")]
+pub use testing::*;
 
 impl Identity for Box<dyn Identity> {
     fn address(&self) -> Address {
         (&**self).address()
+    }
+
+    fn public_key(&self) -> Option<CoseKey> {
+        (&**self).public_key()
     }
 
     fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {

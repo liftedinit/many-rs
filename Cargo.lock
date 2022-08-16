@@ -69,6 +69,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "asn1"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32cc1ec17f6a9d5054651c433a7dacfbf7fd68ae6a91b550e2461b25d3cb6c3d"
+dependencies = [
+ "asn1_derive",
+ "chrono",
+]
+
+[[package]]
+name = "asn1_derive"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b07c097e3b2b4bedbf78a75bb1251c25d050d6db3bcb6b415fc0d28b824a6163"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "async-channel"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1429,6 +1450,7 @@ dependencies = [
  "many-error",
  "many-identity",
  "many-identity-dsa",
+ "many-identity-hsm",
  "many-modules",
  "many-protocol",
  "many-server",
@@ -1498,7 +1520,7 @@ dependencies = [
 name = "many-identity"
 version = "0.1.0"
 dependencies = [
- "asn1",
+ "asn1 0.8.7",
  "base32",
  "coset",
  "crc-any",
@@ -1527,7 +1549,7 @@ dependencies = [
 name = "many-identity-dsa"
 version = "0.1.0"
 dependencies = [
- "asn1",
+ "asn1 0.8.7",
  "base32",
  "coset",
  "crc-any",
@@ -1552,11 +1574,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "many-identity-hsm"
+version = "0.1.0"
+dependencies = [
+ "asn1 0.10.0",
+ "coset",
+ "cryptoki",
+ "hex",
+ "many-error",
+ "many-identity",
+ "many-identity-dsa",
+ "many-protocol",
+ "once_cell",
+ "p256",
+ "sha2 0.10.2",
+ "signature",
+ "tracing",
+]
+
+[[package]]
 name = "many-identity-webauthn"
 version = "0.1.0"
 dependencies = [
  "base64",
  "coset",
+ "hex",
+ "many-error",
  "many-identity",
  "many-identity-dsa",
  "many-protocol",
@@ -1591,6 +1634,7 @@ dependencies = [
  "hex",
  "many-error",
  "many-identity",
+ "many-identity-dsa",
  "many-macros",
  "many-protocol",
  "many-types",
@@ -1634,7 +1678,7 @@ name = "many-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "asn1",
+ "asn1 0.8.7",
  "async-trait",
  "backtrace",
  "base32",
@@ -1651,9 +1695,11 @@ dependencies = [
  "lazy_static",
  "many-error",
  "many-identity",
+ "many-identity-dsa",
  "many-macros",
  "many-modules",
  "many-protocol",
+ "many-server",
  "many-types",
  "minicbor",
  "num-bigint",

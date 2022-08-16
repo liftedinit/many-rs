@@ -148,20 +148,23 @@ pub trait BaseModuleBackend: Send {
 #[cfg(test)]
 mod tests {
     use crate::testutils::call_module;
-    use many_identity::testsutils::generate_random_eddsa_identity;
+    use many_identity::Identity;
+    use many_identity_dsa::ed25519::generate_random_ed25519_identity;
     use many_types::attributes::Attribute;
     use std::sync::{Arc, Mutex};
 
     use super::*;
     #[test]
     fn status() {
-        let id = generate_random_eddsa_identity();
+        let id = generate_random_ed25519_identity();
+        let address = id.address();
+        let public_key = id.public_key();
         let mut mock = MockBaseModuleBackend::new();
         let status = Status {
             version: 1,
             name: "Foobar".to_string(),
-            public_key: id.public_key(),
-            identity: id.identity,
+            public_key: Some(public_key),
+            identity: address,
             attributes: AttributeSet::from_iter(
                 [Attribute {
                     id: 0,

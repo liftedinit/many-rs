@@ -1,4 +1,4 @@
-use coset::{CborSerializable, CoseKeySet, CoseSign1};
+use coset::{CborSerializable, CoseKey, CoseKeySet, CoseSign1};
 use many_error::ManyError;
 use many_identity::{Address, Identity, Verifier};
 use std::fmt::{Debug, Formatter};
@@ -68,27 +68,26 @@ impl Identity for CoseKeyIdentity {
         self.inner.address()
     }
 
+    fn public_key(&self) -> Option<CoseKey> {
+        self.inner.public_key()
+    }
+
     fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
         self.inner.sign_1(envelope)
     }
 }
 
 fn _keyset_from_cose_sign1(envelope: &CoseSign1) -> Option<CoseKeySet> {
-    envelope
+    let keyset = &envelope
         .protected
         .header
         .rest
         .iter()
-        .find(|kv| {
-            matches!(
-                kv,
-                (
-                    coset::Label::Text(name),
-                    coset::cbor::value::Value::Bytes(_)
-                ) if name == "keyset"
-            )
-        })
-        .and_then(|(_, v)| CoseKeySet::from_slice(v.as_bytes().unwrap()).ok())
+        .find(|(k, _)| k == &coset::Label::Text("keyset".to_string()))?
+        .1;
+
+    let bytes = keyset.as_bytes()?;
+    CoseKeySet::from_slice(bytes).ok()
 }
 
 #[derive(Clone)]

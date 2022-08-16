@@ -637,10 +637,10 @@ mod test {
 
     #[test]
     fn event_info_is_about() {
-        let i0 = Address::public_key_raw([0; 28]);
-        let i1 = Address::public_key_raw([1; 28]);
-        let i01 = i0.with_subresource_id_unchecked(1);
-        let i11 = i1.with_subresource_id_unchecked(1);
+        let i0 = unsafe { Address::public_key_raw([0; 28]) };
+        let i1 = unsafe { Address::public_key_raw([1; 28]) };
+        let i01 = i0.with_subresource_id(1).unwrap();
+        let i11 = i1.with_subresource_id(1).unwrap();
 
         let s0 = EventInfo::Send {
             from: i0,
@@ -656,8 +656,8 @@ mod test {
 
     #[test]
     fn event_info_is_about_null() {
-        let i0 = Address::public_key_raw([0; 28]);
-        let i01 = i0.with_subresource_id_unchecked(1);
+        let i0 = unsafe { Address::public_key_raw([0; 28]) };
+        let i01 = i0.with_subresource_id(1).unwrap();
         let token = Vec::new().into();
 
         let s0 = EventInfo::AccountMultisigExecute {
@@ -672,9 +672,9 @@ mod test {
 
     #[test]
     fn event_info_symbol() {
-        let i0 = Address::public_key_raw([0; 28]);
-        let i1 = Address::public_key_raw([1; 28]);
-        let i01 = i0.with_subresource_id_unchecked(1);
+        let i0 = unsafe { Address::public_key_raw([0; 28]) };
+        let i1 = unsafe { Address::public_key_raw([1; 28]) };
+        let i01 = i0.with_subresource_id(1).unwrap();
 
         let event = EventInfo::Send {
             from: i0,
@@ -690,6 +690,7 @@ mod test {
 
     mod event_info {
         use super::super::*;
+        use many_identity::testing::identity;
         use proptest::prelude::*;
 
         fn _create_event_info(
@@ -698,8 +699,8 @@ mod test {
             transaction: AccountMultisigTransaction,
         ) -> EventInfo {
             EventInfo::AccountMultisigSubmit {
-                submitter: Address::public_key_raw([0; 28]),
-                account: Address::public_key_raw([1; 28]),
+                submitter: identity(0),
+                account: identity(1),
                 memo: Some(memo),
                 transaction: Box::new(transaction),
                 token: None,
@@ -722,9 +723,9 @@ mod test {
             fn submit_send(memo in "\\PC*", amount: u64) {
                 _assert_serde(
                     _create_event_info(memo, vec![], AccountMultisigTransaction::Send(module::ledger::SendArgs {
-                        from: Some(Address::public_key_raw([2; 28])),
-                        to: Address::public_key_raw([3; 28]),
-                        symbol: Address::public_key_raw([4; 28]),
+                        from: Some(identity(2)),
+                        to: identity(3),
+                        symbol: identity(4),
                         amount: amount.into(),
                     })),
                 );
@@ -736,12 +737,12 @@ mod test {
                     _create_event_info(memo, vec![],
                         AccountMultisigTransaction::AccountMultisigSubmit(
                             module::account::features::multisig::SubmitTransactionArgs {
-                                account: Address::public_key_raw([2; 28]),
+                                account: identity(2),
                                 memo: Some(memo2),
                                 transaction: Box::new(AccountMultisigTransaction::Send(module::ledger::SendArgs {
-                                    from: Some(Address::public_key_raw([2; 28])),
-                                    to: Address::public_key_raw([3; 28]),
-                                    symbol: Address::public_key_raw([4; 28]),
+                                    from: Some(identity(2)),
+                                    to: identity(3),
+                                    symbol: identity(4),
                                     amount: amount.into(),
                                 })),
                                 threshold: None,
@@ -758,7 +759,7 @@ mod test {
             fn submit_set_defaults(memo in "\\PC*") {
                 _assert_serde(
                     _create_event_info(memo, vec![], AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
-                        account: Address::public_key_raw([2; 28]),
+                        account: identity(2),
                         threshold: Some(2),
                         timeout_in_secs: None,
                         execute_automatically: Some(false),

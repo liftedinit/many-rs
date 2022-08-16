@@ -649,7 +649,8 @@ fn roles_from_str() {
 
 #[test]
 fn needs_role() {
-    let owner = Address::public_key_raw([0; 28]);
+    use many_identity::testing::identity;
+    let owner = identity(0);
     let account = Account::create(
         &owner,
         CreateArgs {
@@ -662,7 +663,5 @@ fn needs_role() {
     assert!(account
         .needs_role(&owner, [Role::CanMultisigSubmit])
         .is_err());
-    assert!(account
-        .needs_role(&Address::public_key_raw([1; 28]), [Role::Owner])
-        .is_err());
+    assert!(account.needs_role(&identity(1), [Role::Owner]).is_err());
 }

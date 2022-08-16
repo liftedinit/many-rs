@@ -1,10 +1,11 @@
 use coset::cbor::value::Value;
 use coset::{CborSerializable, CoseKey, CoseKeySet, CoseSign1, Label};
-use many_identity::Address;
-use many_identity_dsa::CoseKeyIdentity;
+use many_error::ManyError;
+use many_identity::{Address, Verifier};
 use many_protocol::ManyUrl;
 use minicbor::Decode;
 use serde::{Deserialize, Serialize};
+use sha2::digest::Digest;
 use std::collections::BTreeMap;
 
 /// WebAuthn ClientData, in JSON.
@@ -17,7 +18,7 @@ struct ClientData {
 
 /// Provide utility functions surrounding request and response messages.
 #[derive(Clone, Debug, Default)]
-pub(crate) struct WebAuthnVerifier {
+pub struct WebAuthnVerifier {
     allowed_origins: Option<Vec<ManyUrl>>,
 }
 
@@ -26,15 +27,14 @@ impl WebAuthnVerifier {
         Self { allowed_origins }
     }
 
-    pub fn get_keyset(sign1: CoseSign1) -> Option<CoseKeySet> {
-        let keyset = sign1
+    pub fn get_keyset(&self, sign1: &CoseSign1) -> Option<CoseKeySet> {
+        let keyset = &sign1
             .protected
             .header
             .rest
             .iter()
             .find(|(k, _)| k == &Label::Text("keyset".to_string()))?
-            .1
-            .clone();
+            .1;
 
         if let Value::Bytes(ref bytes) = keyset {
             CoseKeySet::from_slice(bytes).ok()
@@ -43,25 +43,16 @@ impl WebAuthnVerifier {
         }
     }
 
-    pub fn get_cose_key_for_identity(&self, id: &Address) -> Option<CoseKey> {
+    pub fn get_cose_key_for_identity(&self, envelope: &CoseSign1, id: &Address) -> Option<CoseKey> {
         // Verify the keybytes matches the identity.
         if id.is_anonymous() {
             return None;
         }
 
-        let cose_key = self
-            .get_keyset()?
-            .0
-            .into_iter()
-            .find(|key| id.matches_key(Some(key)))?;
+        let keyid = &envelope.protected.header.key_id;
+        let keyset = self.get_keyset(envelope)?;
 
-        // The hsm: false parameter is not important here. We always perform
-        // signature verification on the CPU server-side
-        if id == &cose_key {
-            Some(key)
-        } else {
-            None
-        }
+        keyset.0.into_iter().find(|key| key.key_id.eq(keyid))
     }
 
     /// Perform WebAuthn request verification
@@ -70,53 +61,60 @@ impl WebAuthnVerifier {
     /// See https://webauthn.guide/#webauthn-api
     fn _verify_webauthn(
         &self,
+        envelope: &CoseSign1,
         unprotected: BTreeMap<Label, Value>,
-        key: CoseKeyIdentity,
-        allowed_origins: Option<Vec<ManyUrl>>,
-    ) -> Result<(), String> {
+        key: CoseKey,
+    ) -> Result<(), ManyError> {
+        let allowed_origins = &self.allowed_origins;
+
         tracing::trace!("We got a WebAuthn request");
         tracing::trace!("Getting `clientData` from unprotected header");
         let client_data = unprotected
             .get(&Label::Text("clientData".to_string()))
-            .ok_or("`clientData` entry missing from unprotected header")?
+            .ok_or(ManyError::unknown(
+                "`clientData` entry missing from unprotected header",
+            ))?
             .as_text()
-            .ok_or("`clientData` entry is not Text")?;
+            .ok_or(ManyError::unknown("`clientData` entry is not Text"))?;
         let client_data_json: ClientData =
-            serde_json::from_str(client_data).map_err(|e| e.to_string())?;
+            serde_json::from_str(client_data).map_err(|e| ManyError::unknown(e))?;
 
         tracing::trace!("Verifying the webauthn request type");
         if client_data_json.r#type != "webauthn.get" {
-            return Err("request type != webauthn.get".to_string());
+            return Err(ManyError::unknown("request type != webauthn.get"));
         }
 
         tracing::trace!("Verifying origin");
-        let origin = ManyUrl::parse(&client_data_json.origin).map_err(|e| e.to_string())?;
+        let origin = ManyUrl::parse(&client_data_json.origin).map_err(|e| ManyError::unknown(e))?;
         if let Some(urls) = allowed_origins {
             if !urls.contains(&origin) {
-                return Err("Origin not allowed".to_string());
+                return Err(ManyError::unknown("Origin not allowed"));
             }
         }
 
         tracing::trace!("Getting `authData` from unprotected header");
         let auth_data = unprotected
             .get(&Label::Text("authData".to_string()))
-            .ok_or("`authData` entry missing from unprotected header")?
+            .ok_or(ManyError::unknown(
+                "`authData` entry missing from unprotected header",
+            ))?
             .as_bytes()
-            .ok_or("`authData` entry is not Bytes")?;
+            .ok_or(ManyError::unknown("`authData` entry is not Bytes"))?;
 
         tracing::trace!("Getting `signature` from unprotected header");
         let signature = unprotected
             .get(&Label::Text("signature".to_string()))
-            .ok_or("`signature` entry missing from unprotected header")?
+            .ok_or(ManyError::unknown(
+                "`signature` entry missing from unprotected header",
+            ))?
             .as_bytes()
-            .ok_or("`signature` entry is not Bytes")?;
+            .ok_or(ManyError::unknown("`signature` entry is not Bytes"))?;
 
         tracing::trace!("Getting payload");
-        let payload = self
-            .sign1
+        let payload = envelope
             .payload
             .as_ref()
-            .ok_or("`payload` entry missing but required")?;
+            .ok_or(ManyError::unknown("`payload` entry missing but required"))?;
 
         let payload_sha512 = sha2::Sha512::digest(payload);
         let payload_sha512_base64url = base64::encode(payload_sha512);
@@ -132,20 +130,23 @@ impl WebAuthnVerifier {
         }
         tracing::trace!("Decoding `challenge`");
         let challenge = base64::decode_config(&client_data_json.challenge, base64::URL_SAFE_NO_PAD)
-            .map_err(|e| e.to_string())?;
-        let challenge: Challenge = minicbor::decode(&challenge).map_err(|e| e.to_string())?;
+            .map_err(|e| ManyError::unknown(e))?;
+        let challenge: Challenge =
+            minicbor::decode(&challenge).map_err(|e| ManyError::unknown(e))?;
         tracing::trace!("Verifying `challenge` SHA against payload");
         if payload_sha512_base64url != challenge.request_message_sha {
-            return Err("`challenge` SHA doesn't match".to_string());
+            return Err(ManyError::unknown("`challenge` SHA doesn't match"));
         }
 
         tracing::trace!("Decoding ProtectedHeader");
         let protected_header =
             coset::ProtectedHeader::from_cbor_bstr(Value::Bytes(challenge.protected_header))
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| ManyError::unknown(e))?;
         tracing::trace!("Verifying protected header against `challenge`");
-        if self.sign1.protected != protected_header {
-            return Err("Protected header doesn't match `challenge`".to_string());
+        if envelope.protected != protected_header {
+            return Err(ManyError::unknown(
+                "Protected header doesn't match `challenge`",
+            ));
         }
 
         tracing::trace!("Concatenating `authData` and sha256(`clientData`)");
@@ -153,55 +154,55 @@ impl WebAuthnVerifier {
         msg.extend(sha2::Sha256::digest(client_data));
         let cose_sig = signature;
         tracing::trace!("Verifying WebAuthn signature");
-        key.verify(&msg, &cose_sig).map_err(|e| e.to_string())?;
+
+        let key = many_identity_dsa::ecdsa::EcDsaVerifier::from_key(&key)?;
+        key.verify_signature(&cose_sig, &msg)?;
 
         tracing::trace!("WebAuthn verifications succedded!");
         Ok(())
     }
 
     /// Perform standard COSE verification
-    fn _verify(&self, key: CoseKeyIdentity) -> Result<(), String> {
-        self.sign1
-            .verify_signature(b"", |sig, content| {
-                let sig = CoseKeyIdentitySignature::from_bytes(sig).unwrap();
-                key.verify(content, &sig)
-            })
-            .map_err(|e| e.to_string())?;
+    fn _verify(&self, key: CoseKey, envelope: &CoseSign1) -> Result<(), ManyError> {
+        let key = many_identity_dsa::ecdsa::EcDsaVerifier::from_key(&key)?;
 
-        Ok(())
+        envelope.verify_signature(b"", |sig, content| key.verify_signature(&sig, &content))
     }
 
-    pub fn verify(&self, sign1: &CoseSign1) -> Result<Address, String> {
-        let allowed_origins = self.allowed_origins;
+    pub fn verify(&self, sign1: &CoseSign1) -> Result<Address, ManyError> {
         if !sign1.protected.header.key_id.is_empty() {
             if let Ok(id) = Address::from_bytes(&sign1.protected.header.key_id) {
                 if id.is_anonymous() {
                     return Ok(id);
                 }
 
-                let key = self
-                    .get_public_key_for_identity(&id)
-                    .ok_or_else(|| "Could not find a public key in the envelope".to_string())?;
+                let key = self.get_cose_key_for_identity(sign1, &id).ok_or_else(|| {
+                    ManyError::unknown("Could not find a public key in the envelope")
+                })?;
                 let protected =
                     BTreeMap::from_iter(sign1.protected.header.rest.clone().into_iter());
                 if protected.contains_key(&Label::Text("webauthn".to_string())) {
                     let unprotected =
                         BTreeMap::from_iter(sign1.unprotected.rest.clone().into_iter());
-                    self._verify_webauthn(unprotected, key, allowed_origins)?;
+                    self._verify_webauthn(sign1, unprotected, key)?;
                 } else {
-                    self._verify(key)?;
+                    self._verify(key, sign1)?;
                 }
                 Ok(id)
             } else {
-                Err("Invalid (not a MANY identity) key ID".to_string())
+                Err(ManyError::could_not_verify_signature(
+                    "Invalid (not a MANY identity) key ID",
+                ))
             }
         } else {
-            if sign1.signature.is_empty() {
-                return Ok(Address::anonymous());
-            }
-
-            Err("Missing key ID".to_string())
+            Err(ManyError::could_not_verify_signature("Missing key ID"))
         }
+    }
+}
+
+impl Verifier for WebAuthnVerifier {
+    fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+        self.verify(envelope).map(|_| ())
     }
 }
 
@@ -263,7 +264,7 @@ mod tests {
         Payload(Vec<u8>),
     }
 
-    fn get_tampered_request(field_type: Cose1FieldType) -> CoseSign1RequestMessage {
+    fn get_tampered_request(field_type: Cose1FieldType) -> CoseSign1 {
         let mut envelope = ENVELOPE.clone();
         match field_type {
             Cose1FieldType::Protected { field, value } => {
@@ -339,150 +340,135 @@ mod tests {
                 envelope.payload = Some(value);
             }
         }
-        CoseSign1RequestMessage { sign1: envelope }
+        envelope
     }
 
-    fn run_test<T>(test: T)
-    where
-        T: FnOnce() + std::panic::UnwindSafe,
-    {
-        let result = std::panic::catch_unwind(test);
+    fn run_error(allowed_domains: Option<Vec<&str>>, field_type: Cose1FieldType, msg: &str) {
+        let verifier = WebAuthnVerifier::new(
+            allowed_domains.map(|x| x.iter().map(|u| ManyUrl::parse(u).unwrap()).collect()),
+        );
+        let envelope = get_tampered_request(field_type);
+        let request = verifier.sign_1(&envelope);
 
-        assert!(result.is_ok())
+        assert_eq!(request.map_err(|e| e.to_string()), Err(msg.to_string()));
     }
 
     #[test]
     fn webauthn_ok() {
-        run_test(|| {
-            assert!(CoseSign1RequestMessage {
-                sign1: ENVELOPE.clone()
-            }
-            .verify(None)
-            .is_ok())
-        });
+        let envelope = ENVELOPE.clone();
+        assert_eq!(WebAuthnVerifier::new(None).sign_1(&envelope), Ok(()));
     }
 
     #[test]
     fn webauthn_tamper_signature() {
-        run_test(|| {
-            let request = get_tampered_request(Cose1FieldType::Unprotected(
-                UnprotectedHeaderFieldType::Rest {
-                    field: "signature".to_string(),
-                    value: Value::Bytes(vec![1, 2, 3]),
-                },
-            ))
-            .verify(None);
-            assert!(request.is_err());
-            assert_eq!(request.unwrap_err(), "signature error");
-        });
+        run_error(
+            None,
+            Cose1FieldType::Unprotected(UnprotectedHeaderFieldType::Rest {
+                field: "signature".to_string(),
+                value: Value::Bytes(vec![1, 2, 3]),
+            }),
+            "Could not verify the signature: signature error.",
+        );
     }
 
     #[test]
     fn webauthn_tamper_authdata() {
-        run_test(|| {
-            let request = get_tampered_request(Cose1FieldType::Unprotected(
-                UnprotectedHeaderFieldType::Rest {
-                    field: "authData".to_string(),
-                    value: Value::Bytes(vec![1, 2, 3]),
-                },
-            ))
-            .verify(None);
-            assert!(request.is_err());
-            assert_eq!(request.unwrap_err(), "signature error");
-        });
+        run_error(
+            None,
+            Cose1FieldType::Unprotected(UnprotectedHeaderFieldType::Rest {
+                field: "authData".to_string(),
+                value: Value::Bytes(vec![1, 2, 3]),
+            }),
+            "Could not verify the signature: signature error.",
+        );
     }
 
     #[test]
     fn webauthn_tamper_clientdata() {
-        run_test(|| {
-            let request = get_tampered_request(Cose1FieldType::Unprotected(
-                UnprotectedHeaderFieldType::Rest {
-                    field: "clientData".to_string(),
-                    value: Value::Bool(false),
-                },
-            ))
-            .verify(None);
-            assert!(request.is_err());
-            assert_eq!(request.unwrap_err(), "`clientData` entry is not Text");
-        });
+        run_error(
+            None,
+            Cose1FieldType::Unprotected(UnprotectedHeaderFieldType::Rest {
+                field: "clientData".to_string(),
+                value: Value::Bool(false),
+            }),
+            "Unknown error: `clientData` entry is not Text",
+        );
     }
 
     #[test]
     fn webauthn_tamper_challenge() {
-        run_test(|| {
-            let request = get_tampered_request(Cose1FieldType::Unprotected(
-                UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Challenge),
-            ))
-            .verify(None);
-
-            assert!(request.is_err());
-            assert_eq!(request.unwrap_err(), "`challenge` SHA doesn't match");
-        });
+        run_error(
+            None,
+            Cose1FieldType::Unprotected(UnprotectedHeaderFieldType::ClientData(
+                ClientDataFieldType::Challenge,
+            )),
+            "Unknown error: `challenge` SHA doesn't match",
+        );
     }
 
     #[test]
     fn webauthn_tamper_type() {
-        run_test(|| {
-            let request = get_tampered_request(Cose1FieldType::Unprotected(
-                UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Type(
-                    "Foobar".to_string(),
-                )),
-            ))
-            .verify(None);
-            assert!(request.is_err());
-            assert_eq!(request.unwrap_err(), "request type != webauthn.get");
-        });
+        run_error(
+            None,
+            Cose1FieldType::Unprotected(UnprotectedHeaderFieldType::ClientData(
+                ClientDataFieldType::Type("Foobar".to_string()),
+            )),
+            "Unknown error: request type != webauthn.get",
+        );
     }
 
     #[test]
     fn webauthn_tamper_origin() {
-        run_test(|| {
-            let request = get_tampered_request(Cose1FieldType::Unprotected(
-                UnprotectedHeaderFieldType::ClientData(ClientDataFieldType::Origin(
-                    "https://test.com".to_string(),
-                )),
-            ))
-            .verify(Some(vec![ManyUrl::parse("https://foobar.com").unwrap()]));
-            assert!(request.is_err());
-            assert_eq!(request.unwrap_err(), "Origin not allowed");
-        });
+        run_error(
+            Some(vec!["https://foobar.com"]),
+            Cose1FieldType::Unprotected(UnprotectedHeaderFieldType::ClientData(
+                ClientDataFieldType::Origin("https://test.com".to_string()),
+            )),
+            "Unknown error: Origin not allowed",
+        );
+    }
+
+    #[test]
+    fn webauthn_ok_origin_but_mismatch_sig() {
+        run_error(
+            Some(vec!["https://foobar.com"]),
+            Cose1FieldType::Unprotected(UnprotectedHeaderFieldType::ClientData(
+                ClientDataFieldType::Origin("https://foobar.com".to_string()),
+            )),
+            "Could not verify the signature: signature error.",
+        );
     }
 
     #[test]
     fn webauthn_tamper_payload() {
-        run_test(|| {
-            let request = get_tampered_request(Cose1FieldType::Payload(vec![1, 2, 3])).verify(None);
-            assert!(request.is_err());
-            assert_eq!(request.unwrap_err(), "`challenge` SHA doesn't match");
-        });
+        run_error(
+            None,
+            Cose1FieldType::Payload(vec![1, 2, 3]),
+            "Unknown error: `challenge` SHA doesn't match",
+        );
     }
 
     #[test]
     fn webauthn_tamper_webauthn_flag() {
-        run_test(|| {
-            let request = get_tampered_request(Cose1FieldType::Protected {
+        run_error(
+            None,
+            Cose1FieldType::Protected {
                 field: "webauthn".to_string(),
                 value: Value::Bool(false), // Unused
-            })
-            .verify(None);
-            assert!(request.is_err());
-            assert_eq!(request.unwrap_err(), "signature error");
-        });
+            },
+            "Could not verify the signature: signature error.",
+        );
     }
 
     #[test]
     fn webauthn_tamper_protected_header() {
-        run_test(|| {
-            let request = get_tampered_request(Cose1FieldType::Protected {
+        run_error(
+            None,
+            Cose1FieldType::Protected {
                 field: "foo".to_string(),
                 value: Value::Bool(true),
-            })
-            .verify(None);
-            assert!(request.is_err());
-            assert_eq!(
-                request.unwrap_err(),
-                "Protected header doesn't match `challenge`"
-            );
-        });
+            },
+            "Unknown error: Protected header doesn't match `challenge`",
+        );
     }
 }

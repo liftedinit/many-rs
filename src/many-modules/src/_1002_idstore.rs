@@ -32,8 +32,10 @@ mod tests {
     use super::*;
     use crate::testutils::{call_module_cbor, call_module_envelope};
     use coset::CborSerializable;
-    use many_identity::{testing::identity, testsutils::generate_random_eddsa_identity};
+    use many_identity::testing::identity;
+    use many_identity_dsa::ed25519::generate_random_ed25519_identity;
 
+    use many_identity::Identity;
     use minicbor::bytes::ByteVec;
     use mockall::predicate;
     use std::{
@@ -43,11 +45,13 @@ mod tests {
 
     #[test]
     fn store() {
-        let id = generate_random_eddsa_identity();
+        let id = generate_random_ed25519_identity();
+        let address = id.address();
+        let public_key = id.public_key();
         let data = StoreArgs {
-            address: id.identity,
+            address,
             cred_id: CredentialId(ByteVec::from(Vec::from([1u8; 16]))),
-            public_key: PublicKey(ByteVec::from(id.key.unwrap().to_vec().unwrap())),
+            public_key: PublicKey(ByteVec::from(public_key.to_vec().unwrap())),
         };
         let ret = StoreReturns(vec!["foo".to_string(), "bar".to_string()]);
         let mut mock: MockIdStoreModuleBackend = MockIdStoreModuleBackend::new();
@@ -83,11 +87,12 @@ mod tests {
 
     #[test]
     fn get_from_recall_phrase() {
-        let id = generate_random_eddsa_identity();
+        let id = generate_random_ed25519_identity();
+        let public_key = id.public_key();
         let data = GetFromRecallPhraseArgs(vec!["foo".to_string(), "bar".to_string()]);
         let ret = GetReturns {
             cred_id: CredentialId(ByteVec::from(Vec::from([1u8; 16]))),
-            public_key: PublicKey(ByteVec::from(id.key.unwrap().to_vec().unwrap())),
+            public_key: PublicKey(ByteVec::from(public_key.to_vec().unwrap())),
         };
         let mut mock: MockIdStoreModuleBackend = MockIdStoreModuleBackend::new();
         mock.expect_get_from_recall_phrase()
@@ -113,13 +118,14 @@ mod tests {
 
     #[test]
     fn get_from_address() {
-        let id = generate_random_eddsa_identity();
+        let id = generate_random_ed25519_identity();
+        let public_key = id.public_key();
         let data = GetFromAddressArgs(
             Address::from_str("maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp").unwrap(),
         );
         let ret = GetReturns {
             cred_id: CredentialId(ByteVec::from(Vec::from([1u8; 16]))),
-            public_key: PublicKey(ByteVec::from(id.key.unwrap().to_vec().unwrap())),
+            public_key: PublicKey(ByteVec::from(public_key.to_vec().unwrap())),
         };
         let mut mock: MockIdStoreModuleBackend = MockIdStoreModuleBackend::new();
         mock.expect_get_from_address()

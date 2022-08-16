@@ -3,6 +3,7 @@ use coset::iana::{EnumI64, OkpKeyParameter};
 use coset::{CborSerializable, CoseKey, CoseSign1, CoseSign1Builder, Label};
 use ed25519_dalek::Keypair;
 use many_error::ManyError;
+use many_identity::cose::add_keyset_header;
 use many_identity::{Address, Identity, Verifier};
 use pkcs8::der::Document;
 use sha3::{Digest, Sha3_224};
@@ -57,7 +58,7 @@ fn address(key: &CoseKey) -> Result<Address, ManyError> {
     Ok(unsafe { Address::public_key_raw(pk.into()) })
 }
 
-fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
+pub fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
     match key.alg {
         Some(coset::Algorithm::Assigned(coset::iana::Algorithm::EdDSA)) => {
             let x = key
@@ -188,6 +189,10 @@ impl Identity for Ed25519IdentityInner {
         self.address
     }
 
+    fn public_key(&self) -> Option<CoseKey> {
+        Some(self.public_key.clone())
+    }
+
     fn sign_1(&self, mut envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
         // Add the algorithm and key id.
         envelope.protected.header.alg =
@@ -238,6 +243,10 @@ impl Identity for Ed25519SharedIdentity {
         self.0.address()
     }
 
+    fn public_key(&self) -> Option<CoseKey> {
+        Some(self.0.public_key.clone())
+    }
+
     fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
         self.0.sign_1(envelope)
     }
@@ -280,6 +289,10 @@ impl Ed25519Identity {
         );
         Self::from_key(&cose_key)
     }
+
+    pub fn public_key(&self) -> CoseKey {
+        self.0.public_key.clone()
+    }
 }
 
 impl Identity for Ed25519Identity {
@@ -287,18 +300,12 @@ impl Identity for Ed25519Identity {
         self.0.address
     }
 
-    fn sign_1(&self, mut envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
-        let mut keyset = coset::CoseKeySet::default();
-        let mut key_public = self.0.public_key.clone();
-        key_public.key_id = self.address().to_vec();
-        keyset.0.push(key_public);
+    fn public_key(&self) -> Option<CoseKey> {
+        Some(self.0.public_key.clone())
+    }
 
-        envelope.protected.header.rest.push((
-            Label::Text("keyset".to_string()),
-            Value::Bytes(keyset.to_vec().map_err(|e| ManyError::unknown(e))?),
-        ));
-
-        self.0.sign_1(envelope)
+    fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
+        self.0.sign_1(add_keyset_header(envelope, self)?)
     }
 }
 
@@ -306,6 +313,15 @@ impl Identity for Ed25519Identity {
 pub struct Ed25519Verifier {
     address: Address,
     public_key: ed25519_dalek::PublicKey,
+}
+
+impl Ed25519Verifier {
+    pub fn verify_signature(&self, signature: &[u8], data: &[u8]) -> Result<(), ManyError> {
+        let sig = ed25519::Signature::from_bytes(signature)
+            .map_err(|e| ManyError::could_not_verify_signature(e))?;
+        signature::Verifier::verify(&self.public_key, data, &sig)
+            .map_err(|e| ManyError::could_not_verify_signature(e))
+    }
 }
 
 impl Ed25519Verifier {
@@ -343,13 +359,7 @@ impl Verifier for Ed25519Verifier {
     fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
         let address = Address::from_bytes(&envelope.protected.header.key_id)?;
         if self.address.matches(&address) {
-            envelope.verify_signature(&[], |signature, msg| {
-                let sig = ed25519::Signature::from_bytes(signature)
-                    .map_err(|e| ManyError::could_not_verify_signature(e))?;
-                signature::Verifier::verify(&self.public_key, msg, &sig)
-                    .map_err(|e| ManyError::could_not_verify_signature(e))
-            })?;
-            Ok(())
+            envelope.verify_signature(&[], |signature, msg| self.verify_signature(signature, msg))
         } else {
             Err(ManyError::unknown(format!(
                 "Address in envelope does not match expected address. Expected: {}, Actual: {}",
@@ -357,4 +367,19 @@ impl Verifier for Ed25519Verifier {
             )))
         }
     }
+}
+
+#[cfg(feature = "testing")]
+pub fn generate_random_ed25519_identity() -> Ed25519Identity {
+    use rand::rngs::OsRng;
+
+    let mut csprng = OsRng {};
+    let keypair: Keypair = Keypair::generate(&mut csprng);
+
+    let cose_key = eddsa_cose_key(
+        keypair.public.to_bytes().to_vec(),
+        Some(keypair.secret.to_bytes().to_vec()),
+    );
+
+    Ed25519Identity::from_key(&cose_key).unwrap()
 }

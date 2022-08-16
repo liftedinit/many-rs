@@ -1,22 +1,23 @@
+use coset::{CoseKey, CoseSign1, CoseSign1Builder};
 use cryptoki::context::{CInitializeArgs, Pkcs11};
 use cryptoki::mechanism::{Mechanism, MechanismType};
 use cryptoki::object::{Attribute, AttributeType, ObjectHandle};
 use cryptoki::session::{Session, SessionFlags, UserType};
 use cryptoki::slot::Slot;
+use many_error::ManyError;
+use many_identity::cose::add_keyset_header;
+use many_identity::Address;
 use once_cell::sync::Lazy;
-use tracing::{error, trace};
-
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
-
-use crate::ManyError;
+use tracing::{error, trace};
 
 /// HSM Singleton
 /// PKCS#11 v2.40 specifies that
 ///
 /// "An application should never make multiple simultaneous function call to
 /// Cryptoki which use a common session. If multiple threads of an application
-/// attempt to use a common sesion concurrently in this fashion, Cryptoki does
+/// attempt to use a common session concurrently in this fashion, Cryptoki does
 /// not define what happens. This means that if a multiple threads of an
 /// application all need to use Cryptoki to access a particular token, it might
 /// be appropriate for each thread to have its own session with the token,
@@ -26,7 +27,7 @@ use crate::ManyError;
 ///
 /// If one ever modify this behavior, make sure that the application/tests don't
 /// hit the Cryptoki simultaneously
-static HSM_INSTANCE: Lazy<Mutex<Hsm>> = Lazy::new(|| Mutex::new(Hsm::new()));
+static HSM_INSTANCE: Lazy<Mutex<Hsm>> = Lazy::new(|| Mutex::new(Hsm::default()));
 
 /// Same as cryptoki::session::UserType
 pub type HsmUserType = UserType;
@@ -57,8 +58,7 @@ pub struct Hsm {
 impl Hsm {
     /// Return the HSM global instance
     pub fn get_instance() -> Result<MutexGuard<'static, Hsm>, ManyError> {
-        let hsm = HSM_INSTANCE.lock().map_err(ManyError::hsm_mutex_poisoned)?;
-        Ok(hsm)
+        HSM_INSTANCE.lock().map_err(ManyError::hsm_mutex_poisoned)
     }
 
     /// Perform message signature on the HSM using the given mechanism
@@ -75,7 +75,7 @@ impl Hsm {
         trace!("Signing message using HSM");
         let signature = session
             .sign(mechanism, signer, msg)
-            .map_err(|e| ManyError::hsm_sign_error(format!("{e}")))?;
+            .map_err(|e| ManyError::hsm_sign_error(e))?;
         Ok(signature)
     }
 
@@ -308,12 +308,72 @@ impl Hsm {
         }
         Ok(())
     }
+}
 
-    /// Default constructor. You should not call this and use HSM_INSTANCE instead
-    fn new() -> Hsm {
-        Hsm {
-            ..Default::default()
-        }
+#[derive(Clone)]
+pub struct HsmIdentity {
+    address: Address,
+    key: CoseKey,
+}
+
+impl HsmIdentity {
+    pub fn new(mechanism: HsmMechanismType) -> Result<Self, ManyError> {
+        let hsm = Hsm::get_instance()?;
+        let (raw_points, _) = hsm.ec_info(mechanism)?;
+        trace!("Creating NIST P-256 SEC1 encoded point");
+        let points = p256::EncodedPoint::from_bytes(raw_points).map_err(ManyError::unknown)?;
+
+        let key = many_identity_dsa::ecdsa::ecdsa_cose_key(
+            (points.x().unwrap().to_vec(), points.y().unwrap().to_vec()),
+            None,
+        );
+        let address = many_identity_dsa::ecdsa::address(&key)?;
+        Ok(Self { address, key })
+    }
+}
+
+impl many_identity::Identity for HsmIdentity {
+    fn address(&self) -> Address {
+        self.address
+    }
+
+    fn public_key(&self) -> Option<CoseKey> {
+        Some(self.key.clone())
+    }
+
+    fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
+        let hsm = Hsm::get_instance()?;
+        let mut envelope = add_keyset_header(envelope, self)?;
+
+        // Add the algorithm and key id.
+        envelope.protected.header.alg =
+            Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256));
+        envelope.protected.header.key_id = self.address.to_vec();
+
+        let builder = CoseSign1Builder::new()
+            .protected(envelope.protected.header)
+            .unprotected(envelope.unprotected);
+
+        let builder = if let Some(payload) = envelope.payload {
+            builder.payload(payload)
+        } else {
+            builder
+        };
+
+        Ok(builder
+            .try_create_signature(&[], |bytes| {
+                use sha2::Digest;
+
+                trace!("Digesting message using SHA256 (CPU)");
+                let digest = sha2::Sha256::digest(bytes);
+
+                trace!("Singning message using HSM");
+                let msg_signature = hsm.sign(digest.as_slice(), &HsmMechanism::Ecdsa)?;
+                trace!("Message signature is {}", hex::encode(&msg_signature));
+
+                Ok(msg_signature)
+            })?
+            .build())
     }
 }
 
@@ -504,7 +564,6 @@ mod tests {
     /// This test will initialize a new token and generate a new ECDSA P256 keypair.
     /// The keypair will be destroyed at the end of the test, but the token will remain initialized.
     #[test]
-    #[cfg_attr(not(feature = "hsm_test"), ignore)]
     fn hsm_ecdsa_sign_verify() -> Result<(), ManyError> {
         let slot = init()?;
 
@@ -542,7 +601,6 @@ mod tests {
     /// This test will initialize a new token and generate a new ECDSA P256 keypair.
     /// The keypair will be destroyed at the end of the test, but the token will remain initialized.
     #[test]
-    #[cfg_attr(not(feature = "hsm_test"), ignore)]
     fn hsm_ecdsa_sign_p256_verify() -> Result<(), ManyError> {
         let slot = init()?;
 

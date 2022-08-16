@@ -3,9 +3,9 @@ use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
 use many_client::ManyClient;
 use many_error::ManyError;
-// use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity, Identity};
 use many_identity_dsa::CoseKeyIdentity;
+use many_identity_hsm::{Hsm, HsmIdentity, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
@@ -107,7 +107,7 @@ struct MessageOpt {
 
     /// The server to connect to.
     #[clap(long)]
-    server: Option<url::Url>,
+    server: Option<Url>,
 
     /// If true, prints out the hex value of the message bytes.
     #[clap(long)]
@@ -355,31 +355,29 @@ fn main() {
             }
         }
         SubCommand::HsmId(o) => {
-            unimplemented!()
+            let keyid = hex::decode(o.keyid).expect("Failed to decode keyid to hex");
 
-            // let keyid = hex::decode(o.keyid).expect("Failed to decode keyid to hex");
-            //
-            // {
-            //     let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
-            //     hsm.init(o.module, keyid)
-            //         .expect("Failed to initialize HSM module");
-            //
-            //     // The session will stay open until the application terminates
-            //     hsm.open_session(o.slot, HsmSessionType::RO, None, None)
-            //         .expect("Failed to open HSM session");
-            // }
-            //
-            // let mut id = CoseKeyIdentity::from_hsm(HsmMechanismType::ECDSA)
-            //     .expect("Unable to create CoseKeyIdentity from HSM")
-            //     .identity;
-            //
-            // if let Some(subid) = o.subid {
-            //     id = id
-            //         .with_subresource_id(subid)
-            //         .expect("Invalid subresource id");
-            // }
-            //
-            // println!("{}", id);
+            {
+                let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
+                hsm.init(o.module, keyid)
+                    .expect("Failed to initialize HSM module");
+
+                // The session will stay open until the application terminates
+                hsm.open_session(o.slot, HsmSessionType::RO, None, None)
+                    .expect("Failed to open HSM session");
+            }
+
+            let mut id = HsmIdentity::new(HsmMechanismType::ECDSA)
+                .expect("Unable to create CoseKeyIdentity from HSM")
+                .address();
+
+            if let Some(subid) = o.subid {
+                id = id
+                    .with_subresource_id(subid)
+                    .expect("Invalid subresource id");
+            }
+
+            println!("{}", id);
         }
         SubCommand::Message(o) => {
             let to_identity = o.to.unwrap_or_default();
@@ -395,29 +393,27 @@ fn main() {
             let from_identity: Box<dyn Identity> = if let (Some(module), Some(slot), Some(keyid)) =
                 (o.module, o.slot, o.keyid)
             {
-                // trace!("Getting user PIN");
-                // let pin = rpassword::prompt_password("Please enter the HSM user PIN: ")
-                //     .expect("I/O error when reading HSM PIN");
-                // let keyid = hex::decode(keyid).expect("Failed to decode keyid to hex");
-                //
-                // {
-                //     let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
-                //     hsm.init(module, keyid)
-                //         .expect("Failed to initialize HSM module");
-                //
-                //     // The session will stay open until the application terminates
-                //     hsm.open_session(slot, HsmSessionType::RO, Some(HsmUserType::User), Some(pin))
-                //         .expect("Failed to open HSM session");
-                // }
+                trace!("Getting user PIN");
+                let pin = rpassword::prompt_password("Please enter the HSM user PIN: ")
+                    .expect("I/O error when reading HSM PIN");
+                let keyid = hex::decode(keyid).expect("Failed to decode keyid to hex");
 
-                unimplemented!()
+                {
+                    let mut hsm = Hsm::get_instance().expect("HSM mutex poisoned");
+                    hsm.init(module, keyid)
+                        .expect("Failed to initialize HSM module");
 
-                // trace!("Creating CoseKeyIdentity");
-                // // Only ECDSA is supported at the moment. It should be easy to add support for new EC mechanisms
-                // Box::new(
-                //     CoseKeyIdentity::from_hsm(HsmMechanismType::ECDSA)
-                //         .expect("Unable to create CoseKeyIdentity from HSM"),
-                // )
+                    // The session will stay open until the application terminates
+                    hsm.open_session(slot, HsmSessionType::RO, Some(HsmUserType::User), Some(pin))
+                        .expect("Failed to open HSM session");
+                }
+
+                // Only ECDSA is supported at the moment. It should be easy to add support for
+                // new EC mechanisms.
+                Box::new(
+                    HsmIdentity::new(HsmMechanismType::ECDSA)
+                        .expect("Unable to create CoseKeyIdentity from HSM"),
+                )
             } else if let Some(p) = o.pem {
                 // If `pem` is not provided, use anonymous and don't sign.
                 Box::new(CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap())
@@ -483,7 +479,6 @@ fn main() {
                 o.name,
                 key,
                 AcceptAllVerifier,
-                None,
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
             );
             HttpServer::new(many).bind(o.addr).unwrap();

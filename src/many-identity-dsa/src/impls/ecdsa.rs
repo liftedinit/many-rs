@@ -2,6 +2,7 @@ use coset::cbor::value::Value;
 use coset::iana::{Ec2KeyParameter, EnumI64};
 use coset::{CborSerializable, CoseKey, CoseSign1, CoseSign1Builder, Label};
 use many_error::ManyError;
+use many_identity::cose::add_keyset_header;
 use many_identity::{Address, Identity, Verifier};
 use p256::pkcs8::FromPrivateKey;
 use pkcs8::der::Document;
@@ -55,7 +56,7 @@ pub fn ecdsa_cose_key((x, y): (Vec<u8>, Vec<u8>), d: Option<Vec<u8>>) -> CoseKey
     }
 }
 
-fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
+pub fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
     let params = BTreeMap::from_iter(key.params.clone().into_iter());
     match key.alg {
         Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256)) => {
@@ -80,7 +81,7 @@ fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
     }
 }
 
-fn address(key: &CoseKey) -> Result<Address, ManyError> {
+pub fn address(key: &CoseKey) -> Result<Address, ManyError> {
     let pk = Sha3_224::digest(
         &public_key(key)?
             .ok_or_else(|| ManyError::unknown("Could not load key."))?
@@ -171,6 +172,10 @@ impl Identity for EcDsaIdentityInner {
         self.address
     }
 
+    fn public_key(&self) -> Option<CoseKey> {
+        Some(self.public_key.clone())
+    }
+
     fn sign_1(&self, mut envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
         // Add the algorithm and key id.
         envelope.protected.header.alg =
@@ -244,18 +249,12 @@ impl Identity for EcDsaIdentity {
         self.0.address
     }
 
-    fn sign_1(&self, mut envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
-        let mut keyset = coset::CoseKeySet::default();
-        let mut key_public = self.0.public_key.clone();
-        key_public.key_id = self.address().to_vec();
-        keyset.0.push(key_public);
+    fn public_key(&self) -> Option<CoseKey> {
+        self.0.public_key()
+    }
 
-        envelope.protected.header.rest.push((
-            Label::Text("keyset".to_string()),
-            Value::Bytes(keyset.to_vec().map_err(|e| ManyError::unknown(e))?),
-        ));
-
-        self.0.sign_1(envelope)
+    fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
+        self.0.sign_1(add_keyset_header(envelope, self)?)
     }
 }
 
@@ -293,20 +292,21 @@ impl EcDsaVerifier {
 
         Ok(Self { address, pk })
     }
+
+    pub fn verify_signature(&self, signature: &[u8], data: &[u8]) -> Result<(), ManyError> {
+        let signature = p256::ecdsa::Signature::from_der(signature)
+            .or_else(|_| p256::ecdsa::Signature::from_bytes(signature))
+            .map_err(|e| ManyError::could_not_verify_signature(e))?;
+        signature::Verifier::verify(&self.pk, data, &signature)
+            .map_err(|e| ManyError::could_not_verify_signature(e))
+    }
 }
 
 impl Verifier for EcDsaVerifier {
     fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
         let address = Address::from_bytes(&envelope.protected.header.key_id)?;
         if self.address.matches(&address) {
-            envelope.verify_signature(&[], |signature, msg| {
-                let signature = p256::ecdsa::Signature::from_der(signature)
-                    .or_else(|_| p256::ecdsa::Signature::from_bytes(signature))
-                    .map_err(|e| ManyError::could_not_verify_signature(e))?;
-                signature::Verifier::verify(&self.pk, msg, &signature)
-                    .map_err(|e| ManyError::could_not_verify_signature(e))
-            })?;
-            Ok(())
+            envelope.verify_signature(&[], |signature, msg| self.verify_signature(signature, msg))
         } else {
             Err(ManyError::unknown(format!(
                 "Address in envelope does not match expected address. Expected: {}, Actual: {}",

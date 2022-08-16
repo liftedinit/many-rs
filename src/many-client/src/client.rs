@@ -35,6 +35,7 @@ pub fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<CoseSign1
         .map_err(|_| ManyError::internal_server_error())?;
 
     let client = reqwest::blocking::Client::new();
+    tracing::debug!("request {}", hex::encode(&bytes));
     let response = client
         .post(url)
         .body(bytes)
@@ -42,7 +43,7 @@ pub fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<CoseSign1
         .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
     let body = response.bytes().unwrap();
     let bytes = body.to_vec();
-    tracing::debug!("reply\n{}", hex::encode(&bytes));
+    tracing::debug!("reply {}", hex::encode(&bytes));
     CoseSign1::from_tagged_slice(&bytes)
         .map_err(|e| ManyError::deserialization_error(e.to_string()))
 }

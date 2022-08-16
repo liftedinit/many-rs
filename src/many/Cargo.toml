@@ -17,6 +17,7 @@ many-client = { path = "../many-client", version = "0.1.0" }
 many-error = { path = "../many-error", version = "0.1.0" }
 many-identity = { path = "../many-identity", version = "0.1.0", features = ["coset"] }
 many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0", features = ["ecdsa", "ed25519"] }
+many-identity-hsm = { path = "../many-identity-hsm", version = "0.1.0" }
 many-modules = { path = "../many-modules", version = "0.1.0" }
 many-protocol = { path = "../many-protocol", version = "0.1.0" }
 many-server = { path = "../many-server", version = "0.1.0" }
