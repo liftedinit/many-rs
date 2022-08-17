@@ -357,4 +357,13 @@ pub mod tests {
                          -----END PRIVATE KEY-----";
         let _ = EcDsaIdentity::from_pem(pem);
     }
+
+    #[test]
+    fn from_pem_ecdsa() {
+        let id = ecdsa_256_identity();
+        assert_eq!(
+            id.address(),
+            "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf"
+        );
+    }
 }

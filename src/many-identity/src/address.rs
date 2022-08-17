@@ -632,30 +632,6 @@ pub mod tests {
         }
     }
 
-    // #[test]
-    // fn from_pem_eddsa() {
-    //     let id = eddsa_identity();
-    //     assert_eq!(
-    //         id.identity,
-    //         "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
-    //     );
-    // }
-    //
-    // #[test]
-    // fn from_pem_ecdsa() {
-    //     let id = ecdsa_256_identity();
-    //     assert_eq!(
-    //         id.identity,
-    //         "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf"
-    //     );
-    // }
-    //
-    // #[test]
-    // fn matches_key() {
-    //     let id = eddsa_identity();
-    //     assert!(id.identity.matches_key(id.key.as_ref()));
-    // }
-
     #[test]
     fn serde_anonymous() {
         let id = Address::anonymous();

@@ -411,4 +411,13 @@ pub mod tests {
         let signature = id.try_sign(MSG).unwrap();
         let _ = verifier.verify_signature(&signature, MSG).unwrap();
     }
+
+    #[test]
+    fn from_pem_eddsa() {
+        let id = eddsa_identity();
+        assert_eq!(
+            id.address().to_string(),
+            "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
+        );
+    }
 }
