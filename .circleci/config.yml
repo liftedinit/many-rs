@@ -48,7 +48,8 @@ jobs:
             equal: [ "macos", << parameters.os >> ]
           steps:
             - rust/test:
-                package: --all-targets --features default,client,raw,testing,trace_error_creation
+                # Exclude HSM tests as we are not configured in MacOS for them.
+                package: --all-targets --all-features --exclude many-identity-hsm
                 with_cache: false
       - rust/test:
           package: --all-features --doc
