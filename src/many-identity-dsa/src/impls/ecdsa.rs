@@ -1,5 +1,5 @@
 use coset::cbor::value::Value;
-use coset::iana::{Ec2KeyParameter, EnumI64};
+use coset::iana::{Algorithm, Ec2KeyParameter, EllipticCurve, EnumI64, KeyType};
 use coset::{CborSerializable, CoseKey, CoseSign1, CoseSign1Builder, Label};
 use many_error::ManyError;
 use many_identity::cose::add_keyset_header;
@@ -19,17 +19,11 @@ use std::collections::{BTreeMap, BTreeSet};
 pub fn ecdsa_cose_key((x, y): (Vec<u8>, Vec<u8>), d: Option<Vec<u8>>) -> CoseKey {
     let mut params: Vec<(Label, Value)> = Vec::from([
         (
-            Label::Int(coset::iana::Ec2KeyParameter::Crv as i64),
-            Value::from(coset::iana::EllipticCurve::P_256 as u64),
+            Label::Int(Ec2KeyParameter::Crv as i64),
+            Value::from(EllipticCurve::P_256 as u64),
         ),
-        (
-            Label::Int(coset::iana::Ec2KeyParameter::X as i64),
-            Value::Bytes(x),
-        ),
-        (
-            Label::Int(coset::iana::Ec2KeyParameter::Y as i64),
-            Value::Bytes(y),
-        ),
+        (Label::Int(Ec2KeyParameter::X as i64), Value::Bytes(x)),
+        (Label::Int(Ec2KeyParameter::Y as i64), Value::Bytes(y)),
     ]);
     let mut key_ops: BTreeSet<coset::KeyOperation> =
         BTreeSet::from([coset::KeyOperation::Assigned(
@@ -37,10 +31,7 @@ pub fn ecdsa_cose_key((x, y): (Vec<u8>, Vec<u8>), d: Option<Vec<u8>>) -> CoseKey
         )]);
 
     if let Some(d) = d {
-        params.push((
-            Label::Int(coset::iana::Ec2KeyParameter::D as i64),
-            Value::Bytes(d),
-        ));
+        params.push((Label::Int(Ec2KeyParameter::D as i64), Value::Bytes(d)));
         key_ops.insert(coset::KeyOperation::Assigned(
             coset::iana::KeyOperation::Sign,
         ));
@@ -48,8 +39,8 @@ pub fn ecdsa_cose_key((x, y): (Vec<u8>, Vec<u8>), d: Option<Vec<u8>>) -> CoseKey
 
     // The CoseKeyBuilder is too limited to be used here
     CoseKey {
-        kty: coset::KeyType::Assigned(coset::iana::KeyType::EC2),
-        alg: Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256)),
+        kty: coset::KeyType::Assigned(KeyType::EC2),
+        alg: Some(coset::Algorithm::Assigned(Algorithm::ES256)),
         key_ops,
         params,
         ..Default::default()
@@ -59,9 +50,9 @@ pub fn ecdsa_cose_key((x, y): (Vec<u8>, Vec<u8>), d: Option<Vec<u8>>) -> CoseKey
 pub fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
     let params = BTreeMap::from_iter(key.params.clone().into_iter());
     match key.alg {
-        Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256)) => {
-            let x = params.get(&Label::Int(coset::iana::Ec2KeyParameter::X.to_i64()));
-            let y = params.get(&Label::Int(coset::iana::Ec2KeyParameter::Y.to_i64()));
+        Some(coset::Algorithm::Assigned(Algorithm::ES256)) => {
+            let x = params.get(&Label::Int(Ec2KeyParameter::X.to_i64()));
+            let y = params.get(&Label::Int(Ec2KeyParameter::Y.to_i64()));
 
             if let (Some(x), Some(y)) = (x.cloned(), y.cloned()) {
                 let x = x
@@ -132,12 +123,8 @@ struct EcDsaIdentityInner {
 }
 
 impl EcDsaIdentityInner {
-    pub fn from_points(
-        x: impl ToOwned<Owned = Vec<u8>>,
-        y: impl ToOwned<Owned = Vec<u8>>,
-        d: impl ToOwned<Owned = Option<Vec<u8>>>,
-    ) -> Result<Self, ManyError> {
-        let key = ecdsa_cose_key((x.to_owned(), y.to_owned()), d.to_owned());
+    pub fn from_points(x: Vec<u8>, y: Vec<u8>, d: Option<Vec<u8>>) -> Result<Self, ManyError> {
+        let key = ecdsa_cose_key((x, y), d);
 
         Self::from_key(key)
     }
@@ -149,7 +136,7 @@ impl EcDsaIdentityInner {
 
         check_key(&cose_key, true, false)?;
 
-        let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
+        let params = BTreeMap::from_iter(cose_key.params.into_iter());
         let d = params
             .get(&Label::Int(Ec2KeyParameter::D.to_i64()))
             .ok_or_else(|| ManyError::unknown("Could not find the D parameter in key"))?
@@ -210,11 +197,7 @@ impl Identity for EcDsaIdentityInner {
 pub struct EcDsaIdentity(EcDsaIdentityInner);
 
 impl EcDsaIdentity {
-    pub fn from_points(
-        x: impl ToOwned<Owned = Vec<u8>>,
-        y: impl ToOwned<Owned = Vec<u8>>,
-        d: impl ToOwned<Owned = Option<Vec<u8>>>,
-    ) -> Result<Self, ManyError> {
+    pub fn from_points(x: Vec<u8>, y: Vec<u8>, d: Option<Vec<u8>>) -> Result<Self, ManyError> {
         EcDsaIdentityInner::from_points(x, y, d).map(Self)
     }
 
@@ -298,9 +281,9 @@ impl EcDsaVerifier {
     pub fn verify_signature(&self, signature: &[u8], data: &[u8]) -> Result<(), ManyError> {
         let signature = p256::ecdsa::Signature::from_der(signature)
             .or_else(|_| p256::ecdsa::Signature::from_bytes(signature))
-            .map_err(|e| ManyError::could_not_verify_signature(e))?;
+            .map_err(ManyError::could_not_verify_signature)?;
         signature::Verifier::verify(&self.pk, data, &signature)
-            .map_err(|e| ManyError::could_not_verify_signature(e))
+            .map_err(ManyError::could_not_verify_signature)
     }
 }
 

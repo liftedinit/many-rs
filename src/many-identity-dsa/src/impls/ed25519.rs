@@ -315,9 +315,9 @@ pub struct Ed25519Verifier {
 impl Ed25519Verifier {
     pub fn verify_signature(&self, signature: &[u8], data: &[u8]) -> Result<(), ManyError> {
         let sig = ed25519::Signature::from_bytes(signature)
-            .map_err(|e| ManyError::could_not_verify_signature(e))?;
+            .map_err(ManyError::could_not_verify_signature)?;
         signature::Verifier::verify(&self.public_key, data, &sig)
-            .map_err(|e| ManyError::could_not_verify_signature(e))
+            .map_err(ManyError::could_not_verify_signature)
     }
 }
 

@@ -71,11 +71,11 @@ impl WebAuthnVerifier {
         tracing::trace!("Getting `clientData` from unprotected header");
         let client_data = unprotected
             .get(&Label::Text("clientData".to_string()))
-            .ok_or(ManyError::unknown(
-                "`clientData` entry missing from unprotected header",
-            ))?
+            .ok_or_else(|| {
+                ManyError::unknown("`clientData` entry missing from unprotected header")
+            })?
             .as_text()
-            .ok_or(ManyError::unknown("`clientData` entry is not Text"))?;
+            .ok_or_else(|| ManyError::unknown("`clientData` entry is not Text"))?;
         let client_data_json: ClientData =
             serde_json::from_str(client_data).map_err(ManyError::unknown)?;
 
@@ -95,26 +95,22 @@ impl WebAuthnVerifier {
         tracing::trace!("Getting `authData` from unprotected header");
         let auth_data = unprotected
             .get(&Label::Text("authData".to_string()))
-            .ok_or(ManyError::unknown(
-                "`authData` entry missing from unprotected header",
-            ))?
+            .ok_or_else(|| ManyError::unknown("`authData` entry missing from unprotected header"))?
             .as_bytes()
-            .ok_or(ManyError::unknown("`authData` entry is not Bytes"))?;
+            .ok_or_else(|| ManyError::unknown("`authData` entry is not Bytes"))?;
 
         tracing::trace!("Getting `signature` from unprotected header");
         let signature = unprotected
             .get(&Label::Text("signature".to_string()))
-            .ok_or(ManyError::unknown(
-                "`signature` entry missing from unprotected header",
-            ))?
+            .ok_or_else(|| ManyError::unknown("`signature` entry missing from unprotected header"))?
             .as_bytes()
-            .ok_or(ManyError::unknown("`signature` entry is not Bytes"))?;
+            .ok_or_else(|| ManyError::unknown("`signature` entry is not Bytes"))?;
 
         tracing::trace!("Getting payload");
         let payload = envelope
             .payload
             .as_ref()
-            .ok_or(ManyError::unknown("`payload` entry missing but required"))?;
+            .ok_or_else(|| ManyError::unknown("`payload` entry missing but required"))?;
 
         let payload_sha512 = sha2::Sha512::digest(payload);
         let payload_sha512_base64url = base64::encode(payload_sha512);
@@ -131,8 +127,7 @@ impl WebAuthnVerifier {
         tracing::trace!("Decoding `challenge`");
         let challenge = base64::decode_config(&client_data_json.challenge, base64::URL_SAFE_NO_PAD)
             .map_err(ManyError::unknown)?;
-        let challenge: Challenge =
-            minicbor::decode(&challenge).map_err(ManyError::unknown)?;
+        let challenge: Challenge = minicbor::decode(&challenge).map_err(ManyError::unknown)?;
         tracing::trace!("Verifying `challenge` SHA against payload");
         if payload_sha512_base64url != challenge.request_message_sha {
             return Err(ManyError::unknown("`challenge` SHA doesn't match"));
