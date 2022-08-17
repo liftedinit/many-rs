@@ -639,24 +639,6 @@ pub mod tests {
         assert_tokens(&id.compact(), &[Token::Bytes(&[0])]);
     }
 
-    // #[test]
-    // fn serde_pub_key() {
-    //     let id = ecdsa_256_identity().identity;
-    //     assert_tokens(
-    //         &id.readable(),
-    //         &[Token::String(
-    //             "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf",
-    //         )],
-    //     );
-    //     assert_tokens(
-    //         &id.compact(),
-    //         &[Token::Bytes(&[
-    //             1, 132, 209, 73, 162, 9, 88, 81, 212, 153, 75, 10, 129, 43, 159, 125, 140, 66, 165,
-    //             172, 246, 68, 3, 30, 159, 41, 73, 183, 110,
-    //         ])],
-    //     );
-    // }
-
     #[test]
     fn from_str_overflow() {
         assert!(Address::from_str("m").is_err());

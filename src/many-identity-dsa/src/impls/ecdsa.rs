@@ -310,6 +310,7 @@ impl Verifier for EcDsaVerifier {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use serde_test::{assert_tokens, Configure, Token};
 
     const MSG: &[u8] = b"FOOBAR";
 
@@ -364,6 +365,24 @@ pub mod tests {
         assert_eq!(
             id.address(),
             "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf"
+        );
+    }
+
+    #[test]
+    fn serde_pub_key() {
+        let id = ecdsa_256_identity().address();
+        assert_tokens(
+            &id.readable(),
+            &[Token::String(
+                "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf",
+            )],
+        );
+        assert_tokens(
+            &id.compact(),
+            &[Token::Bytes(&[
+                1, 132, 209, 73, 162, 9, 88, 81, 212, 153, 75, 10, 129, 43, 159, 125, 140, 66, 165,
+                172, 246, 68, 3, 30, 159, 41, 73, 183, 110,
+            ])],
         );
     }
 }
