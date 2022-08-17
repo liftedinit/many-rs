@@ -409,7 +409,7 @@ pub mod tests {
         let verifier = Ed25519Verifier::from_key(&id.public_key()).unwrap();
 
         let signature = id.try_sign(MSG).unwrap();
-        let _ = verifier.verify_signature(&signature, MSG).unwrap();
+        verifier.verify_signature(&signature, MSG).unwrap();
     }
 
     #[test]
