@@ -99,14 +99,14 @@ fn check_key(cose_key: &CoseKey, sign: bool, verify: bool) -> Result<(), ManyErr
         return Err(ManyError::unknown("Key cannot verify"));
     }
 
-    if cose_key.kty != coset::KeyType::Assigned(coset::iana::KeyType::EC2) {
+    if cose_key.kty != coset::KeyType::Assigned(KeyType::EC2) {
         return Err(ManyError::unknown(format!(
             "Wrong key type: {:?}",
             cose_key.kty
         )));
     }
 
-    if cose_key.alg != Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256)) {
+    if cose_key.alg != Some(coset::Algorithm::Assigned(Algorithm::ES256)) {
         return Err(ManyError::unknown(format!(
             "Wrong key algorihm: {:?}",
             cose_key.alg
@@ -153,6 +153,13 @@ impl EcDsaIdentityInner {
             sk: sk.into(),
         })
     }
+
+    pub(crate) fn try_sign(&self, bytes: &[u8]) -> Result<Vec<u8>, ManyError> {
+        self.sk
+            .try_sign(bytes)
+            .map(|x| x.as_bytes().to_vec())
+            .map_err(ManyError::unknown)
+    }
 }
 
 impl Identity for EcDsaIdentityInner {
@@ -166,8 +173,7 @@ impl Identity for EcDsaIdentityInner {
 
     fn sign_1(&self, mut envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
         // Add the algorithm and key id.
-        envelope.protected.header.alg =
-            Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256));
+        envelope.protected.header.alg = Some(coset::Algorithm::Assigned(Algorithm::ES256));
         envelope.protected.header.key_id = self.address.to_vec();
 
         let builder = CoseSign1Builder::new()
@@ -181,12 +187,7 @@ impl Identity for EcDsaIdentityInner {
         };
 
         Ok(builder
-            .try_create_signature(&[], |bytes| {
-                let kp = &self.sk;
-                kp.try_sign(bytes)
-                    .map(|x| x.as_bytes().to_vec())
-                    .map_err(ManyError::unknown)
-            })?
+            .try_create_signature(&[], |bytes| self.try_sign(bytes))?
             .build())
     }
 }
@@ -226,6 +227,11 @@ impl EcDsaIdentity {
             Some(sk.to_bytes().to_vec()),
         );
         Self::from_key(cose_key)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn try_sign(&self, bytes: &[u8]) -> Result<Vec<u8>, ManyError> {
+        self.0.try_sign(bytes)
     }
 }
 
@@ -298,5 +304,57 @@ impl Verifier for EcDsaVerifier {
                 self.address, address
             )))
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    const MSG: &[u8] = b"FOOBAR";
+
+    pub fn ecdsa_256_identity() -> EcDsaIdentity {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgNsLo2hVPeUZEOPCw\n\
+                         lLQbhLpwjUbt9BHXKCFMY0i+Wm6hRANCAATyM3MzaNX4ELK6bzqgNC/ODvGOUd60\n\
+                         7A4yltVQLNKUxtTywYy2MIPV8ls1BlUp40zYmQfxCL3VANvZ62ofaMPv\n\
+                         -----END PRIVATE KEY-----";
+
+        EcDsaIdentity::from_pem(pem).unwrap()
+    }
+
+    #[test]
+    fn ecdsa_256_sign_verify() {
+        let id = ecdsa_256_identity();
+        let verifier = EcDsaVerifier::from_key(&id.public_key().unwrap()).unwrap();
+
+        let signature = id.try_sign(MSG).unwrap();
+        verifier.verify_signature(&signature, MSG).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn fail_ecdsa_512() {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIB2zGGfgHhqK9J8Eug\n\
+                         Sb5pnwnRA3OZ5Ks4eXEJJOeqeZu+8vYZbNuK9IY78JcmAI+syc3at1eVPtcAtTUr\n\
+                         qSTAkIehgYkDgYYABABVfJDnPyVOY0N1shZaB5kBPM6JcEb3BZRT8MR4qBp0zXwM\n\
+                         pyh7pdD9wxqsCYQVxl9FbiJSQZXzZTwmXsmTzO8X5AAS52WLB+7Ch+ddQW5UEqj6\n\
+                         Tptw8tbMJhJlD4IH7SDevF+gNetMicMQ1fIFyfCbaK0xxVoLwKJvtp7MIV46IZMC\n\
+                         aA==\n\
+                         -----END PRIVATE KEY-----";
+        EcDsaIdentity::from_pem(pem).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn fail_ecdsa_384() {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDAo/RAjCOzB1SklJw3K\n\
+                         ASQqyjtuVQv7hruJgoy7EotHqD7kFS8c9dyOuoaNyx0V9HChZANiAAQil9Mt9nV4\n\
+                         LDxECgIOQvJJd3UcP1d2rTcBY8XMQDl51gLCvCp9c3v1tz9I/hRCEQcH/d96mNHn\n\
+                         SigsOU15Tt1NMHHgrucDBMeDrMZ+uUIDdZbfpvvh0gCtvmvvH5FLs/Y=\n\
+                         -----END PRIVATE KEY-----";
+        let _ = EcDsaIdentity::from_pem(pem);
     }
 }

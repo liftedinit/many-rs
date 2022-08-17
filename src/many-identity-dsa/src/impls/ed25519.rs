@@ -181,6 +181,13 @@ impl Ed25519IdentityInner {
             key_pair,
         })
     }
+
+    pub(crate) fn try_sign(&self, bytes: &[u8]) -> Result<Vec<u8>, ManyError> {
+        self.key_pair
+            .try_sign(bytes)
+            .map(|x| x.as_bytes().to_vec())
+            .map_err(ManyError::unknown)
+    }
 }
 
 impl Identity for Ed25519IdentityInner {
@@ -209,12 +216,7 @@ impl Identity for Ed25519IdentityInner {
         };
 
         Ok(builder
-            .try_create_signature(&[], |bytes| {
-                let kp = &self.key_pair;
-                kp.try_sign(bytes)
-                    .map(|x| x.as_bytes().to_vec())
-                    .map_err(ManyError::unknown)
-            })?
+            .try_create_signature(&[], |bytes| self.try_sign(bytes))?
             .build())
     }
 }
@@ -289,6 +291,11 @@ impl Ed25519Identity {
 
     pub fn public_key(&self) -> CoseKey {
         self.0.public_key.clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn try_sign(&self, bytes: &[u8]) -> Result<Vec<u8>, ManyError> {
+        self.0.try_sign(bytes)
     }
 }
 
@@ -379,4 +386,29 @@ pub fn generate_random_ed25519_identity() -> Ed25519Identity {
     );
 
     Ed25519Identity::from_key(&cose_key).unwrap()
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    // MSG == FOOBAR
+    const MSG: &[u8] = b"FOOBAR";
+
+    pub fn eddsa_identity() -> Ed25519Identity {
+        let pem = "-----BEGIN PRIVATE KEY-----\n\
+                         MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n\
+                         -----END PRIVATE KEY-----";
+
+        Ed25519Identity::from_pem(pem).unwrap()
+    }
+
+    #[test]
+    fn eddsa_256_sign_verify() {
+        let id = eddsa_identity();
+        let verifier = Ed25519Verifier::from_key(&id.public_key()).unwrap();
+
+        let signature = id.try_sign(MSG).unwrap();
+        let _ = verifier.verify_signature(&signature, MSG).unwrap();
+    }
 }

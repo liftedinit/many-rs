@@ -21,6 +21,11 @@ enum CoseKeyImpl {
 
     #[cfg(feature = "ecdsa")]
     EcDsa(ecdsa::EcDsaIdentity),
+
+    /// This should never be constructed, but in some cases the other enum
+    /// values might not exist and an empty enum is illegal.
+    #[allow(unused)]
+    Illegal_,
 }
 
 impl CoseKeyImpl {
@@ -45,6 +50,8 @@ impl CoseKeyImpl {
 
             #[cfg(feature = "ecdsa")]
             CoseKeyImpl::EcDsa(i) => i.address(),
+
+            CoseKeyImpl::Illegal_ => unreachable!(),
         }
     }
 
@@ -55,6 +62,8 @@ impl CoseKeyImpl {
 
             #[cfg(feature = "ecdsa")]
             CoseKeyImpl::EcDsa(i) => Identity::public_key(i),
+
+            CoseKeyImpl::Illegal_ => unreachable!(),
         }
     }
 
@@ -65,6 +74,8 @@ impl CoseKeyImpl {
 
             #[cfg(feature = "ecdsa")]
             CoseKeyImpl::EcDsa(i) => i.sign_1(envelope),
+
+            CoseKeyImpl::Illegal_ => unreachable!(),
         }
     }
 }
