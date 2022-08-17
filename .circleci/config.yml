@@ -49,7 +49,7 @@ jobs:
           steps:
             - rust/test:
                 # Exclude HSM tests as we are not configured in MacOS for them.
-                package: --all-targets --all-features --exclude many-identity-hsm
+                package: --workspace --all-targets --all-features --exclude many-identity-hsm
                 with_cache: false
       - rust/test:
           package: --all-features --doc
