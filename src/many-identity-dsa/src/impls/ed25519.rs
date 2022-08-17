@@ -9,6 +9,7 @@ use pkcs8::der::Document;
 use sha3::{Digest, Sha3_224};
 use signature::{Signature, Signer};
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 /// Build an EdDSA CoseKey
 ///
@@ -155,10 +156,11 @@ fn key_pair(cose_key: &CoseKey) -> Result<Keypair, ManyError> {
         .map_err(|e| ManyError::unknown(format!("Invalid Ed25519 keypair from bytes: {e}")))
 }
 
+#[derive(Clone)]
 struct Ed25519IdentityInner {
     address: Address,
     public_key: CoseKey,
-    key_pair: Keypair,
+    key_pair: Arc<Keypair>,
 }
 
 impl Ed25519IdentityInner {
@@ -173,7 +175,7 @@ impl Ed25519IdentityInner {
 
     pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
         let public_key = public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
-        let key_pair = key_pair(cose_key)?;
+        let key_pair = Arc::new(key_pair(cose_key)?);
         let address = address(cose_key)?;
 
         Ok(Self {
@@ -254,6 +256,7 @@ impl Identity for Ed25519SharedIdentity {
 
 /// An Ed25519 identity that sign messages and include the public key in the
 /// protected headers.
+#[derive(Clone)]
 pub struct Ed25519Identity(Ed25519IdentityInner);
 
 impl Ed25519Identity {

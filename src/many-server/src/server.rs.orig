@@ -281,11 +281,11 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
         let request = {
             let this = self.lock().unwrap();
-            if let Some(resolver) = this.resolver.as_ref() {
-                many_protocol::decode_request_from_cose_sign1(&envelope, &this.verifier, resolver)
-            } else {
-                many_protocol::decode_request_from_cose_sign1_no_resolve(&envelope, &this.verifier)
-            }
+            many_protocol::decode_request_from_cose_sign1(
+                envelope.clone(),
+                &this.verifier,
+                this.resolver.as_ref(),
+            )
         };
         let mut id = None;
 
@@ -293,6 +293,37 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
             let this = self.lock().unwrap();
             let address = this.identity.address();
 
+<<<<<<< HEAD
+            request
+                .and_then(|message| {
+                    let now = this
+                        .time_fn
+                        .as_ref()
+                        .map_or_else(|| Ok(SystemTime::now()), |f| f())?;
+
+                    id = message.id;
+                    _validate_time(&message, now, this.timeout)?;
+                    Ok(message)
+                })
+                .and_then(|message| {
+                    this.validate_id(&message)?;
+                    Ok(message)
+                })
+                .map(|message| {
+                    let maybe_module = this.find_module(&message);
+                    (message, maybe_module)
+                })
+                .and_then(|(message, maybe_module)| {
+                    if let Some(ref m) = maybe_module {
+                        m.validate(&message, &envelope)?;
+                    }
+                    Ok((message, maybe_module))
+                })
+                .map(|(message, maybe_module)| {
+                    (address, message, maybe_module, this.fallback.clone())
+                })
+                .map_err(|many_err| ResponseMessage::error(address, id, many_err))
+=======
             (|| {
                 let message = request?;
 
@@ -312,9 +343,15 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                     m.validate(&message, &envelope)?;
                 };
 
-                Ok((address, message, maybe_module, this.fallback.clone()))
+                Ok((
+                    cose_id.clone(),
+                    message,
+                    maybe_module,
+                    this.fallback.clone(),
+                ))
             })()
-            .map_err(|many_err| ResponseMessage::error(address, id, many_err))
+            .map_err(|many_err: ManyError| ResponseMessage::error(&cose_id.identity, id, many_err))
+>>>>>>> upstream/main
         };
 
         match response {

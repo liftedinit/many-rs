@@ -124,6 +124,7 @@ fn check_key(cose_key: &CoseKey, sign: bool, verify: bool) -> Result<(), ManyErr
     Ok(())
 }
 
+#[derive(Clone)]
 struct EcDsaIdentityInner {
     address: Address,
     public_key: CoseKey,
@@ -205,6 +206,7 @@ impl Identity for EcDsaIdentityInner {
 
 /// An EcDsa identity that sign messages and include the public key in the
 /// protected headers.
+#[derive(Clone)]
 pub struct EcDsaIdentity(EcDsaIdentityInner);
 
 impl EcDsaIdentity {

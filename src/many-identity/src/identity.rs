@@ -13,7 +13,7 @@ pub trait Verifier: Send {
     fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError>;
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct AnonymousIdentity;
 
 impl Identity for AnonymousIdentity {
@@ -92,24 +92,18 @@ pub mod verifiers {
             $clsName
         };
         ( $cls: expr, $last: expr $(,)? ) => {
-            $crate::verifiers::OneOf::new($cls, $last)
+            $crate::verifiers::OneOf($cls, $last)
         };
         ( $cls: expr, $last: expr, $($tail: expr),* ) => {
-            $crate::verifiers::OneOf::new(
-                $crate::verifier::OneOf::new($cls, $last),
+            $crate::verifiers::OneOf(
+                $crate::verifiers::OneOf($cls, $last),
                 one_of!($($tail),*)
             )
         };
     }
     pub use one_of;
 
-    pub struct OneOf<L: Verifier, R: Verifier>(L, R);
-
-    impl<L: Verifier, R: Verifier> OneOf<L, R> {
-        pub fn new(l: L, r: R) -> Self {
-            Self(l, r)
-        }
-    }
+    pub struct OneOf<L: Verifier, R: Verifier>(pub L, pub R);
 
     impl<L: Verifier, R: Verifier> Verifier for OneOf<L, R> {
         #[inline]

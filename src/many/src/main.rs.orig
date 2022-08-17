@@ -3,10 +3,15 @@ use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
 use many_client::ManyClient;
 use many_error::ManyError;
+<<<<<<< HEAD
 use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity, Identity};
 use many_identity_dsa::CoseKeyIdentity;
 use many_identity_hsm::{Hsm, HsmIdentity, HsmMechanismType, HsmSessionType, HsmUserType};
+=======
+use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
+use many_identity::{Address, CoseKeyIdentity};
 use many_mock::{parse_mockfile, server::ManyMockServer, MockEntries};
+>>>>>>> upstream/main
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
@@ -484,8 +489,12 @@ fn main() {
 
             let many = ManyServer::simple(
                 o.name,
-                key.clone(),
+<<<<<<< HEAD
+                key,
                 AcceptAllVerifier,
+=======
+                key.clone(),
+>>>>>>> upstream/main
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
             );
             let mockfile = o.mockfile.unwrap_or_default();

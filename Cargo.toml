@@ -8,6 +8,7 @@ members = [
     "src/many-identity-hsm",
     "src/many-identity-webauthn",
     "src/many-macros",
+    "src/many-mock",
     "src/many-modules",
     "src/many-protocol",
     "src/many-server",

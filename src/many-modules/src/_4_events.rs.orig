@@ -733,10 +733,17 @@ mod test {
             fn submit_send(memo in string_regex("[A-Za-z0-9\\., ]{0,4000}").unwrap(), amount: u64) {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::Send(module::ledger::SendArgs {
+<<<<<<< HEAD
+                    _create_event_info(memo, vec![], AccountMultisigTransaction::Send(module::ledger::SendArgs {
                         from: Some(identity(2)),
                         to: identity(3),
                         symbol: identity(4),
+=======
+                    _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::Send(module::ledger::SendArgs {
+                        from: Some(Address::public_key_raw([2; 28])),
+                        to: Address::public_key_raw([3; 28]),
+                        symbol: Address::public_key_raw([4; 28]),
+>>>>>>> upstream/main
                         amount: amount.into(),
                     })),
                 );
@@ -747,7 +754,8 @@ mod test {
                 let memo = memo.try_into().unwrap();
                 let memo2 = memo2.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![].try_into().unwrap(),
+<<<<<<< HEAD
+                    _create_event_info(memo, vec![],
                         AccountMultisigTransaction::AccountMultisigSubmit(
                             module::account::features::multisig::SubmitTransactionArgs {
                                 account: identity(2),
@@ -764,6 +772,25 @@ mod test {
                                 data: None,
                             }
                         )
+=======
+                    _create_event_info(memo, vec![].try_into().unwrap(),
+                                       AccountMultisigTransaction::AccountMultisigSubmit(
+                                           module::account::features::multisig::SubmitTransactionArgs {
+                                               account: Address::public_key_raw([2; 28]),
+                                               memo: Some(memo2),
+                                               transaction: Box::new(AccountMultisigTransaction::Send(module::ledger::SendArgs {
+                                                   from: Some(Address::public_key_raw([2; 28])),
+                                                   to: Address::public_key_raw([3; 28]),
+                                                   symbol: Address::public_key_raw([4; 28]),
+                                                   amount: amount.into(),
+                                               })),
+                                               threshold: None,
+                                               timeout_in_secs: None,
+                                               execute_automatically: None,
+                                               data: None,
+                                           }
+                                       )
+>>>>>>> upstream/main
                     )
                 );
             }
@@ -772,8 +799,13 @@ mod test {
             fn submit_set_defaults(memo in string_regex("[A-Za-z0-9\\., ]{0,4000}").unwrap()) {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
+<<<<<<< HEAD
+                    _create_event_info(memo, vec![], AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
                         account: identity(2),
+=======
+                    _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
+                        account: Address::public_key_raw([2; 28]),
+>>>>>>> upstream/main
                         threshold: Some(2),
                         timeout_in_secs: None,
                         execute_automatically: Some(false),
@@ -852,18 +884,18 @@ mod tests {
 
     #[test]
     fn encode_decode() {
-        let event = hex::decode(
-            "a30045030000000201c11a62e7dcea02a500820\
+        let event = hex::decode("a30045030000000201c11a62e7dcea02a500820\
 982010301d92710582080e8acda9634f6f745be872b0e5e9b65b1d3624a3ba91c6432143\
 f60e90000020245020000000103f604d92712a301d92710582080e8acda9634f6f745be8\
 72b0e5e9b65b1d3624a3ba91c6432143f60e900000204a3003a00015f9001781d4163636\
 f756e742077697468204944207b69647d20756e6b6e6f776e2e02a162696478326d61666\
 66261686b736477617165656e6179793267786b65333268676237617134616f347774373\
-4356c7366733677696a7005c11a62e7dcf5",
-        )
-        .unwrap();
+4356c7366733677696a7005c11a62e7dcf5").unwrap();
         let event_log: EventLog = minicbor::decode(&event).unwrap();
-        if let EventInfo::AccountMultisigExecute { response, .. } = event_log.content {
+        if let EventInfo::AccountMultisigExecute {
+            response,
+            ..
+        } = event_log.content {
             assert!(response.data.unwrap_err().is_attribute_specific());
         }
     }

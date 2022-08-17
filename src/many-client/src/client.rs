@@ -19,7 +19,7 @@ pub struct ManyClient<I: Identity> {
     verifier: OneOf<AnonymousVerifier, CoseKeyVerifier>,
 }
 
-impl<I: Identity + Debug> std::fmt::Debug for ManyClient<I> {
+impl<I: Identity + Debug> Debug for ManyClient<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ManyClient")
             .field("id", &self.identity)

@@ -41,3 +41,17 @@ pub fn add_keyset_header(
 
     Ok(envelope)
 }
+
+/// Extract the keyset parameter from the envelope.
+pub fn keyset_from_cose_sign1(envelope: &CoseSign1) -> Option<CoseKeySet> {
+    let keyset = &envelope
+        .protected
+        .header
+        .rest
+        .iter()
+        .find(|(k, _)| k == &coset::Label::Text("keyset".to_string()))?
+        .1;
+
+    let bytes = keyset.as_bytes()?;
+    CoseKeySet::from_slice(bytes).ok()
+}

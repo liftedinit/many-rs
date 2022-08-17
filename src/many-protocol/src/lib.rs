@@ -42,10 +42,9 @@ impl IdentityResolver for Box<dyn IdentityResolver> {
     }
 }
 
-pub fn decode_request_from_cose_sign1(
-    envelope: CoseSign1,
+pub fn decode_request_from_cose_sign1_no_resolve(
+    envelope: &CoseSign1,
     verifier: &impl Verifier,
-    resolver: Option<&impl IdentityResolver>,
 ) -> Result<RequestMessage, ManyError> {
     verifier.sign_1(&envelope)?;
 
@@ -53,15 +52,21 @@ pub fn decode_request_from_cose_sign1(
         .payload
         .as_ref()
         .ok_or_else(ManyError::empty_envelope)?;
-    let message = RequestMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
+    RequestMessage::from_bytes(payload).map_err(ManyError::deserialization_error)
+}
 
-    if let Some(resolver) = resolver {
-        let from_id = resolver.resolve_request(&envelope, &message)?;
+pub fn decode_request_from_cose_sign1(
+    envelope: &CoseSign1,
+    verifier: &impl Verifier,
+    resolver: &impl IdentityResolver,
+) -> Result<RequestMessage, ManyError> {
+    let message = decode_request_from_cose_sign1_no_resolve(envelope, verifier)?;
 
-        // Check the `from` field.
-        if !from_id.matches(&message.from.unwrap_or_default()) {
-            return Err(ManyError::invalid_from_identity());
-        }
+    let from_id = resolver.resolve_request(&envelope, &message)?;
+
+    // Check the `from` field.
+    if !from_id.matches(&message.from.unwrap_or_default()) {
+        return Err(ManyError::invalid_from_identity());
     }
 
     Ok(message)

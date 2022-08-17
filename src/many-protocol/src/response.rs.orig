@@ -150,7 +150,17 @@ impl<C> Encode<C> for ResponseMessage {
         };
 
         e.i8(ResponseMessageCborKey::Timestamp as i8)?;
+<<<<<<< HEAD
+        let timestamp = self.timestamp.unwrap_or_else(SystemTime::now);
+        e.tag(Tag::Timestamp)?.u64(
+            timestamp
+                .duration_since(UNIX_EPOCH)
+                .expect("Time flew backward")
+                .as_secs(),
+        )?;
+=======
         e.encode(self.timestamp.unwrap_or_else(Timestamp::now))?;
+>>>>>>> upstream/main
 
         if let Some(ref id) = self.id {
             e.i8(ResponseMessageCborKey::Id as i8)?.u64(*id)?;
@@ -194,7 +204,27 @@ impl<'b, C> Decode<'b, C> for ResponseMessage {
                     Type::Map => builder.data(Err(d.decode()?)),
                     _ => &mut builder,
                 },
+<<<<<<< HEAD
+                Some(ResponseMessageCborKey::Timestamp) => {
+                    // Some logic applies.
+                    let t = d.tag()?;
+                    if t != Tag::Timestamp {
+                        return Err(minicbor::decode::Error::message("Invalid tag."));
+                    }
+
+                    let secs = d.u64()?;
+                    let timestamp = UNIX_EPOCH
+                        .checked_add(Duration::from_secs(secs))
+                        .ok_or_else(|| {
+                            minicbor::decode::Error::message(
+                                "duration value can not represent system time",
+                            )
+                        })?;
+                    builder.timestamp(timestamp)
+                }
+=======
                 Some(ResponseMessageCborKey::Timestamp) => builder.timestamp(d.decode()?),
+>>>>>>> upstream/main
                 Some(ResponseMessageCborKey::Attributes) => builder.attributes(d.decode()?),
                 _ => &mut builder,
             };

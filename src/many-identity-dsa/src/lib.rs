@@ -1,4 +1,4 @@
-use coset::{CborSerializable, CoseKey, CoseKeySet, CoseSign1};
+use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
 use many_identity::{Address, Identity, Verifier};
 use std::fmt::{Debug, Formatter};
@@ -11,9 +11,67 @@ pub use impls::ed25519;
 
 #[cfg(feature = "ecdsa")]
 pub use impls::ecdsa;
+use many_identity::cose::keyset_from_cose_sign1;
 
+#[derive(Clone)]
+#[non_exhaustive]
+enum CoseKeyImpl {
+    #[cfg(feature = "ed25519")]
+    Ed25519(ed25519::Ed25519Identity),
+
+    #[cfg(feature = "ecdsa")]
+    EcDsa(ecdsa::EcDsaIdentity),
+}
+
+impl CoseKeyImpl {
+    pub fn from_pem(pem: &str) -> Option<Self> {
+        #[cfg(feature = "ed25519")]
+        if let Ok(i) = ed25519::Ed25519Identity::from_pem(pem) {
+            return Some(Self::Ed25519(i));
+        }
+
+        #[cfg(feature = "ecdsa")]
+        if let Ok(i) = ecdsa::EcDsaIdentity::from_pem(pem) {
+            return Some(Self::EcDsa(i));
+        }
+
+        None
+    }
+
+    pub fn address(&self) -> Address {
+        match self {
+            #[cfg(feature = "ed25519")]
+            CoseKeyImpl::Ed25519(i) => i.address(),
+
+            #[cfg(feature = "ecdsa")]
+            CoseKeyImpl::EcDsa(i) => i.address(),
+        }
+    }
+
+    pub fn public_key(&self) -> Option<CoseKey> {
+        match self {
+            #[cfg(feature = "ed25519")]
+            CoseKeyImpl::Ed25519(i) => Identity::public_key(i),
+
+            #[cfg(feature = "ecdsa")]
+            CoseKeyImpl::EcDsa(i) => Identity::public_key(i),
+        }
+    }
+
+    pub fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
+        match self {
+            #[cfg(feature = "ed25519")]
+            CoseKeyImpl::Ed25519(i) => i.sign_1(envelope),
+
+            #[cfg(feature = "ecdsa")]
+            CoseKeyImpl::EcDsa(i) => i.sign_1(envelope),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct CoseKeyIdentity {
-    inner: Box<dyn Identity>,
+    inner: CoseKeyImpl,
 }
 
 impl Debug for CoseKeyIdentity {
@@ -24,42 +82,12 @@ impl Debug for CoseKeyIdentity {
     }
 }
 
-macro_rules! try_initialize {
-    ($init: expr, $name: literal) => {
-        match $init {
-            Ok(result) => {
-                return Ok(Self {
-                    inner: Box::new(result),
-                });
-            }
-            Err(err) => {
-                trace!("Initialization error ({}): {}", $name, err)
-            }
-        }
-    };
-}
-
-macro_rules! try_verify {
-    ($init: expr, $envelope: ident, $name: literal) => {
-        match $init {
-            Ok(v) => {
-                return v.sign_1($envelope);
-            }
-            Err(err) => {
-                trace!("Initialization error ({}): {}", $name, err)
-            }
-        }
-    };
-}
-
 impl CoseKeyIdentity {
-    pub fn from_pem(pem: impl AsRef<str>) -> Result<Self, String> {
-        #[cfg(feature = "ed25519")]
-        try_initialize!(ed25519::Ed25519Identity::from_pem(&pem), "Ed25519");
-        #[cfg(feature = "ecdsa")]
-        try_initialize!(ecdsa::EcDsaIdentity::from_pem(&pem), "EcDSA");
-
-        Err("Algorithm unsupported.".to_string())
+    pub fn from_pem(pem: impl AsRef<str>) -> Result<Self, ManyError> {
+        Ok(Self {
+            inner: CoseKeyImpl::from_pem(pem.as_ref())
+                .ok_or_else(|| ManyError::unknown("Algorithm unsupported."))?,
+        })
     }
 }
 
@@ -77,17 +105,17 @@ impl Identity for CoseKeyIdentity {
     }
 }
 
-fn _keyset_from_cose_sign1(envelope: &CoseSign1) -> Option<CoseKeySet> {
-    let keyset = &envelope
-        .protected
-        .header
-        .rest
-        .iter()
-        .find(|(k, _)| k == &coset::Label::Text("keyset".to_string()))?
-        .1;
-
-    let bytes = keyset.as_bytes()?;
-    CoseKeySet::from_slice(bytes).ok()
+macro_rules! try_verify {
+    ($init: expr, $envelope: ident, $name: literal) => {
+        match $init {
+            Ok(v) => {
+                return v.sign_1($envelope);
+            }
+            Err(err) => {
+                trace!("Initialization error ({}): {}", $name, err)
+            }
+        }
+    };
 }
 
 #[derive(Clone)]
@@ -98,7 +126,7 @@ impl Verifier for CoseKeyVerifier {
         let keyid = &envelope.protected.header.key_id;
 
         // Extract the keyset argument.
-        let keyset = _keyset_from_cose_sign1(envelope)
+        let keyset = keyset_from_cose_sign1(envelope)
             .ok_or_else(|| ManyError::unknown("Could not find keyset in headers."))?;
 
         let key = keyset
