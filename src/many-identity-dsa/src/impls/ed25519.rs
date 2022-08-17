@@ -164,11 +164,8 @@ struct Ed25519IdentityInner {
 }
 
 impl Ed25519IdentityInner {
-    pub fn from_points(
-        x: impl ToOwned<Owned = Vec<u8>>,
-        d: impl ToOwned<Owned = Option<Vec<u8>>>,
-    ) -> Result<Self, ManyError> {
-        let key = eddsa_cose_key(x.to_owned(), d.to_owned());
+    pub fn from_points(x: Vec<u8>, d: Option<Vec<u8>>) -> Result<Self, ManyError> {
+        let key = eddsa_cose_key(x, d);
 
         Self::from_key(&key)
     }
@@ -228,10 +225,7 @@ impl Identity for Ed25519IdentityInner {
 pub struct Ed25519SharedIdentity(Ed25519IdentityInner);
 
 impl Ed25519SharedIdentity {
-    pub fn from_points(
-        x: impl ToOwned<Owned = Vec<u8>>,
-        d: impl ToOwned<Owned = Option<Vec<u8>>>,
-    ) -> Result<Self, ManyError> {
+    pub fn from_points(x: Vec<u8>, d: Option<Vec<u8>>) -> Result<Self, ManyError> {
         Ed25519IdentityInner::from_points(x, d).map(Self)
     }
 

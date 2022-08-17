@@ -80,9 +80,9 @@ impl TryInto<SubresourceId> for u64 {
     }
 }
 
-impl Into<u32> for SubresourceId {
-    fn into(self) -> u32 {
-        self.0
+impl From<SubresourceId> for u32 {
+    fn from(id: SubresourceId) -> Self {
+        id.0
     }
 }
 
@@ -175,11 +175,13 @@ impl Address {
     }
 
     /// Create an identity from the raw value of a public key hash, without checking
-    /// its validity. This is marked as unsafe to make sure the caller knows they
-    /// are not supposed to use this function directly without thinking a bit more
-    /// about it.
+    /// its validity.
     ///
-    /// To use this method without unsafe code, use an utility function available
+    /// # Safety
+    /// This is marked as unsafe to make sure the caller knows they are not supposed
+    /// to use this function directly without thinking a bit more about it.
+    ///
+    /// To use this method without unsafe code, use a utility function available
     /// in a separate crate (like many-identity-dsa) or in the testing utilities
     /// available here to create a bogus address.
     #[inline(always)]
@@ -188,9 +190,12 @@ impl Address {
     }
 
     /// Create an identity from the raw value of a public key hash and a subresource
-    /// id. The hash isn't validated, but the subid is. This is marked as unsafe to
-    /// make sure the caller knows they are not supposed to use this function
-    /// directly without thinking a bit more about it.
+    /// id. The hash isn't validated, but the subid is.
+    ///
+    /// # Safety
+    ///
+    /// This is marked as unsafe to make sure the caller knows they are not supposed
+    /// to use this function directly without thinking a bit more about it.
     ///
     /// To use this method without unsafe code, use an utility function available
     /// in a separate crate (like many-identity-dsa) or in the testing utilities

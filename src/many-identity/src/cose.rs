@@ -23,8 +23,8 @@ pub fn add_keyset_header(
         let keyset = &headers[index].1;
         if let Ok(mut keyset) = CoseKeySet::from_cbor_value(keyset.clone()) {
             keyset.0.push(cose_key);
-            *&mut headers.get_mut(index).unwrap().1 =
-                Value::Bytes(keyset.to_vec().map_err(|e| ManyError::unknown(e))?);
+            headers.get_mut(index).unwrap().1 =
+                Value::Bytes(keyset.to_vec().map_err(ManyError::unknown)?);
             return Ok(envelope);
         } else {
             headers.remove(index);
@@ -36,7 +36,7 @@ pub fn add_keyset_header(
 
     envelope.protected.header.rest.push((
         Label::Text("keyset".to_string()),
-        Value::Bytes(keyset.to_vec().map_err(|e| ManyError::unknown(e))?),
+        Value::Bytes(keyset.to_vec().map_err(ManyError::unknown)?),
     ));
 
     Ok(envelope)

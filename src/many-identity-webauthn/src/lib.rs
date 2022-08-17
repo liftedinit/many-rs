@@ -77,7 +77,7 @@ impl WebAuthnVerifier {
             .as_text()
             .ok_or(ManyError::unknown("`clientData` entry is not Text"))?;
         let client_data_json: ClientData =
-            serde_json::from_str(client_data).map_err(|e| ManyError::unknown(e))?;
+            serde_json::from_str(client_data).map_err(ManyError::unknown)?;
 
         tracing::trace!("Verifying the webauthn request type");
         if client_data_json.r#type != "webauthn.get" {
@@ -85,7 +85,7 @@ impl WebAuthnVerifier {
         }
 
         tracing::trace!("Verifying origin");
-        let origin = ManyUrl::parse(&client_data_json.origin).map_err(|e| ManyError::unknown(e))?;
+        let origin = ManyUrl::parse(&client_data_json.origin).map_err(ManyError::unknown)?;
         if let Some(urls) = allowed_origins {
             if !urls.contains(&origin) {
                 return Err(ManyError::unknown("Origin not allowed"));
@@ -130,9 +130,9 @@ impl WebAuthnVerifier {
         }
         tracing::trace!("Decoding `challenge`");
         let challenge = base64::decode_config(&client_data_json.challenge, base64::URL_SAFE_NO_PAD)
-            .map_err(|e| ManyError::unknown(e))?;
+            .map_err(ManyError::unknown)?;
         let challenge: Challenge =
-            minicbor::decode(&challenge).map_err(|e| ManyError::unknown(e))?;
+            minicbor::decode(&challenge).map_err(ManyError::unknown)?;
         tracing::trace!("Verifying `challenge` SHA against payload");
         if payload_sha512_base64url != challenge.request_message_sha {
             return Err(ManyError::unknown("`challenge` SHA doesn't match"));
@@ -141,7 +141,7 @@ impl WebAuthnVerifier {
         tracing::trace!("Decoding ProtectedHeader");
         let protected_header =
             coset::ProtectedHeader::from_cbor_bstr(Value::Bytes(challenge.protected_header))
-                .map_err(|e| ManyError::unknown(e))?;
+                .map_err(ManyError::unknown)?;
         tracing::trace!("Verifying protected header against `challenge`");
         if envelope.protected != protected_header {
             return Err(ManyError::unknown(
@@ -156,7 +156,7 @@ impl WebAuthnVerifier {
         tracing::trace!("Verifying WebAuthn signature");
 
         let key = many_identity_dsa::ecdsa::EcDsaVerifier::from_key(&key)?;
-        key.verify_signature(&cose_sig, &msg)?;
+        key.verify_signature(cose_sig, &msg)?;
 
         tracing::trace!("WebAuthn verifications succedded!");
         Ok(())
@@ -166,7 +166,7 @@ impl WebAuthnVerifier {
     fn _verify(&self, key: CoseKey, envelope: &CoseSign1) -> Result<(), ManyError> {
         let key = many_identity_dsa::ecdsa::EcDsaVerifier::from_key(&key)?;
 
-        envelope.verify_signature(b"", |sig, content| key.verify_signature(&sig, &content))
+        envelope.verify_signature(b"", |sig, content| key.verify_signature(sig, content))
     }
 
     pub fn verify(&self, sign1: &CoseSign1) -> Result<Address, ManyError> {

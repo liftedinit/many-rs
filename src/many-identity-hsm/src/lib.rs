@@ -75,7 +75,7 @@ impl Hsm {
         trace!("Signing message using HSM");
         let signature = session
             .sign(mechanism, signer, msg)
-            .map_err(|e| ManyError::hsm_sign_error(e))?;
+            .map_err(ManyError::hsm_sign_error)?;
         Ok(signature)
     }
 

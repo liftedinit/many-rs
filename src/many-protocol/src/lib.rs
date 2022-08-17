@@ -46,7 +46,7 @@ pub fn decode_request_from_cose_sign1_no_resolve(
     envelope: &CoseSign1,
     verifier: &impl Verifier,
 ) -> Result<RequestMessage, ManyError> {
-    verifier.sign_1(&envelope)?;
+    verifier.sign_1(envelope)?;
 
     let payload = envelope
         .payload
@@ -62,7 +62,7 @@ pub fn decode_request_from_cose_sign1(
 ) -> Result<RequestMessage, ManyError> {
     let message = decode_request_from_cose_sign1_no_resolve(envelope, verifier)?;
 
-    let from_id = resolver.resolve_request(&envelope, &message)?;
+    let from_id = resolver.resolve_request(envelope, &message)?;
 
     // Check the `from` field.
     if !from_id.matches(&message.from.unwrap_or_default()) {

@@ -88,7 +88,7 @@ impl ResponseMessage {
         envelope: &CoseSign1,
         verifier: &impl Verifier,
     ) -> Result<Self, ManyError> {
-        verifier.sign_1(&envelope)?;
+        verifier.sign_1(envelope)?;
 
         let payload = envelope
             .payload
