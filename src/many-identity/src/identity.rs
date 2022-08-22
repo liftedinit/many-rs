@@ -80,56 +80,48 @@ impl Verifier for Box<dyn Verifier> {
     }
 }
 
+macro_rules! declare_tuple_verifiers {
+        ( $name: ident: 0 ) => {
+            impl< $name: Verifier > Verifier for ( $name, ) {
+                #[inline]
+                fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+                    self.0.sign_1(envelope)
+                }
+            }
+        };
+
+        ( $( $name: ident: $index: tt ),* ) => {
+            impl< $( $name: Verifier ),* > Verifier for ( $( $name ),* ) {
+                #[inline]
+                fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+                    let mut errs = Vec::new();
+                    $(
+                        match self. $index . sign_1(envelope) {
+                            Ok(_) => return Ok(()),
+                            Err(e) => errs.push(e.to_string()),
+                        }
+                    )*
+
+                    Err(ManyError::could_not_verify_signature(errs.join(", ")))
+                }
+            }
+        };
+    }
+
+// 8 outta be enough for everyone (but you can also ((a, b), (c, d), ...) recursively).
+declare_tuple_verifiers!(A: 0);
+declare_tuple_verifiers!(A: 0, B: 1);
+declare_tuple_verifiers!(A: 0, B: 1, C: 2);
+declare_tuple_verifiers!(A: 0, B: 1, C: 2, D: 3);
+declare_tuple_verifiers!(A: 0, B: 1, C: 2, D: 3, E: 4);
+declare_tuple_verifiers!(A: 0, B: 1, C: 2, D: 3, E: 4, F: 5);
+declare_tuple_verifiers!(A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6);
+declare_tuple_verifiers!(A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7);
+
 pub mod verifiers {
     use crate::{Address, Verifier};
     use coset::CoseSign1;
     use many_error::ManyError;
-    use std::fmt::{Debug, Formatter};
-
-    #[macro_export]
-    macro_rules! one_of {
-        ( $clsName: expr $(,)? ) => {
-            $clsName
-        };
-        ( $cls: expr, $last: expr $(,)? ) => {
-            $crate::verifiers::OneOf($cls, $last)
-        };
-        ( $cls: expr, $last: expr, $($tail: expr),* ) => {
-            $crate::verifiers::OneOf(
-                $crate::verifiers::OneOf($cls, $last),
-                one_of!($($tail),*)
-            )
-        };
-    }
-    pub use one_of;
-
-    pub struct OneOf<L: Verifier, R: Verifier>(pub L, pub R);
-
-    impl<L: Verifier, R: Verifier> Verifier for OneOf<L, R> {
-        #[inline]
-        fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
-            self.0.sign_1(envelope).or_else(|lerr| {
-                self.1.sign_1(envelope).map_err(|rerr| {
-                    ManyError::unknown(format!("Could not verify: [{}, {}]", lerr, rerr))
-                })
-            })
-        }
-    }
-
-    impl<L: Verifier + Clone, R: Verifier + Clone> Clone for OneOf<L, R> {
-        fn clone(&self) -> Self {
-            Self(self.0.clone(), self.1.clone())
-        }
-    }
-
-    impl<L: Verifier + Debug, R: Verifier + Debug> Debug for OneOf<L, R> {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            f.debug_tuple("OneOf")
-                .field(&self.0)
-                .field(&self.0)
-                .finish()
-        }
-    }
 
     #[derive(Clone, Debug)]
     pub struct AnonymousVerifier;

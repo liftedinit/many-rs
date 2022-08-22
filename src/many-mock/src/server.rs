@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use coset::CoseSign1;
 use many_error::ManyError;
-use many_identity::verifiers::{AnonymousVerifier, OneOf};
-use many_identity::{one_of, Identity};
+use many_identity::verifiers::AnonymousVerifier;
+use many_identity::Identity;
 use many_identity_dsa::CoseKeyVerifier;
 use many_identity_webauthn::WebAuthnVerifier;
 use many_modules::base;
@@ -16,7 +16,7 @@ use crate::MockEntries;
 pub struct ManyMockServer<I: Identity> {
     mock_entries: MockEntries,
     identity: I,
-    verifier: OneOf<OneOf<AnonymousVerifier, CoseKeyVerifier>, WebAuthnVerifier>,
+    verifier: (AnonymousVerifier, CoseKeyVerifier, WebAuthnVerifier),
 }
 
 impl<I: Identity> ManyMockServer<I> {
@@ -25,10 +25,10 @@ impl<I: Identity> ManyMockServer<I> {
         allowed_origins: Option<Vec<ManyUrl>>,
         identity: I,
     ) -> Self {
-        let verifier = one_of!(
+        let verifier = (
             AnonymousVerifier,
             CoseKeyVerifier,
-            WebAuthnVerifier::new(allowed_origins)
+            WebAuthnVerifier::new(allowed_origins),
         );
 
         ManyMockServer {

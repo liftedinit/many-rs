@@ -1,5 +1,5 @@
 use coset::{CoseSign1, TaggedCborSerializable};
-use many_identity::verifiers::{AnonymousVerifier, OneOf};
+use many_identity::verifiers::AnonymousVerifier;
 use many_identity::{verifiers, Identity};
 use many_identity_dsa::CoseKeyVerifier;
 use many_modules::base::Status;
@@ -16,7 +16,7 @@ pub struct ManyClient<I: Identity> {
     identity: I,
     to: Option<Address>,
     url: Url,
-    verifier: OneOf<AnonymousVerifier, CoseKeyVerifier>,
+    verifier: (AnonymousVerifier, CoseKeyVerifier),
 }
 
 impl<I: Identity + Debug> Debug for ManyClient<I> {
@@ -50,7 +50,7 @@ pub fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<CoseSign1
 
 impl<I: Identity> ManyClient<I> {
     pub fn new<S: IntoUrl>(url: S, to: Address, identity: I) -> Result<Self, String> {
-        let verifier = many_identity::one_of!(verifiers::AnonymousVerifier, CoseKeyVerifier);
+        let verifier = (verifiers::AnonymousVerifier, CoseKeyVerifier);
 
         Ok(Self {
             identity,
