@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 many-error = { path = "../many-error", version = "0.1.0" }
-asn1 = { version = "0.8", default-features = false }
+asn1 = { version = "0.11", default-features = false }
 base32 = "0.4.0"
 crc-any = "2.4.3"
 cryptoki = { version = "0.3", features = ["generate-bindings"] }
