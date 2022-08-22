@@ -108,4 +108,5 @@ dist
 target/
 bazel-*
 rust-project.json
+genhtml/
 src/many-modules/proptest-regressions
