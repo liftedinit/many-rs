@@ -4,6 +4,7 @@ package(default_visibility = [
     "//src/many:__pkg__",
     "//src/many-client:__pkg__",
     "//src/many-identity:__pkg__",
+    "//src/many-mock:__pkg__",
 ])
 
 MANY_SERVER_DEPS = [

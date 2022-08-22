@@ -1,0 +1,55 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//src/many:__pkg__"])
+
+MANY_MOCK_DEPS = [
+    "@crate_index//:cbor-diag",
+    "@crate_index//:coset",
+    "@crate_index//:serde",
+    "@crate_index//:toml",
+    "@crate_index//:regex",
+]
+
+MANY_MOCK_PROC_MACRO_DEPS = [
+    "@crate_index//:async-trait",
+]
+
+MANY_MOCK_CRATE_NAME = "many-mock"
+
+MANY_MOCK_CRATE_NAME_SANE = MANY_MOCK_CRATE_NAME.replace("-", "_")
+
+rust_library(
+    name = MANY_MOCK_CRATE_NAME,
+    srcs = glob(include = ["src/**/*.rs"]),
+    proc_macro_deps = MANY_MOCK_PROC_MACRO_DEPS,
+    deps = MANY_MOCK_DEPS + [
+        "//src/many-identity",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+    ],
+)
+
+rust_test(
+    name = "many-mock-test",
+    srcs = ["tests/integration.rs"],
+    data = glob(include = [
+        "tests/*.toml",
+        "tests/features/*.feature",
+    ]),
+    proc_macro_deps = MANY_MOCK_PROC_MACRO_DEPS,
+    use_libtest_harness = False,
+    deps = [
+        ":many-mock",
+        "//src/many-client",
+        "//src/many-identity",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
+        "@crate_index//:ciborium",
+        "@crate_index//:cucumber",
+        "@crate_index//:futures",
+        "@crate_index//:serde_json",
+    ],
+)

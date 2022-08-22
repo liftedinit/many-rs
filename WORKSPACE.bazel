@@ -2,10 +2,10 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "rules_rust",
-    sha256 = "05e15e536cc1e5fd7b395d044fc2dabf73d2b27622fbc10504b7e48219bb09bc",
+    sha256 = "6bfe75125e74155955d8a9854a8811365e6c0f3d33ed700bc17f39e32522c822",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_rust/releases/download/0.8.1/rules_rust-v0.8.1.tar.gz",
-        "https://github.com/bazelbuild/rules_rust/releases/download/0.8.1/rules_rust-v0.8.1.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_rust/releases/download/0.9.0/rules_rust-v0.9.0.tar.gz",
+        "https://github.com/bazelbuild/rules_rust/releases/download/0.9.0/rules_rust-v0.9.0.tar.gz",
     ],
 )
 
@@ -47,7 +47,7 @@ crates_repository(
         "base32": crate.spec(version = "0.4.0"),
         "base64": crate.spec(version = "0.13.0"),
         "cbor-diag": crate.spec(version = "0.1.9"),
-        "chrono": crate.spec(version = "0.4.19"),  # TODO: Disable `oldtime`
+        "ciborium": crate.spec(version = "0.2"),
         "clap": crate.spec(
             features = ["derive"],
             version = "3.0.14",
@@ -58,6 +58,7 @@ crates_repository(
             features = ["generate-bindings"],
             version = "0.3",
         ),
+        "cucumber": crate.spec(version = "0.13"),
         "derive_builder": crate.spec(version = "0.10.2"),
         "ecdsa": crate.spec(version = "0.12.4"),
         "ed25519": crate.spec(
@@ -69,6 +70,7 @@ crates_repository(
             version = "1.0.1",
         ),
         "fixed": crate.spec(version = "1.11.0"),
+        "futures": crate.spec(version = "0.3"),
         "hex": crate.spec(version = "0.4.3"),
         "inflections": crate.spec(version = "1.1.1"),
         "json": crate.spec(version = "0.12"),
@@ -141,6 +143,7 @@ crates_repository(
             features = ["full"],
             version = "1.12.0",
         ),
+        "toml": crate.spec(version = "0.5"),
         "tracing": crate.spec(version = "0.1.29"),
         "tracing-subscriber": crate.spec(version = "0.2.24"),
         "url": crate.spec(version = "2.2.2"),
