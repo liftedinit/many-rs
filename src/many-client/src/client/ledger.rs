@@ -18,11 +18,15 @@ impl LedgerClient {
         LedgerClient { client }
     }
 
-    pub async fn symbols(&self) -> Result<Vec<Symbol>, ManyError> {
+    pub async fn symbols(&self) -> Result<BTreeMap<String, Symbol>, ManyError> {
         let response = self.client.call_("ledger.info", ()).await?;
         let decoded: InfoReturns =
             minicbor::decode(&response).map_err(ManyError::deserialization_error)?;
-        Ok(decoded.symbols)
+        Ok(decoded
+            .local_names
+            .into_iter()
+            .map(|(k, v)| (v, k))
+            .collect())
     }
 
     pub async fn balance(
