@@ -51,13 +51,19 @@ impl LedgerClient {
         amount: TokenAmount,
         symbol: Symbol,
     ) -> Result<(), ManyError> {
+        let client = ManyClient::new(
+            self.client.url.clone(),
+            CoseKeyIdentity::anonymous().identity,
+            from.clone(),
+        )
+        .map_err(|_| ManyError::could_not_route_message())?;
         let argument = SendArgs {
             from: Some(from.identity),
             to,
             amount,
             symbol,
         };
-        self.client.call_("ledger.send", argument).await?;
+        client.call_("ledger.send", argument).await?;
         Ok(())
     }
 }
