@@ -30,11 +30,11 @@ impl LedgerClient {
     pub async fn balance(
         &self,
         account: Address,
-        symbols: VecOrSingle<Symbol>,
+        symbols: Vec<Symbol>,
     ) -> Result<BTreeMap<Symbol, TokenAmount>, ManyError> {
         let argument = BalanceArgs {
             account: Some(account),
-            symbols: Some(symbols),
+            symbols: Some(VecOrSingle(symbols)),
         };
         let data = self.client.call_("ledger.balance", argument).await?;
         let response: BalanceReturns =
