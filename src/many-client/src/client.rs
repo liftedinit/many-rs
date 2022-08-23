@@ -1,3 +1,7 @@
+pub mod ledger;
+
+pub use ledger::LedgerClient;
+
 use coset::{CoseSign1, TaggedCborSerializable};
 use many_identity::verifiers::AnonymousVerifier;
 use many_identity::{verifiers, Identity};

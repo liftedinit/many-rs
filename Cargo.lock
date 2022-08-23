@@ -1782,6 +1782,7 @@ dependencies = [
  "many-modules",
  "many-protocol",
  "many-server",
+ "many-types",
  "minicbor",
  "num-bigint",
  "num-derive",
