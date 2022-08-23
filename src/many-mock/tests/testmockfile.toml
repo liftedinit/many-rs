@@ -1,0 +1,3 @@
+simplefield = '"hello"'
+
+object = '{"numfield":10,"arrayfield":["foo","bar","baz"]}'

@@ -1,0 +1,270 @@
+# many-rs CI
+# The Lifted Initiative
+version: 2.1
+
+orbs:
+  codecov: codecov/codecov@3.2.3
+  rust: circleci/rust@1.6.0
+  detect: circleci/os-detect@0.3.0
+
+executors:
+  linux2204:
+    machine:
+      image: ubuntu-2204:current
+  macos:
+    macos:
+      xcode: 13.4.1
+
+jobs:
+  lint-test-build:
+    parameters:
+      os:
+        type: string
+    executor: << parameters.os >>
+    environment:
+      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      SOFTHSM2_CONF: /tmp/softhsm2.conf
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+      - rust/install:
+          version: nightly
+      - rust/format:
+          with_cache: false
+      - rust/clippy:
+          flags: --all-targets --all-features -- -D clippy::all
+          with_cache: false
+      - when:
+          condition:
+            equal: [ "linux2204", << parameters.os >> ]
+          steps:
+            - rust/test:
+                package: --all-targets --all-features
+                with_cache: false
+      - when:
+          condition:
+            equal: [ "macos", << parameters.os >> ]
+          steps:
+            - rust/test:
+                package: --all-targets --features default,client,raw,testing,trace_error_creation
+                with_cache: false
+      - rust/test:
+          package: --all-features --doc
+          with_cache: false
+      - rust/build:
+          crate: --all-features
+          with_cache: false
+      - save_cache:
+          key: cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+          paths:
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+            - target/
+  coverage:
+    parameters:
+      os:
+        type: string
+    executor: << parameters.os >>
+    working_directory: ~/project/repo
+    environment:
+      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      SOFTHSM2_CONF: /tmp/softhsm2.conf
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - cargo-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+      - rust/install:
+          version: nightly
+      - run:
+          name: install llvm-tools-preview
+          command: rustup component add llvm-tools-preview
+      - run:
+          name: generate test coverage
+          command: cargo test --all-targets --all-features
+          environment:
+            RUSTFLAGS: "-C instrument-coverage"
+            LLVM_PROFILE_FILE: "coverage/lcov-%p-%m.profraw"
+      - run:
+          name: generate coverage report
+          command: grcov src -b target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o coverage/report.lcov
+      - codecov/upload:
+          file: coverage/report.lcov
+      - save_cache:
+          key: cargo-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+          paths:
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+            - target/
+  create:
+    parameters:
+      os:
+        type: string
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - detect/init
+      - rust/build:
+          release: true
+          with_cache: false
+      - run: mkdir -p artifacts
+      - run:
+          name: creating release archive
+          command: file target/release/* | grep 'executable\|shared object' | cut -d ':' -f 1 | xargs tar czvf artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
+      - run:
+          name: creating release shasum
+          command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
+      - persist_to_workspace:
+          root: artifacts
+          paths:
+            - "*.tar.gz"
+            - "*.txt"
+  publish:
+    parameters:
+      pre-release:
+        type: boolean
+        default: false
+    docker:
+      - image: cibuilds/github:0.10
+    steps:
+      - attach_workspace:
+          at: ~/project/artifacts
+      - when:
+          condition:
+            not: << parameters.pre-release >>
+          steps:
+            - run:
+                name: publish pre-release
+                command: ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
+      - when:
+          condition: << parameters.pre-release >>
+          steps:
+            - run:
+                name: publish pre-release
+                command: ghr -prerelease -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
+  audit:
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - run:
+          name: install cargo-audit
+          command: cargo install cargo-audit
+      - run:
+          name: cargo audit
+          command: cargo audit
+
+# Re-usable commands
+commands:
+  install-deps:
+    description: install << parameters.os>> dependencies
+    parameters:
+      os:
+        type: string
+    steps:
+      - when:
+          condition:
+            matches: { pattern: "^linux.*$", value: << parameters.os >> }
+          steps:
+            - run:
+                name: installing linux dependencies
+                command: |
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y update
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install build-essential pkg-config clang libssl-dev libsofthsm2
+                  mkdir /tmp/tokens
+                  echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
+            - run:
+                name: installing grcov
+                command: wget https://github.com/mozilla/grcov/releases/download/v0.8.11/grcov-x86_64-unknown-linux-gnu.tar.bz2 -O - | sudo tar -xj -C /usr/local/bin
+
+workflows:
+  ci:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - lint-test-build:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: lint-test-build-v<< matrix.os >>
+          context:
+            - CACHE
+          matrix:
+            parameters:
+              os: [linux2204, macos]
+      - coverage:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: coverage-v<< matrix.os >>
+          context:
+            - CACHE
+          matrix:
+            parameters:
+              os: [linux2204]
+          requires:
+            - lint-test-build-v<< matrix.os >>
+  release:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - create:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: create-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204]
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+$/                 # e.g., 0.1.1, 1.0.0
+                - /^\d+\.\d+\.\d+-(alpha|beta)$/    # e.g., 0.1.1-alpha, 2.3.1-beta
+                - /^\d+\.\d+\.\d+-.*-rc.*$/         # e.g., 0.1.1-alpha-rc1, 1.3.4-beta-rc4
+                - /^\d+\.\d+\.\d+-pre.*$/           # e.g., 0.1.1-prealpha-3, 1.5.6-prealpha-8
+      - publish:
+          name: publish
+          pre-release: false
+          context:
+            - GITHUB_CREDS
+          requires:
+            - create
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+$/                 # e.g., 0.1.1, 1.0.0
+                - /^\d+\.\d+\.\d+-(alpha|beta)$/    # e.g., 0.1.1-alpha, 2.3.1-beta
+      - publish:
+          name: publish-pre-release
+          pre-release: true
+          context:
+            - GITHUB_CREDS
+          requires:
+            - create
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+-.*-rc.*$/         # e.g., 0.1.1-alpha-rc1, 1.3.4-beta-rc4
+                - /^\d+\.\d+\.\d+-pre.*$/           # e.g., 0.1.1-prealpha-3, 1.5.6-prealpha-8
+  security:
+    when:
+      and:
+        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+        - equal: [ "Audit", << pipeline.schedule.name >> ]
+    jobs:
+      - audit
