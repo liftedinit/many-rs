@@ -3,10 +3,8 @@ use std::collections::BTreeMap;
 use many_identity::{Address, CoseKeyIdentity};
 use many_modules::ledger::{BalanceArgs, BalanceReturns, InfoReturns, SendArgs};
 use many_protocol::ManyError;
-use many_types::{
-    ledger::{Symbol, TokenAmount},
-    VecOrSingle,
-};
+pub use many_types::ledger::{Symbol, TokenAmount};
+use many_types::VecOrSingle;
 
 use crate::ManyClient;
 
