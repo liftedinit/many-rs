@@ -16,13 +16,13 @@ define_attribute_many_error!(
 #[many_module(name = AbciFrontendModule, id = 1001, namespace = abci, many_modules_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait AbciClientModuleBackend: Send {
-    fn status(&self) -> Result<StatusReturns, ManyError>;
+    fn status(&self) -> Result<StatusReturn, ManyError>;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::server::module::testutils::call_module;
+    use crate::testutils::call_module;
     use std::sync::{Arc, Mutex};
 
     #[test]
