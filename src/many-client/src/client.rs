@@ -29,19 +29,20 @@ impl<I: Identity + Debug> Debug for ManyClient<I> {
     }
 }
 
-pub fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<CoseSign1, ManyError> {
+pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<CoseSign1, ManyError> {
     let bytes = message
         .to_tagged_vec()
         .map_err(|_| ManyError::internal_server_error())?;
 
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::Client::new();
     tracing::debug!("request {}", hex::encode(&bytes));
     let response = client
         .post(url)
         .body(bytes)
         .send()
+        .await
         .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
-    let body = response.bytes().unwrap();
+    let body = response.bytes().await.unwrap();
     let bytes = body.to_vec();
     tracing::debug!("reply {}", hex::encode(&bytes));
     CoseSign1::from_tagged_slice(&bytes)
@@ -60,14 +61,21 @@ impl<I: Identity> ManyClient<I> {
         })
     }
 
-    pub fn send_message(&self, message: RequestMessage) -> Result<ResponseMessage, ManyError> {
+    pub async fn send_message(
+        &self,
+        message: RequestMessage,
+    ) -> Result<ResponseMessage, ManyError> {
         let cose = encode_cose_sign1_from_request(message, &self.identity).unwrap();
-        let cose_sign1 = send_envelope(self.url.clone(), cose)?;
+        let cose_sign1 = send_envelope(self.url.clone(), cose).await?;
 
         ResponseMessage::decode_and_verify(&cose_sign1, &self.verifier)
     }
 
-    pub fn call_raw<M>(&self, method: M, argument: &[u8]) -> Result<ResponseMessage, ManyError>
+    pub async fn call_raw<M>(
+        &self,
+        method: M,
+        argument: &[u8],
+    ) -> Result<ResponseMessage, ManyError>
     where
         M: Into<String>,
     {
@@ -91,10 +99,10 @@ impl<I: Identity> ManyClient<I> {
         .build()
         .map_err(|_| ManyError::internal_server_error())?;
 
-        self.send_message(message)
+        self.send_message(message).await
     }
 
-    pub fn call<M, A>(&self, method: M, argument: A) -> Result<ResponseMessage, ManyError>
+    pub async fn call<M, A>(&self, method: M, argument: A) -> Result<ResponseMessage, ManyError>
     where
         M: Into<String>,
         A: Encode<()>,
@@ -102,19 +110,19 @@ impl<I: Identity> ManyClient<I> {
         let bytes: Vec<u8> = minicbor::to_vec(argument)
             .map_err(|e| ManyError::serialization_error(e.to_string()))?;
 
-        self.call_raw(method, bytes.as_slice())
+        self.call_raw(method, bytes.as_slice()).await
     }
 
-    pub fn call_<M, A>(&self, method: M, argument: A) -> Result<Vec<u8>, ManyError>
+    pub async fn call_<M, A>(&self, method: M, argument: A) -> Result<Vec<u8>, ManyError>
     where
         M: Into<String>,
         A: Encode<()>,
     {
-        self.call(method, argument)?.data
+        self.call(method, argument).await?.data
     }
 
-    pub fn status(&self) -> Result<Status, ManyError> {
-        let response = self.call_("status", ())?;
+    pub async fn status(&self) -> Result<Status, ManyError> {
+        let response = self.call_("status", ()).await?;
 
         let status = minicbor::decode(response.as_slice())
             .map_err(|e| ManyError::deserialization_error(e.to_string()))?;

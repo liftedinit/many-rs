@@ -67,7 +67,7 @@ impl cucumber::World for World {
 
 #[given(regex = r#"I request "(.*)""#)]
 async fn make_request(w: &mut World, method: String) {
-    let result = w.client.call(method, ()).unwrap();
+    let result = w.client.call(method, ()).await.unwrap();
     let bytes = result.data.expect("Should have a Vec<u8>");
     let response: Value =
         ciborium::de::from_reader(bytes.as_slice()).expect("Should have parsed to a cbor value");
@@ -95,6 +95,7 @@ async fn field_value(w: &mut World, field_name: String, value: String) {
     assert_eq!(object[&field_name], json_value);
 }
 
-fn main() {
-    futures::executor::block_on(World::run("tests/features"));
+#[tokio::main]
+async fn main() {
+    World::run("tests/features").await
 }
