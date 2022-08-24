@@ -10,7 +10,7 @@ pub trait Identity: Send {
 }
 
 pub trait Verifier: Send {
-    fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError>;
+    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError>;
 }
 
 #[derive(Debug, Clone)]
@@ -32,7 +32,7 @@ impl Identity for AnonymousIdentity {
 }
 
 impl Verifier for AnonymousIdentity {
-    fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
         if !envelope.signature.is_empty() {
             Err(ManyError::could_not_verify_signature(
                 "Anonymous should not have a signature.",
@@ -51,7 +51,7 @@ mod testing {
     pub struct AcceptAllVerifier;
 
     impl Verifier for AcceptAllVerifier {
-        fn sign_1(&self, _envelope: &coset::CoseSign1) -> Result<(), many_error::ManyError> {
+        fn verify_1(&self, _envelope: &coset::CoseSign1) -> Result<(), many_error::ManyError> {
             Ok(())
         }
     }
@@ -75,8 +75,8 @@ impl Identity for Box<dyn Identity> {
 }
 
 impl Verifier for Box<dyn Verifier> {
-    fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
-        (&**self).sign_1(envelope)
+    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+        (&**self).verify_1(envelope)
     }
 }
 
@@ -84,8 +84,8 @@ macro_rules! declare_tuple_verifiers {
         ( $name: ident: 0 ) => {
             impl< $name: Verifier > Verifier for ( $name, ) {
                 #[inline]
-                fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
-                    self.0.sign_1(envelope)
+                fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+                    self.0.verify_1(envelope)
                 }
             }
         };
@@ -93,10 +93,10 @@ macro_rules! declare_tuple_verifiers {
         ( $( $name: ident: $index: tt ),* ) => {
             impl< $( $name: Verifier ),* > Verifier for ( $( $name ),* ) {
                 #[inline]
-                fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+                fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
                     let mut errs = Vec::new();
                     $(
-                        match self. $index . sign_1(envelope) {
+                        match self. $index . verify_1(envelope) {
                             Ok(_) => return Ok(()),
                             Err(e) => errs.push(e.to_string()),
                         }
@@ -127,7 +127,7 @@ pub mod verifiers {
     pub struct AnonymousVerifier;
 
     impl Verifier for AnonymousVerifier {
-        fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+        fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
             let kid = &envelope.protected.header.key_id;
             if !kid.is_empty() {
                 if Address::from_bytes(kid)?.is_anonymous() {

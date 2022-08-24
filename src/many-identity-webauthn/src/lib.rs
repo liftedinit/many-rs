@@ -196,7 +196,7 @@ impl WebAuthnVerifier {
 }
 
 impl Verifier for WebAuthnVerifier {
-    fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
         self.verify(envelope).map(|_| ())
     }
 }
@@ -343,7 +343,7 @@ mod tests {
             allowed_domains.map(|x| x.iter().map(|u| ManyUrl::parse(u).unwrap()).collect()),
         );
         let envelope = get_tampered_request(field_type);
-        let request = verifier.sign_1(&envelope);
+        let request = verifier.verify_1(&envelope);
 
         assert_eq!(request.map_err(|e| e.to_string()), Err(msg.to_string()));
     }
@@ -351,7 +351,7 @@ mod tests {
     #[test]
     fn webauthn_ok() {
         let envelope = ENVELOPE.clone();
-        assert_eq!(WebAuthnVerifier::new(None).sign_1(&envelope), Ok(()));
+        assert_eq!(WebAuthnVerifier::new(None).verify_1(&envelope), Ok(()));
     }
 
     #[test]

@@ -46,7 +46,7 @@ pub fn decode_request_from_cose_sign1_no_resolve(
     envelope: &CoseSign1,
     verifier: &impl Verifier,
 ) -> Result<RequestMessage, ManyError> {
-    verifier.sign_1(envelope)?;
+    verifier.verify_1(envelope)?;
 
     let payload = envelope
         .payload

@@ -120,7 +120,7 @@ macro_rules! try_verify {
     ($init: expr, $envelope: ident, $name: literal) => {
         match $init {
             Ok(v) => {
-                return v.sign_1($envelope);
+                return v.verify_1($envelope);
             }
             Err(err) => {
                 trace!("Initialization error ({}): {}", $name, err)
@@ -133,7 +133,7 @@ macro_rules! try_verify {
 pub struct CoseKeyVerifier;
 
 impl Verifier for CoseKeyVerifier {
-    fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
         let keyid = &envelope.protected.header.key_id;
 
         // Extract the keyset argument.

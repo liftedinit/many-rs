@@ -237,7 +237,7 @@ impl EcDsaIdentity {
 
 impl Identity for EcDsaIdentity {
     fn address(&self) -> Address {
-        self.0.address
+        self.0.address()
     }
 
     fn public_key(&self) -> Option<CoseKey> {
@@ -294,7 +294,7 @@ impl EcDsaVerifier {
 }
 
 impl Verifier for EcDsaVerifier {
-    fn sign_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
         let address = Address::from_bytes(&envelope.protected.header.key_id)?;
         if self.address.matches(&address) {
             envelope.verify_signature(&[], |signature, msg| self.verify_signature(signature, msg))
