@@ -1,3 +1,4 @@
+pub mod base;
 pub mod ledger;
 
 pub use ledger::LedgerClient;
