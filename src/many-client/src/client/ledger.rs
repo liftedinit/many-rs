@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use many_identity::{Address, CoseKeyIdentity};
 use many_modules::ledger::{BalanceArgs, BalanceReturns, InfoReturns, SendArgs};
 use many_protocol::ManyError;
@@ -18,30 +16,22 @@ impl LedgerClient {
         LedgerClient { client }
     }
 
-    pub async fn symbols(&self) -> Result<BTreeMap<String, Symbol>, ManyError> {
+    pub async fn info(&self) -> Result<InfoReturns, ManyError> {
         let response = self.client.call_("ledger.info", ()).await?;
-        let decoded: InfoReturns =
-            minicbor::decode(&response).map_err(ManyError::deserialization_error)?;
-        Ok(decoded
-            .local_names
-            .into_iter()
-            .map(|(k, v)| (v, k))
-            .collect())
+        minicbor::decode(&response).map_err(ManyError::deserialization_error)
     }
 
     pub async fn balance(
         &self,
-        account: Address,
-        symbols: Vec<Symbol>,
-    ) -> Result<BTreeMap<Symbol, TokenAmount>, ManyError> {
+        account: Option<Address>,
+        symbols: Option<Vec<Symbol>>,
+    ) -> Result<BalanceReturns, ManyError> {
         let argument = BalanceArgs {
-            account: Some(account),
-            symbols: Some(VecOrSingle(symbols)),
+            account,
+            symbols: symbols.map(VecOrSingle),
         };
         let data = self.client.call_("ledger.balance", argument).await?;
-        let response: BalanceReturns =
-            minicbor::decode(&data).map_err(ManyError::deserialization_error)?;
-        Ok(response.balances)
+        minicbor::decode(&data).map_err(ManyError::deserialization_error)
     }
 
     pub async fn send(
