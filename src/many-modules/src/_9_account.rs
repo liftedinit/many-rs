@@ -471,9 +471,7 @@ mod module_tests {
     // TODO: split this to get easier to maintain tests.
     #[test]
     fn module_works() {
-        let account_map = Arc::new(RwLock::new(AccountMap::new(unsafe {
-            Address::public_key_raw([0; 28])
-        })));
+        let account_map = Arc::new(RwLock::new(AccountMap::new(identity(0))));
         let mut mock = MockAccountModuleBackend::new();
 
         mock.expect_create().returning({
@@ -658,6 +656,7 @@ fn roles_from_str() {
 #[test]
 fn needs_role() {
     use many_identity::testing::identity;
+
     let owner = identity(0);
     let account = Account::create(
         &owner,
@@ -676,7 +675,9 @@ fn needs_role() {
 
 #[test]
 fn remove_empty_role() {
-    let owner = unsafe { Address::public_key_raw([0; 28]) };
+    use many_identity::testing::identity;
+
+    let owner = identity(0);
     let mut account = Account::create(
         &owner,
         CreateArgs {
@@ -685,20 +686,10 @@ fn remove_empty_role() {
             features: Default::default(),
         },
     );
-    account.add_role(
-        &unsafe { Address::public_key_raw([1; 28]) },
-        Role::CanMultisigSubmit,
-    );
-    assert!(account.has_role(
-        &unsafe { Address::public_key_raw([1; 28]) },
-        Role::CanMultisigSubmit
-    ));
+    assert!(!account.has_role(&identity(1), Role::CanMultisigSubmit));
+    account.add_role(&identity(1), Role::CanMultisigSubmit);
+    assert!(account.has_role(&identity(1), Role::CanMultisigSubmit));
 
-    account.remove_role(
-        &unsafe { Address::public_key_raw([1; 28]) },
-        Role::CanMultisigSubmit,
-    );
-    assert!(!account
-        .roles
-        .contains_key(&unsafe { Address::public_key_raw([1; 28]) }));
+    account.remove_role(&identity(1), Role::CanMultisigSubmit);
+    assert!(!account.roles.contains_key(&identity(1)));
 }

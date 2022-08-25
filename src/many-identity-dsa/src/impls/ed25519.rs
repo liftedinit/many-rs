@@ -1,15 +1,14 @@
-use coset::cbor::value::{Integer, Value};
+use crate::impls::check_key;
+use coset::cbor::value::Value;
 use coset::iana::{EnumI64, OkpKeyParameter};
-use coset::{CborSerializable, CoseKey, CoseSign1, CoseSign1Builder, Label};
+use coset::{CoseKey, CoseSign1, CoseSign1Builder, Label};
 use ed25519_dalek::Keypair;
 use many_error::ManyError;
 use many_identity::cose::add_keyset_header;
-use many_identity::{Address, Identity, Verifier};
+use many_identity::{cose, Address, Identity, Verifier};
 use pkcs8::der::Document;
-use sha3::{Digest, Sha3_224};
 use signature::{Signature, Signer};
 use std::collections::BTreeSet;
-use std::sync::Arc;
 
 /// Build an EdDSA CoseKey
 ///
@@ -48,17 +47,6 @@ fn eddsa_cose_key(x: Vec<u8>, d: Option<Vec<u8>>) -> CoseKey {
     }
 }
 
-fn address(key: &CoseKey) -> Result<Address, ManyError> {
-    let pk = Sha3_224::digest(
-        &public_key(key)?
-            .ok_or_else(|| ManyError::unknown("Could not load key."))?
-            .to_vec()
-            .map_err(|e| ManyError::unknown(e.to_string()))?,
-    );
-
-    Ok(unsafe { Address::public_key_raw(pk.into()) })
-}
-
 pub fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
     match key.alg {
         Some(coset::Algorithm::Assigned(coset::iana::Algorithm::EdDSA)) => {
@@ -82,54 +70,15 @@ pub fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
     }
 }
 
-/// Verify that key is valid Ed25519.
-fn check_key(cose_key: &CoseKey, sign: bool, verify: bool) -> Result<(), ManyError> {
-    if sign
-        && !cose_key.key_ops.contains(&coset::KeyOperation::Assigned(
-            coset::iana::KeyOperation::Sign,
-        ))
-    {
-        return Err(ManyError::unknown("Key cannot sign"));
-    }
-    if verify
-        && !cose_key.key_ops.contains(&coset::KeyOperation::Assigned(
-            coset::iana::KeyOperation::Verify,
-        ))
-    {
-        return Err(ManyError::unknown("Key cannot verify"));
-    }
-
-    if cose_key.kty != coset::KeyType::Assigned(coset::iana::KeyType::OKP) {
-        return Err(ManyError::unknown(format!(
-            "Wrong key type: {:?}",
-            cose_key.kty
-        )));
-    }
-    if cose_key.alg != Some(coset::Algorithm::Assigned(coset::iana::Algorithm::EdDSA)) {
-        return Err(ManyError::unknown(format!(
-            "Wrong key algorihm: {:?}",
-            cose_key.alg
-        )));
-    }
-
-    if cose_key
-        .params
-        .iter()
-        .find(|(k, _v)| k == &Label::Int(OkpKeyParameter::Crv.to_i64()))
-        .map(|(_k, v)| v)
-        .ok_or_else(|| ManyError::unknown("Crv parameter not found."))?
-        .as_integer()
-        .ok_or_else(|| ManyError::unknown("Crv parameter not found."))?
-        != Integer::from(coset::iana::EllipticCurve::Ed25519.to_i64())
-    {
-        Err(ManyError::unknown("Curve unsupported. Expected Ed25519"))
-    } else {
-        Ok(())
-    }
-}
-
 fn key_pair(cose_key: &CoseKey) -> Result<Keypair, ManyError> {
-    check_key(cose_key, true, false)?;
+    check_key(
+        cose_key,
+        true,
+        false,
+        coset::iana::KeyType::OKP,
+        coset::iana::Algorithm::EdDSA,
+        Some(coset::iana::EllipticCurve::Ed25519),
+    )?;
 
     let mut maybe_x = None;
     let mut maybe_d = None;
@@ -156,11 +105,10 @@ fn key_pair(cose_key: &CoseKey) -> Result<Keypair, ManyError> {
         .map_err(|e| ManyError::unknown(format!("Invalid Ed25519 keypair from bytes: {e}")))
 }
 
-#[derive(Clone)]
 struct Ed25519IdentityInner {
     address: Address,
     public_key: CoseKey,
-    key_pair: Arc<Keypair>,
+    key_pair: Keypair,
 }
 
 impl Ed25519IdentityInner {
@@ -172,8 +120,8 @@ impl Ed25519IdentityInner {
 
     pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
         let public_key = public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
-        let key_pair = Arc::new(key_pair(cose_key)?);
-        let address = address(cose_key)?;
+        let key_pair = key_pair(cose_key)?;
+        let address = unsafe { cose::address(&public_key)? };
 
         Ok(Self {
             address,
@@ -242,7 +190,7 @@ impl Identity for Ed25519SharedIdentity {
     }
 
     fn public_key(&self) -> Option<CoseKey> {
-        Some(self.0.public_key.clone())
+        self.0.public_key()
     }
 
     fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
@@ -252,7 +200,6 @@ impl Identity for Ed25519SharedIdentity {
 
 /// An Ed25519 identity that sign messages and include the public key in the
 /// protected headers.
-#[derive(Clone)]
 pub struct Ed25519Identity(Ed25519IdentityInner);
 
 impl Ed25519Identity {
@@ -305,7 +252,7 @@ impl Identity for Ed25519Identity {
     }
 
     fn public_key(&self) -> Option<CoseKey> {
-        Some(self.0.public_key.clone())
+        self.0.public_key()
     }
 
     fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
@@ -326,14 +273,20 @@ impl Ed25519Verifier {
         signature::Verifier::verify(&self.public_key, data, &sig)
             .map_err(ManyError::could_not_verify_signature)
     }
-}
 
-impl Ed25519Verifier {
     pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
         let public_key =
             public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Key not ed25519."))?;
+        let address = unsafe { cose::address(&public_key)? };
 
-        check_key(&public_key, false, true)?;
+        check_key(
+            &public_key,
+            false,
+            true,
+            coset::iana::KeyType::OKP,
+            coset::iana::Algorithm::EdDSA,
+            Some(coset::iana::EllipticCurve::Ed25519),
+        )?;
 
         let mut maybe_x = None;
         for (k, v) in cose_key.params.iter() {
@@ -349,8 +302,6 @@ impl Ed25519Verifier {
             .as_slice();
         let public_key = ed25519_dalek::PublicKey::from_bytes(x)
             .map_err(|_| ManyError::unknown("Could not create a public key from X."))?;
-
-        let address = address(cose_key)?;
 
         Ok(Self {
             address,
@@ -392,9 +343,6 @@ pub fn generate_random_ed25519_identity() -> Ed25519Identity {
 pub mod tests {
     use super::*;
 
-    // MSG == FOOBAR
-    const MSG: &[u8] = b"FOOBAR";
-
     pub fn eddsa_identity() -> Ed25519Identity {
         let pem = "-----BEGIN PRIVATE KEY-----\n\
                          MC4CAQAwBQYDK2VwBCIEIHcoTY2RYa48O8ONAgfxEw+15MIyqSat0/QpwA1YxiPD\n\
@@ -408,8 +356,8 @@ pub mod tests {
         let id = eddsa_identity();
         let verifier = Ed25519Verifier::from_key(&id.public_key()).unwrap();
 
-        let signature = id.try_sign(MSG).unwrap();
-        verifier.verify_signature(&signature, MSG).unwrap();
+        let signature = id.try_sign(b"FOOBAR").unwrap();
+        verifier.verify_signature(&signature, b"FOOBAR").unwrap();
     }
 
     #[test]

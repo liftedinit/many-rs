@@ -574,6 +574,7 @@ impl EventLog {
 #[cfg(test)]
 mod test {
     use super::*;
+    use many_identity::testing::identity;
 
     #[test]
     fn eventid_from_bytevec() {
@@ -638,8 +639,8 @@ mod test {
 
     #[test]
     fn event_info_is_about() {
-        let i0 = unsafe { Address::public_key_raw([0; 28]) };
-        let i1 = unsafe { Address::public_key_raw([1; 28]) };
+        let i0 = identity(0);
+        let i1 = identity(1);
         let i01 = i0.with_subresource_id(1).unwrap();
         let i11 = i1.with_subresource_id(1).unwrap();
 
@@ -657,7 +658,7 @@ mod test {
 
     #[test]
     fn event_info_is_about_null() {
-        let i0 = unsafe { Address::public_key_raw([0; 28]) };
+        let i0 = identity(0);
         let i01 = i0.with_subresource_id(1).unwrap();
         let token = Vec::new().into();
 
@@ -673,8 +674,8 @@ mod test {
 
     #[test]
     fn event_info_symbol() {
-        let i0 = unsafe { Address::public_key_raw([0; 28]) };
-        let i1 = unsafe { Address::public_key_raw([1; 28]) };
+        let i0 = identity(0);
+        let i1 = identity(1);
         let i01 = i0.with_subresource_id(1).unwrap();
 
         let event = EventInfo::Send {

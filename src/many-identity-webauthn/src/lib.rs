@@ -44,7 +44,7 @@ impl WebAuthnVerifier {
     }
 
     pub fn get_cose_key_for_identity(&self, envelope: &CoseSign1, id: &Address) -> Option<CoseKey> {
-        // Verify the keybytes matches the identity.
+        // Verify the key bytes matches the identity.
         if id.is_anonymous() {
             return None;
         }

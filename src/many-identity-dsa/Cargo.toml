@@ -35,7 +35,6 @@ serde_test = "1.0.139"
 default = ["coset", "minicbor"]
 ecdsa = []
 ed25519 = ["dep:ed25519", "dep:ed25519-dalek"]
-hsm_test = []
 raw = []
 serde = []
 testing = []

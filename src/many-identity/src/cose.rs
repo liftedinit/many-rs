@@ -1,7 +1,24 @@
-use crate::Identity;
+use crate::{Address, Identity};
 use coset::cbor::value::Value;
-use coset::{AsCborValue, CborSerializable, CoseKeySet, CoseSign1, Label};
+use coset::{AsCborValue, CborSerializable, CoseKey, CoseKeySet, CoseSign1, Label};
 use many_error::ManyError;
+use sha3::{Digest, Sha3_224};
+
+/// Returns the address of a public COSE key.
+///
+/// # Safety
+/// This methods DOES NOT VERIFY that the cose key is of a public key. There are
+/// strict criteria (see spec) for how to define the public key of a COSE Key.
+pub unsafe fn address(cose_key: &CoseKey) -> Result<Address, ManyError> {
+    let pk = Sha3_224::digest(
+        cose_key
+            .clone()
+            .to_vec()
+            .map_err(|e| ManyError::unknown(e.to_string()))?,
+    );
+
+    Ok(Address::public_key_raw(pk.into()))
+}
 
 /// Add the keyset to the protected headers of a CoseSign1 envelope, adding to
 /// it instead of replacing if it was already present.

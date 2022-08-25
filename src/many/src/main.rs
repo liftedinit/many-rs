@@ -20,6 +20,7 @@ use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tracing::{error, info, level_filters::LevelFilter, trace};
 use url::Url;
@@ -479,12 +480,14 @@ fn main() {
         }
         SubCommand::Server(o) => {
             let pem = std::fs::read_to_string(&o.pem).expect("Could not read PEM file.");
-            let key = CoseKeyIdentity::from_pem(&pem)
-                .expect("Could not generate identity from PEM file.");
+            let key = Arc::new(
+                CoseKeyIdentity::from_pem(&pem)
+                    .expect("Could not generate identity from PEM file."),
+            );
 
             let many = ManyServer::simple(
                 o.name,
-                key.clone(),
+                Arc::clone(&key),
                 AcceptAllVerifier,
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
             );

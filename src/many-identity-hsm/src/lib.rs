@@ -6,7 +6,7 @@ use cryptoki::session::{Session, SessionFlags, UserType};
 use cryptoki::slot::Slot;
 use many_error::ManyError;
 use many_identity::cose::add_keyset_header;
-use many_identity::Address;
+use many_identity::{cose, Address};
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
@@ -327,7 +327,9 @@ impl HsmIdentity {
             (points.x().unwrap().to_vec(), points.y().unwrap().to_vec()),
             None,
         );
-        let address = many_identity_dsa::ecdsa::address(&key)?;
+        let public_key = many_identity_dsa::ecdsa::public_key(&key)?
+            .ok_or_else(|| ManyError::unknown("Could not load key."))?;
+        let address = unsafe { cose::address(&public_key)? };
         Ok(Self { address, key })
     }
 }

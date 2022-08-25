@@ -1,12 +1,12 @@
+use crate::impls::check_key;
 use coset::cbor::value::Value;
 use coset::iana::{Algorithm, Ec2KeyParameter, EllipticCurve, EnumI64, KeyType};
-use coset::{CborSerializable, CoseKey, CoseSign1, CoseSign1Builder, Label};
+use coset::{CoseKey, CoseSign1, CoseSign1Builder, Label};
 use many_error::ManyError;
 use many_identity::cose::add_keyset_header;
-use many_identity::{Address, Identity, Verifier};
+use many_identity::{cose, Address, Identity, Verifier};
 use p256::pkcs8::FromPrivateKey;
 use pkcs8::der::Document;
-use sha3::{Digest, Sha3_224};
 use signature::{Signature, Signer};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -72,49 +72,6 @@ pub fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
     }
 }
 
-pub fn address(key: &CoseKey) -> Result<Address, ManyError> {
-    let pk = Sha3_224::digest(
-        &public_key(key)?
-            .ok_or_else(|| ManyError::unknown("Could not load key."))?
-            .to_vec()
-            .map_err(|e| ManyError::unknown(e.to_string()))?,
-    );
-
-    Ok(unsafe { Address::public_key_raw(pk.into()) })
-}
-
-fn check_key(cose_key: &CoseKey, sign: bool, verify: bool) -> Result<(), ManyError> {
-    if sign
-        && !cose_key.key_ops.contains(&coset::KeyOperation::Assigned(
-            coset::iana::KeyOperation::Sign,
-        ))
-    {
-        return Err(ManyError::unknown("Key cannot sign"));
-    }
-    if verify
-        && !cose_key.key_ops.contains(&coset::KeyOperation::Assigned(
-            coset::iana::KeyOperation::Verify,
-        ))
-    {
-        return Err(ManyError::unknown("Key cannot verify"));
-    }
-
-    if cose_key.kty != coset::KeyType::Assigned(KeyType::EC2) {
-        return Err(ManyError::unknown(format!(
-            "Wrong key type: {:?}",
-            cose_key.kty
-        )));
-    }
-
-    if cose_key.alg != Some(coset::Algorithm::Assigned(Algorithm::ES256)) {
-        return Err(ManyError::unknown(format!(
-            "Wrong key algorihm: {:?}",
-            cose_key.alg
-        )));
-    }
-    Ok(())
-}
-
 #[derive(Clone)]
 struct EcDsaIdentityInner {
     address: Address,
@@ -130,11 +87,11 @@ impl EcDsaIdentityInner {
     }
 
     pub fn from_key(cose_key: CoseKey) -> Result<Self, ManyError> {
+        check_key(&cose_key, true, false, KeyType::EC2, Algorithm::ES256, None)?;
+
         let public_key =
             public_key(&cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
-        let address = address(&public_key)?;
-
-        check_key(&cose_key, true, false)?;
+        let address = unsafe { cose::address(&public_key)? };
 
         let params = BTreeMap::from_iter(cose_key.params.into_iter());
         let d = params
@@ -260,7 +217,8 @@ impl EcDsaVerifier {
         let public_key =
             public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Key not EcDsa."))?;
 
-        check_key(&public_key, false, true)?;
+        check_key(&cose_key, false, true, KeyType::EC2, Algorithm::ES256, None)?;
+        let address = unsafe { cose::address(&public_key)? };
 
         let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
         let x = params
@@ -278,8 +236,6 @@ impl EcDsaVerifier {
         let points = p256::EncodedPoint::from_affine_coordinates(x.into(), y.into(), false);
         let pk = p256::ecdsa::VerifyingKey::from_encoded_point(&points)
             .map_err(|e| ManyError::unknown(format!("Could not create a verifying key: {}", e)))?;
-
-        let address = address(cose_key)?;
 
         Ok(Self { address, pk })
     }

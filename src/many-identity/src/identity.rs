@@ -30,19 +30,6 @@ impl Identity for AnonymousIdentity {
         Ok(envelope)
     }
 }
-
-impl Verifier for AnonymousIdentity {
-    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
-        if !envelope.signature.is_empty() {
-            Err(ManyError::could_not_verify_signature(
-                "Anonymous should not have a signature.",
-            ))
-        } else {
-            Ok(())
-        }
-    }
-}
-
 /// Accept ALL envelopes.
 #[cfg(feature = "testing")]
 mod testing {
@@ -60,53 +47,97 @@ mod testing {
 #[cfg(feature = "testing")]
 pub use testing::*;
 
-impl Identity for Box<dyn Identity> {
-    fn address(&self) -> Address {
-        (&**self).address()
-    }
-
-    fn public_key(&self) -> Option<CoseKey> {
-        (&**self).public_key()
-    }
-
-    fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
-        (&**self).sign_1(envelope)
-    }
+macro_rules! decl_redirection {
+    (
+        $(
+            fn $name: ident ( &self $(,)? $($argn: ident : $argt: ty),* ) -> $ret: tt $( < $( $lt:tt ),+ > )?
+        ),* $(,)?
+    ) => {
+        $(
+        fn $name ( &self, $($argn : $argt),* ) -> $ret $(< $( $lt ),+ >)? {
+            (&**self) . $name ( $($argn),* )
+        }
+        )*
+    };
 }
 
-impl Verifier for Box<dyn Verifier> {
-    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
-        (&**self).verify_1(envelope)
-    }
+macro_rules! decl_identity_impl {
+    (
+        $(
+            impl $(
+                < $( $lt:tt $( : $clt:tt $(+ $dlt:tt )* )? ),+ >
+            )? for $ty: ty
+        );+ $(;)?
+    ) => {
+        $(
+        impl $(< $( $lt $( : $clt $(+ $dlt )* )? ),+ >)? Identity for $ty {
+            decl_redirection!(
+                fn address(&self) -> Address,
+                fn public_key(&self) -> Option<CoseKey>,
+                fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError>,
+            );
+        }
+        )+
+    };
 }
+
+macro_rules! decl_verifier_impl {
+    (
+        $(
+            impl $(
+                < $( $lt:tt $( : $clt:tt $(+ $dlt:tt )* )? ),+ >
+            )? for $ty: ty
+        );+ $(;)?
+    ) => {
+        $(
+        impl $(< $( $lt $( : $clt $(+ $dlt )* )? ),+ >)? Verifier for $ty {
+            decl_redirection!(
+                fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError>,
+            );
+        }
+        )+
+    };
+}
+
+decl_identity_impl!(
+    impl for Box<dyn Identity>;
+    impl<I: Identity> for Box<I>;
+    impl<I: Identity + Sync> for std::sync::Arc<I>;
+);
+
+decl_verifier_impl!(
+    impl for Box<dyn Verifier>;
+    impl<I: Verifier> for Box<I>;
+    impl<I: Verifier + Sync> for std::sync::Arc<I>;
+);
 
 macro_rules! declare_tuple_verifiers {
-        ( $name: ident: 0 ) => {
-            impl< $name: Verifier > Verifier for ( $name, ) {
-                #[inline]
-                fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
-                    self.0.verify_1(envelope)
-                }
+    ( $name: ident: 0 ) => {
+        impl< $name: Verifier > Verifier for ( $name, ) {
+            #[inline]
+            fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+                self.0.verify_1(envelope)
             }
-        };
+        }
+    };
 
-        ( $( $name: ident: $index: tt ),* ) => {
-            impl< $( $name: Verifier ),* > Verifier for ( $( $name ),* ) {
-                #[inline]
-                fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
-                    let mut errs = Vec::new();
-                    $(
-                        match self. $index . verify_1(envelope) {
-                            Ok(_) => return Ok(()),
-                            Err(e) => errs.push(e.to_string()),
-                        }
-                    )*
+    ( $( $name: ident: $index: tt ),* ) => {
+        impl< $( $name: Verifier ),* > Verifier for ( $( $name ),* ) {
+            #[inline]
+            fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+                let mut errs = Vec::new();
+                $(
+                    match self. $index . verify_1(envelope) {
+                        Ok(_) => return Ok(()),
+                        Err(e) => errs.push(e.to_string()),
+                    }
+                )*
 
-                    Err(ManyError::could_not_verify_signature(errs.join(", ")))
-                }
+                Err(ManyError::could_not_verify_signature(errs.join(", ")))
             }
-        };
-    }
+        }
+    };
+}
 
 // 8 outta be enough for everyone (but you can also ((a, b), (c, d), ...) recursively).
 declare_tuple_verifiers!(A: 0);
@@ -122,6 +153,7 @@ pub mod verifiers {
     use crate::{Address, Verifier};
     use coset::CoseSign1;
     use many_error::ManyError;
+    use tracing::trace;
 
     #[derive(Clone, Debug)]
     pub struct AnonymousVerifier;
@@ -131,6 +163,7 @@ pub mod verifiers {
             let kid = &envelope.protected.header.key_id;
             if !kid.is_empty() {
                 if Address::from_bytes(kid)?.is_anonymous() {
+                    trace!("Anonymous message");
                     Ok(())
                 } else {
                     Err(ManyError::unknown("Anonymous requires no key id."))
@@ -138,6 +171,7 @@ pub mod verifiers {
             } else if !envelope.signature.is_empty() {
                 Err(ManyError::unknown("Anonymous requires no signature."))
             } else {
+                trace!("Anonymous message");
                 Ok(())
             }
         }
