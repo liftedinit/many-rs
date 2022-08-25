@@ -37,12 +37,32 @@ The dependency graph between the crates in this repository looks like this:
 ```mermaid
 graph TD;
   many-identity --> many-client;
+  many-identity-dsa --> many-client;
   many-modules --> many-client;
   many-protocol --> many-client;
   many-server --> many-client;
+  many-error --> many-identity-dsa;
+  many-identity --> many-identity-dsa;
+  many-error --> many-identity-hsm;
+  many-identity --> many-identity-hsm;
+  many-identity-dsa --> many-identity-hsm;
+  many-protocol --> many-identity-hsm;
+  many-error --> many-identity-webauthn;
+  many-identity --> many-identity-webauthn;
+  many-identity-dsa --> many-identity-webauthn;
+  many-protocol --> many-identity-webauthn;
   many-error --> many-identity;
+  many-client --> many-mock;
+  many-error --> many-mock;
+  many-identity --> many-mock;
+  many-identity-dsa --> many-mock;
+  many-identity-webauthn --> many-mock;
+  many-modules --> many-mock;
+  many-protocol --> many-mock;
+  many-server --> many-mock;
   many-error --> many-modules;
   many-identity --> many-modules;
+  many-identity-dsa --> many-modules;
   many-macros --> many-modules;
   many-protocol --> many-modules;
   many-types --> many-modules;
@@ -51,6 +71,7 @@ graph TD;
   many-types --> many-protocol;
   many-error --> many-server;
   many-identity --> many-server;
+  many-identity-dsa --> many-server;
   many-macros --> many-server;
   many-modules --> many-server;
   many-protocol --> many-server;
@@ -60,6 +81,9 @@ graph TD;
   many-client --> many;
   many-error --> many;
   many-identity --> many;
+  many-identity-dsa --> many;
+  many-identity-hsm --> many;
+  many-mock --> many;
   many-modules --> many;
   many-protocol --> many;
   many-server --> many;
@@ -68,23 +92,32 @@ graph TD;
 
 * `many`([crates](https://crates.io/crate/many), [docs](https://docs.rs/many))
     – Contains the CLI tool to contact and diagnose MANY servers.
+* `many-client`([crates](https://crates.io/crate/many-client), [docs](https://docs.rs/many-client))
+  – Types and methods to talk to the MANY network.
 * `many-error`([crates](https://crates.io/crate/many-error), [docs](https://docs.rs/many-error))
     – Error and Reason types, as defined by the specification.
 * `many-identity`([crates](https://crates.io/crate/many-identity), [docs](https://docs.rs/many-identity))
-    – Types for managing an identity, its address and signing/verification of messages.
-* `many-types`([crates](https://crates.io/crate/many-types), [docs](https://docs.rs/many-types))
-    – General types related to CBOR encoding, or to the specification.
+    – Types for managing an identity, its address and traits related to signing/verification of messages.
+* `many-identity-dsa`([crates](https://crates.io/crate/many-identity-dsa), [docs](https://docs.rs/many-identity-dsa))
+    – Digital Signature identity, verifiers and utility functions. 
+      This crate has features for all supported algorithms (e.g. `ed25519`).
+* `many-identity-hsm`([crates](https://crates.io/crate/many-identity-hsm), [docs](https://docs.rs/many-identity-hsm))
+    – Hardware Security Module based identity, verifiers and utility functions.
+* `many-identity-webauthn`([crates](https://crates.io/crate/many-identity-webauthn), [docs](https://docs.rs/many-identity-webauthn))
+    – Verifiers for WebAuthn signed envelopes.
 * `many-macros`([crates](https://crates.io/crate/many-macros), [docs](https://docs.rs/many-macros))
     – Contains macros to help with server and module declaration and implementations.
+* `many-mock`([crates](https://crates.io/crate/many-mock), [docs](https://docs.rs/many-mock))
+    – Utility types for creating mocked MANY servers.
 * `many-modules`([crates](https://crates.io/crate/many-modules), [docs](https://docs.rs/many-modules))
     – All modules declared in the specification.
 * `many-protocol`([crates](https://crates.io/crate/many-protocol), [docs](https://docs.rs/many-protocol))
     – Types exclusively associated with the protocol.
       This does not include types that are related to attributes or modules.
-* `many-client`([crates](https://crates.io/crate/many-client), [docs](https://docs.rs/many-client))
-    – Types and methods to talk to the MANY network.
 * `many-server`([crates](https://crates.io/crate/many-server), [docs](https://docs.rs/many-server))
     – Types and methods to create a MANY network server and neighborhood.
+* `many-types`([crates](https://crates.io/crate/many-types), [docs](https://docs.rs/many-types))
+  – General types related to CBOR encoding, or to the specification.
 
 # Installation
 
