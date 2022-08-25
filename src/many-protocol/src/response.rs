@@ -88,7 +88,7 @@ impl ResponseMessage {
         envelope: &CoseSign1,
         verifier: &impl Verifier,
     ) -> Result<Self, ManyError> {
-        verifier.verify_1(envelope)?;
+        let address = verifier.verify_1(envelope)?;
 
         let payload = envelope
             .payload
@@ -97,7 +97,11 @@ impl ResponseMessage {
         let message =
             ResponseMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
 
-        Ok(message)
+        if address != message.from {
+            Err(ManyError::invalid_from_identity())
+        } else {
+            Ok(message)
+        }
     }
 
     pub fn with_attribute(mut self, attr: Attribute) -> Self {

@@ -4,7 +4,7 @@ use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
 use many_identity::{AcceptAllVerifier, Identity, Verifier};
 use many_modules::{base, ManyModule, ManyModuleInfo};
-use many_protocol::{IdentityResolver, RequestMessage, ResponseMessage};
+use many_protocol::{RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Formatter};
@@ -58,7 +58,6 @@ pub struct ManyServer {
     method_cache: BTreeSet<String>,
     identity: Box<dyn Identity>,
     verifier: Box<dyn Verifier>,
-    resolver: Option<Box<dyn IdentityResolver>>,
     public_key: Option<CoseKey>,
     name: String,
     version: Option<String>,
@@ -103,7 +102,6 @@ impl ManyServer {
             name: name.to_string(),
             identity: Box::new(identity),
             verifier: Box::new(verifier),
-            resolver: None,
             public_key,
             timeout: MANYSERVER_DEFAULT_TIMEOUT,
             fallback: None,
@@ -281,11 +279,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
         let request = {
             let this = self.lock().unwrap();
-            if let Some(resolver) = this.resolver.as_ref() {
-                many_protocol::decode_request_from_cose_sign1(&envelope, &this.verifier, resolver)
-            } else {
-                many_protocol::decode_request_from_cose_sign1_no_resolve(&envelope, &this.verifier)
-            }
+            many_protocol::decode_request_from_cose_sign1(&envelope, &this.verifier)
         };
         let mut id = None;
 
@@ -364,8 +358,7 @@ mod tests {
     use many_identity_dsa::ed25519::generate_random_ed25519_identity;
     use many_modules::base::Status;
     use many_protocol::{
-        decode_response_from_cose_sign1_no_resolve, encode_cose_sign1_from_request,
-        RequestMessageBuilder,
+        decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessageBuilder,
     };
     use many_types::Timestamp;
     use proptest::prelude::*;
@@ -407,7 +400,7 @@ mod tests {
 
             let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
             let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
-            let response_message = decode_response_from_cose_sign1_no_resolve(&response, None, &AcceptAllVerifier).unwrap();
+            let response_message = decode_response_from_cose_sign1(&response, None, &AcceptAllVerifier).unwrap();
 
             let status: Status = minicbor::decode(&response_message.data.unwrap()).unwrap();
 
@@ -420,6 +413,40 @@ mod tests {
             assert_eq!(status.timeout, Some(MANYSERVER_DEFAULT_TIMEOUT));
             assert_eq!(status.extras, BTreeMap::new());
         }
+    }
+
+    #[test]
+    fn validate_from_anonymous_fail() {
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .from(Address::anonymous())
+            .to(Address::anonymous())
+            .method("status".to_string())
+            .build()
+            .unwrap();
+        let id = generate_random_ed25519_identity();
+        let server = ManyServer::test(AnonymousIdentity);
+        let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
+        let response_e = smol::block_on(server.execute(envelope)).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        assert!(response.data.is_err());
+    }
+
+    #[test]
+    fn validate_from_different_fail() {
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .from(generate_random_ed25519_identity().address())
+            .to(Address::anonymous())
+            .method("status".to_string())
+            .build()
+            .unwrap();
+        let id = generate_random_ed25519_identity();
+        let server = ManyServer::test(AnonymousIdentity);
+        let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
+        let response_e = smol::block_on(server.execute(envelope)).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        assert!(response.data.is_err());
     }
 
     #[test]
@@ -471,8 +498,7 @@ mod tests {
         // timestamp is now, so this should be fairly close to it and should pass.
         let response_e = smol::block_on(server.execute(create_request(timestamp, 0))).unwrap();
         let response =
-            decode_response_from_cose_sign1_no_resolve(&response_e, None, &AcceptAllVerifier)
-                .unwrap();
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
         assert!(response.data.is_ok());
 
         // Set time to present.
@@ -481,8 +507,7 @@ mod tests {
         }
         let response_e = smol::block_on(server.execute(create_request(timestamp, 1))).unwrap();
         let response =
-            decode_response_from_cose_sign1_no_resolve(&response_e, None, &AcceptAllVerifier)
-                .unwrap();
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
         assert!(response.data.is_ok());
 
         // Set time to 10 minutes past.
@@ -491,8 +516,7 @@ mod tests {
         }
         let response_e = smol::block_on(server.execute(create_request(timestamp, 2))).unwrap();
         let response =
-            decode_response_from_cose_sign1_no_resolve(&response_e, None, &AcceptAllVerifier)
-                .unwrap();
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
         assert!(response.data.is_err());
         assert_eq!(
             response.data.unwrap_err().code(),
@@ -506,8 +530,7 @@ mod tests {
         )))
         .unwrap();
         let response =
-            decode_response_from_cose_sign1_no_resolve(&response_e, None, &AcceptAllVerifier)
-                .unwrap();
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
         assert!(response.data.is_ok());
     }
 }

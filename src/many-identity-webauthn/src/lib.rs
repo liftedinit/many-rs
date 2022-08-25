@@ -196,8 +196,8 @@ impl WebAuthnVerifier {
 }
 
 impl Verifier for WebAuthnVerifier {
-    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
-        self.verify(envelope).map(|_| ())
+    fn verify_1(&self, envelope: &CoseSign1) -> Result<Address, ManyError> {
+        self.verify(envelope)
     }
 }
 
@@ -205,6 +205,7 @@ impl Verifier for WebAuthnVerifier {
 mod tests {
     use super::*;
     use once_cell::sync::Lazy;
+    use std::str::FromStr;
 
     // A real CBOR WebAuthn CoseSign1 request
     static ENVELOPE: Lazy<CoseSign1> = Lazy::new(|| {
@@ -351,7 +352,10 @@ mod tests {
     #[test]
     fn webauthn_ok() {
         let envelope = ENVELOPE.clone();
-        assert_eq!(WebAuthnVerifier::new(None).verify_1(&envelope), Ok(()));
+        assert_eq!(
+            WebAuthnVerifier::new(None).verify_1(&envelope),
+            Ok(Address::from_str("mag7naerft2o3czjj6edvfkm6m3ahhdc3zpaaqjz2j7pvvlyf5").unwrap())
+        );
     }
 
     #[test]

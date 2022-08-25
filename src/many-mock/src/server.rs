@@ -42,8 +42,7 @@ impl<I: Identity> ManyMockServer<I> {
 #[async_trait]
 impl<I: Identity + Debug + Send + Sync> LowLevelManyRequestHandler for ManyMockServer<I> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
-        let request =
-            many_protocol::decode_request_from_cose_sign1_no_resolve(&envelope, &self.verifier);
+        let request = many_protocol::decode_request_from_cose_sign1(&envelope, &self.verifier);
         let id = &self.identity;
 
         let message = request.map_err(|_| "Error processing the request".to_string())?;

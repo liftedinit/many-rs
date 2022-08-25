@@ -311,10 +311,12 @@ impl Ed25519Verifier {
 }
 
 impl Verifier for Ed25519Verifier {
-    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+    fn verify_1(&self, envelope: &CoseSign1) -> Result<Address, ManyError> {
         let address = Address::from_bytes(&envelope.protected.header.key_id)?;
         if self.address.matches(&address) {
-            envelope.verify_signature(&[], |signature, msg| self.verify_signature(signature, msg))
+            envelope
+                .verify_signature(&[], |signature, msg| self.verify_signature(signature, msg))?;
+            Ok(address)
         } else {
             Err(ManyError::unknown(format!(
                 "Address in envelope does not match expected address. Expected: {}, Actual: {}",

@@ -3,14 +3,24 @@ use crate::Address;
 use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
 
+/// An Identity is anything that is a unique address and can sign messages.
 pub trait Identity: Send {
+    /// The address of the identity.
     fn address(&self) -> Address;
+
+    /// Its public key. In some cases, the public key is absent or unknown.
     fn public_key(&self) -> Option<CoseKey>;
+
+    /// Signs an envelope with this identity.
     fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError>;
 }
 
+/// A Verifier is the other side of the signature. It verifies that an envelope
+/// matches its signature, either using the envelope or the message fields.
+/// It should also resolve the address used to sign or represent the signer
+/// the envelope, and returns it.
 pub trait Verifier: Send {
-    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError>;
+    fn verify_1(&self, envelope: &CoseSign1) -> Result<Address, ManyError>;
 }
 
 #[derive(Debug, Clone)]
@@ -30,16 +40,24 @@ impl Identity for AnonymousIdentity {
         Ok(envelope)
     }
 }
-/// Accept ALL envelopes.
+
 #[cfg(feature = "testing")]
 mod testing {
-    use crate::Verifier;
+    use crate::{Address, Verifier};
 
+    /// Accept ALL envelopes, and uses the key id as is to resolve the address.
+    /// No verification is made. This should NEVER BE used for production.
     pub struct AcceptAllVerifier;
 
     impl Verifier for AcceptAllVerifier {
-        fn verify_1(&self, _envelope: &coset::CoseSign1) -> Result<(), many_error::ManyError> {
-            Ok(())
+        fn verify_1(&self, envelope: &coset::CoseSign1) -> Result<Address, many_error::ManyError> {
+            // Does not verify the signature and key id.
+            let kid = &envelope.protected.header.key_id;
+            if kid.is_empty() {
+                Ok(Address::anonymous())
+            } else {
+                Address::from_bytes(kid)
+            }
         }
     }
 }
@@ -92,7 +110,7 @@ macro_rules! decl_verifier_impl {
         $(
         impl $(< $( $lt $( : $clt $(+ $dlt )* )? ),+ >)? Verifier for $ty {
             decl_redirection!(
-                fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError>,
+                fn verify_1(&self, envelope: &CoseSign1) -> Result<Address, ManyError>,
             );
         }
         )+
@@ -115,7 +133,7 @@ macro_rules! declare_tuple_verifiers {
     ( $name: ident: 0 ) => {
         impl< $name: Verifier > Verifier for ( $name, ) {
             #[inline]
-            fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+            fn verify_1(&self, envelope: &CoseSign1) -> Result<Address, ManyError> {
                 self.0.verify_1(envelope)
             }
         }
@@ -124,11 +142,11 @@ macro_rules! declare_tuple_verifiers {
     ( $( $name: ident: $index: tt ),* ) => {
         impl< $( $name: Verifier ),* > Verifier for ( $( $name ),* ) {
             #[inline]
-            fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+            fn verify_1(&self, envelope: &CoseSign1) -> Result<Address, ManyError> {
                 let mut errs = Vec::new();
                 $(
                     match self. $index . verify_1(envelope) {
-                        Ok(_) => return Ok(()),
+                        Ok(a) => return Ok(a),
                         Err(e) => errs.push(e.to_string()),
                     }
                 )*
@@ -159,12 +177,12 @@ pub mod verifiers {
     pub struct AnonymousVerifier;
 
     impl Verifier for AnonymousVerifier {
-        fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+        fn verify_1(&self, envelope: &CoseSign1) -> Result<Address, ManyError> {
             let kid = &envelope.protected.header.key_id;
             if !kid.is_empty() {
                 if Address::from_bytes(kid)?.is_anonymous() {
                     trace!("Anonymous message");
-                    Ok(())
+                    Ok(Address::anonymous())
                 } else {
                     Err(ManyError::unknown("Anonymous requires no key id."))
                 }
@@ -172,7 +190,7 @@ pub mod verifiers {
                 Err(ManyError::unknown("Anonymous requires no signature."))
             } else {
                 trace!("Anonymous message");
-                Ok(())
+                Ok(Address::anonymous())
             }
         }
     }

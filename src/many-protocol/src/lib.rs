@@ -11,58 +11,17 @@ pub use response::{ResponseMessage, ResponseMessageBuilder};
 
 pub type ManyUrl = reqwest::Url;
 
-pub trait IdentityResolver: Send {
-    fn resolve_request(
-        &self,
-        envelope: &CoseSign1,
-        request: &RequestMessage,
-    ) -> Result<Address, ManyError>;
-    fn resolve_response(
-        &self,
-        envelope: &CoseSign1,
-        response: &ResponseMessage,
-    ) -> Result<Address, ManyError>;
-}
-
-impl IdentityResolver for Box<dyn IdentityResolver> {
-    fn resolve_request(
-        &self,
-        envelope: &CoseSign1,
-        request: &RequestMessage,
-    ) -> Result<Address, ManyError> {
-        (&**self).resolve_request(envelope, request)
-    }
-
-    fn resolve_response(
-        &self,
-        envelope: &CoseSign1,
-        response: &ResponseMessage,
-    ) -> Result<Address, ManyError> {
-        (&**self).resolve_response(envelope, response)
-    }
-}
-
-pub fn decode_request_from_cose_sign1_no_resolve(
+pub fn decode_request_from_cose_sign1(
     envelope: &CoseSign1,
     verifier: &impl Verifier,
 ) -> Result<RequestMessage, ManyError> {
-    verifier.verify_1(envelope)?;
+    let from_id = verifier.verify_1(envelope)?;
 
     let payload = envelope
         .payload
         .as_ref()
         .ok_or_else(ManyError::empty_envelope)?;
-    RequestMessage::from_bytes(payload).map_err(ManyError::deserialization_error)
-}
-
-pub fn decode_request_from_cose_sign1(
-    envelope: &CoseSign1,
-    verifier: &impl Verifier,
-    resolver: &impl IdentityResolver,
-) -> Result<RequestMessage, ManyError> {
-    let message = decode_request_from_cose_sign1_no_resolve(envelope, verifier)?;
-
-    let from_id = resolver.resolve_request(envelope, &message)?;
+    let message = RequestMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
 
     // Check the `from` field.
     if !from_id.matches(&message.from.unwrap_or_default()) {
@@ -72,7 +31,7 @@ pub fn decode_request_from_cose_sign1(
     Ok(message)
 }
 
-pub fn decode_response_from_cose_sign1_no_resolve(
+pub fn decode_response_from_cose_sign1(
     envelope: &CoseSign1,
     to: Option<Address>,
     verifier: &impl Verifier,
@@ -84,23 +43,6 @@ pub fn decode_response_from_cose_sign1_no_resolve(
         if to_id != message.to.unwrap_or_default() {
             return Err(ManyError::invalid_to_identity());
         }
-    }
-
-    Ok(message)
-}
-
-pub fn decode_response_from_cose_sign1(
-    envelope: &CoseSign1,
-    to: Option<Address>,
-    verifier: &impl Verifier,
-    resolver: &impl IdentityResolver,
-) -> Result<ResponseMessage, ManyError> {
-    let message = decode_response_from_cose_sign1_no_resolve(envelope, to, verifier)?;
-
-    let from_id = resolver.resolve_response(envelope, &message)?;
-    // Check the `from` field.
-    if from_id != message.from {
-        return Err(ManyError::invalid_from_identity());
     }
 
     Ok(message)

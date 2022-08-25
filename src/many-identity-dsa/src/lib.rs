@@ -131,7 +131,7 @@ macro_rules! try_verify {
 pub struct CoseKeyVerifier;
 
 impl Verifier for CoseKeyVerifier {
-    fn verify_1(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+    fn verify_1(&self, envelope: &CoseSign1) -> Result<Address, ManyError> {
         let keyid = &envelope.protected.header.key_id;
 
         // Extract the keyset argument.
@@ -144,13 +144,17 @@ impl Verifier for CoseKeyVerifier {
             .find(|key| key.key_id.eq(keyid))
             .ok_or_else(|| ManyError::unknown("Could not find the key in keyset."))?;
 
-        #[cfg(feature = "ed25519")]
-        try_verify!(ed25519::Ed25519Verifier::from_key(key), envelope, "ed25519");
+        let address = (|| {
+            #[cfg(feature = "ed25519")]
+            try_verify!(ed25519::Ed25519Verifier::from_key(key), envelope, "ed25519");
 
-        #[cfg(feature = "ecdsa")]
-        try_verify!(ecdsa::EcDsaVerifier::from_key(key), envelope, "ecdsa");
+            #[cfg(feature = "ecdsa")]
+            try_verify!(ecdsa::EcDsaVerifier::from_key(key), envelope, "ecdsa");
 
-        Err(ManyError::unknown("Algorithm unsupported."))
+            Err(ManyError::unknown("Algorithm unsupported."))
+        })()?;
+
+        Ok(address)
     }
 }
 
