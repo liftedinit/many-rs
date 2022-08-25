@@ -217,7 +217,7 @@ impl EcDsaVerifier {
         let public_key =
             public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Key not EcDsa."))?;
 
-        check_key(&cose_key, false, true, KeyType::EC2, Algorithm::ES256, None)?;
+        check_key(cose_key, false, true, KeyType::EC2, Algorithm::ES256, None)?;
         let address = unsafe { cose::address(&public_key)? };
 
         let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
