@@ -70,7 +70,6 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as AttributeArgs);
 
     let mut namespace = None;
-
     let mut methods = None;
 
     for arg in args.iter() {
@@ -98,7 +97,7 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
 
     assert!(
         input_struct.fields.is_empty(),
-        "The base struct should be empty"
+        "The base struct should be a unit struct"
     );
 
     let fields_named: FieldsNamed = parse_quote! { { client: crate::ManyClient } };
