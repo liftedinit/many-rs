@@ -291,7 +291,7 @@ impl Verifier for Ed25519Verifier {
 }
 
 #[cfg(feature = "testing")]
-fn generate_random_ed25519_cose_key() -> CoseKey {
+pub(crate) fn generate_random_ed25519_cose_key() -> CoseKey {
     use rand_07::rngs::OsRng;
 
     let mut csprng = OsRng {};

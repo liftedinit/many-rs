@@ -1844,6 +1844,7 @@ dependencies = [
  "hex",
  "many-error",
  "many-identity",
+ "many-identity-dsa",
  "many-protocol",
  "minicbor",
  "once_cell",

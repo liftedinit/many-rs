@@ -31,6 +31,7 @@ tracing = "0.1.29"
 [dev-dependencies]
 proptest = "1.0.0"
 many-protocol = { path = "../many-protocol", version = "0.1.0" }
+many-identity-dsa = { path = ".", features = [ "default", "ecdsa", "ed25519", "serde", "testing" ] }
 serde_test = "1.0.139"
 
 [features]
