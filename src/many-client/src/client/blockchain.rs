@@ -1,5 +1,5 @@
 use many_client_macros::many_client;
-use many_modules::blockchain::{
+pub use many_modules::blockchain::{
     BlockArgs, BlockReturns, InfoReturns, TransactionArgs, TransactionReturns,
 };
 
