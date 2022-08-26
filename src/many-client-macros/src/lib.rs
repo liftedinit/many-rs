@@ -1,121 +1,71 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, ToTokens};
-use syn::parse;
-use syn::punctuated::Punctuated;
-use syn::token::Comma;
-use syn::MetaList;
-use syn::MetaNameValue;
+use syn::parse2;
+use syn::FnArg;
+use syn::ItemTrait;
+use syn::TraitItemMethod;
 use syn::Type;
-use syn::{
-    parse_macro_input, parse_quote, AttributeArgs, FieldsNamed, ItemStruct, LitStr, NestedMeta,
-};
+use syn::{parse_macro_input, parse_quote, AttributeArgs, LitStr};
 
-fn build_request_methods<'a>(
-    namespace: Option<&'a LitStr>,
-    methods: &'a Punctuated<NestedMeta, Comma>,
-) -> impl IntoIterator<Item = TokenStream2> + 'a {
-    methods.iter().map(move |method| {
-        let list = parse::<MetaList>(method.to_token_stream().into())
-            .expect("A method should be a MetaList");
-        let name = list.path.get_ident().unwrap();
-        let mut params = None;
-        let mut returns = None;
-        for element in list.nested.iter() {
-            let name_value = parse::<MetaNameValue>(element.to_token_stream().into())
-                .expect("Elements should be MetaNameValue");
-            let name = name_value.path.get_ident().unwrap();
-            if name == "params" {
-                let str = parse::<LitStr>(name_value.lit.to_token_stream().into())
-                    .expect("Params should be a string or undeclared");
-                params = Some(str.parse().unwrap());
-            } else if name == "returns" {
-                let str = parse::<LitStr>(name_value.lit.to_token_stream().into())
-                    .expect("Returns should be a string or undeclared");
-                returns = Some(str.parse().unwrap());
-            } else {
-                panic!("Unknown field {:?}", element);
-            }
+fn type_and_namespace(arguments: AttributeArgs) -> (Type, Option<LitStr>) {
+    let mut r#type = None;
+    let mut lit = None;
+    for argument in arguments {
+        if let Ok(t) = parse2::<Type>(argument.to_token_stream()) {
+            r#type = Some(t)
+        } else if let Ok(l) = parse2::<LitStr>(argument.to_token_stream()) {
+            lit = Some(l)
         }
-        let returns = returns
-            .map(|r: Type| quote! { #r })
-            .unwrap_or(quote! { () });
-        let params: TokenStream2 = params
-            .map(|params: Type| quote! { params: #params })
-            .unwrap_or_else(TokenStream2::new);
-        let method: LitStr = if let Some(namespace) = namespace {
-            let namespace = format!("{}.{}", namespace.value(), name);
-            parse_quote! { #namespace }
-        } else {
-            let namespace = format!("{}", name);
-            parse_quote! { #namespace }
-        };
-        let params_call = if params.is_empty() {
-            quote! { () }
-        } else {
-            quote! { params }
-        };
-        let q = quote! {
-            pub async fn #name(&self, #params) -> Result<#returns, many_protocol::ManyError> {
-                let response = self.client.call_(#method, #params_call).await?;
-                minicbor::decode(&response).map_err(many_protocol::ManyError::deserialization_error)
-            }
-        };
-        q.into_token_stream()
-    })
+    }
+    (r#type.expect("Should have a type in the arguments"), lit)
 }
 
 #[proc_macro_attribute]
 pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(attr as AttributeArgs);
+    let arguments = parse_macro_input!(attr as AttributeArgs);
 
-    let mut namespace = None;
-    let mut methods = None;
+    let (r#type, namespace) = type_and_namespace(arguments);
 
-    for arg in args.iter() {
-        if let Ok(name_value) = parse::<MetaNameValue>(arg.to_token_stream().into()) {
-            if name_value.path.get_ident().unwrap() == "namespace" {
-                let namespace_lit = name_value.lit;
-                let namespace_lit: LitStr = parse_quote! { #namespace_lit };
-                namespace = Some(namespace_lit);
-            }
-        } else if let Ok(list) = parse::<MetaList>(arg.to_token_stream().into()) {
-            if list.path.get_ident().unwrap() == "methods" {
-                methods = Some(list.nested);
-            }
+    let input_trait = parse_macro_input!(input as ItemTrait);
+
+    let methods_iter = input_trait.items.iter().map(|func| {
+        let namespace = namespace.clone();
+        let func = func.to_token_stream();
+        let method: TraitItemMethod =
+            parse2(func).expect("Should only contain function signatures");
+        let method = method.sig;
+        let mut args_iter = method.inputs.iter();
+        let _self_arg = args_iter.next().expect("Should have a &self argument");
+        let args_param = args_iter.next();
+        let args_var = if let Some(FnArg::Typed(args)) = args_param {
+            let args = &args.pat;
+            quote! { #args }
         } else {
-            panic!("Unknown argument {:?}", arg);
-        }
-    }
-
-    let mut mapped_methods = proc_macro2::TokenStream::new();
-    if let Some(methods) = methods.as_ref() {
-        mapped_methods.extend(build_request_methods(namespace.as_ref(), methods));
-    }
-
-    let mut input_struct = parse_macro_input!(input as ItemStruct);
-
-    assert!(
-        input_struct.fields.is_empty(),
-        "The base struct should be a unit struct"
-    );
-
-    let fields_named: FieldsNamed = parse_quote! { { client: crate::ManyClient } };
-    input_struct.fields = fields_named.into();
-
-    let struct_name = &input_struct.ident;
-
-    let gen = quote! {
-        #[derive(Clone, Debug)]
-        #input_struct
-
-        impl #struct_name {
-            pub fn new(client: crate::ManyClient) -> Self {
-                Self { client }
+            quote! { () }
+        };
+        let server_method = if let Some(namespace) = namespace {
+            format!("{}.{}", namespace.value(), method.ident)
+        } else {
+            format!("{}", method.ident)
+        };
+        let server_method: LitStr = parse_quote! { #server_method };
+        let q = quote! {
+            #method {
+                let response = self.0.call_(#server_method, #args_var).await?;
+                minicbor::decode(&response).map_err(many_protocol::ManyError::deserialization_error)
             }
+        };
+        q.into_token_stream()
+    });
 
-            #mapped_methods
+    let mut methods = TokenStream2::new();
+    methods.extend(methods_iter);
+
+    let q = quote! {
+        impl #r#type {
+            #methods
         }
     };
-    gen.into()
+    q.into()
 }
