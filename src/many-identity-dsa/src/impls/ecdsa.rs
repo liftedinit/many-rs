@@ -387,7 +387,7 @@ pub mod tests {
     #[test]
     fn sign_and_verify_request() {
         let key = generate_random_ecdsa_identity();
-        let pubkey = key.public_key();
+        let pubkey = key.public_key().unwrap();
         let envelope = many_protocol::encode_cose_sign1_from_request(
             many_protocol::RequestMessageBuilder::default()
                 .from(key.address())
@@ -401,7 +401,7 @@ pub mod tests {
 
         many_protocol::decode_request_from_cose_sign1(
             &envelope,
-            &Ed25519Verifier::from_key(&pubkey).unwrap(),
+            &EcDsaVerifier::from_key(&pubkey).unwrap(),
         )
         .unwrap();
     }
@@ -409,7 +409,7 @@ pub mod tests {
     #[test]
     fn sign_and_verify_response() {
         let key = generate_random_ecdsa_identity();
-        let pubkey = key.public_key();
+        let pubkey = key.public_key().unwrap();
         let envelope = many_protocol::encode_cose_sign1_from_response(
             many_protocol::ResponseMessageBuilder::default()
                 .from(key.address())
@@ -423,7 +423,7 @@ pub mod tests {
         many_protocol::decode_response_from_cose_sign1(
             &envelope,
             None,
-            &Ed25519Verifier::from_key(&pubkey).unwrap(),
+            &EcDsaVerifier::from_key(&pubkey).unwrap(),
         )
         .unwrap();
     }
