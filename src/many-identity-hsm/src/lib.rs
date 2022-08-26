@@ -329,7 +329,7 @@ impl HsmIdentity {
         );
         let public_key = many_identity_dsa::ecdsa::public_key(&key)?
             .ok_or_else(|| ManyError::unknown("Could not load key."))?;
-        let address = unsafe { cose::address(&public_key)? };
+        let address = cose::address_unchecked(&public_key)?;
         Ok(Self { address, key })
     }
 }

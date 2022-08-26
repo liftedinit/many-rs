@@ -80,20 +80,13 @@ struct EcDsaIdentityInner {
 }
 
 impl EcDsaIdentityInner {
-    pub fn from_points(x: Vec<u8>, y: Vec<u8>, d: Option<Vec<u8>>) -> Result<Self, ManyError> {
-        let key = ecdsa_cose_key((x, y), d);
+    pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
+        check_key(cose_key, true, false, KeyType::EC2, Algorithm::ES256, None)?;
 
-        Self::from_key(key)
-    }
+        let public_key = public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
+        let address = cose::address_unchecked(&public_key)?;
 
-    pub fn from_key(cose_key: CoseKey) -> Result<Self, ManyError> {
-        check_key(&cose_key, true, false, KeyType::EC2, Algorithm::ES256, None)?;
-
-        let public_key =
-            public_key(&cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
-        let address = unsafe { cose::address(&public_key)? };
-
-        let params = BTreeMap::from_iter(cose_key.params.into_iter());
+        let params = BTreeMap::from_iter(cose_key.params.iter().cloned());
         let d = params
             .get(&Label::Int(Ec2KeyParameter::D.to_i64()))
             .ok_or_else(|| ManyError::unknown("Could not find the D parameter in key"))?
@@ -155,11 +148,7 @@ impl Identity for EcDsaIdentityInner {
 pub struct EcDsaIdentity(EcDsaIdentityInner);
 
 impl EcDsaIdentity {
-    pub fn from_points(x: Vec<u8>, y: Vec<u8>, d: Option<Vec<u8>>) -> Result<Self, ManyError> {
-        EcDsaIdentityInner::from_points(x, y, d).map(Self)
-    }
-
-    pub fn from_key(key: CoseKey) -> Result<Self, ManyError> {
+    pub fn from_key(key: &CoseKey) -> Result<Self, ManyError> {
         EcDsaIdentityInner::from_key(key).map(Self)
     }
 
@@ -183,7 +172,7 @@ impl EcDsaIdentity {
             (points.x().unwrap().to_vec(), points.y().unwrap().to_vec()),
             Some(sk.to_bytes().to_vec()),
         );
-        Self::from_key(cose_key)
+        Self::from_key(&cose_key)
     }
 
     #[cfg(test)]
@@ -218,7 +207,7 @@ impl EcDsaVerifier {
             public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Key not EcDsa."))?;
 
         check_key(cose_key, false, true, KeyType::EC2, Algorithm::ES256, None)?;
-        let address = unsafe { cose::address(&public_key)? };
+        let address = cose::address_unchecked(&public_key)?;
 
         let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
         let x = params
@@ -263,6 +252,25 @@ impl Verifier for EcDsaVerifier {
             )))
         }
     }
+}
+
+#[cfg(feature = "testing")]
+fn generate_random_ecdsa_cose_key() -> CoseKey {
+    use rand::rngs::OsRng;
+
+    let mut csprng = OsRng {};
+    let privkey = p256::ecdsa::SigningKey::random(&mut csprng);
+    let pubkey = privkey.verifying_key();
+
+    let x = pubkey.to_encoded_point(false).x().unwrap().to_vec();
+    let y = pubkey.to_encoded_point(false).y().unwrap().to_vec();
+
+    ecdsa_cose_key((x, y), Some(privkey.to_bytes().to_vec()))
+}
+
+#[cfg(feature = "testing")]
+pub fn generate_random_ecdsa_identity() -> EcDsaIdentity {
+    EcDsaIdentity::from_key(&generate_random_ecdsa_cose_key()).unwrap()
 }
 
 #[cfg(test)]
@@ -324,6 +332,10 @@ pub mod tests {
             id.address(),
             "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf"
         );
+        assert_eq!(
+            cose::address_unchecked(&id.public_key().unwrap()).unwrap(),
+            "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf"
+        );
     }
 
     #[test]
@@ -342,5 +354,77 @@ pub mod tests {
                 172, 246, 68, 3, 30, 159, 41, 73, 183, 110,
             ])],
         );
+    }
+
+    #[test]
+    fn identity_invalid_key_no_sign() {
+        let mut cose_key = generate_random_ecdsa_cose_key();
+        cose_key.key_ops.clear();
+        assert!(EcDsaIdentity::from_key(&cose_key).is_err());
+    }
+
+    #[test]
+    fn identity_invalid_no_alg() {
+        let mut cose_key = generate_random_ecdsa_cose_key();
+        cose_key.alg = None;
+        assert!(EcDsaIdentity::from_key(&cose_key).is_err());
+    }
+
+    #[test]
+    fn identity_invalid_alg() {
+        let mut cose_key = generate_random_ecdsa_cose_key();
+        cose_key.alg = Some(coset::Algorithm::Assigned(coset::iana::Algorithm::EdDSA));
+        assert!(EcDsaIdentity::from_key(&cose_key).is_err());
+    }
+
+    #[test]
+    fn identity_invalid_kty() {
+        let mut cose_key = generate_random_ecdsa_cose_key();
+        cose_key.kty = coset::KeyType::Assigned(coset::iana::KeyType::OKP);
+        assert!(EcDsaIdentity::from_key(&cose_key).is_err());
+    }
+
+    #[test]
+    fn sign_and_verify_request() {
+        let key = generate_random_ecdsa_identity();
+        let pubkey = key.public_key();
+        let envelope = many_protocol::encode_cose_sign1_from_request(
+            many_protocol::RequestMessageBuilder::default()
+                .from(key.address())
+                .method("status".to_string())
+                .data(b"".to_vec())
+                .build()
+                .unwrap(),
+            &key,
+        )
+        .unwrap();
+
+        many_protocol::decode_request_from_cose_sign1(
+            &envelope,
+            &Ed25519Verifier::from_key(&pubkey).unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn sign_and_verify_response() {
+        let key = generate_random_ecdsa_identity();
+        let pubkey = key.public_key();
+        let envelope = many_protocol::encode_cose_sign1_from_response(
+            many_protocol::ResponseMessageBuilder::default()
+                .from(key.address())
+                .data(Ok(b"".to_vec()))
+                .build()
+                .unwrap(),
+            &key,
+        )
+        .unwrap();
+
+        many_protocol::decode_response_from_cose_sign1(
+            &envelope,
+            None,
+            &Ed25519Verifier::from_key(&pubkey).unwrap(),
+        )
+        .unwrap();
     }
 }

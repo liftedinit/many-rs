@@ -177,33 +177,15 @@ impl Address {
     /// Create an identity from the raw value of a public key hash, without checking
     /// its validity.
     ///
-    /// # Safety
-    /// This is marked as unsafe to make sure the caller knows they are not supposed
+    /// This is unchecked to make sure the caller knows they are not supposed
     /// to use this function directly without thinking a bit more about it.
     ///
-    /// To use this method without unsafe code, use a utility function available
-    /// in a separate crate (like many-identity-dsa) or in the testing utilities
-    /// available here to create a bogus address.
+    /// Instead, use a utility function available in a separate crate (like
+    /// many-identity-dsa) or in the testing utilities available here to create
+    /// a bogus address.
     #[inline(always)]
-    pub unsafe fn public_key_raw(hash: PublicKeyHash) -> Self {
+    pub fn public_key_unchecked(hash: PublicKeyHash) -> Self {
         Self(InnerAddress::public_key(hash))
-    }
-
-    /// Create an identity from the raw value of a public key hash and a subresource
-    /// id. The hash isn't validated, but the subid is.
-    ///
-    /// # Safety
-    ///
-    /// This is marked as unsafe to make sure the caller knows they are not supposed
-    /// to use this function directly without thinking a bit more about it.
-    ///
-    /// To use this method without unsafe code, use an utility function available
-    /// in a separate crate (like many-identity-dsa) or in the testing utilities
-    /// available here to create a bogus address.
-    #[inline(always)]
-    #[allow(dead_code)]
-    pub unsafe fn subresource_raw(hash: PublicKeyHash, subid: SubresourceId) -> Self {
-        Self(InnerAddress::subresource_unchecked(hash, subid))
     }
 }
 

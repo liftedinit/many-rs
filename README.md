@@ -105,6 +105,8 @@ graph TD;
     – Hardware Security Module based identity, verifiers and utility functions.
 * `many-identity-webauthn`([crates](https://crates.io/crate/many-identity-webauthn), [docs](https://docs.rs/many-identity-webauthn))
     – Verifiers for WebAuthn signed envelopes.
+      This uses our custom WebAuthn format, which is not fully compliant with the [WebAuthn standard](https://webauthn.io).
+      See the [Lifted WebAuthn Auth Paper](https://coda.io/@hans-larsen/lifted-webauthn-auth).
 * `many-macros`([crates](https://crates.io/crate/many-macros), [docs](https://docs.rs/many-macros))
     – Contains macros to help with server and module declaration and implementations.
 * `many-mock`([crates](https://crates.io/crate/many-mock), [docs](https://docs.rs/many-mock))

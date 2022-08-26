@@ -9,7 +9,7 @@ use sha3::{Digest, Sha3_224};
 /// # Safety
 /// This methods DOES NOT VERIFY that the cose key is of a public key. There are
 /// strict criteria (see spec) for how to define the public key of a COSE Key.
-pub unsafe fn address(cose_key: &CoseKey) -> Result<Address, ManyError> {
+pub fn address_unchecked(cose_key: &CoseKey) -> Result<Address, ManyError> {
     let pk = Sha3_224::digest(
         cose_key
             .clone()
@@ -17,7 +17,7 @@ pub unsafe fn address(cose_key: &CoseKey) -> Result<Address, ManyError> {
             .map_err(|e| ManyError::unknown(e.to_string()))?,
     );
 
-    Ok(Address::public_key_raw(pk.into()))
+    Ok(Address::public_key_unchecked(pk.into()))
 }
 
 /// Add the keyset to the protected headers of a CoseSign1 envelope, adding to

@@ -1,4 +1,4 @@
-use coset::cbor::value::Integer;
+use coset::cbor::value::{Integer, Value};
 use coset::iana::{EnumI64, OkpKeyParameter};
 use coset::{CoseKey, Label};
 use many_error::ManyError;
@@ -16,7 +16,7 @@ fn check_key(
     verify: bool,
     key_type: coset::iana::KeyType,
     algo: coset::iana::Algorithm,
-    crv: Option<coset::iana::EllipticCurve>,
+    crv: Option<(&str, coset::iana::EllipticCurve)>,
 ) -> Result<(), ManyError> {
     if sign
         && !cose_key.key_ops.contains(&coset::KeyOperation::Assigned(
@@ -46,18 +46,20 @@ fn check_key(
         )));
     }
 
-    if let Some(crv) = crv {
+    if let Some((crv_name, crv)) = crv {
         if cose_key
             .params
             .iter()
             .find(|(k, _v)| k == &Label::Int(OkpKeyParameter::Crv.to_i64()))
             .map(|(_k, v)| v)
-            .ok_or_else(|| ManyError::unknown("Crv parameter not found."))?
-            .as_integer()
+            .and_then(Value::as_integer)
             .ok_or_else(|| ManyError::unknown("Crv parameter not found."))?
             != Integer::from(crv.to_i64())
         {
-            return Err(ManyError::unknown("Curve unsupported. Expected Ed25519"));
+            return Err(ManyError::unknown(format!(
+                "Curve unsupported. Expected {}",
+                crv_name
+            )));
         }
     }
 

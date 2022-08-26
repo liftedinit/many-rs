@@ -4,7 +4,6 @@ use coset::iana::{EnumI64, OkpKeyParameter};
 use coset::{CoseKey, CoseSign1, CoseSign1Builder, Label};
 use ed25519_dalek::Keypair;
 use many_error::ManyError;
-use many_identity::cose::add_keyset_header;
 use many_identity::{cose, Address, Identity, Verifier};
 use pkcs8::der::Document;
 use signature::{Signature, Signer};
@@ -77,7 +76,7 @@ fn key_pair(cose_key: &CoseKey) -> Result<Keypair, ManyError> {
         false,
         coset::iana::KeyType::OKP,
         coset::iana::Algorithm::EdDSA,
-        Some(coset::iana::EllipticCurve::Ed25519),
+        Some(("Ed25519", coset::iana::EllipticCurve::Ed25519)),
     )?;
 
     let mut maybe_x = None;
@@ -112,16 +111,10 @@ struct Ed25519IdentityInner {
 }
 
 impl Ed25519IdentityInner {
-    pub fn from_points(x: Vec<u8>, d: Option<Vec<u8>>) -> Result<Self, ManyError> {
-        let key = eddsa_cose_key(x, d);
-
-        Self::from_key(&key)
-    }
-
     pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
         let public_key = public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
         let key_pair = key_pair(cose_key)?;
-        let address = unsafe { cose::address(&public_key)? };
+        let address = cose::address_unchecked(&public_key)?;
 
         Ok(Self {
             address,
@@ -166,35 +159,6 @@ impl Identity for Ed25519IdentityInner {
         Ok(builder
             .try_create_signature(&[], |bytes| self.try_sign(bytes))?
             .build())
-    }
-}
-
-/// An Ed25519 identity that is already shared with the server, and as such
-/// does not need to contain the `keyset` headers. Only use this type if you
-/// know you don't need the header in the CoseSign1 envelope.
-pub struct Ed25519SharedIdentity(Ed25519IdentityInner);
-
-impl Ed25519SharedIdentity {
-    pub fn from_points(x: Vec<u8>, d: Option<Vec<u8>>) -> Result<Self, ManyError> {
-        Ed25519IdentityInner::from_points(x, d).map(Self)
-    }
-
-    pub fn from_key(key: &CoseKey) -> Result<Self, ManyError> {
-        Ed25519IdentityInner::from_key(key).map(Self)
-    }
-}
-
-impl Identity for Ed25519SharedIdentity {
-    fn address(&self) -> Address {
-        self.0.address()
-    }
-
-    fn public_key(&self) -> Option<CoseKey> {
-        self.0.public_key()
-    }
-
-    fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
-        self.0.sign_1(envelope)
     }
 }
 
@@ -256,7 +220,7 @@ impl Identity for Ed25519Identity {
     }
 
     fn sign_1(&self, envelope: CoseSign1) -> Result<CoseSign1, ManyError> {
-        self.0.sign_1(add_keyset_header(envelope, self)?)
+        self.0.sign_1(cose::add_keyset_header(envelope, self)?)
     }
 }
 
@@ -277,7 +241,7 @@ impl Ed25519Verifier {
     pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
         let public_key =
             public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Key not ed25519."))?;
-        let address = unsafe { cose::address(&public_key)? };
+        let address = cose::address_unchecked(&public_key)?;
 
         check_key(
             &public_key,
@@ -285,7 +249,7 @@ impl Ed25519Verifier {
             true,
             coset::iana::KeyType::OKP,
             coset::iana::Algorithm::EdDSA,
-            Some(coset::iana::EllipticCurve::Ed25519),
+            Some(("Ed25519", coset::iana::EllipticCurve::Ed25519)),
         )?;
 
         let mut maybe_x = None;
@@ -327,18 +291,21 @@ impl Verifier for Ed25519Verifier {
 }
 
 #[cfg(feature = "testing")]
-pub fn generate_random_ed25519_identity() -> Ed25519Identity {
-    use rand::rngs::OsRng;
+fn generate_random_ed25519_cose_key() -> CoseKey {
+    use rand_07::rngs::OsRng;
 
     let mut csprng = OsRng {};
     let keypair: Keypair = Keypair::generate(&mut csprng);
 
-    let cose_key = eddsa_cose_key(
+    eddsa_cose_key(
         keypair.public.to_bytes().to_vec(),
         Some(keypair.secret.to_bytes().to_vec()),
-    );
+    )
+}
 
-    Ed25519Identity::from_key(&cose_key).unwrap()
+#[cfg(feature = "testing")]
+pub fn generate_random_ed25519_identity() -> Ed25519Identity {
+    Ed25519Identity::from_key(&generate_random_ed25519_cose_key()).unwrap()
 }
 
 #[cfg(test)]
@@ -369,5 +336,81 @@ pub mod tests {
             id.address().to_string(),
             "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
         );
+        assert_eq!(
+            cose::address_unchecked(&id.public_key()).unwrap(),
+            "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
+        );
+    }
+
+    #[test]
+    fn identity_invalid_key_no_sign() {
+        let mut cose_key = generate_random_ed25519_cose_key();
+        cose_key.key_ops.clear();
+        assert!(Ed25519Identity::from_key(&cose_key).is_err());
+    }
+
+    #[test]
+    fn identity_invalid_no_alg() {
+        let mut cose_key = generate_random_ed25519_cose_key();
+        cose_key.alg = None;
+        assert!(Ed25519Identity::from_key(&cose_key).is_err());
+    }
+
+    #[test]
+    fn identity_invalid_alg() {
+        let mut cose_key = generate_random_ed25519_cose_key();
+        cose_key.alg = Some(coset::Algorithm::Assigned(coset::iana::Algorithm::ES256));
+        assert!(Ed25519Identity::from_key(&cose_key).is_err());
+    }
+
+    #[test]
+    fn identity_invalid_kty() {
+        let mut cose_key = generate_random_ed25519_cose_key();
+        cose_key.kty = coset::KeyType::Assigned(coset::iana::KeyType::EC2);
+        assert!(Ed25519Identity::from_key(&cose_key).is_err());
+    }
+
+    #[test]
+    fn sign_and_verify_request() {
+        let key = generate_random_ed25519_identity();
+        let pubkey = key.public_key();
+        let envelope = many_protocol::encode_cose_sign1_from_request(
+            many_protocol::RequestMessageBuilder::default()
+                .from(key.address())
+                .method("status".to_string())
+                .data(b"".to_vec())
+                .build()
+                .unwrap(),
+            &key,
+        )
+        .unwrap();
+
+        many_protocol::decode_request_from_cose_sign1(
+            &envelope,
+            &Ed25519Verifier::from_key(&pubkey).unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn sign_and_verify_response() {
+        let key = generate_random_ed25519_identity();
+        let pubkey = key.public_key();
+        let envelope = many_protocol::encode_cose_sign1_from_response(
+            many_protocol::ResponseMessageBuilder::default()
+                .from(key.address())
+                .data(Ok(b"".to_vec()))
+                .build()
+                .unwrap(),
+            &key,
+        )
+        .unwrap();
+
+        many_protocol::decode_response_from_cose_sign1(
+            &envelope,
+            None,
+            &Ed25519Verifier::from_key(&pubkey).unwrap(),
+        )
+        .unwrap();
     }
 }
