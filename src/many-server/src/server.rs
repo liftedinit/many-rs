@@ -2,7 +2,7 @@ use crate::transport::LowLevelManyRequestHandler;
 use async_trait::async_trait;
 use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
-use many_identity::{AcceptAllVerifier, Identity, Verifier};
+use many_identity::{Identity, Verifier};
 use many_modules::{base, ManyModule, ManyModuleInfo};
 use many_protocol::{RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
@@ -71,7 +71,12 @@ impl ManyServer {
     /// Create a test server. This should never be used in prod.
     #[cfg(feature = "testing")]
     pub fn test(identity: impl Identity + 'static) -> Arc<Mutex<Self>> {
-        Self::simple("test-many-server", identity, AcceptAllVerifier, None)
+        Self::simple(
+            "test-many-server",
+            identity,
+            many_identity::AcceptAllVerifier,
+            None,
+        )
     }
 
     pub fn simple(

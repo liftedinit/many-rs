@@ -3,8 +3,9 @@ use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
 use many_client::ManyClient;
 use many_error::ManyError;
-use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity, Identity};
-use many_identity_dsa::CoseKeyIdentity;
+use many_identity::verifiers::AnonymousVerifier;
+use many_identity::{Address, AnonymousIdentity, Identity};
+use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
 use many_identity_hsm::{Hsm, HsmIdentity, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_mock::{parse_mockfile, server::ManyMockServer, MockEntries};
 use many_modules::ledger;
@@ -299,8 +300,9 @@ fn message_from_hex(
     let envelope = CoseSign1::from_slice(&data).map_err(|e| anyhow!(e))?;
 
     let cose_sign1 = many_client::client::send_envelope(s, envelope)?;
-    let response = ResponseMessage::decode_and_verify(&cose_sign1, &AcceptAllVerifier)
-        .map_err(|e| anyhow!(e))?;
+    let response =
+        ResponseMessage::decode_and_verify(&cose_sign1, &(AnonymousVerifier, CoseKeyVerifier))
+            .map_err(|e| anyhow!(e))?;
 
     show_response(response, client, r#async)
 }
@@ -488,7 +490,7 @@ fn main() {
             let many = ManyServer::simple(
                 o.name,
                 Arc::clone(&key),
-                AcceptAllVerifier,
+                (AnonymousVerifier, CoseKeyVerifier),
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
             );
             let mockfile = o.mockfile.unwrap_or_default();
