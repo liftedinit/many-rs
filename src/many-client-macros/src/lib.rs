@@ -66,6 +66,10 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
     let q = quote! {
         impl #r#type {
             #methods
+
+            pub fn new(client: crate::ManyClient) -> Self {
+                Self(client)
+            }
         }
     };
     q.into()
