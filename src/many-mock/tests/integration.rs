@@ -10,14 +10,14 @@ use async_trait::async_trait;
 use ciborium::value::Value;
 use cucumber::{given, then, WorldInit};
 use many_client::ManyClient;
-use many_identity::{Address, CoseKeyIdentity};
+use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity};
 use many_mock::server::ManyMockServer;
 use many_server::{transport::http::HttpServer, ManyServer};
 
 #[derive(Debug, WorldInit)]
 struct World {
     finish_server: Arc<AtomicBool>,
-    client: ManyClient,
+    client: ManyClient<AnonymousIdentity>,
     response: Option<Value>,
 }
 
@@ -39,9 +39,9 @@ impl cucumber::World for World {
         let mockfile = mockfile.as_os_str().to_str().unwrap();
 
         let mocktree = many_mock::parse_mockfile(mockfile).unwrap();
-        let key = CoseKeyIdentity::anonymous();
+        let key = AnonymousIdentity;
 
-        let many = ManyServer::simple("integration", key.clone(), None, None);
+        let many = ManyServer::simple("integration", key.clone(), AcceptAllVerifier, None);
         {
             let mut many = many.lock().unwrap();
             let mock_server = ManyMockServer::new(mocktree, None, key.clone());

@@ -574,6 +574,7 @@ impl EventLog {
 #[cfg(test)]
 mod test {
     use super::*;
+    use many_identity::testing::identity;
 
     #[test]
     fn eventid_from_bytevec() {
@@ -638,10 +639,10 @@ mod test {
 
     #[test]
     fn event_info_is_about() {
-        let i0 = Address::public_key_raw([0; 28]);
-        let i1 = Address::public_key_raw([1; 28]);
-        let i01 = i0.with_subresource_id_unchecked(1);
-        let i11 = i1.with_subresource_id_unchecked(1);
+        let i0 = identity(0);
+        let i1 = identity(1);
+        let i01 = i0.with_subresource_id(1).unwrap();
+        let i11 = i1.with_subresource_id(1).unwrap();
 
         let s0 = EventInfo::Send {
             from: i0,
@@ -657,8 +658,8 @@ mod test {
 
     #[test]
     fn event_info_is_about_null() {
-        let i0 = Address::public_key_raw([0; 28]);
-        let i01 = i0.with_subresource_id_unchecked(1);
+        let i0 = identity(0);
+        let i01 = i0.with_subresource_id(1).unwrap();
         let token = Vec::new().into();
 
         let s0 = EventInfo::AccountMultisigExecute {
@@ -673,9 +674,9 @@ mod test {
 
     #[test]
     fn event_info_symbol() {
-        let i0 = Address::public_key_raw([0; 28]);
-        let i1 = Address::public_key_raw([1; 28]);
-        let i01 = i0.with_subresource_id_unchecked(1);
+        let i0 = identity(0);
+        let i1 = identity(1);
+        let i01 = i0.with_subresource_id(1).unwrap();
 
         let event = EventInfo::Send {
             from: i0,
@@ -693,6 +694,7 @@ mod test {
         use crate::account::features::multisig::Memo;
 
         use super::super::*;
+        use many_identity::testing::identity;
         use proptest::prelude::*;
         use proptest::string::string_regex;
 
@@ -702,8 +704,8 @@ mod test {
             transaction: AccountMultisigTransaction,
         ) -> EventInfo {
             EventInfo::AccountMultisigSubmit {
-                submitter: Address::public_key_raw([0; 28]),
-                account: Address::public_key_raw([1; 28]),
+                submitter: identity(0),
+                account: identity(1),
                 memo: Some(memo),
                 transaction: Box::new(transaction),
                 token: None,
@@ -733,9 +735,9 @@ mod test {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
                     _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::Send(module::ledger::SendArgs {
-                        from: Some(Address::public_key_raw([2; 28])),
-                        to: Address::public_key_raw([3; 28]),
-                        symbol: Address::public_key_raw([4; 28]),
+                        from: Some(identity(2)),
+                        to: identity(3),
+                        symbol: identity(4),
                         amount: amount.into(),
                     })),
                 );
@@ -747,22 +749,22 @@ mod test {
                 let memo2 = memo2.try_into().unwrap();
                 _assert_serde(
                     _create_event_info(memo, vec![].try_into().unwrap(),
-                                       AccountMultisigTransaction::AccountMultisigSubmit(
-                                           module::account::features::multisig::SubmitTransactionArgs {
-                                               account: Address::public_key_raw([2; 28]),
-                                               memo: Some(memo2),
-                                               transaction: Box::new(AccountMultisigTransaction::Send(module::ledger::SendArgs {
-                                                   from: Some(Address::public_key_raw([2; 28])),
-                                                   to: Address::public_key_raw([3; 28]),
-                                                   symbol: Address::public_key_raw([4; 28]),
-                                                   amount: amount.into(),
-                                               })),
-                                               threshold: None,
-                                               timeout_in_secs: None,
-                                               execute_automatically: None,
-                                               data: None,
-                                           }
-                                       )
+                        AccountMultisigTransaction::AccountMultisigSubmit(
+                            module::account::features::multisig::SubmitTransactionArgs {
+                                account: identity(2),
+                                memo: Some(memo2),
+                                transaction: Box::new(AccountMultisigTransaction::Send(module::ledger::SendArgs {
+                                    from: Some(identity(2)),
+                                    to: identity(3),
+                                    symbol: identity(4),
+                                    amount: amount.into(),
+                                })),
+                                threshold: None,
+                                timeout_in_secs: None,
+                                execute_automatically: None,
+                                data: None,
+                            }
+                        )
                     )
                 );
             }
@@ -772,7 +774,7 @@ mod test {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
                     _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
-                        account: Address::public_key_raw([2; 28]),
+                        account: identity(2),
                         threshold: Some(2),
                         timeout_in_secs: None,
                         execute_automatically: Some(false),
@@ -851,18 +853,18 @@ mod tests {
 
     #[test]
     fn encode_decode() {
-        let event = hex::decode("a30045030000000201c11a62e7dcea02a500820\
+        let event = hex::decode(
+            "a30045030000000201c11a62e7dcea02a500820\
 982010301d92710582080e8acda9634f6f745be872b0e5e9b65b1d3624a3ba91c6432143\
 f60e90000020245020000000103f604d92712a301d92710582080e8acda9634f6f745be8\
 72b0e5e9b65b1d3624a3ba91c6432143f60e900000204a3003a00015f9001781d4163636\
 f756e742077697468204944207b69647d20756e6b6e6f776e2e02a162696478326d61666\
 66261686b736477617165656e6179793267786b65333268676237617134616f347774373\
-4356c7366733677696a7005c11a62e7dcf5").unwrap();
+4356c7366733677696a7005c11a62e7dcf5",
+        )
+        .unwrap();
         let event_log: EventLog = minicbor::decode(&event).unwrap();
-        if let EventInfo::AccountMultisigExecute {
-            response,
-            ..
-        } = event_log.content {
+        if let EventInfo::AccountMultisigExecute { response, .. } = event_log.content {
             assert!(response.data.unwrap_err().is_attribute_specific());
         }
     }

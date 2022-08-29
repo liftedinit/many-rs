@@ -74,9 +74,13 @@ impl<'it> Iterator for AccountMapIterator<'it> {
     type Item = (Address, &'it Account);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.1
-            .next()
-            .map(|(k, v)| (self.0.with_subresource_id_unchecked(*k), v))
+        self.1.next().map(|(k, v)| {
+            (
+                self.0
+                    .with_subresource_id_unchecked((*k).try_into().unwrap()),
+                v,
+            )
+        })
     }
 }
 
@@ -259,7 +263,7 @@ impl Account {
                 }
                 result
             }
-            None => false
+            None => false,
         }
     }
 
@@ -467,9 +471,7 @@ mod module_tests {
     // TODO: split this to get easier to maintain tests.
     #[test]
     fn module_works() {
-        let account_map = Arc::new(RwLock::new(AccountMap::new(Address::public_key_raw(
-            [0; 28],
-        ))));
+        let account_map = Arc::new(RwLock::new(AccountMap::new(identity(0))));
         let mut mock = MockAccountModuleBackend::new();
 
         mock.expect_create().returning({
@@ -653,7 +655,9 @@ fn roles_from_str() {
 
 #[test]
 fn needs_role() {
-    let owner = Address::public_key_raw([0; 28]);
+    use many_identity::testing::identity;
+
+    let owner = identity(0);
     let account = Account::create(
         &owner,
         CreateArgs {
@@ -666,14 +670,14 @@ fn needs_role() {
     assert!(account
         .needs_role(&owner, [Role::CanMultisigSubmit])
         .is_err());
-    assert!(account
-        .needs_role(&Address::public_key_raw([1; 28]), [Role::Owner])
-        .is_err());
+    assert!(account.needs_role(&identity(1), [Role::Owner]).is_err());
 }
 
 #[test]
 fn remove_empty_role() {
-    let owner = Address::public_key_raw([0; 28]);
+    use many_identity::testing::identity;
+
+    let owner = identity(0);
     let mut account = Account::create(
         &owner,
         CreateArgs {
@@ -682,9 +686,10 @@ fn remove_empty_role() {
             features: Default::default(),
         },
     );
-    account.add_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit);
-    assert!(account.has_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit));
+    assert!(!account.has_role(&identity(1), Role::CanMultisigSubmit));
+    account.add_role(&identity(1), Role::CanMultisigSubmit);
+    assert!(account.has_role(&identity(1), Role::CanMultisigSubmit));
 
-    account.remove_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit);
-    assert!(!account.roles.contains_key(&Address::public_key_raw([1; 28])));
+    account.remove_role(&identity(1), Role::CanMultisigSubmit);
+    assert!(!account.roles.contains_key(&identity(1)));
 }

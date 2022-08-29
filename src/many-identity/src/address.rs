@@ -1,7 +1,7 @@
 use many_error::ManyError;
 use sha3::digest::generic_array::typenum::Unsigned;
 use sha3::digest::OutputSizeUser;
-use sha3::{Digest, Sha3_224};
+use sha3::Sha3_224;
 use std::convert::TryFrom;
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
@@ -12,18 +12,79 @@ mod minicbor;
 #[cfg(feature = "serde")]
 mod serde;
 
-#[cfg(feature = "coset")]
-mod cose;
-
-#[cfg(feature = "coset")]
-pub use cose::*;
-
 /// Subresource IDs are 31 bit integers.
 pub const MAX_SUBRESOURCE_ID: u32 = 0x7FFF_FFFF;
 
 const MAX_IDENTITY_BYTE_LEN: usize = 32;
 const SHA_OUTPUT_SIZE: usize = <Sha3_224 as OutputSizeUser>::OutputSize::USIZE;
 pub type PublicKeyHash = [u8; SHA_OUTPUT_SIZE];
+
+/// A subresource ID. Addresses with this must be of type 0x80-0xFF.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[must_use]
+pub struct SubresourceId(pub(crate) u32);
+
+impl TryInto<SubresourceId> for i16 {
+    type Error = ManyError;
+
+    fn try_into(self) -> Result<SubresourceId, Self::Error> {
+        if self < 0 {
+            Err(ManyError::invalid_identity_subid())
+        } else {
+            Ok(SubresourceId(self as u32))
+        }
+    }
+}
+
+impl TryInto<SubresourceId> for i32 {
+    type Error = ManyError;
+
+    fn try_into(self) -> Result<SubresourceId, Self::Error> {
+        if self < 0 {
+            Err(ManyError::invalid_identity_subid())
+        } else {
+            Ok(SubresourceId(self as u32))
+        }
+    }
+}
+
+impl TryInto<SubresourceId> for u16 {
+    type Error = ManyError;
+
+    fn try_into(self) -> Result<SubresourceId, Self::Error> {
+        Ok(SubresourceId(self as u32))
+    }
+}
+
+impl TryInto<SubresourceId> for u32 {
+    type Error = ManyError;
+
+    fn try_into(self) -> Result<SubresourceId, Self::Error> {
+        if self > MAX_SUBRESOURCE_ID {
+            Err(ManyError::invalid_identity_subid())
+        } else {
+            Ok(SubresourceId(self as u32))
+        }
+    }
+}
+
+impl TryInto<SubresourceId> for u64 {
+    type Error = ManyError;
+
+    fn try_into(self) -> Result<SubresourceId, Self::Error> {
+        if self > (MAX_SUBRESOURCE_ID as u64) {
+            Err(ManyError::invalid_identity_subid())
+        } else {
+            Ok(SubresourceId(self as u32))
+        }
+    }
+}
+
+impl From<SubresourceId> for u32 {
+    fn from(id: SubresourceId) -> Self {
+        id.0
+    }
+}
 
 /// An identity address in the ManyVerse. This could be a server, network, user, DAO,
 /// automated process, etc.
@@ -61,16 +122,15 @@ impl Address {
     }
 
     #[inline]
-    pub fn with_subresource_id(&self, subid: u32) -> Result<Self, ManyError> {
-        if subid > MAX_SUBRESOURCE_ID {
-            Err(ManyError::invalid_identity_subid())
-        } else {
-            Ok(self.with_subresource_id_unchecked(subid))
-        }
+    pub fn with_subresource_id<I: TryInto<SubresourceId, Error = ManyError>>(
+        &self,
+        subid: I,
+    ) -> Result<Self, ManyError> {
+        Ok(self.with_subresource_id_unchecked(subid.try_into()?))
     }
 
     #[inline]
-    pub const fn with_subresource_id_unchecked(&self, subid: u32) -> Self {
+    pub const fn with_subresource_id_unchecked(&self, subid: SubresourceId) -> Self {
         if let Some(h) = self.0.hash() {
             Self(InnerAddress::subresource_unchecked(h, subid))
         } else {
@@ -113,52 +173,19 @@ impl Address {
             self.0.hash() == other.0.hash()
         }
     }
-}
 
-#[cfg(feature = "coset")]
-impl Address {
-    pub fn public_key(key: &coset::CoseKey) -> Self {
-        use coset::CborSerializable;
-        let pk = Sha3_224::digest(
-            &crate::cose_helpers::public_key(key)
-                .unwrap()
-                .to_vec()
-                .unwrap(),
-        );
-        Self(InnerAddress::public_key(pk.into()))
-    }
-
-    pub fn subresource(key: &coset::CoseKey, subid: u32) -> Result<Self, ManyError> {
-        use coset::CborSerializable;
-        if subid > MAX_SUBRESOURCE_ID {
-            Err(ManyError::invalid_identity_subid())
-        } else {
-            let pk = Sha3_224::digest(
-                &crate::cose_helpers::public_key(key)
-                    .unwrap()
-                    .to_vec()
-                    .unwrap(),
-            );
-            Ok(Self(InnerAddress::subresource_unchecked(pk.into(), subid)))
-        }
-    }
-}
-
-#[cfg(any(test, feature = "raw"))]
-impl Address {
     /// Create an identity from the raw value of a public key hash, without checking
     /// its validity.
+    ///
+    /// This is unchecked to make sure the caller knows they are not supposed
+    /// to use this function directly without thinking a bit more about it.
+    ///
+    /// Instead, use a utility function available in a separate crate (like
+    /// many-identity-dsa) or in the testing utilities available here to create
+    /// a bogus address.
     #[inline(always)]
-    pub fn public_key_raw(hash: PublicKeyHash) -> Self {
+    pub fn public_key_unchecked(hash: PublicKeyHash) -> Self {
         Self(InnerAddress::public_key(hash))
-    }
-
-    /// Create an identity from the raw value of a public key hash and a subresource
-    /// id. The hash isn't validated, but the subid is.
-    #[inline(always)]
-    #[allow(dead_code)]
-    pub(crate) fn subresource_raw(hash: PublicKeyHash, subid: u32) -> Self {
-        Self(InnerAddress::subresource_unchecked(hash, subid))
     }
 }
 
@@ -300,7 +327,12 @@ impl InnerAddress {
         Self { bytes }
     }
 
-    pub(crate) const fn subresource_unchecked(hash: [u8; SHA_OUTPUT_SIZE], id: u32) -> Self {
+    pub(crate) const fn subresource_unchecked(
+        hash: [u8; SHA_OUTPUT_SIZE],
+        id: SubresourceId,
+    ) -> Self {
+        let id = id.0;
+
         // Get a public key and add the resource id.
         let mut bytes = Self::public_key(hash).bytes;
         bytes[0] = 0x80 + ((id & 0x7F00_0000) >> 24) as u8;
@@ -342,7 +374,10 @@ impl InnerAddress {
                     hash.copy_from_slice(&bytes[1..29]);
                     subid[0] = hi;
                     subid[1..].copy_from_slice(&bytes[29..32]);
-                    Ok(Self::subresource_unchecked(hash, u32::from_be_bytes(subid)))
+                    Ok(Self::subresource_unchecked(
+                        hash,
+                        SubresourceId(u32::from_be_bytes(subid)),
+                    ))
                 }
             }
             x => Err(ManyError::invalid_identity_kind(x.to_string())),
@@ -483,7 +518,6 @@ impl TryFrom<&[u8]> for InnerAddress {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::cose::tests::{ecdsa_256_identity, eddsa_identity};
     use crate::testing::identity;
     use crate::Address;
     use serde_test::{assert_tokens, Configure, Token};
@@ -581,52 +615,10 @@ pub mod tests {
     }
 
     #[test]
-    fn from_pem_eddsa() {
-        let id = eddsa_identity();
-        assert_eq!(
-            id.identity,
-            "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
-        );
-    }
-
-    #[test]
-    fn from_pem_ecdsa() {
-        let id = ecdsa_256_identity();
-        assert_eq!(
-            id.identity,
-            "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf"
-        );
-    }
-
-    #[test]
-    fn matches_key() {
-        let id = eddsa_identity();
-        assert!(id.identity.matches_key(id.key.as_ref()));
-    }
-
-    #[test]
     fn serde_anonymous() {
         let id = Address::anonymous();
         assert_tokens(&id.readable(), &[Token::String("maa")]);
         assert_tokens(&id.compact(), &[Token::Bytes(&[0])]);
-    }
-
-    #[test]
-    fn serde_pub_key() {
-        let id = ecdsa_256_identity().identity;
-        assert_tokens(
-            &id.readable(),
-            &[Token::String(
-                "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf",
-            )],
-        );
-        assert_tokens(
-            &id.compact(),
-            &[Token::Bytes(&[
-                1, 132, 209, 73, 162, 9, 88, 81, 212, 153, 75, 10, 129, 43, 159, 125, 140, 66, 165,
-                172, 246, 68, 3, 30, 159, 41, 73, 183, 110,
-            ])],
-        );
     }
 
     #[test]

@@ -147,17 +147,19 @@ many_error! {
             => r#"Invalid method name: "{method}"."#,
     -1001: InvalidFromIdentity as invalid_from_identity()
             => "The identity of the from field is invalid or unexpected.",
-    -1002: CouldNotVerifySignature as could_not_verify_signature(details)
+    -1002: InvalidToIdentity as invalid_to_identity()
+            => "The identity of the to field is invalid or unexpected.",
+    -1003: CouldNotVerifySignature as could_not_verify_signature(details)
             => "Could not verify the signature: {details}.",
-    -1003: UnknownDestination as unknown_destination(to, this)
+    -1004: UnknownDestination as unknown_destination(to, this)
             => "Unknown destination for message.\nThis is \"{this}\", message was for \"{to}\".",
-    -1004: EmptyEnvelope as empty_envelope()
+    -1005: EmptyEnvelope as empty_envelope()
             => "An envelope must contain a payload.",
-    -1005: TimestampOutOfRange as timestamp_out_of_range()
+    -1006: TimestampOutOfRange as timestamp_out_of_range()
             => "The message's timestamp is out of the accepted range of the server.",
-    -1006: RequiredFieldMissing as required_field_missing(field)
+    -1007: RequiredFieldMissing as required_field_missing(field)
             => "Field is required but missing: '{field}'.",
-    -1007: NonWebAuthnRequestDenied as non_webauthn_request_denied(endpoint)
+    -1008: NonWebAuthnRequestDenied as non_webauthn_request_denied(endpoint)
             => "Non-WebAuthn request denied for endpoint '{endpoint}'.",
 
     // -2000 - -2999 is for server errors.

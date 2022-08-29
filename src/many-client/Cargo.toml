@@ -23,6 +23,7 @@ fixed = "1.16.0"
 hex = "0.4.3"
 lazy_static = "1.4.0"
 many-identity = { path = "../many-identity", version = "0.1.0" }
+many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0" }
 many-modules = { path = "../many-modules", version = "0.1.0" }
 many-protocol = { path = "../many-protocol", version = "0.1.0" }
 minicbor = { version = "0.18.0", features = ["derive", "half", "std"] }

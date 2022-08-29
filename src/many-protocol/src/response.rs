@@ -1,6 +1,8 @@
 use crate::RequestMessage;
+use coset::CoseSign1;
 use derive_builder::Builder;
-use many_identity::Address;
+use many_error::ManyError;
+use many_identity::{Address, Verifier};
 use many_types::attributes::{Attribute, AttributeSet};
 use many_types::Timestamp;
 use minicbor::data::{Tag, Type};
@@ -29,7 +31,7 @@ pub struct ResponseMessage {
     pub version: Option<u8>,
     pub from: Address,
     pub to: Option<Address>,
-    pub data: Result<Vec<u8>, super::ManyError>,
+    pub data: Result<Vec<u8>, ManyError>,
 
     /// An optional timestamp for this response. If [None] this will be filled
     /// with [Timestamp::now()]
@@ -57,7 +59,7 @@ impl ResponseMessage {
     pub fn from_request(
         request: &RequestMessage,
         from: &Address,
-        data: Result<Vec<u8>, super::ManyError>,
+        data: Result<Vec<u8>, ManyError>,
     ) -> Self {
         Self {
             version: Some(1),
@@ -70,15 +72,35 @@ impl ResponseMessage {
         }
     }
 
-    pub fn error(from: &Address, id: Option<u64>, data: super::ManyError) -> Self {
+    pub fn error(from: Address, id: Option<u64>, data: ManyError) -> Self {
         Self {
             version: Some(1),
-            from: *from,
+            from,
             to: None,
             data: Err(data),
             timestamp: None, // To be filled.
             id,
             attributes: Default::default(),
+        }
+    }
+
+    pub fn decode_and_verify(
+        envelope: &CoseSign1,
+        verifier: &impl Verifier,
+    ) -> Result<Self, ManyError> {
+        let address = verifier.verify_1(envelope)?;
+
+        let payload = envelope
+            .payload
+            .as_ref()
+            .ok_or_else(ManyError::empty_envelope)?;
+        let message =
+            ResponseMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
+
+        if address != message.from {
+            Err(ManyError::invalid_from_identity())
+        } else {
+            Ok(message)
         }
     }
 
