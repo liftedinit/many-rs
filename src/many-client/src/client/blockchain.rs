@@ -3,6 +3,7 @@ pub use many_modules::blockchain::{
     BlockArgs, BlockReturns, InfoReturns, TransactionArgs, TransactionReturns,
 };
 use many_protocol::ManyError;
+pub use many_types::blockchain::{Block, BlockIdentifier};
 
 use crate::ManyClient;
 
