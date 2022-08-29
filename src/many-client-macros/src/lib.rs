@@ -1,37 +1,38 @@
 use proc_macro::TokenStream;
+use proc_macro2::Punct;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, ToTokens};
-use syn::spanned::Spanned;
+use syn::parse::Parse;
+use syn::parse::ParseStream;
 use syn::parse2;
 use syn::FnArg;
 use syn::ItemTrait;
 use syn::TraitItemMethod;
 use syn::Type;
-use syn::{parse_macro_input, parse_quote, AttributeArgs, LitStr};
+use syn::{parse_macro_input, parse_quote, LitStr};
 
-fn type_and_namespace(arguments: AttributeArgs) -> syn::Result<(Type, Option<LitStr>)> {
-    let mut r#type = None;
-    let mut lit = None;
-    for argument in arguments {
-        match (parse2::<Type>(argument.to_token_stream()), parse2::<LitStr>(argument.to_token_stream())) {
-            (Ok(t), _) if r#type.is_none() => r#type = Some(t),
-            (_, Ok(l)) if lit.is_none() => lit = Some(l),
-            (Ok(t), _) => return Err(syn::Error::new(t.span(), "Only one type is allowed")),
-            (_, Ok(l)) => return Err(syn::Error::new(l.span(), "Only one literal is allowed")),
-            (Err(e), Err(_)) => return Err(e),
+#[derive(Debug)]
+struct MacroArguments {
+    r#type: Type,
+    namespace: Option<LitStr>,
+}
+
+impl Parse for MacroArguments {
+    fn parse(stream: ParseStream) -> syn::Result<MacroArguments> {
+        let r#type = stream.parse()?;
+        let _: syn::Result<Punct> = stream.parse();
+        let namespace = stream.parse().ok();
+        let result = Ok(MacroArguments { r#type, namespace });
+        if !stream.is_empty() {
+            return Err(stream.error("Shouldn't have more than 2 arguments"));
         }
+        result
     }
-    Ok((r#type.unwrap(), lit))
 }
 
 #[proc_macro_attribute]
 pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
-    let arguments = parse_macro_input!(attr as AttributeArgs);
-
-    let (r#type, namespace) = match type_and_namespace(arguments) {
-        Ok((t, n)) => (t, n),
-        Err(e) => return e.into_compile_error().into(),
-    };
+    let MacroArguments { r#type, namespace } = parse_macro_input!(attr as MacroArguments);
 
     let input_trait = parse_macro_input!(input as ItemTrait);
 
