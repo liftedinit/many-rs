@@ -13,4 +13,5 @@ trait BlockchainClientTrait {
     fn transaction(&self, args: TransactionArgs) -> Result<TransactionReturns, ManyError>;
 }
 
+#[derive(Debug, Clone)]
 pub struct BlockchainClient(ManyClient);

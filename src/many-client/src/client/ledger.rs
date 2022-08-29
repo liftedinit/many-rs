@@ -12,4 +12,5 @@ trait LedgerClientTrait {
     fn send(&self, args: SendArgs) -> Result<SendReturns, ManyError>;
 }
 
+#[derive(Debug, Clone)]
 pub struct LedgerClient(ManyClient);

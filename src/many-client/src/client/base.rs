@@ -11,4 +11,5 @@ trait BaseClientTrait {
     fn endpoints(&self) -> Result<Endpoints, ManyError>;
 }
 
+#[derive(Debug, Clone)]
 pub struct BaseClient(ManyClient);
