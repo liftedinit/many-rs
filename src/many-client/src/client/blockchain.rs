@@ -8,9 +8,9 @@ use crate::ManyClient;
 
 #[many_client(BlockchainClient, "blockchain")]
 trait BlockchainClientTrait {
-    async fn info(&self) -> Result<InfoReturns, ManyError>;
-    async fn block(&self, args: BlockArgs) -> Result<BlockReturns, ManyError>;
-    async fn transaction(&self, args: TransactionArgs) -> Result<TransactionReturns, ManyError>;
+    fn info(&self) -> Result<InfoReturns, ManyError>;
+    fn block(&self, args: BlockArgs) -> Result<BlockReturns, ManyError>;
+    fn transaction(&self, args: TransactionArgs) -> Result<TransactionReturns, ManyError>;
 }
 
 pub struct BlockchainClient(ManyClient);

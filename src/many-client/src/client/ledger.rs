@@ -7,9 +7,9 @@ use crate::ManyClient;
 
 #[many_client(LedgerClient, "ledger")]
 trait LedgerClientTrait {
-    async fn info(&self) -> Result<InfoReturns, ManyError>;
-    async fn balance(&self, args: BalanceArgs) -> Result<BalanceReturns, ManyError>;
-    async fn send(&self, args: SendArgs) -> Result<SendReturns, ManyError>;
+    fn info(&self) -> Result<InfoReturns, ManyError>;
+    fn balance(&self, args: BalanceArgs) -> Result<BalanceReturns, ManyError>;
+    fn send(&self, args: SendArgs) -> Result<SendReturns, ManyError>;
 }
 
 pub struct LedgerClient(ManyClient);

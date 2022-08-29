@@ -34,7 +34,8 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
         let func = func.to_token_stream();
         let method: TraitItemMethod =
             parse2(func).expect("Should only contain function signatures");
-        let method = method.sig;
+        let mut method = method.sig;
+        method.asyncness = parse_quote! { async };
         let mut args_iter = method.inputs.iter();
         let _self_arg = args_iter.next().expect("Should have a &self argument");
         let args_param = args_iter.next();
@@ -51,7 +52,7 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
         };
         let server_method: LitStr = parse_quote! { #server_method };
         let q = quote! {
-            #method {
+            pub #method {
                 let response = self.0.call_(#server_method, #args_var).await?;
                 minicbor::decode(&response).map_err(many_protocol::ManyError::deserialization_error)
             }
