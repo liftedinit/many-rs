@@ -11,9 +11,11 @@ executors:
   linux2204:
     machine:
       image: ubuntu-2204:current
+    resource_class: large
   macos:
     macos:
       xcode: 13.4.1
+    resource_class: medium
 
 jobs:
   lint-test-build:
@@ -133,6 +135,7 @@ jobs:
         default: false
     docker:
       - image: cibuilds/github:0.10
+    resource_class: large
     steps:
       - attach_workspace:
           at: ~/project/artifacts
@@ -152,6 +155,7 @@ jobs:
   audit:
     docker:
       - image: rust:latest
+    resource_class: small
     steps:
       - checkout
       - run:
