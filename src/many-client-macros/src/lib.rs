@@ -5,6 +5,7 @@ use quote::{quote, ToTokens};
 use syn::parse::Parse;
 use syn::parse::ParseStream;
 use syn::parse2;
+use syn::spanned::Spanned;
 use syn::FnArg;
 use syn::ItemTrait;
 use syn::TraitItemMethod;
@@ -36,15 +37,15 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
 
     let input_trait = parse_macro_input!(input as ItemTrait);
 
-    let methods_iter = input_trait.items.iter().map(|func| {
+    let methods_vec = input_trait.items.iter().map(|func| {
         let namespace = namespace.clone();
         let func = func.to_token_stream();
         let method: TraitItemMethod =
-            parse2(func).expect("Should only contain function signatures");
+            parse2(func)?;
         let mut method = method.sig;
         method.asyncness = parse_quote! { async };
         let mut args_iter = method.inputs.iter();
-        let _self_arg = args_iter.next().expect("Should have a &self argument");
+        let _self_arg = args_iter.next().ok_or_else(|| syn::Error::new(method.span(), "Should have a &self argument"))?;
         let args_param = args_iter.next();
         let args_var = if let Some(FnArg::Typed(args)) = args_param {
             let args = &args.pat;
@@ -64,11 +65,21 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
                 minicbor::decode(&response).map_err(many_protocol::ManyError::deserialization_error)
             }
         };
-        q.into_token_stream()
+        Ok(q.into_token_stream())
+    }).try_fold(vec![], |mut acc, curr: syn::Result<TokenStream2>| {
+        match curr {
+            Ok(c) => acc.push(c),
+            Err(e) => return Err(e)
+        }
+        Ok(acc)
     });
+    let methods_vec = match methods_vec {
+        Ok(v) => v,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let methods_iter = methods_vec.into_iter();
 
-    let mut methods = TokenStream2::new();
-    methods.extend(methods_iter);
+    let methods = TokenStream2::from_iter(methods_iter);
 
     let q = quote! {
         impl #r#type {
