@@ -255,7 +255,7 @@ impl Verifier for EcDsaVerifier {
 }
 
 #[cfg(feature = "testing")]
-pub(crate) fn generate_random_ecdsa_cose_key() -> CoseKey {
+pub fn generate_random_ecdsa_cose_key() -> CoseKey {
     use rand::rngs::OsRng;
 
     let mut csprng = OsRng {};

@@ -70,14 +70,14 @@ impl BlockIdentifier {
     }
 }
 
-#[derive(Clone, Decode, Encode)]
+#[derive(Debug, Clone, Decode, Encode)]
 #[cbor(map)]
 pub struct TransactionIdentifier {
     #[cbor(n(0), with = "minicbor::bytes")]
     pub hash: Vec<u8>,
 }
 
-#[derive(Clone, Decode, Encode)]
+#[derive(Debug, Clone, Decode, Encode)]
 #[cbor(map)]
 pub struct Transaction {
     #[n(0)]
@@ -87,7 +87,7 @@ pub struct Transaction {
     pub content: Option<Vec<u8>>,
 }
 
-#[derive(Clone, Decode, Encode)]
+#[derive(Debug, Clone, Decode, Encode)]
 #[cbor(map)]
 pub struct Block {
     #[n(0)]
