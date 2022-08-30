@@ -61,7 +61,7 @@ jobs:
           with_cache: false
       - run:
           name: cargo install
-          command: cargo install --path src/many/ many
+          command: cargo install --force --root target/ --path src/many/ many
       - save_cache:
           key: cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
           paths:
