@@ -113,7 +113,7 @@ struct Ed25519IdentityInner {
 impl Clone for Ed25519IdentityInner {
     fn clone(&self) -> Self {
         Ed25519IdentityInner {
-            address: self.address.clone(),
+            address: self.address,
             public_key: self.public_key.clone(),
             key_pair: Keypair::from_bytes(&self.key_pair.to_bytes()).unwrap(),
         }
