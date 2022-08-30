@@ -25,6 +25,7 @@ reexport_module!(
     blockchain: _1_blockchain;
     ledger: _2_ledger + _6_ledger_commands;
     events: _4_events;
+    data: _5_data;
     kvstore: _3_kvstore + _7_kvstore_commands;
     r#async: _8_async;
     account: _9_account;
