@@ -62,7 +62,7 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
         let q = quote! {
             pub #method {
                 let response = self.0.call_(#server_method, #args_var).await?;
-                minicbor::decode(&response).map_err(many_protocol::ManyError::deserialization_error)
+                minicbor::decode(&response).map_err(many_server::ManyError::deserialization_error)
             }
         };
         Ok(q.into_token_stream())
@@ -82,10 +82,10 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
     let methods = TokenStream2::from_iter(methods_iter);
 
     let q = quote! {
-        impl #r#type {
+        impl<I: many_identity::Identity> #r#type<I> {
             #methods
 
-            pub fn new(client: crate::ManyClient) -> Self {
+            pub fn new(client: crate::ManyClient<I>) -> Self {
                 Self(client)
             }
         }

@@ -1,8 +1,9 @@
 use many_client_macros::many_client;
+pub use many_identity::Identity;
 pub use many_modules::blockchain::{
     BlockArgs, BlockReturns, InfoReturns, TransactionArgs, TransactionReturns,
 };
-use many_protocol::ManyError;
+use many_server::ManyError;
 pub use many_types::blockchain::{
     Block, BlockIdentifier, SingleBlockQuery, SingleTransactionQuery,
 };
@@ -17,4 +18,4 @@ trait BlockchainClientTrait {
 }
 
 #[derive(Debug, Clone)]
-pub struct BlockchainClient(ManyClient);
+pub struct BlockchainClient<I: Identity>(ManyClient<I>);

@@ -1,6 +1,7 @@
 use many_client_macros::many_client;
+pub use many_identity::Identity;
 pub use many_modules::ledger::{BalanceArgs, BalanceReturns, InfoReturns, SendArgs, SendReturns};
-use many_protocol::ManyError;
+use many_server::ManyError;
 pub use many_types::ledger::{Symbol, TokenAmount};
 
 use crate::ManyClient;
@@ -13,4 +14,4 @@ trait LedgerClientTrait {
 }
 
 #[derive(Debug, Clone)]
-pub struct LedgerClient(ManyClient);
+pub struct LedgerClient<I: Identity>(ManyClient<I>);

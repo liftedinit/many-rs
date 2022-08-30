@@ -1,7 +1,8 @@
 use many_client_macros::many_client;
+pub use many_identity::Identity;
 use many_modules::base::HeartbeatReturn;
 pub use many_modules::base::{Endpoints, Status};
-use many_protocol::ManyError;
+use many_server::ManyError;
 
 use crate::ManyClient;
 
@@ -13,4 +14,4 @@ trait BaseClientTrait {
 }
 
 #[derive(Debug, Clone)]
-pub struct BaseClient(ManyClient);
+pub struct BaseClient<I: Identity>(ManyClient<I>);
