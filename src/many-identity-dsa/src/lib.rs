@@ -14,6 +14,7 @@ pub use impls::ecdsa;
 use many_identity::cose::keyset_from_cose_sign1;
 
 #[non_exhaustive]
+#[derive(Clone)]
 enum CoseKeyImpl {
     #[cfg(feature = "ed25519")]
     Ed25519(ed25519::Ed25519Identity),
@@ -93,6 +94,7 @@ impl CoseKeyImpl {
     }
 }
 
+#[derive(Clone)]
 pub struct CoseKeyIdentity {
     inner: CoseKeyImpl,
 }

@@ -110,6 +110,16 @@ struct Ed25519IdentityInner {
     key_pair: Keypair,
 }
 
+impl Clone for Ed25519IdentityInner {
+    fn clone(&self) -> Self {
+        Ed25519IdentityInner {
+            address: self.address.clone(),
+            public_key: self.public_key.clone(),
+            key_pair: Keypair::from_bytes(&self.key_pair.to_bytes()).unwrap(),
+        }
+    }
+}
+
 impl Ed25519IdentityInner {
     pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
         let public_key = public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
@@ -164,6 +174,7 @@ impl Identity for Ed25519IdentityInner {
 
 /// An Ed25519 identity that sign messages and include the public key in the
 /// protected headers.
+#[derive(Clone)]
 pub struct Ed25519Identity(Ed25519IdentityInner);
 
 impl Ed25519Identity {
