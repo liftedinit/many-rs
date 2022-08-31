@@ -509,7 +509,7 @@ define_event! {
         1     | submitter:              Address                                [ id ],
         2     | account:                Address                                [ id ],
         3     | memo:                   Option<Memo<String>>,
-        4     | transaction:            Box<AccountMultisigTransaction>         [ inner ],
+        4     | transaction:            Box<AccountMultisigTransaction>        [ inner ],
         5     | token:                  Option<ByteVec>,
         6     | threshold:              u64,
         7     | timeout:                Timestamp,
@@ -657,6 +657,33 @@ mod test {
             amount: Default::default(),
         };
         assert_eq!(s0.addresses(), BTreeSet::from_iter(&[i0, i01]));
+    }
+
+    #[test]
+    fn event_info_addresses_inner() {
+        // TODO: reenable this when inner for multisig transactions work.
+        // let i0 = identity(0);
+        // let i1 = identity(1);
+        // let i01 = i0.with_subresource_id(1).unwrap();
+        // let i11 = i1.with_subresource_id(1).unwrap();
+        //
+        // let s0 = EventInfo::AccountMultisigSubmit {
+        //     submitter: i0,
+        //     account: i1,
+        //     memo: None,
+        //     transaction: Box::new(AccountMultisigTransaction::Send(SendArgs {
+        //         from: Some(i01),
+        //         to: i11,
+        //         amount: Default::default(),
+        //         symbol: Default::default(),
+        //     })),
+        //     token: None,
+        //     threshold: 0,
+        //     timeout: Timestamp::now(),
+        //     execute_automatically: false,
+        //     data: None,
+        // };
+        // assert_eq!(s0.addresses(), BTreeSet::from_iter(&[i0, i01, i1, i11]));
     }
 
     #[test]
