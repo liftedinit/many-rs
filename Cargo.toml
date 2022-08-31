@@ -2,6 +2,7 @@
 members = [
     "src/many",
     "src/many-client",
+    "src/many-client-macros",
     "src/many-error",
     "src/many-identity",
     "src/many-identity-dsa",

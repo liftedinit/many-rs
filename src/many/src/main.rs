@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use async_recursion::async_recursion;
 use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
 use many_client::ManyClient;
@@ -184,16 +185,17 @@ struct GetTokenIdOpt {
     symbol: String,
 }
 
-fn show_response(
-    response: ResponseMessage,
-    client: ManyClient<impl Identity>,
+#[async_recursion(?Send)]
+async fn show_response<'a>(
+    response: &'a ResponseMessage,
+    client: ManyClient<impl Identity + 'a>,
     r#async: bool,
 ) -> Result<(), anyhow::Error> {
     let ResponseMessage {
         data, attributes, ..
     } = response;
 
-    let payload = data?;
+    let payload = data.clone()?;
     if payload.is_empty() {
         let attr = attributes.get::<AsyncAttribute>().unwrap();
         info!("Async token: {}", hex::encode(&attr.token));
@@ -216,17 +218,19 @@ fn show_response(
             // TODO: improve on this by using duration and thread and watchdog.
             // Wait for the server for ~60 seconds by pinging it every second.
             for _ in 0..60 {
-                let response = client.call(
-                    "async.status",
-                    StatusArgs {
-                        token: attr.token.clone(),
-                    },
-                )?;
+                let response = client
+                    .call(
+                        "async.status",
+                        StatusArgs {
+                            token: attr.token.clone(),
+                        },
+                    )
+                    .await?;
                 let status: StatusReturn = minicbor::decode(&response.data?)?;
                 match status {
                     StatusReturn::Done { response } => {
                         progress(".", true);
-                        return show_response(*response, client, r#async);
+                        return show_response(&*response, client, r#async).await;
                     }
                     StatusReturn::Expired => {
                         progress(".", true);
@@ -250,7 +254,7 @@ fn show_response(
     Ok(())
 }
 
-fn message(
+async fn message(
     s: Url,
     to: Address,
     key: impl Identity,
@@ -282,12 +286,12 @@ fn message(
         .build()
         .map_err(|_| ManyError::internal_server_error())?;
 
-    let response = client.send_message(message)?;
+    let response = client.send_message(message).await?;
 
-    show_response(response, client, r#async)
+    show_response(&response, client, r#async).await
 }
 
-fn message_from_hex(
+async fn message_from_hex(
     s: Url,
     to: Address,
     key: impl Identity,
@@ -299,15 +303,16 @@ fn message_from_hex(
     let data = hex::decode(hex)?;
     let envelope = CoseSign1::from_slice(&data).map_err(|e| anyhow!(e))?;
 
-    let cose_sign1 = many_client::client::send_envelope(s, envelope)?;
+    let cose_sign1 = many_client::client::send_envelope(s, envelope).await?;
     let response =
         ResponseMessage::decode_and_verify(&cose_sign1, &(AnonymousVerifier, CoseKeyVerifier))
             .map_err(|e| anyhow!(e))?;
 
-    show_response(response, client, r#async)
+    show_response(&response, client, r#async).await
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let Opts {
         verbose,
         quiet,
@@ -433,7 +438,7 @@ fn main() {
 
             if let Some(s) = o.server {
                 let result = if let Some(hex) = o.from_hex {
-                    message_from_hex(s, to_identity, from_identity, hex, o.r#async)
+                    message_from_hex(s, to_identity, from_identity, hex, o.r#async).await
                 } else {
                     message(
                         s,
@@ -444,6 +449,7 @@ fn main() {
                         timestamp,
                         o.r#async,
                     )
+                    .await
                 };
 
                 match result {
@@ -504,7 +510,7 @@ fn main() {
         SubCommand::GetTokenId(o) => {
             let client = ManyClient::new(o.server, Address::anonymous(), AnonymousIdentity)
                 .expect("Could not create a client");
-            let status = client.status().expect("Cannot get status of server");
+            let status = client.status().await.expect("Cannot get status of server");
 
             if !status.attributes.contains(&ledger::LEDGER_MODULE_ATTRIBUTE) {
                 error!("Server does not implement Ledger Attribute.");
@@ -514,6 +520,7 @@ fn main() {
             let info: ledger::InfoReturns = minicbor::decode(
                 &client
                     .call("ledger.info", ledger::InfoArgs {})
+                    .await
                     .unwrap()
                     .data
                     .expect("An error happened during the call to ledger.info"),
