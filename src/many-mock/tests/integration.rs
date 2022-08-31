@@ -97,7 +97,8 @@ async fn field_value(w: &mut World, field_name: String, value: String) {
     assert_eq!(object[&field_name], json_value);
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // Support both Cargo and Bazel paths
     let features = ["tests/features", "src/many-mock/tests/features"]
         .into_iter()
