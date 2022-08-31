@@ -249,50 +249,50 @@ macro_rules! define_event_info_symbol {
     };
 }
 
-macro_rules! define_event_info_is_about {
-    (@check_id $id: ident) => {};
-    (@check_id $id: ident $name: ident id $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        if $name == $id {
-            return true;
-        }
-        define_event_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
+macro_rules! define_event_info_addresses {
+    (@field $set: ident) => {};
+    (@field $set: ident $name: ident id $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        $set.insert(&$name);
+        define_event_info_addresses!(@field $set $( $name_ $( $tag_ )*, )* );
     };
-    (@check_id $id: ident $name: ident id_non_null $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        if $name.is_some() && $name == $id {
-            return true;
+    (@field $set: ident $name: ident id_non_null $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if let Some(n) = $name.as_ref() {
+            $set.insert(n);
         }
-        define_event_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
+        define_event_info_addresses!(@field $set $( $name_ $( $tag_ )*, )* );
     };
-    (@check_id $id: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_event_info_is_about!(@check_id $id $( $name $( $tag )*, )* )
+    (@field $set: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
+        define_event_info_addresses!(@field $set $( $name $( $tag )*, )* );
     };
 
-    (@inner $id: ident) => {};
-    (@inner $id: ident $name: ident inner $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        if $name .is_about($id) {
-            return true;
-        }
-        define_event_info_is_about!(@inner $id $( $name_ $( $tag_ )*, )* )
+    (@inner $set: ident) => {};
+    (@inner $set: ident $name: ident inner $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        $set.append( &mut $name.addresses() );
+        define_event_info_addresses!(@inner $set $( $name_ $( $tag_ )*, )* );
     };
-    (@inner $id: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_event_info_is_about!(@inner $id $( $name $( $tag )*, )* )
+    (@inner $set: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
+        define_event_info_addresses!(@inner $set $( $name $( $tag )*, )* );
     };
 
     ( $( $name: ident { $( $fname: ident $( $tag: ident )* , )* } )* ) => {
-        pub fn is_about(&self, id: &Address) -> bool {
+        pub fn addresses(&self) -> BTreeSet<&Address> {
             match self {
                 $( EventInfo :: $name {
                     $( $fname, )*
                 } => {
                     // Remove warnings.
                     $( let _ = $fname; )*
-                    define_event_info_is_about!(@check_id id $( $fname $( $tag )*, )* );
+
+                    let mut set = BTreeSet::<&Address>::new();
+
+                    define_event_info_addresses!(@field set $( $fname $( $tag )*, )* );
 
                     // Inner fields might match the address.
-                    define_event_info_is_about!(@inner id $( $fname $( $tag )*, )* );
+                    define_event_info_addresses!(@inner set $( $fname $( $tag )*, )* );
+
+                    return set;
                 } )*
             }
-            false
         }
     };
 }
@@ -309,7 +309,11 @@ macro_rules! define_event_info {
 
         impl EventInfo {
             define_event_info_symbol!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
-            define_event_info_is_about!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
+            define_event_info_addresses!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
+
+            fn is_about(&self, id: &Address) -> bool {
+                self.addresses().contains(id)
+            }
         }
 
         encode_event_info!( $( $name { $( $idx => $fname : $type, )* }, )* );
@@ -396,6 +400,10 @@ macro_rules! define_multisig_event {
                 None
             }
 
+            pub fn addresses(&self) -> BTreeSet<&Address> {
+                BTreeSet::new()
+            }
+
             pub fn is_about(&self, _id: &Address) -> bool {
                 false
             }
@@ -468,7 +476,7 @@ define_event! {
     [6, 0]      Send (module::ledger::SendArgs) {
         1     | from:                   Address                                [ id ],
         2     | to:                     Address                                [ id ],
-        3     | symbol:                 Symbol                                  [ symbol ],
+        3     | symbol:                 Symbol                                 [ symbol ],
         4     | amount:                 TokenAmount,
     },
     [9, 0]      AccountCreate (module::account::CreateArgs) {
@@ -501,7 +509,7 @@ define_event! {
         1     | submitter:              Address                                [ id ],
         2     | account:                Address                                [ id ],
         3     | memo:                   Option<Memo<String>>,
-        4     | transaction:            Box<AccountMultisigTransaction>         [ inner ],
+        4     | transaction:            Box<AccountMultisigTransaction>        [ inner ],
         5     | token:                  Option<ByteVec>,
         6     | threshold:              u64,
         7     | timeout:                Timestamp,
@@ -635,6 +643,47 @@ mod test {
         let t2 = EventId::from(v) - b;
 
         assert_eq!(Into::<Vec<u8>>::into(t2), (v - 1).to_be_bytes());
+    }
+
+    #[test]
+    fn event_info_addresses() {
+        let i0 = identity(0);
+        let i01 = i0.with_subresource_id(1).unwrap();
+
+        let s0 = EventInfo::Send {
+            from: i0,
+            to: i01,
+            symbol: Default::default(),
+            amount: Default::default(),
+        };
+        assert_eq!(s0.addresses(), BTreeSet::from_iter(&[i0, i01]));
+    }
+
+    #[test]
+    fn event_info_addresses_inner() {
+        // TODO: reenable this when inner for multisig transactions work.
+        // let i0 = identity(0);
+        // let i1 = identity(1);
+        // let i01 = i0.with_subresource_id(1).unwrap();
+        // let i11 = i1.with_subresource_id(1).unwrap();
+        //
+        // let s0 = EventInfo::AccountMultisigSubmit {
+        //     submitter: i0,
+        //     account: i1,
+        //     memo: None,
+        //     transaction: Box::new(AccountMultisigTransaction::Send(SendArgs {
+        //         from: Some(i01),
+        //         to: i11,
+        //         amount: Default::default(),
+        //         symbol: Default::default(),
+        //     })),
+        //     token: None,
+        //     threshold: 0,
+        //     timeout: Timestamp::now(),
+        //     execute_automatically: false,
+        //     data: None,
+        // };
+        // assert_eq!(s0.addresses(), BTreeSet::from_iter(&[i0, i01, i1, i11]));
     }
 
     #[test]

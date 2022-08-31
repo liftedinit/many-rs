@@ -69,7 +69,7 @@ impl cucumber::World for World {
 
 #[given(regex = r#"I request "(.*)""#)]
 async fn make_request(w: &mut World, method: String) {
-    let result = w.client.call(method, ()).unwrap();
+    let result = w.client.call(method, ()).await.unwrap();
     let bytes = result.data.expect("Should have a Vec<u8>");
     let response: Value =
         ciborium::de::from_reader(bytes.as_slice()).expect("Should have parsed to a cbor value");
@@ -103,5 +103,5 @@ fn main() {
         .into_iter()
         .find(|&p| Path::new(p).exists())
         .expect("Cucumber test features not found");
-    futures::executor::block_on(World::run(features));
+    World::run(features).await;
 }

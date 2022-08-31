@@ -46,6 +46,9 @@ impl<'b, C> Decode<'b, C> for Percent {
     }
 }
 
+/// Equivalent to enum VecOrSingle<T> { Single(T), Vec(Vec<T>) } in
+/// the cbor-level. That is, a user can decode a VecOrSingle from
+/// either a single value or a vec.
 #[derive(Clone, Default, Debug, PartialEq)]
 #[must_use]
 pub struct VecOrSingle<T>(pub Vec<T>);

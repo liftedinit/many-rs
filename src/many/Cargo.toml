@@ -24,6 +24,7 @@ many-protocol = { path = "../many-protocol", version = "0.1.0" }
 many-types = { path = "../many-types", version = "0.1.0" }
 many-server = { path = "../many-server", version = "0.1.0" }
 anyhow = "1.0.57"
+async-recursion = "1.0"
 atty = "0.2.14"
 base64 = "0.13.0"
 cbor-diag = "0.1.9"

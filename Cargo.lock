@@ -195,6 +195,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-recursion"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cda8f4bcc10624c4e85bc66b3f452cca98cfa5ca002dc83a16aad2367641bea"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "async-task"
 version = "4.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1723,6 +1734,7 @@ name = "many"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-recursion",
  "atty",
  "base64",
  "cbor-diag",
@@ -1765,11 +1777,13 @@ dependencies = [
  "fixed",
  "hex",
  "lazy_static",
+ "many-client-macros",
  "many-identity",
  "many-identity-dsa",
  "many-modules",
  "many-protocol",
  "many-server",
+ "many-types",
  "minicbor",
  "num-bigint",
  "num-derive",
@@ -1787,6 +1801,15 @@ dependencies = [
  "tiny_http",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "many-client-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1932,6 +1955,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "tokio",
  "toml",
 ]
 
