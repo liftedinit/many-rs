@@ -72,7 +72,7 @@ pub fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct EcDsaIdentityInner {
     address: Address,
     public_key: CoseKey,
@@ -144,7 +144,7 @@ impl Identity for EcDsaIdentityInner {
 
 /// An EcDsa identity that sign messages and include the public key in the
 /// protected headers.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EcDsaIdentity(EcDsaIdentityInner);
 
 impl EcDsaIdentity {
