@@ -14,3 +14,4 @@ build:rust-analyzer @rules_rust//tools/rust_analyzer:gen_rust_project
 # This import should always be last to allow users to override
 # settings for local development.
 try-import %workspace%/user.bazelrc
+
