@@ -1,0 +1,70 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = [
+    "//src/many:__pkg__",
+])
+
+rust_library(
+    name = "many-mock",
+    srcs = glob(include = ["src/**/*.rs"]),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+    ],
+)
+
+MANY_MOCK_TEST_DEV_DEPS = [
+    "//src/many-error",
+    "//src/many-client:many-client-for-test",
+    "//src/many-identity:many-identity-for-test",
+    "//src/many-identity-dsa:many-identity-dsa-for-test",
+    "//src/many-identity-webauthn:many-identity-webauthn-for-test",
+    "//src/many-modules:many-modules-for-test",
+    "//src/many-protocol:many-protocol-for-test",
+    "//src/many-server:many-server-for-test",
+]
+
+rust_library(
+    name = "many-mock-for-test",
+    srcs = glob(include = ["src/**/*.rs"]),
+    crate_name = "many_mock",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + MANY_MOCK_TEST_DEV_DEPS,
+)
+
+rust_test(
+    name = "many-mock-test",
+    srcs = ["tests/integration.rs"],
+    data = glob(include = [
+        "tests/*.toml",
+        "tests/features/*.feature",
+    ]),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    use_libtest_harness = False,
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + MANY_MOCK_TEST_DEV_DEPS + [
+        ":many-mock-for-test",
+    ],
+)

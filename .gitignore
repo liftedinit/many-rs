@@ -107,3 +107,6 @@ dist
 .idea/
 target/
 src/many-modules/proptest-regressions
+bazel-*
+rust-project.json
+genhtml/

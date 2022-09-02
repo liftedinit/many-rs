@@ -1,7 +1,7 @@
 use std::{
     collections::BTreeMap,
     convert::Infallible,
-    path::PathBuf,
+    path::Path,
     sync::{atomic::AtomicBool, Arc},
     thread,
 };
@@ -33,10 +33,12 @@ impl cucumber::World for World {
     type Error = Infallible;
 
     async fn new() -> Result<Self, Self::Error> {
-        let mut mockfile = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        mockfile.push("tests");
-        mockfile.push("testmockfile.toml");
-        let mockfile = mockfile.as_os_str().to_str().unwrap();
+        // Support both Cargo and Bazel paths
+        let tmp = format!("{}/tests/testmockfile.toml", env!("CARGO_MANIFEST_DIR"));
+        let mockfile = [tmp.as_ref(), "src/many-mock/tests/testmockfile.toml"]
+            .into_iter()
+            .find(|&p| Path::new(p).exists())
+            .expect("Test mock file not found");
 
         let mocktree = many_mock::parse_mockfile(mockfile).unwrap();
         let key = AnonymousIdentity;
@@ -97,5 +99,10 @@ async fn field_value(w: &mut World, field_name: String, value: String) {
 
 #[tokio::main]
 async fn main() {
-    World::run("tests/features").await
+    // Support both Cargo and Bazel paths
+    let features = ["tests/features", "src/many-mock/tests/features"]
+        .into_iter()
+        .find(|&p| Path::new(p).exists())
+        .expect("Cucumber test features not found");
+    World::run(features).await;
 }
