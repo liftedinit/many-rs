@@ -11,17 +11,23 @@ use tokio::runtime::{self, Handle, Runtime};
 use crate::ManyClient as AsyncClient;
 
 #[derive(Debug, Clone)]
+enum RuntimeChoice {
+    Runtime(Arc<Runtime>),
+    Handle(Handle),
+}
+
+#[derive(Debug, Clone)]
 pub struct ManyClient<I: Identity> {
     client: AsyncClient<I>,
-    runtime: Option<Arc<Runtime>>,
-    handle: Option<Handle>,
+    runtime_choice: RuntimeChoice,
 }
 
 impl<I: Identity> ManyClient<I> {
     fn handle(&self) -> &Handle {
-        self.handle
-            .as_ref()
-            .unwrap_or_else(|| self.runtime.as_ref().unwrap().handle())
+        match &self.runtime_choice {
+            RuntimeChoice::Runtime(r) => r.handle(),
+            RuntimeChoice::Handle(h) => h,
+        }
     }
 
     pub fn new<S: IntoUrl>(url: S, to: Address, identity: I) -> Result<Self, String> {
@@ -29,18 +35,16 @@ impl<I: Identity> ManyClient<I> {
         match Handle::try_current() {
             Ok(h) => Ok(Self {
                 client,
-                runtime: None,
-                handle: Some(h),
+                runtime_choice: RuntimeChoice::Handle(h),
             }),
             Err(_) => Ok(Self {
                 client,
-                runtime: Some(Arc::new(
+                runtime_choice: RuntimeChoice::Runtime(Arc::new(
                     runtime::Builder::new_current_thread()
                         .enable_all()
                         .build()
                         .map_err(|e| e.to_string())?,
                 )),
-                handle: None,
             }),
         }
     }
