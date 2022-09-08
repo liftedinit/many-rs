@@ -18,21 +18,13 @@ pub struct ManyClient<I: Identity> {
 
 impl<I: Identity> ManyClient<I> {
     pub fn new<S: IntoUrl>(url: S, to: Address, identity: I) -> Result<Self, String> {
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|e| e.to_string())?;
-        Self::new_with_runtime(url, to, identity, Arc::new(runtime))
-    }
-
-    pub fn new_with_runtime<S: IntoUrl>(
-        url: S,
-        to: Address,
-        identity: I,
-        runtime: Arc<Runtime>,
-    ) -> Result<Self, String> {
         let client = AsyncClient::new(url, to, identity)?;
-
+        let runtime = Arc::new(
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| e.to_string())?,
+        );
         Ok(Self { client, runtime })
     }
 
@@ -40,14 +32,19 @@ impl<I: Identity> ManyClient<I> {
         self.runtime.block_on(self.client.send_message(message))
     }
 
-    pub fn call_raw<M>(&self, method: M, argument: &[u8]) -> Result<ResponseMessage, ManyError> where M: Into<String> {
-        self.runtime.block_on(self.client.call_raw(method, argument))
+    pub fn call_raw<M>(&self, method: M, argument: &[u8]) -> Result<ResponseMessage, ManyError>
+    where
+        M: Into<String>,
+    {
+        self.runtime
+            .block_on(self.client.call_raw(method, argument))
     }
 
     pub fn call<M, A>(&self, method: M, argument: A) -> Result<ResponseMessage, ManyError>
     where
         M: Into<String>,
-        A: Encode<()>, {
+        A: Encode<()>,
+    {
         self.runtime.block_on(self.client.call(method, argument))
     }
 
