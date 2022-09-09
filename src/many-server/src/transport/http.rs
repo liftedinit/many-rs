@@ -1,6 +1,7 @@
 use crate::transport::LowLevelManyRequestHandler;
 use anyhow::anyhow;
 use coset::{CoseSign1, TaggedCborSerializable};
+use many_types::RuntimeChoice;
 use std::fmt::Debug;
 use std::io::Cursor;
 use std::net::ToSocketAddrs;
@@ -78,11 +79,13 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
     pub fn bind<A: ToSocketAddrs>(&self, addr: A) -> Result<(), anyhow::Error> {
         let server = tiny_http::Server::http(addr).map_err(|e| anyhow!("{}", e))?;
 
-        let runtime = tokio::runtime::Runtime::new().unwrap();
+        info!("Creating tokio runtime");
+        let runtime_choice = RuntimeChoice::new()?;
+        info!("Runtime created");
 
         loop {
             if let Some(mut request) = server.recv_timeout(Duration::from_millis(100))? {
-                runtime.block_on(async {
+                runtime_choice.handle().block_on(async {
                     let response = self.handle_request(&mut request).await;
 
                     // If there's a transport error (e.g. connection closed) on the response itself,

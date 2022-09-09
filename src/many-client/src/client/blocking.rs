@@ -1,20 +1,13 @@
-use std::sync::Arc;
-
 use many_identity::{Address, Identity};
 use many_modules::base::Status;
 use many_protocol::{RequestMessage, ResponseMessage};
 use many_server::ManyError;
+use many_types::RuntimeChoice;
 use minicbor::Encode;
 use reqwest::IntoUrl;
-use tokio::runtime::{self, Handle, Runtime};
+use tokio::runtime::Handle;
 
 use crate::ManyClient as AsyncClient;
-
-#[derive(Debug, Clone)]
-enum RuntimeChoice {
-    Runtime(Arc<Runtime>),
-    Handle(Handle),
-}
 
 #[derive(Debug, Clone)]
 pub struct ManyClient<I: Identity> {
@@ -24,29 +17,16 @@ pub struct ManyClient<I: Identity> {
 
 impl<I: Identity> ManyClient<I> {
     fn handle(&self) -> &Handle {
-        match &self.runtime_choice {
-            RuntimeChoice::Runtime(r) => r.handle(),
-            RuntimeChoice::Handle(h) => h,
-        }
+        self.runtime_choice.handle()
     }
 
     pub fn new<S: IntoUrl>(url: S, to: Address, identity: I) -> Result<Self, String> {
         let client = AsyncClient::new(url, to, identity)?;
-        match Handle::try_current() {
-            Ok(h) => Ok(Self {
-                client,
-                runtime_choice: RuntimeChoice::Handle(h),
-            }),
-            Err(_) => Ok(Self {
-                client,
-                runtime_choice: RuntimeChoice::Runtime(Arc::new(
-                    runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .build()
-                        .map_err(|e| e.to_string())?,
-                )),
-            }),
-        }
+        let runtime_choice = RuntimeChoice::new().map_err(|e| e.to_string())?;
+        Ok(Self {
+            client,
+            runtime_choice,
+        })
     }
 
     pub fn send_message(&self, message: RequestMessage) -> Result<ResponseMessage, ManyError> {
