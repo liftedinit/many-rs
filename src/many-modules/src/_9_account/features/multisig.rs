@@ -577,4 +577,30 @@ mod tests {
 
         assert!(minicbor::decode::<Memo>(&bytes).is_err());
     }
+
+    #[test]
+    fn mixed_decode_ok() {
+        let data = hex::encode(vec![1u8; MULTISIG_MEMO_DATA_MAX_SIZE]);
+        let cbor = format!(r#" [ "", h'{data}', "" ] "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        assert!(minicbor::decode::<Memo>(&bytes).is_ok());
+    }
+
+    #[test]
+    fn mixed_decode_data_too_lare() {
+        let data = hex::encode(vec![1u8; MULTISIG_MEMO_DATA_MAX_SIZE + 1]);
+        let cbor = format!(r#" [ "", h'{data}', "" ] "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+    }
+
+    #[test]
+    fn mixed_decode_data_type_mismatch() {
+        let cbor = format!(r#" [ "", 0, "" ] "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+    }
 }
