@@ -588,7 +588,7 @@ mod tests {
 
     #[test]
     fn mixed_decode_data_type_mismatch() {
-        let cbor = format!(r#" [ "", 0, "" ] "#);
+        let cbor = r#" [ "", 0, "" ] "#;
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
         assert!(minicbor::decode::<Memo>(&bytes).is_err());
