@@ -1,5 +1,5 @@
 use crate as module;
-use crate::account::features::multisig::{Data, Memo};
+use crate::account::features::multisig::Memo;
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
@@ -508,13 +508,12 @@ define_event! {
     [9, 1, 0]   AccountMultisigSubmit (module::account::features::multisig::SubmitTransactionArgs) {
         1     | submitter:              Address                                [ id ],
         2     | account:                Address                                [ id ],
-        3     | memo:                   Option<Memo<String>>,
+        3     | memo:                   Option<Memo>,
         4     | transaction:            Box<AccountMultisigTransaction>        [ inner ],
         5     | token:                  Option<ByteVec>,
         6     | threshold:              u64,
         7     | timeout:                Timestamp,
         8     | execute_automatically:  bool,
-        9     | data:                   Option<Data>,
     },
     [9, 1, 1]   AccountMultisigApprove (module::account::features::multisig::ApproveArgs) {
         1     | account:                Address                                [ id ],
@@ -747,11 +746,7 @@ mod test {
         use proptest::prelude::*;
         use proptest::string::string_regex;
 
-        fn _create_event_info(
-            memo: Memo<String>,
-            data: Data,
-            transaction: AccountMultisigTransaction,
-        ) -> EventInfo {
+        fn _create_event_info(memo: Memo, transaction: AccountMultisigTransaction) -> EventInfo {
             EventInfo::AccountMultisigSubmit {
                 submitter: identity(0),
                 account: identity(1),
@@ -761,7 +756,6 @@ mod test {
                 threshold: 1,
                 timeout: Timestamp::now(),
                 execute_automatically: false,
-                data: Some(data),
             }
         }
 
@@ -775,7 +769,7 @@ mod test {
         proptest! {
             #[test]
             fn huge_memo(memo in string_regex("[A-Za-z0-9\\., ]{4001,5000}").unwrap()) {
-                let memo: Option<Memo<String>> = memo.try_into().ok();
+                let memo: Option<Memo> = memo.try_into().ok();
                 assert!(memo.is_none());
             }
 
@@ -783,7 +777,7 @@ mod test {
             fn submit_send(memo in string_regex("[A-Za-z0-9\\., ]{0,4000}").unwrap(), amount: u64) {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::Send(module::ledger::SendArgs {
+                    _create_event_info(memo, AccountMultisigTransaction::Send(module::ledger::SendArgs {
                         from: Some(identity(2)),
                         to: identity(3),
                         symbol: identity(4),
@@ -797,7 +791,7 @@ mod test {
                 let memo = memo.try_into().unwrap();
                 let memo2 = memo2.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![].try_into().unwrap(),
+                    _create_event_info(memo,
                         AccountMultisigTransaction::AccountMultisigSubmit(
                             module::account::features::multisig::SubmitTransactionArgs {
                                 account: identity(2),
@@ -811,7 +805,6 @@ mod test {
                                 threshold: None,
                                 timeout_in_secs: None,
                                 execute_automatically: None,
-                                data: None,
                             }
                         )
                     )
@@ -822,7 +815,7 @@ mod test {
             fn submit_set_defaults(memo in string_regex("[A-Za-z0-9\\., ]{0,4000}").unwrap()) {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
+                    _create_event_info(memo, AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
                         account: identity(2),
                         threshold: Some(2),
                         timeout_in_secs: None,

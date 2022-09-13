@@ -9,98 +9,178 @@ use many_macros::many_module;
 use many_protocol::ResponseMessage;
 use many_types::cbor::CborAny;
 use many_types::ledger::TokenAmount;
-use many_types::Timestamp;
+use many_types::{Either, Timestamp};
 use minicbor::bytes::ByteVec;
-use minicbor::{encode, decode, Decode, Decoder, Encode, Encoder};
+use minicbor::data::Type;
+use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// A short note in a transaction
-#[derive(Clone, Debug, PartialEq)]
-// Using AsRef<str> for extensibility:
-// We might want to borrow with a Memo<&str> instead of a &Memo<String>
-pub struct Memo<S: AsRef<str>>(S);
+const MULTISIG_MEMO_DATA_MAX_SIZE: usize = 4000; // 4kB
 
-impl<S, C> Encode<C> for Memo<S> where S: AsRef<str> {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), encode::Error<W::Error>> {
-        e.str(self.0.as_ref()).map(|_| ())
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+enum MemoInner<const MAX_LENGTH: usize> {
+    String(String),
+    ByteString(ByteVec),
+}
+
+macro_rules! declare_try_from {
+    ( $( $ty: ty = $item: path );* $(;)? ) => {
+        $(
+        impl<const M: usize> TryFrom<$ty> for MemoInner<M> {
+            type Error = ManyError;
+
+            fn try_from(value: $ty) -> Result<Self, Self::Error> {
+                if value.len() > M {
+                    return Err(ManyError::unknown(format!(
+                        "Data size ({}) over limit ({})",
+                        value.len(),
+                        M
+                    )));
+                }
+                Ok($item(value.into()))
+            }
+        }
+        )*
+    };
+}
+
+declare_try_from!(
+    String = Self::String;
+    &str = Self::String;
+    ByteVec = Self::ByteString;
+    Vec<u8> = Self::ByteString;
+);
+
+impl<const M: usize> TryFrom<Either<String, ByteVec>> for MemoInner<M> {
+    type Error = ManyError;
+
+    fn try_from(value: Either<String, ByteVec>) -> Result<Self, Self::Error> {
+        match value {
+            Either::Left(str) => Self::try_from(str),
+            Either::Right(bstr) => Self::try_from(bstr),
+        }
     }
 }
 
-impl<C> Decode<'_, C> for Memo<String> {
-    fn decode(d: &mut Decoder<'_>, ctx: &mut C) -> Result<Self, decode::Error> {
-        let Memo(s): Memo<&str> = Memo::decode(d, ctx)?;
-        Ok(Memo(s.into()))
+impl<C, const M: usize> Encode<C> for MemoInner<M> {
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
+        match self {
+            MemoInner::String(str) => e.str(str),
+            MemoInner::ByteString(bstr) => e.bytes(bstr.as_slice()),
+        }
+        .map(|_| ())
     }
 }
 
-// Implementing for completeness, in case we want zero-allocation parsing in the future
-impl<'b, C> Decode<'b, C> for Memo<&'b str> {
+impl<'b, C, const M: usize> Decode<'b, C> for MemoInner<M> {
     fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
-        let s = d.str()?;
-        if s.as_bytes().len() > MULTISIG_MEMO_DATA_MAX_SIZE {
-            return Err(decode::Error::message("Memo size over limit"));
+        match d.datatype()? {
+            Type::Bytes => Self::try_from(d.bytes()?.to_vec()).map_err(decode::Error::message),
+            Type::String => Self::try_from(d.str()?).map_err(decode::Error::message),
+            // Type::BytesIndef => {}
+            // Type::StringIndef => {}
+            _ => Err(decode::Error::type_mismatch(Type::String)),
         }
-        Ok(Memo(s))
     }
 }
 
-impl TryFrom<String> for Memo<String> {
-    type Error = String;
+/// A memo contains a human readable portion and/or a machine readable portion.
+/// It is meant to be a note regarding a message, transaction, info or any
+/// type that requires meta information.
+#[derive(Default, Clone, Debug, PartialOrd, PartialEq)]
+pub struct Memo<const MAX_LENGTH: usize = MULTISIG_MEMO_DATA_MAX_SIZE> {
+    inner: Vec<MemoInner<MAX_LENGTH>>,
+}
+
+impl<const M: usize> Memo<M> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn from_iter<I: Iterator<Item = Either<String, ByteVec>>>(
+        iter: I,
+    ) -> Result<Self, ManyError> {
+        Ok(Self {
+            inner: iter
+                .map(|e| MemoInner::<M>::try_from(e))
+                .collect::<Result<Vec<MemoInner<M>>, _>>()?,
+        })
+    }
+
+    pub fn push_str(&mut self, str: String) -> Result<(), ManyError> {
+        self.inner.push(MemoInner::<M>::try_from(str)?);
+        Ok(())
+    }
+
+    pub fn push_byte_vec(&mut self, bytes: ByteVec) -> Result<(), ManyError> {
+        self.inner.push(MemoInner::<M>::try_from(bytes)?);
+        Ok(())
+    }
+}
+
+impl<const M: usize> From<MemoInner<M>> for Memo<M> {
+    fn from(inner: MemoInner<M>) -> Self {
+        Self { inner: vec![inner] }
+    }
+}
+
+impl<const M: usize> TryFrom<Either<String, ByteVec>> for Memo<M> {
+    type Error = ManyError;
+
+    fn try_from(s: Either<String, ByteVec>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            inner: vec![match s {
+                Either::Left(str) => MemoInner::String(str),
+                Either::Right(bstr) => MemoInner::ByteString(bstr),
+            }],
+        })
+    }
+}
+
+impl<const M: usize> TryFrom<String> for Memo<M> {
+    type Error = ManyError;
     fn try_from(s: String) -> Result<Self, Self::Error> {
-        if s.as_str().as_bytes().len() > MULTISIG_MEMO_DATA_MAX_SIZE {
-            return Err(format!("Memo size over limit {}", s.as_str().as_bytes().len()));
+        Ok(Self::from(MemoInner::try_from(s)?))
+    }
+}
+
+impl<const M: usize> TryFrom<ByteVec> for Memo<M> {
+    type Error = ManyError;
+    fn try_from(b: ByteVec) -> Result<Self, Self::Error> {
+        if b.len() > M {
+            return Err(ManyError::unknown(format!(
+                "Data size ({}) over limit ({})",
+                b.len(),
+                M
+            )));
         }
-        Ok(Memo(s))
+        Ok(Self {
+            inner: vec![MemoInner::ByteString(b)],
+        })
     }
 }
 
-impl Memo<String> {
-    // USED ONLY IN TESTS! NEVER REMOVE THIS GUARD! MEMOS SHOULDN'T BE PRODUCED FROM LARGE STRINGS
-    #[cfg(test)]
-    pub fn new(s: String) -> Self {
-        Memo(s)
+impl<C, const M: usize> Encode<C> for Memo<M> {
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
+        e.encode(&self.inner).map(|_| ())
     }
 }
 
-/// Data inside a transaction
-#[derive(Clone, Debug, PartialEq)]
-pub struct Data(ByteVec);
-
-impl<C> Encode<C> for Data {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), encode::Error<W::Error>> {
-        e.bytes(self.0.as_ref()).map(|_| ())
-    }
-}
-
-impl<C> Decode<'_, C> for Data {
-    fn decode(d: &mut Decoder<'_>, _: &mut C) -> Result<Self, decode::Error> {
-        let b = d.bytes()?;
-        if b.len() > MULTISIG_MEMO_DATA_MAX_SIZE {
-            return Err(minicbor::decode::Error::message("Data size over limit"));
-        }
-        Ok(Data(b.to_vec().into()))
-    }
-}
-
-impl TryFrom<Vec<u8>> for Data {
-    type Error = String;
-    fn try_from(b: Vec<u8>) -> Result<Self, Self::Error> {
-        if b.len() > MULTISIG_MEMO_DATA_MAX_SIZE {
-            return Err(format!("Data size over limit {}", b.len()));
-        }
-        Ok(Data(b.into()))
-    }
-}
-
-impl Data {
-    // USED ONLY IN TESTS! NEVER REMOVE THIS GUARD! MEMOS SHOULDN'T BE PRODUCED FROM LARGE STRINGS
-    #[cfg(test)]
-    fn new(b: ByteVec) -> Self {
-        Data(b)
-    }
-
-    pub fn as_bytes(&self) -> &[u8] {
-        self.0.as_slice()
+impl<'b, C, const M: usize> Decode<'b, C> for Memo<M> {
+    fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, minicbor::decode::Error> {
+        Ok(Self {
+            inner: d
+                .array_iter_with(ctx)?
+                .collect::<Result<Vec<MemoInner<M>>, _>>()?,
+        })
     }
 }
 
@@ -211,8 +291,6 @@ impl super::FeatureInfo for MultisigAccountFeature {
     }
 }
 
-const MULTISIG_MEMO_DATA_MAX_SIZE: usize = 4000; //4kB
-
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct SubmitTransactionArgs {
@@ -220,7 +298,7 @@ pub struct SubmitTransactionArgs {
     pub account: Address,
 
     #[n(1)]
-    pub memo: Option<Memo<String>>,
+    pub memo: Option<Memo>,
 
     #[n(2)]
     pub transaction: Box<AccountMultisigTransaction>,
@@ -233,9 +311,6 @@ pub struct SubmitTransactionArgs {
 
     #[n(5)]
     pub execute_automatically: Option<bool>,
-
-    #[n(6)]
-    pub data: Option<Data>,
 }
 
 impl SubmitTransactionArgs {
@@ -252,7 +327,6 @@ impl SubmitTransactionArgs {
             threshold: None,
             timeout_in_secs: None,
             execute_automatically: None,
-            data: None,
         }
     }
 }
@@ -322,7 +396,7 @@ impl<'b, C> Decode<'b, C> for MultisigTransactionState {
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]
-    pub memo: Option<Memo<String>>,
+    pub memo: Option<Memo>,
 
     #[n(1)]
     pub transaction: AccountMultisigTransaction,
@@ -341,9 +415,6 @@ pub struct InfoReturn {
 
     #[n(6)]
     pub timeout: Timestamp,
-
-    #[n(7)]
-    pub data: Option<Data>,
 
     #[n(8)]
     pub state: MultisigTransactionState,
@@ -438,63 +509,72 @@ pub trait AccountMultisigModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
-    use super::SubmitTransactionArgs;
-    use crate::account::features::multisig::{MULTISIG_MEMO_DATA_MAX_SIZE, Memo, Data};
-    use crate::account::DisableArgs;
-    use crate::events::AccountMultisigTransaction;
-    use many_identity::testing::identity;
+    use crate::account::features::multisig::{Memo, MULTISIG_MEMO_DATA_MAX_SIZE};
+    use proptest::proptest;
 
-    #[test]
-    fn memo_size() {
-        let mut tx = SubmitTransactionArgs {
-            account: identity(1),
-            memo: Some(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE]).unwrap().try_into().unwrap()),
-            transaction: Box::new(AccountMultisigTransaction::AccountDisable(DisableArgs {
-                account: identity(1),
-            })),
-            threshold: None,
-            timeout_in_secs: None,
-            execute_automatically: None,
-            data: None,
-        };
-        let enc = minicbor::to_vec(&tx).unwrap();
-        let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
-        assert!(dec.is_ok());
+    proptest! {
+        #[test]
+        fn memo_str_decode_prop(len in 900..1100usize) {
+            let data = String::from_utf8(vec![b'A'; len]).unwrap();
+            let cbor = format!(r#" [ "{data}" ] "#);
+            let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        tx.memo = Some(Memo::new(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE + 1]).unwrap()));
-        let enc = minicbor::to_vec(&tx).unwrap();
-        let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
-        assert!(dec.is_err());
-        assert_eq!(
-            dec.unwrap_err().to_string(),
-            "decode error: Memo size over limit"
-        );
+            let result = minicbor::decode::<Memo<1000>>(&bytes);
+            if len <= 1000 {
+                assert!(result.is_ok());
+            } else {
+                assert!(result.is_err());
+            }
+        }
+
+        #[test]
+        fn memo_bytes_decode_prop(len in 900..1100usize) {
+            let data = hex::encode(vec![1u8; len]);
+            let cbor = format!(r#" [ h'{data}' ] "#);
+            let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+            let result = minicbor::decode::<Memo<1000>>(&bytes);
+            if len <= 1000 {
+                assert!(result.is_ok());
+            } else {
+                assert!(result.is_err());
+            }
+        }
     }
 
     #[test]
-    fn data_size() {
-        let mut tx = SubmitTransactionArgs {
-            account: identity(1),
-            memo: None,
-            transaction: Box::new(AccountMultisigTransaction::AccountDisable(DisableArgs {
-                account: identity(1),
-            })),
-            threshold: None,
-            timeout_in_secs: None,
-            execute_automatically: None,
-            data: Some(vec![1u8; MULTISIG_MEMO_DATA_MAX_SIZE].try_into().unwrap()),
-        };
-        let enc = minicbor::to_vec(&tx).unwrap();
-        let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
-        assert!(dec.is_ok());
+    fn memo_decode_ok() {
+        let data = String::from_utf8(vec![b'A'; MULTISIG_MEMO_DATA_MAX_SIZE]).unwrap();
+        let cbor = format!(r#" [ "{data}" ] "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        tx.data = Some(Data::new(vec![1u8; MULTISIG_MEMO_DATA_MAX_SIZE + 1].into()));
-        let enc = minicbor::to_vec(&tx).unwrap();
-        let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
-        assert!(dec.is_err());
-        assert_eq!(
-            dec.unwrap_err().to_string(),
-            "decode error: Data size over limit"
-        );
+        assert!(minicbor::decode::<Memo>(&bytes).is_ok());
+    }
+
+    #[test]
+    fn memo_decode_too_large() {
+        let data = String::from_utf8(vec![b'A'; MULTISIG_MEMO_DATA_MAX_SIZE + 1]).unwrap();
+        let cbor = format!(r#" [ "{data}" ] "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+    }
+
+    #[test]
+    fn data_decode_ok() {
+        let data = hex::encode(vec![1u8; MULTISIG_MEMO_DATA_MAX_SIZE]);
+        let cbor = format!(r#" [ h'{data}' ] "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        assert!(minicbor::decode::<Memo>(&bytes).is_ok());
+    }
+
+    #[test]
+    fn data_decode_large() {
+        let data = hex::encode(vec![1u8; MULTISIG_MEMO_DATA_MAX_SIZE + 1]);
+        let cbor = format!(r#" [ h'{data}' ] "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        assert!(minicbor::decode::<Memo>(&bytes).is_err());
     }
 }
