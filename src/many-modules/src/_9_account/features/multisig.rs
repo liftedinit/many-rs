@@ -101,16 +101,6 @@ impl<const M: usize> Memo<M> {
         Self::default()
     }
 
-    pub fn from_iter<I: Iterator<Item = Either<String, ByteVec>>>(
-        iter: I,
-    ) -> Result<Self, ManyError> {
-        Ok(Self {
-            inner: iter
-                .map(|e| MemoInner::<M>::try_from(e))
-                .collect::<Result<Vec<MemoInner<M>>, _>>()?,
-        })
-    }
-
     pub fn push_str(&mut self, str: String) -> Result<(), ManyError> {
         self.inner.push(MemoInner::<M>::try_from(str)?);
         Ok(())
