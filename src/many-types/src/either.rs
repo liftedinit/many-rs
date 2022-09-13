@@ -871,7 +871,7 @@ where
     type Target = L::Target;
 
     fn deref(&self) -> &Self::Target {
-        either!(*self, ref inner => &*inner)
+        either!(*self, ref inner => &**inner)
     }
 }
 

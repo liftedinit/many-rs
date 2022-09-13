@@ -17,7 +17,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 const MULTISIG_MEMO_DATA_MAX_SIZE: usize = 4000; // 4kB
 
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 enum MemoInner<const MAX_LENGTH: usize> {
     String(String),
     ByteString(ByteVec),
@@ -91,7 +91,7 @@ impl<'b, C, const M: usize> Decode<'b, C> for MemoInner<M> {
 /// A memo contains a human readable portion and/or a machine readable portion.
 /// It is meant to be a note regarding a message, transaction, info or any
 /// type that requires meta information.
-#[derive(Default, Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Default, Clone, Debug, PartialOrd, Eq, PartialEq)]
 pub struct Memo<const MAX_LENGTH: usize = MULTISIG_MEMO_DATA_MAX_SIZE> {
     inner: Vec<MemoInner<MAX_LENGTH>>,
 }
@@ -281,7 +281,7 @@ impl super::FeatureInfo for MultisigAccountFeature {
     }
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct SubmitTransactionArgs {
     #[n(0)]
@@ -328,7 +328,7 @@ pub struct SubmitTransactionReturn {
     pub token: ByteVec,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct InfoArgs {
     #[n(0)]
@@ -410,7 +410,7 @@ pub struct InfoReturn {
     pub state: MultisigTransactionState,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct SetDefaultsArgs {
     #[n(0)]
@@ -428,7 +428,7 @@ pub struct SetDefaultsArgs {
 
 pub type SetDefaultsReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct ApproveArgs {
     #[n(0)]
@@ -437,7 +437,7 @@ pub struct ApproveArgs {
 
 pub type ApproveReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct RevokeArgs {
     #[n(0)]
@@ -446,14 +446,14 @@ pub struct RevokeArgs {
 
 pub type RevokeReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct ExecuteArgs {
     #[n(0)]
     pub token: ByteVec,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct WithdrawArgs {
     #[n(0)]
