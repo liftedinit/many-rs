@@ -521,7 +521,7 @@ impl RuntimeChoice {
         match Handle::try_current() {
             Ok(h) => Ok(Self::Handle(h)),
             Err(_) => Ok(Self::Runtime(Arc::new(
-                tokio::runtime::Builder::new_current_thread()
+                tokio::runtime::Builder::new_multi_thread()
                     .enable_all()
                     .build()?,
             ))),
