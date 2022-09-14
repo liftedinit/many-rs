@@ -91,16 +91,12 @@ impl<'b, C, const M: usize> Decode<'b, C> for MemoInner<M> {
 /// A memo contains a human readable portion and/or a machine readable portion.
 /// It is meant to be a note regarding a message, transaction, info or any
 /// type that requires meta information.
-#[derive(Default, Clone, Debug, PartialOrd, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialOrd, Eq, PartialEq)]
 pub struct Memo<const MAX_LENGTH: usize = MULTISIG_MEMO_DATA_MAX_SIZE> {
     inner: Vec<MemoInner<MAX_LENGTH>>,
 }
 
 impl<const M: usize> Memo<M> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn push_str(&mut self, str: String) -> Result<(), ManyError> {
         self.inner.push(MemoInner::<M>::try_from(str)?);
         Ok(())
@@ -134,23 +130,14 @@ impl<const M: usize> TryFrom<Either<String, ByteVec>> for Memo<M> {
 impl<const M: usize> TryFrom<String> for Memo<M> {
     type Error = ManyError;
     fn try_from(s: String) -> Result<Self, Self::Error> {
-        Ok(Self::from(MemoInner::try_from(s)?))
+        Ok(Self::from(MemoInner::<M>::try_from(s)?))
     }
 }
 
 impl<const M: usize> TryFrom<ByteVec> for Memo<M> {
     type Error = ManyError;
     fn try_from(b: ByteVec) -> Result<Self, Self::Error> {
-        if b.len() > M {
-            return Err(ManyError::unknown(format!(
-                "Data size ({}) over limit ({})",
-                b.len(),
-                M
-            )));
-        }
-        Ok(Self {
-            inner: vec![MemoInner::ByteString(b)],
-        })
+        Ok(Self::from(MemoInner::<M>::try_from(b)?))
     }
 }
 
