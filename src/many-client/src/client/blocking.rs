@@ -5,7 +5,6 @@ use many_server::ManyError;
 use many_types::RuntimeChoice;
 use minicbor::Encode;
 use reqwest::IntoUrl;
-use tokio::runtime::Handle;
 
 use crate::ManyClient as AsyncClient;
 
@@ -16,10 +15,6 @@ pub struct ManyClient<I: Identity> {
 }
 
 impl<I: Identity> ManyClient<I> {
-    fn handle(&self) -> &Handle {
-        self.runtime_choice.handle()
-    }
-
     pub fn new<S: IntoUrl>(url: S, to: Address, identity: I) -> Result<Self, String> {
         let client = AsyncClient::new(url, to, identity)?;
         let runtime_choice = RuntimeChoice::new().map_err(|e| e.to_string())?;
@@ -30,14 +25,14 @@ impl<I: Identity> ManyClient<I> {
     }
 
     pub fn send_message(&self, message: RequestMessage) -> Result<ResponseMessage, ManyError> {
-        self.handle().block_on(self.client.send_message(message))
+        self.runtime_choice.block_on(self.client.send_message(message))
     }
 
     pub fn call_raw<M>(&self, method: M, argument: &[u8]) -> Result<ResponseMessage, ManyError>
     where
         M: Into<String>,
     {
-        self.handle()
+        self.runtime_choice
             .block_on(self.client.call_raw(method, argument))
     }
 
@@ -46,7 +41,7 @@ impl<I: Identity> ManyClient<I> {
         M: Into<String>,
         A: Encode<()>,
     {
-        self.handle().block_on(self.client.call(method, argument))
+        self.runtime_choice.block_on(self.client.call(method, argument))
     }
 
     pub fn call_<M, A>(&self, method: M, argument: A) -> Result<Vec<u8>, ManyError>
@@ -54,10 +49,10 @@ impl<I: Identity> ManyClient<I> {
         M: Into<String>,
         A: Encode<()>,
     {
-        self.handle().block_on(self.client.call_(method, argument))
+        self.runtime_choice.block_on(self.client.call_(method, argument))
     }
 
     pub fn status(&self) -> Result<Status, ManyError> {
-        self.handle().block_on(self.client.status())
+        self.runtime_choice.block_on(self.client.status())
     }
 }

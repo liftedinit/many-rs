@@ -3,7 +3,6 @@ use std::{
     convert::Infallible,
     path::Path,
     sync::{atomic::AtomicBool, Arc},
-    thread,
 };
 
 use async_trait::async_trait;
