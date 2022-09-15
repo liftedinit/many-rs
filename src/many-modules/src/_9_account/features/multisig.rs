@@ -153,6 +153,19 @@ impl<C, const M: usize> Encode<C> for Memo<M> {
 
 impl<'b, C, const M: usize> Decode<'b, C> for Memo<M> {
     fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, minicbor::decode::Error> {
+        // Allow for backward compatibility when using a feature.
+        // We need this if we move a database with existing memos.
+        #[cfg(feature = "memo-backward-compatible")]
+        match d.datatype()? {
+            Type::Bytes => {
+                return Self::try_from(d.bytes()?.to_vec()).map_err(decode::Error::message);
+            }
+            Type::String => {
+                return Self::try_from(d.str()?).map_err(decode::Error::message);
+            }
+            _ => {}
+        }
+
         Ok(Self {
             inner: d
                 .array_iter_with(ctx)?
