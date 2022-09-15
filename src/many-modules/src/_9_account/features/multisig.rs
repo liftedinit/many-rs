@@ -106,6 +106,20 @@ impl<const M: usize> Memo<M> {
         self.inner.push(MemoInner::<M>::try_from(bytes)?);
         Ok(())
     }
+
+    pub fn iter_str(&self) -> impl Iterator<Item = &String> {
+        self.inner.iter().filter_map(|inner| match inner {
+            MemoInner::String(s) => Some(s),
+            MemoInner::ByteString(_) => None,
+        })
+    }
+
+    pub fn iter_bytes(&self) -> impl Iterator<Item = &[u8]> {
+        self.inner.iter().filter_map(|inner| match inner {
+            MemoInner::String(_) => None,
+            MemoInner::ByteString(bstr) => Some(bstr.as_slice()),
+        })
+    }
 }
 
 impl<const M: usize> From<MemoInner<M>> for Memo<M> {
@@ -596,9 +610,38 @@ mod tests {
 
     #[test]
     fn mixed_decode_data_type_mismatch() {
+        let cbor = r#" 0 "#;
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+    }
+
+    #[test]
+    fn mixed_decode_data_type_mismatch_array() {
         let cbor = r#" [ "", 0, "" ] "#;
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
         assert!(minicbor::decode::<Memo>(&bytes).is_err());
+    }
+
+    #[test]
+    fn backward_compatibility_str() {
+        let data = String::from_utf8(vec![b'A'; MULTISIG_MEMO_DATA_MAX_SIZE]).unwrap();
+        let cbor = format!(r#" "{data}" "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        let memo = minicbor::decode::<Memo>(&bytes).unwrap();
+        assert_eq!(memo.iter_str().next(), Some(&data));
+    }
+
+    #[test]
+    fn backward_compatibility_bytes() {
+        let bytes = vec![1u8; MULTISIG_MEMO_DATA_MAX_SIZE];
+        let data = hex::encode(&bytes);
+        let cbor = format!(r#" h'{data}' "#);
+        let cbor_bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        let memo = minicbor::decode::<Memo>(&cbor_bytes).unwrap();
+        assert_eq!(memo.iter_bytes().next(), Some(bytes.as_slice()));
     }
 }
