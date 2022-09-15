@@ -141,6 +141,13 @@ impl<const M: usize> TryFrom<ByteVec> for Memo<M> {
     }
 }
 
+impl<const M: usize> TryFrom<Vec<u8>> for Memo<M> {
+    type Error = ManyError;
+    fn try_from(b: Vec<u8>) -> Result<Self, Self::Error> {
+        Ok(Self::from(MemoInner::<M>::try_from(b)?))
+    }
+}
+
 impl<C, const M: usize> Encode<C> for Memo<M> {
     fn encode<W: encode::Write>(
         &self,
@@ -152,7 +159,7 @@ impl<C, const M: usize> Encode<C> for Memo<M> {
 }
 
 impl<'b, C, const M: usize> Decode<'b, C> for Memo<M> {
-    fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, minicbor::decode::Error> {
+    fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
         // Allow for backward compatibility when using a feature.
         // We need this if we move a database with existing memos.
         #[cfg(feature = "memo-backward-compatible")]
@@ -161,7 +168,7 @@ impl<'b, C, const M: usize> Decode<'b, C> for Memo<M> {
                 return Self::try_from(d.bytes()?.to_vec()).map_err(decode::Error::message);
             }
             Type::String => {
-                return Self::try_from(d.str()?).map_err(decode::Error::message);
+                return Self::try_from(d.str()?.to_string()).map_err(decode::Error::message);
             }
             _ => {}
         }
@@ -370,14 +377,14 @@ impl<C> Encode<C> for MultisigTransactionState {
 }
 
 impl<'b, C> Decode<'b, C> for MultisigTransactionState {
-    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
         match d.u32()? {
             0 => Ok(Self::Pending),
             1 => Ok(Self::ExecutedAutomatically),
             2 => Ok(Self::ExecutedManually),
             3 => Ok(Self::Withdrawn),
             4 => Ok(Self::Expired),
-            x => Err(minicbor::decode::Error::unknown_variant(x)),
+            x => Err(decode::Error::unknown_variant(x)),
         }
     }
 }
@@ -530,6 +537,7 @@ mod tests {
                 assert!(result.is_err());
             }
         }
+
     }
 
     #[test]
