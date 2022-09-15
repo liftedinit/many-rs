@@ -25,7 +25,8 @@ impl<I: Identity> ManyClient<I> {
     }
 
     pub fn send_message(&self, message: RequestMessage) -> Result<ResponseMessage, ManyError> {
-        self.runtime_choice.block_on(self.client.send_message(message))
+        self.runtime_choice
+            .block_on(self.client.send_message(message))
     }
 
     pub fn call_raw<M>(&self, method: M, argument: &[u8]) -> Result<ResponseMessage, ManyError>
@@ -41,7 +42,8 @@ impl<I: Identity> ManyClient<I> {
         M: Into<String>,
         A: Encode<()>,
     {
-        self.runtime_choice.block_on(self.client.call(method, argument))
+        self.runtime_choice
+            .block_on(self.client.call(method, argument))
     }
 
     pub fn call_<M, A>(&self, method: M, argument: A) -> Result<Vec<u8>, ManyError>
@@ -49,7 +51,8 @@ impl<I: Identity> ManyClient<I> {
         M: Into<String>,
         A: Encode<()>,
     {
-        self.runtime_choice.block_on(self.client.call_(method, argument))
+        self.runtime_choice
+            .block_on(self.client.call_(method, argument))
     }
 
     pub fn status(&self) -> Result<Status, ManyError> {

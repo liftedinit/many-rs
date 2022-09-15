@@ -528,12 +528,13 @@ impl RuntimeChoice {
         }
     }
 
-    pub fn block_on<F>(&self, f: F) -> F::Output where F: std::future::Future {
+    pub fn block_on<F>(&self, f: F) -> F::Output
+    where
+        F: std::future::Future,
+    {
         match &self {
             RuntimeChoice::Runtime(r) => r.block_on(f),
-            RuntimeChoice::Handle(h) => tokio::task::block_in_place(|| {
-                h.block_on(f)
-            })
+            RuntimeChoice::Handle(h) => tokio::task::block_in_place(|| h.block_on(f)),
         }
     }
 }
