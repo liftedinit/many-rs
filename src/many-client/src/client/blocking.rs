@@ -2,7 +2,6 @@ use many_identity::{Address, Identity};
 use many_modules::base::Status;
 use many_protocol::{RequestMessage, ResponseMessage};
 use many_server::ManyError;
-use many_types::RuntimeChoice;
 use minicbor::Encode;
 use reqwest::IntoUrl;
 
@@ -11,30 +10,36 @@ use crate::ManyClient as AsyncClient;
 #[derive(Debug, Clone)]
 pub struct ManyClient<I: Identity> {
     client: AsyncClient<I>,
-    runtime_choice: RuntimeChoice,
+}
+
+pub fn block_on<F>(future: F) -> F::Output
+where
+    F: std::future::Future,
+{
+    match tokio::runtime::Handle::try_current() {
+        Ok(handle) => tokio::task::block_in_place(|| handle.block_on(future)),
+        Err(_) => {
+            let runtime = tokio::runtime::Runtime::new().unwrap();
+            runtime.block_on(future)
+        }
+    }
 }
 
 impl<I: Identity> ManyClient<I> {
     pub fn new<S: IntoUrl>(url: S, to: Address, identity: I) -> Result<Self, String> {
         let client = AsyncClient::new(url, to, identity)?;
-        let runtime_choice = RuntimeChoice::new().map_err(|e| e.to_string())?;
-        Ok(Self {
-            client,
-            runtime_choice,
-        })
+        Ok(Self { client })
     }
 
     pub fn send_message(&self, message: RequestMessage) -> Result<ResponseMessage, ManyError> {
-        self.runtime_choice
-            .block_on(self.client.send_message(message))
+        block_on(self.client.send_message(message))
     }
 
     pub fn call_raw<M>(&self, method: M, argument: &[u8]) -> Result<ResponseMessage, ManyError>
     where
         M: Into<String>,
     {
-        self.runtime_choice
-            .block_on(self.client.call_raw(method, argument))
+        block_on(self.client.call_raw(method, argument))
     }
 
     pub fn call<M, A>(&self, method: M, argument: A) -> Result<ResponseMessage, ManyError>
@@ -42,8 +47,7 @@ impl<I: Identity> ManyClient<I> {
         M: Into<String>,
         A: Encode<()>,
     {
-        self.runtime_choice
-            .block_on(self.client.call(method, argument))
+        block_on(self.client.call(method, argument))
     }
 
     pub fn call_<M, A>(&self, method: M, argument: A) -> Result<Vec<u8>, ManyError>
@@ -51,11 +55,10 @@ impl<I: Identity> ManyClient<I> {
         M: Into<String>,
         A: Encode<()>,
     {
-        self.runtime_choice
-            .block_on(self.client.call_(method, argument))
+        block_on(self.client.call_(method, argument))
     }
 
     pub fn status(&self) -> Result<Status, ManyError> {
-        self.runtime_choice.block_on(self.client.status())
+        block_on(self.client.status())
     }
 }

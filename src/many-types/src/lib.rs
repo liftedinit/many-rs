@@ -5,8 +5,6 @@ use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Bound, RangeBounds, Shl};
-use std::sync::Arc;
-use tokio::runtime::{Handle, Runtime};
 
 pub mod attributes;
 pub mod blockchain;
@@ -506,35 +504,6 @@ impl<'b, C> Decode<'b, C> for AttributeRelatedIndex {
                 }
                 x => return Err(decode::Error::type_mismatch(x)),
             };
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum RuntimeChoice {
-    Runtime(Arc<Runtime>),
-    Handle(Handle),
-}
-
-impl RuntimeChoice {
-    pub fn new() -> std::io::Result<Self> {
-        match Handle::try_current() {
-            Ok(h) => Ok(Self::Handle(h)),
-            Err(_) => Ok(Self::Runtime(Arc::new(
-                tokio::runtime::Builder::new_multi_thread()
-                    .enable_all()
-                    .build()?,
-            ))),
-        }
-    }
-
-    pub fn block_on<F>(&self, f: F) -> F::Output
-    where
-        F: std::future::Future,
-    {
-        match &self {
-            RuntimeChoice::Runtime(r) => r.block_on(f),
-            RuntimeChoice::Handle(h) => tokio::task::block_in_place(|| h.block_on(f)),
         }
     }
 }
