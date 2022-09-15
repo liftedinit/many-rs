@@ -2081,7 +2081,6 @@ dependencies = [
  "proptest",
  "serde",
  "serde_test",
- "tokio",
 ]
 
 [[package]]
