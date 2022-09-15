@@ -3,7 +3,7 @@ use many_identity::Address;
 use many_types::ledger;
 use minicbor::{Decode, Encode};
 
-#[derive(Debug, Clone, Encode, Decode, PartialEq)]
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct SendArgs {
     #[n(0)]

@@ -49,7 +49,7 @@ impl<'b, C> Decode<'b, C> for Percent {
 /// Equivalent to enum VecOrSingle<T> { Single(T), Vec(Vec<T>) } in
 /// the cbor-level. That is, a user can decode a VecOrSingle from
 /// either a single value or a vec.
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
 #[must_use]
 pub struct VecOrSingle<T>(pub Vec<T>);
 
@@ -181,7 +181,7 @@ impl<'b, C> Decode<'b, C> for Timestamp {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 #[must_use]
 pub struct CborRange<T> {
     pub start: Bound<T>,
@@ -337,7 +337,7 @@ impl<'b, T: Decode<'b, C>, C> Decode<'b, C> for CborRange<T> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[must_use]
 pub enum SortOrder {
     Indeterminate = 0,

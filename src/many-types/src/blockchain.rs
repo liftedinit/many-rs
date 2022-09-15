@@ -2,7 +2,7 @@ use crate::Timestamp;
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SingleBlockQuery {
     Hash(Vec<u8>),
     Height(u64),
@@ -115,7 +115,7 @@ pub struct Block {
 //     { 0 => bstr }
 //     ; A block + transaction index.
 //     / { 1 => [ single-block-query, uint ] }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SingleTransactionQuery {
     Hash(Vec<u8>),
 }

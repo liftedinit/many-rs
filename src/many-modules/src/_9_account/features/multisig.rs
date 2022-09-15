@@ -11,17 +11,24 @@ use many_types::cbor::CborAny;
 use many_types::ledger::TokenAmount;
 use many_types::Timestamp;
 use minicbor::bytes::ByteVec;
-use minicbor::{encode, decode, Decode, Decoder, Encode, Encoder};
+use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A short note in a transaction
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 // Using AsRef<str> for extensibility:
 // We might want to borrow with a Memo<&str> instead of a &Memo<String>
 pub struct Memo<S: AsRef<str>>(S);
 
-impl<S, C> Encode<C> for Memo<S> where S: AsRef<str> {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), encode::Error<W::Error>> {
+impl<S, C> Encode<C> for Memo<S>
+where
+    S: AsRef<str>,
+{
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
         e.str(self.0.as_ref()).map(|_| ())
     }
 }
@@ -48,7 +55,10 @@ impl TryFrom<String> for Memo<String> {
     type Error = String;
     fn try_from(s: String) -> Result<Self, Self::Error> {
         if s.as_str().as_bytes().len() > MULTISIG_MEMO_DATA_MAX_SIZE {
-            return Err(format!("Memo size over limit {}", s.as_str().as_bytes().len()));
+            return Err(format!(
+                "Memo size over limit {}",
+                s.as_str().as_bytes().len()
+            ));
         }
         Ok(Memo(s))
     }
@@ -63,11 +73,15 @@ impl Memo<String> {
 }
 
 /// Data inside a transaction
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Data(ByteVec);
 
 impl<C> Encode<C> for Data {
-    fn encode<W: encode::Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), encode::Error<W::Error>> {
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
         e.bytes(self.0.as_ref()).map(|_| ())
     }
 }
@@ -213,7 +227,7 @@ impl super::FeatureInfo for MultisigAccountFeature {
 
 const MULTISIG_MEMO_DATA_MAX_SIZE: usize = 4000; //4kB
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct SubmitTransactionArgs {
     #[n(0)]
@@ -264,7 +278,7 @@ pub struct SubmitTransactionReturn {
     pub token: ByteVec,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct InfoArgs {
     #[n(0)]
@@ -349,7 +363,7 @@ pub struct InfoReturn {
     pub state: MultisigTransactionState,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct SetDefaultsArgs {
     #[n(0)]
@@ -367,7 +381,7 @@ pub struct SetDefaultsArgs {
 
 pub type SetDefaultsReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct ApproveArgs {
     #[n(0)]
@@ -376,7 +390,7 @@ pub struct ApproveArgs {
 
 pub type ApproveReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct RevokeArgs {
     #[n(0)]
@@ -385,14 +399,14 @@ pub struct RevokeArgs {
 
 pub type RevokeReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct ExecuteArgs {
     #[n(0)]
     pub token: ByteVec,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct WithdrawArgs {
     #[n(0)]
@@ -439,7 +453,7 @@ pub trait AccountMultisigModuleBackend: Send {
 #[cfg(test)]
 mod tests {
     use super::SubmitTransactionArgs;
-    use crate::account::features::multisig::{MULTISIG_MEMO_DATA_MAX_SIZE, Memo, Data};
+    use crate::account::features::multisig::{Data, Memo, MULTISIG_MEMO_DATA_MAX_SIZE};
     use crate::account::DisableArgs;
     use crate::events::AccountMultisigTransaction;
     use many_identity::testing::identity;
@@ -448,7 +462,12 @@ mod tests {
     fn memo_size() {
         let mut tx = SubmitTransactionArgs {
             account: identity(1),
-            memo: Some(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE]).unwrap().try_into().unwrap()),
+            memo: Some(
+                String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE])
+                    .unwrap()
+                    .try_into()
+                    .unwrap(),
+            ),
             transaction: Box::new(AccountMultisigTransaction::AccountDisable(DisableArgs {
                 account: identity(1),
             })),
@@ -461,7 +480,9 @@ mod tests {
         let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
         assert!(dec.is_ok());
 
-        tx.memo = Some(Memo::new(String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE + 1]).unwrap()));
+        tx.memo = Some(Memo::new(
+            String::from_utf8(vec![65; MULTISIG_MEMO_DATA_MAX_SIZE + 1]).unwrap(),
+        ));
         let enc = minicbor::to_vec(&tx).unwrap();
         let dec = minicbor::decode::<SubmitTransactionArgs>(&enc);
         assert!(dec.is_err());

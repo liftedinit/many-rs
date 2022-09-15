@@ -3,7 +3,7 @@ use many_types::{ledger, VecOrSingle};
 use minicbor::{Decode, Encode};
 use std::collections::BTreeMap;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct BalanceArgs {
     #[n(0)]

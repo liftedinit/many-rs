@@ -8,14 +8,14 @@ use std::collections::BTreeMap;
 #[cfg(test)]
 use mockall::{automock, predicate::*};
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct EndpointInfo {
     #[n(0)]
     pub is_command: bool,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct AbciInit {
     /// List the methods supported by this module. For performance reason, this list will be
@@ -28,7 +28,7 @@ pub struct AbciInit {
     pub endpoints: BTreeMap<String, EndpointInfo>,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct AbciInfo {
     #[n(0)]
@@ -38,14 +38,14 @@ pub struct AbciInfo {
     pub hash: ByteVec,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct AbciBlock {
     #[n(0)]
     pub time: Option<u64>,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct AbciCommitInfo {
     #[n(0)]
