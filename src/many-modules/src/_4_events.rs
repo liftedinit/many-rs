@@ -27,7 +27,7 @@ pub trait EventsModuleBackend: Send {
     fn list(&self, args: ListArgs) -> Result<ListReturns, ManyError>;
 }
 
-#[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct EventId(ByteVec);
 
@@ -128,7 +128,7 @@ impl From<EventId> for Vec<u8> {
     }
 }
 
-#[derive(Clone, Debug, Default, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Default, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct EventFilter {
     #[n(0)]
@@ -387,7 +387,7 @@ macro_rules! encode_event_info {
 
 macro_rules! define_multisig_event {
     ( $( $name: ident $(: $arg: ty )?, )* ) => {
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, Eq, PartialEq)]
         #[non_exhaustive]
         pub enum AccountMultisigTransaction {
             $( $( $name($arg), )? )*

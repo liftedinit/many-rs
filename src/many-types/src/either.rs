@@ -28,7 +28,7 @@ pub use Either::{Left, Right};
 /// The `Either` type is symmetric and treats its variants the same way, without
 /// preference.
 /// (For representing success or error, use the regular `Result` enum instead.)
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub enum Either<L, R> {
     /// A value of type `L`.
     Left(L),
@@ -871,7 +871,7 @@ where
     type Target = L::Target;
 
     fn deref(&self) -> &Self::Target {
-        either!(*self, ref inner => &*inner)
+        either!(*self, ref inner => &**inner)
     }
 }
 

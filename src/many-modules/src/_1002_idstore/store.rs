@@ -2,7 +2,7 @@ use super::types::{CredentialId, PublicKey, RecallPhrase};
 use many_identity::Address;
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct StoreArgs {
     #[n(0)]

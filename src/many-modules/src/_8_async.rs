@@ -11,7 +11,7 @@ use mockall::{automock, predicate::*};
 
 /// An AsyncToken which is returned when the server does not have an immediate
 /// response.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct AsyncToken(Vec<u8>);
 
@@ -104,7 +104,7 @@ pub mod attributes {
     }
 }
 
-#[derive(Debug, Clone, Encode, Decode, PartialEq)]
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct StatusArgs {
     #[n(0)]
