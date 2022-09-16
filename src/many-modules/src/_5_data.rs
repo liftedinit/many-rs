@@ -1,14 +1,14 @@
-pub mod info;
 pub mod get_info;
+pub mod info;
 pub mod query;
 pub mod types;
-pub use info::*;
 pub use get_info::*;
-pub use query::*;
-pub use types::*;
+pub use info::*;
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
+pub use query::*;
+pub use types::*;
 
 #[cfg(test)]
 use mockall::{automock, predicate::*};
@@ -17,7 +17,11 @@ use mockall::{automock, predicate::*};
 #[cfg_attr(test, automock)]
 pub trait DataModuleBackend: Send {
     fn info(&self, sender: &Address, args: DataInfoArgs) -> Result<DataInfoReturns, ManyError>;
-    fn get_info(&self, sender: &Address, args: DataGetInfoArgs) -> Result<DataGetInfoReturns, ManyError>;
+    fn get_info(
+        &self,
+        sender: &Address,
+        args: DataGetInfoArgs,
+    ) -> Result<DataGetInfoReturns, ManyError>;
     fn query(&self, sender: &Address, args: DataQueryArgs) -> Result<DataQueryReturns, ManyError>;
 }
 
@@ -26,6 +30,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use many_types::VecOrSingle;
+    use num_bigint::BigInt;
 
     use crate::testutils::{call_module, call_module_cbor};
 
@@ -48,7 +53,9 @@ mod tests {
         };
 
         let mut mock = MockDataModuleBackend::new();
-        mock.expect_info().times(1).return_const(Ok(info_returns.clone()));
+        mock.expect_info()
+            .times(1)
+            .return_const(Ok(info_returns.clone()));
         let module = super::DataModule::new(Arc::new(Mutex::new(mock)));
         let results: DataInfoReturns =
             minicbor::decode(&call_module(5, &module, "data.info", "null").unwrap()).unwrap();
@@ -64,7 +71,7 @@ mod tests {
         let account_total_count = account_total_count();
         let non_zero_account_total_count = non_zero_account_total_count();
         let args = DataGetInfoArgs {
-            indices: VecOrSingle(vec![account_total_count, non_zero_account_total_count])
+            indices: VecOrSingle(vec![account_total_count, non_zero_account_total_count]),
         };
 
         // Returns
@@ -85,13 +92,10 @@ mod tests {
             .times(1)
             .return_const(Ok(returns.clone()));
         let module = super::DataModule::new(Arc::new(Mutex::new(mock)));
-        let results: DataGetInfoReturns =
-            minicbor::decode(&call_module_cbor(
-                5,
-                &module,
-                "data.getInfo",
-                minicbor::to_vec(args).unwrap()
-            ).unwrap()).unwrap();
+        let results: DataGetInfoReturns = minicbor::decode(
+            &call_module_cbor(5, &module, "data.getInfo", minicbor::to_vec(args).unwrap()).unwrap(),
+        )
+        .unwrap();
 
         assert_eq!(results, returns);
         assert_eq!(results[&account_total_count], atc);
@@ -104,7 +108,7 @@ mod tests {
         let account_total_count = account_total_count();
         let non_zero_account_total_count = non_zero_account_total_count();
         let args = DataQueryArgs {
-            indices: VecOrSingle(vec![account_total_count, non_zero_account_total_count])
+            indices: VecOrSingle(vec![account_total_count, non_zero_account_total_count]),
         };
 
         // Returns
@@ -115,19 +119,23 @@ mod tests {
         returns.insert(non_zero_account_total_count, nzatc_value.clone());
 
         let mut mock = MockDataModuleBackend::new();
-        mock.expect_query()
-            .times(1)
-            .return_const(Ok(returns));
+        mock.expect_query().times(1).return_const(Ok(returns));
         let module = super::DataModule::new(Arc::new(Mutex::new(mock)));
-        let results: DataQueryReturns =
-            minicbor::decode(&call_module_cbor(
-                5,
-                &module,
-                "data.query",
-                minicbor::to_vec(args).unwrap()
-            ).unwrap()).unwrap();
+        let results: DataQueryReturns = minicbor::decode(
+            &call_module_cbor(5, &module, "data.query", minicbor::to_vec(args).unwrap()).unwrap(),
+        )
+        .unwrap();
 
-        assert_eq!(results[&account_total_count], act_value);
-        assert_eq!(results[&non_zero_account_total_count], nzatc_value);
+        let a: BigInt = results[&account_total_count].clone().try_into().unwrap();
+        let b = act_value.try_into().unwrap();
+
+        assert_eq!(a, b);
+
+        let a: BigInt = results[&non_zero_account_total_count]
+            .clone()
+            .try_into()
+            .unwrap();
+        let b = nzatc_value.try_into().unwrap();
+        assert_eq!(a, b);
     }
 }

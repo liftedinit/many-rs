@@ -12,12 +12,23 @@ pub enum DataType {
     Gauge,
 }
 
-#[derive(Clone, Decode, Encode, PartialEq, Eq, Debug)]
+#[derive(Clone, Decode, Encode, Debug)]
 pub enum DataValue {
     #[n(0)]
     Counter(#[n(0)] DataValueTypeCounter),
     #[n(1)]
     Gauge(#[n(0)] DataValueTypeGauge),
+}
+
+impl TryFrom<DataValue> for BigInt {
+    type Error = String;
+
+    fn try_from(value: DataValue) -> Result<Self, Self::Error> {
+        match value {
+            DataValue::Counter(c) => Ok(c.into()),
+            DataValue::Gauge(g) => g.try_into(),
+        }
+    }
 }
 
 pub type DataValueTypeCounter = u64;
@@ -32,31 +43,19 @@ pub enum DataValueTypeGauge {
     BigInt(#[cbor(n(0), decode_with = "decode_bigint", encode_with = "encode_bigint")] BigInt),
 }
 
-impl PartialEq<DataValueTypeGauge> for DataValueTypeGauge {
-    fn eq(&self, other: &DataValueTypeGauge) -> bool {
-        match (self, other) {
-            (DataValueTypeGauge::BigInt(a), DataValueTypeGauge::Int(b)) => &BigInt::from(*b) == a,
-            (DataValueTypeGauge::BigInt(a), DataValueTypeGauge::Float(b)) => {
-                &BigInt::from(b.ceil() as i64) == a && &BigInt::from(b.floor() as i64) == a
-            }
-            (DataValueTypeGauge::Int(a), DataValueTypeGauge::BigInt(b)) => &BigInt::from(*a) == b,
-            (DataValueTypeGauge::Float(a), DataValueTypeGauge::BigInt(b)) => {
-                &BigInt::from(a.ceil() as i64) == b && &BigInt::from(a.floor() as i64) == b
-            }
-            (DataValueTypeGauge::Int(a), DataValueTypeGauge::Int(b)) => a == b,
-            (DataValueTypeGauge::BigInt(a), DataValueTypeGauge::BigInt(b)) => a == b,
-            (DataValueTypeGauge::Float(a), DataValueTypeGauge::Float(b)) => a == b,
-            (DataValueTypeGauge::Int(a), DataValueTypeGauge::Float(b)) => {
-                b.ceil() as i64 == *a && b.floor() as i64 == *a
-            }
-            (DataValueTypeGauge::Float(a), DataValueTypeGauge::Int(b)) => {
-                a.ceil() as i64 == *b && a.floor() as i64 == *b
+impl TryFrom<DataValueTypeGauge> for BigInt {
+    type Error = String;
+
+    fn try_from(value: DataValueTypeGauge) -> Result<Self, Self::Error> {
+        match value {
+            DataValueTypeGauge::Int(i) => Ok(i.into()),
+            DataValueTypeGauge::BigInt(b) => Ok(b),
+            DataValueTypeGauge::Float(_) => {
+                Err("Floats can't be converted to BigInt without loss".into())
             }
         }
     }
 }
-
-impl Eq for DataValueTypeGauge {}
 
 fn decode_bigint<C>(
     d: &mut minicbor::Decoder<'_>,
@@ -81,37 +80,4 @@ pub struct DataInfo {
     pub r#type: DataType,
     #[n(1)]
     pub shortname: String,
-}
-
-#[cfg(test)]
-mod test {
-    use num_bigint::BigInt;
-
-    use super::DataValueTypeGauge;
-
-    #[test]
-    fn test_equality() {
-        assert_eq!(DataValueTypeGauge::Int(2), DataValueTypeGauge::Float(2.0));
-        assert_eq!(
-            DataValueTypeGauge::Int(2),
-            DataValueTypeGauge::BigInt(BigInt::from(2))
-        );
-        assert_eq!(
-            DataValueTypeGauge::Float(2.0),
-            DataValueTypeGauge::BigInt(BigInt::from(2))
-        );
-    }
-
-    #[test]
-    fn test_difference() {
-        assert_ne!(DataValueTypeGauge::Int(2), DataValueTypeGauge::Float(2.2));
-        assert_ne!(
-            DataValueTypeGauge::Float(2.2),
-            DataValueTypeGauge::BigInt(BigInt::from(2))
-        );
-        assert_ne!(
-            DataValueTypeGauge::Float(1.0000001),
-            DataValueTypeGauge::Int(1)
-        );
-    }
 }
