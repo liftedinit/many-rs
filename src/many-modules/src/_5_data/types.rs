@@ -109,5 +109,9 @@ mod test {
             DataValueTypeGauge::Float(2.2),
             DataValueTypeGauge::BigInt(BigInt::from(2))
         );
+        assert_ne!(
+            DataValueTypeGauge::Float(1.0000001),
+            DataValueTypeGauge::Int(1)
+        );
     }
 }
