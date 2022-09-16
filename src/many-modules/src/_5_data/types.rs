@@ -1,5 +1,5 @@
 use many_types::AttributeRelatedIndex;
-use minicbor::{Encode, Decode};
+use minicbor::{Decode, Encode};
 use num_bigint::BigInt;
 
 pub type DataIndex = AttributeRelatedIndex;
@@ -29,37 +29,38 @@ pub enum DataValueTypeGauge {
     #[n(1)]
     Float(#[n(0)] f64),
     #[n(2)]
-    BigInt(#[cbor(n(0), decode_with="decode_bigint", encode_with = "encode_bigint")] BigInt)
+    BigInt(#[cbor(n(0), decode_with = "decode_bigint", encode_with = "encode_bigint")] BigInt),
 }
 
 impl PartialEq<DataValueTypeGauge> for DataValueTypeGauge {
     fn eq(&self, other: &DataValueTypeGauge) -> bool {
         match (self, other) {
-            (DataValueTypeGauge::BigInt(a),
-             DataValueTypeGauge::Int(b)) => &BigInt::from(*b) == a,
-            (DataValueTypeGauge::BigInt(a),
-             DataValueTypeGauge::Float(b)) => b.fract() != 0.0 && &BigInt::from(*b as i64) == a,
-            (DataValueTypeGauge::Int(a),
-             DataValueTypeGauge::BigInt(b)) => &BigInt::from(*a) == b,
-            (DataValueTypeGauge::Float(a),
-             DataValueTypeGauge::BigInt(b)) => a.fract() != 0.0 && &BigInt::from(*a as i64) == b,
+            (DataValueTypeGauge::BigInt(a), DataValueTypeGauge::Int(b)) => &BigInt::from(*b) == a,
+            (DataValueTypeGauge::BigInt(a), DataValueTypeGauge::Float(b)) => {
+                &b.trunc() == b && &BigInt::from(*b as i64) == a
+            }
+            (DataValueTypeGauge::Int(a), DataValueTypeGauge::BigInt(b)) => &BigInt::from(*a) == b,
+            (DataValueTypeGauge::Float(a), DataValueTypeGauge::BigInt(b)) => {
+                &a.trunc() == a && &BigInt::from(*a as i64) == b
+            }
             (DataValueTypeGauge::Int(a), DataValueTypeGauge::Int(b)) => a == b,
             (DataValueTypeGauge::BigInt(a), DataValueTypeGauge::BigInt(b)) => a == b,
             (DataValueTypeGauge::Float(a), DataValueTypeGauge::Float(b)) => a == b,
-            (DataValueTypeGauge::Int(a),
-             DataValueTypeGauge::Float(b)) => b.fract() != 0.0 && (*b as i64) == *a,
-            (DataValueTypeGauge::Float(a),
-             DataValueTypeGauge::Int(b)) => a.fract() != 0.0 && (*a as i64) == *b,
+            (DataValueTypeGauge::Int(a), DataValueTypeGauge::Float(b)) => {
+                &b.trunc() == b && (*b as i64) == *a
+            }
+            (DataValueTypeGauge::Float(a), DataValueTypeGauge::Int(b)) => {
+                &a.trunc() == a && (*a as i64) == *b
+            }
         }
     }
 }
 
-impl Eq for DataValueTypeGauge {
-}
+impl Eq for DataValueTypeGauge {}
 
 fn decode_bigint<C>(
     d: &mut minicbor::Decoder<'_>,
-    _: &mut C
+    _: &mut C,
 ) -> Result<BigInt, minicbor::decode::Error> {
     let vec: Vec<u8> = d.decode()?;
     Ok(BigInt::from_signed_bytes_be(vec.as_slice()))
@@ -68,7 +69,7 @@ fn decode_bigint<C>(
 fn encode_bigint<C, W: minicbor::encode::Write>(
     v: &BigInt,
     e: &mut minicbor::Encoder<W>,
-    _: &mut C
+    _: &mut C,
 ) -> Result<(), minicbor::encode::Error<W::Error>> {
     e.encode(v.to_signed_bytes_be())?;
     Ok(())
@@ -80,4 +81,33 @@ pub struct DataInfo {
     pub r#type: DataType,
     #[n(1)]
     pub shortname: String,
+}
+
+#[cfg(test)]
+mod test {
+    use num_bigint::BigInt;
+
+    use super::DataValueTypeGauge;
+
+    #[test]
+    fn test_equality() {
+        assert_eq!(DataValueTypeGauge::Int(2), DataValueTypeGauge::Float(2.0));
+        assert_eq!(
+            DataValueTypeGauge::Int(2),
+            DataValueTypeGauge::BigInt(BigInt::from(2))
+        );
+        assert_eq!(
+            DataValueTypeGauge::Float(2.0),
+            DataValueTypeGauge::BigInt(BigInt::from(2))
+        );
+    }
+
+    #[test]
+    fn test_difference() {
+        assert_ne!(DataValueTypeGauge::Int(2), DataValueTypeGauge::Float(2.2));
+        assert_ne!(
+            DataValueTypeGauge::Float(2.2),
+            DataValueTypeGauge::BigInt(BigInt::from(2))
+        );
+    }
 }
