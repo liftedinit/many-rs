@@ -37,20 +37,20 @@ impl PartialEq<DataValueTypeGauge> for DataValueTypeGauge {
         match (self, other) {
             (DataValueTypeGauge::BigInt(a), DataValueTypeGauge::Int(b)) => &BigInt::from(*b) == a,
             (DataValueTypeGauge::BigInt(a), DataValueTypeGauge::Float(b)) => {
-                &b.trunc() == b && &BigInt::from(*b as i64) == a
+                &BigInt::from(b.ceil() as i64) == a && &BigInt::from(b.floor() as i64) == a
             }
             (DataValueTypeGauge::Int(a), DataValueTypeGauge::BigInt(b)) => &BigInt::from(*a) == b,
             (DataValueTypeGauge::Float(a), DataValueTypeGauge::BigInt(b)) => {
-                &a.trunc() == a && &BigInt::from(*a as i64) == b
+                &BigInt::from(a.ceil() as i64) == b && &BigInt::from(a.floor() as i64) == b
             }
             (DataValueTypeGauge::Int(a), DataValueTypeGauge::Int(b)) => a == b,
             (DataValueTypeGauge::BigInt(a), DataValueTypeGauge::BigInt(b)) => a == b,
             (DataValueTypeGauge::Float(a), DataValueTypeGauge::Float(b)) => a == b,
             (DataValueTypeGauge::Int(a), DataValueTypeGauge::Float(b)) => {
-                &b.trunc() == b && (*b as i64) == *a
+                b.ceil() as i64 == *a && b.floor() as i64 == *a
             }
             (DataValueTypeGauge::Float(a), DataValueTypeGauge::Int(b)) => {
-                &a.trunc() == a && (*a as i64) == *b
+                a.ceil() as i64 == *b && a.floor() as i64 == *b
             }
         }
     }
