@@ -75,20 +75,16 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
         Arc::clone(&self.term_signal)
     }
 
-    pub fn bind<A: ToSocketAddrs>(&self, addr: A) -> Result<(), anyhow::Error> {
+    pub async fn bind<A: ToSocketAddrs>(&self, addr: A) -> Result<(), anyhow::Error> {
         let server = tiny_http::Server::http(addr).map_err(|e| anyhow!("{}", e))?;
-
-        let runtime = tokio::runtime::Runtime::new().unwrap();
 
         loop {
             if let Some(mut request) = server.recv_timeout(Duration::from_millis(100))? {
-                runtime.block_on(async {
-                    let response = self.handle_request(&mut request).await;
+                let response = self.handle_request(&mut request).await;
 
-                    // If there's a transport error (e.g. connection closed) on the response itself,
-                    // we don't actually care and just continue waiting for the next request.
-                    let _ = request.respond(response);
-                });
+                // If there's a transport error (e.g. connection closed) on the response itself,
+                // we don't actually care and just continue waiting for the next request.
+                let _ = request.respond(response);
             }
 
             // Check for the term signal and break out.
