@@ -468,8 +468,17 @@ define_event! {
     [6, 0]      Send (module::ledger::SendArgs) {
         1     | from:                   Address                                [ id ],
         2     | to:                     Address                                [ id ],
-        3     | symbol:                 Symbol                                  [ symbol ],
+        3     | symbol:                 Symbol                                 [ symbol ],
         4     | amount:                 TokenAmount,
+    },
+    [7, 0]      KvStorePut (module::kvstore::PutArgs) {
+        1     | key:                    ByteVec,
+        2     | value:                  ByteVec,
+        3     | owner:                  Address                                [ id ],
+    },
+    [7, 1]      KvStoreDisable (module::kvstore::DisableArgs) {
+        1     | key:                    ByteVec,
+        2     | owner:                  Address                                [ id ],
     },
     [9, 0]      AccountCreate (module::account::CreateArgs) {
         1     | account:                Address                                [ id ],
@@ -501,7 +510,7 @@ define_event! {
         1     | submitter:              Address                                [ id ],
         2     | account:                Address                                [ id ],
         3     | memo:                   Option<Memo<String>>,
-        4     | transaction:            Box<AccountMultisigTransaction>         [ inner ],
+        4     | transaction:            Box<AccountMultisigTransaction>        [ inner ],
         5     | token:                  Option<ByteVec>,
         6     | threshold:              u64,
         7     | timeout:                Timestamp,
@@ -851,18 +860,18 @@ mod tests {
 
     #[test]
     fn encode_decode() {
-        let event = hex::decode("a30045030000000201c11a62e7dcea02a500820\
+        let event = hex::decode(
+            "a30045030000000201c11a62e7dcea02a500820\
 982010301d92710582080e8acda9634f6f745be872b0e5e9b65b1d3624a3ba91c6432143\
 f60e90000020245020000000103f604d92712a301d92710582080e8acda9634f6f745be8\
 72b0e5e9b65b1d3624a3ba91c6432143f60e900000204a3003a00015f9001781d4163636\
 f756e742077697468204944207b69647d20756e6b6e6f776e2e02a162696478326d61666\
 66261686b736477617165656e6179793267786b65333268676237617134616f347774373\
-4356c7366733677696a7005c11a62e7dcf5").unwrap();
+4356c7366733677696a7005c11a62e7dcf5",
+        )
+        .unwrap();
         let event_log: EventLog = minicbor::decode(&event).unwrap();
-        if let EventInfo::AccountMultisigExecute {
-            response,
-            ..
-        } = event_log.content {
+        if let EventInfo::AccountMultisigExecute { response, .. } = event_log.content {
             assert!(response.data.unwrap_err().is_attribute_specific());
         }
     }

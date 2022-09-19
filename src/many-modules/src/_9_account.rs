@@ -30,6 +30,8 @@ pub enum Role {
     CanLedgerTransact,
     CanMultisigSubmit,
     CanMultisigApprove,
+    CanKvStoreWrite,
+    CanKvStoreDisable,
 }
 
 impl PartialEq<&str> for Role {
@@ -259,7 +261,7 @@ impl Account {
                 }
                 result
             }
-            None => false
+            None => false,
         }
     }
 
@@ -686,5 +688,7 @@ fn remove_empty_role() {
     assert!(account.has_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit));
 
     account.remove_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit);
-    assert!(!account.roles.contains_key(&Address::public_key_raw([1; 28])));
+    assert!(!account
+        .roles
+        .contains_key(&Address::public_key_raw([1; 28])));
 }

@@ -1,4 +1,6 @@
 use crate::EmptyReturn;
+use derive_builder::Builder;
+use many_identity::Address;
 use minicbor::bytes::ByteVec;
 use minicbor::data::Type;
 use minicbor::{Decode, Encode};
@@ -6,7 +8,7 @@ use minicbor::{Decode, Encode};
 const KVSTORE_KEY_MAX_SIZE: usize = 248; // size is u8 but storage is in "/store/" (7 bytes long);
 const KVSTORE_VALUE_MAX_SIZE: usize = 64000; // 64kB
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Builder, Debug, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct PutArgs {
     #[n(0)]
@@ -16,6 +18,10 @@ pub struct PutArgs {
     #[n(1)]
     #[cbor(decode_with = "decode_value")]
     pub value: ByteVec,
+
+    #[n(2)]
+    #[builder(default = "None")]
+    pub alternative_owner: Option<Address>,
 }
 
 /// Data decoder. Check if the key is less than or equal to the maximum allowed size
@@ -59,6 +65,7 @@ mod tests {
         let tx = PutArgs {
             key: ByteVec::from(vec![1u8; KVSTORE_KEY_MAX_SIZE + 1]),
             value: ByteVec::from(vec![2]),
+            alternative_owner: None,
         };
 
         let enc = minicbor::to_vec(&tx).unwrap();
@@ -75,6 +82,7 @@ mod tests {
         let tx = PutArgs {
             key: ByteVec::from(vec![1]),
             value: ByteVec::from(vec![1u8; KVSTORE_VALUE_MAX_SIZE + 1]),
+            alternative_owner: None,
         };
 
         let enc = minicbor::to_vec(&tx).unwrap();
