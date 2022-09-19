@@ -11,9 +11,11 @@ executors:
   linux2204:
     machine:
       image: ubuntu-2204:current
+    resource_class: large
   macos:
     macos:
       xcode: 13.4.1
+    resource_class: medium
 
 jobs:
   lint-test-build:
@@ -48,7 +50,8 @@ jobs:
             equal: [ "macos", << parameters.os >> ]
           steps:
             - rust/test:
-                package: --all-targets --features default,client,raw,testing,trace_error_creation
+                # Exclude HSM tests as we are not configured in MacOS for them.
+                package: --workspace --all-targets --all-features --exclude many-identity-hsm
                 with_cache: false
       - rust/test:
           package: --all-features --doc
@@ -56,6 +59,9 @@ jobs:
       - rust/build:
           crate: --all-features
           with_cache: false
+      - run:
+          name: cargo install
+          command: cargo install --force --root target/ --path src/many/ many
       - save_cache:
           key: cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
           paths:
@@ -132,6 +138,7 @@ jobs:
         default: false
     docker:
       - image: cibuilds/github:0.10
+    resource_class: large
     steps:
       - attach_workspace:
           at: ~/project/artifacts
@@ -151,6 +158,7 @@ jobs:
   audit:
     docker:
       - image: rust:latest
+    resource_class: small
     steps:
       - checkout
       - run:

@@ -1,10 +1,10 @@
 use crate::transport::LowLevelManyRequestHandler;
 use async_trait::async_trait;
-use coset::CoseSign1;
+use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
-use many_identity::CoseKeyIdentity;
+use many_identity::{Identity, Verifier};
 use many_modules::{base, ManyModule, ManyModuleInfo};
-use many_protocol::{ManyUrl, RequestMessage, ResponseMessage};
+use many_protocol::{RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Formatter};
@@ -53,28 +53,40 @@ pub struct ManyModuleList {}
 
 pub const MANYSERVER_DEFAULT_TIMEOUT: u64 = 300;
 
-#[derive(Default)]
 pub struct ManyServer {
     modules: Vec<Arc<dyn ManyModule + Send>>,
     method_cache: BTreeSet<String>,
-    identity: CoseKeyIdentity,
+    identity: Box<dyn Identity>,
+    verifier: Box<dyn Verifier>,
+    public_key: Option<CoseKey>,
     name: String,
     version: Option<String>,
     timeout: u64,
     fallback: Option<Arc<dyn ManyServerFallback + Send + 'static>>,
-    allowed_origins: Option<Vec<ManyUrl>>,
 
     time_fn: Option<Arc<dyn Fn() -> Result<SystemTime, ManyError> + Send + Sync>>,
 }
 
 impl ManyServer {
-    pub fn simple<N: ToString>(
-        name: N,
-        identity: CoseKeyIdentity,
+    /// Create a test server. This should never be used in prod.
+    #[cfg(feature = "testing")]
+    pub fn test(identity: impl Identity + 'static) -> Arc<Mutex<Self>> {
+        Self::simple(
+            "test-many-server",
+            identity,
+            many_identity::AcceptAllVerifier,
+            None,
+        )
+    }
+
+    pub fn simple(
+        name: impl ToString,
+        identity: impl Identity + 'static,
+        verifier: impl Verifier + 'static,
         version: Option<String>,
-        allow: Option<Vec<ManyUrl>>,
     ) -> Arc<Mutex<Self>> {
-        let s = Self::new(name, identity, allow);
+        let public_key = identity.public_key();
+        let s = Self::new(name, identity, verifier, public_key);
         {
             let mut s2 = s.lock().unwrap();
             s2.version = version;
@@ -86,15 +98,21 @@ impl ManyServer {
 
     pub fn new<N: ToString>(
         name: N,
-        identity: CoseKeyIdentity,
-        allowed_origins: Option<Vec<ManyUrl>>,
+        identity: impl Identity + 'static,
+        verifier: impl Verifier + 'static,
+        public_key: Option<CoseKey>,
     ) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self {
+            modules: vec![],
             name: name.to_string(),
-            identity,
+            identity: Box::new(identity),
+            verifier: Box::new(verifier),
+            public_key,
             timeout: MANYSERVER_DEFAULT_TIMEOUT,
-            allowed_origins,
-            ..Default::default()
+            fallback: None,
+            method_cache: Default::default(),
+            version: None,
+            time_fn: None,
         }))
     }
 
@@ -163,12 +181,12 @@ impl ManyServer {
         let to = &message.to;
 
         // Verify that the message is for this server, if it's not anonymous.
-        if to.is_anonymous() || &self.identity.identity == to {
+        if to.is_anonymous() || &self.identity.address() == to {
             Ok(())
         } else {
             Err(ManyError::unknown_destination(
                 to.to_string(),
-                self.identity.identity.to_string(),
+                self.identity.address().to_string(),
             ))
         }
     }
@@ -213,27 +231,28 @@ impl base::BaseModuleBackend for ManyServer {
         builder
             .name(self.name.clone())
             .version(1)
-            .identity(self.identity.identity)
+            .identity(self.identity.address())
             .timeout(self.timeout)
             .extras(BTreeMap::new());
 
-        if let Some(pk) = self.identity.public_key() {
-            builder.public_key(pk);
+        if let Some(ref pk) = self.public_key {
+            builder.public_key(pk.clone());
         }
+
         if let Some(sv) = self.version.clone() {
             builder.server_version(sv);
         }
 
         if let Some(fb) = &self.fallback {
             let fb_status = fb.status()?;
-            if fb_status.identity != self.identity.identity
+            if fb_status.identity != self.identity.address()
                 || fb_status.version != 1
                 || (fb_status.server_version != self.version && self.version.is_some())
             {
                 tracing::error!(
                     "fallback status differs from internal status: {} != {} || {:?} != {:?}",
                     fb_status.identity,
-                    self.identity.identity,
+                    self.identity.address(),
                     fb_status.server_version,
                     self.version
                 );
@@ -265,16 +284,13 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
         let request = {
             let this = self.lock().unwrap();
-            many_protocol::decode_request_from_cose_sign1(
-                envelope.clone(),
-                this.allowed_origins.clone(),
-            )
+            many_protocol::decode_request_from_cose_sign1(&envelope, &this.verifier)
         };
         let mut id = None;
 
         let response = {
             let this = self.lock().unwrap();
-            let cose_id = this.identity.clone();
+            let address = this.identity.address();
 
             (|| {
                 let message = request?;
@@ -295,41 +311,42 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                     m.validate(&message, &envelope)?;
                 };
 
-                Ok((
-                    cose_id.clone(),
-                    message,
-                    maybe_module,
-                    this.fallback.clone(),
-                ))
+                Ok((address, message, maybe_module, this.fallback.clone()))
             })()
-            .map_err(|many_err: ManyError| ResponseMessage::error(&cose_id.identity, id, many_err))
+            .map_err(|many_err| ResponseMessage::error(address, id, many_err))
         };
 
         match response {
-            Ok((cose_id, message, maybe_module, fallback)) => match (maybe_module, fallback) {
+            Ok((address, message, maybe_module, fallback)) => match (maybe_module, fallback) {
                 (Some(m), _) => {
                     let mut response = match m.execute(message).await {
                         Ok(response) => response,
-                        Err(many_err) => ResponseMessage::error(&cose_id.identity, id, many_err),
+                        Err(many_err) => ResponseMessage::error(address, id, many_err),
                     };
-                    response.from = cose_id.identity;
-                    many_protocol::encode_cose_sign1_from_response(response, &cose_id)
+                    response.from = address;
+
+                    let this = self.lock().unwrap();
+                    many_protocol::encode_cose_sign1_from_response(response, &this.identity)
+                        .map_err(|e| e.to_string())
                 }
                 (None, Some(fb)) => {
                     LowLevelManyRequestHandler::execute(fb.as_ref(), envelope).await
                 }
                 (None, None) => {
-                    let response = ResponseMessage::error(
-                        &cose_id.identity,
-                        id,
-                        ManyError::could_not_route_message(),
-                    );
-                    many_protocol::encode_cose_sign1_from_response(response, &cose_id)
+                    let this = self.lock().unwrap();
+                    let identity = &this.identity;
+                    let address = identity.address();
+
+                    let response =
+                        ResponseMessage::error(address, id, ManyError::could_not_route_message());
+                    many_protocol::encode_cose_sign1_from_response(response, identity)
+                        .map_err(|e| e.to_string())
                 }
             },
             Err(response) => {
                 let this = self.lock().unwrap();
                 many_protocol::encode_cose_sign1_from_response(response, &this.identity)
+                    .map_err(|e| e.to_string())
             }
         }
     }
@@ -338,14 +355,12 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 #[cfg(test)]
 mod tests {
     use semver::{BuildMetadata, Prerelease, Version};
-    use std::ops::Sub;
     use std::sync::RwLock;
     use std::time::Duration;
 
     use super::*;
-    use many_identity::cose_helpers::public_key;
-    use many_identity::testsutils::generate_random_eddsa_identity;
-    use many_identity::Address;
+    use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity};
+    use many_identity_dsa::ed25519::generate_random_ed25519_identity;
     use many_modules::base::Status;
     use many_protocol::{
         decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessageBuilder,
@@ -370,16 +385,19 @@ mod tests {
     proptest! {
         #[test]
         fn simple_status(name in "\\PC*", version in arb_semver()) {
-            let id = generate_random_eddsa_identity();
-            let server = ManyServer::simple(name.clone(), id.clone(), Some(version.to_string()), None);
+            let server_id = generate_random_ed25519_identity();
+            let id = generate_random_ed25519_identity();
+            let server_address = server_id.address();
+            let server_public_key = server_id.public_key();
+            let server = ManyServer::simple(&name, server_id, AcceptAllVerifier, Some(version.to_string()));
 
             // Test status() using a message instead of a direct call
             //
             // This will test other ManyServer methods as well
             let request: RequestMessage = RequestMessageBuilder::default()
                 .version(1)
-                .from(id.identity)
-                .to(id.identity)
+                .from(id.address())
+                .to(server_address)
                 .method("status".to_string())
                 .data("null".as_bytes().to_vec())
                 .build()
@@ -387,19 +405,53 @@ mod tests {
 
             let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
             let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
-            let response_message = decode_response_from_cose_sign1(response, None).unwrap();
+            let response_message = decode_response_from_cose_sign1(&response, None, &AcceptAllVerifier).unwrap();
 
             let status: Status = minicbor::decode(&response_message.data.unwrap()).unwrap();
 
             assert_eq!(status.version, 1);
             assert_eq!(status.name, name);
-            assert_eq!(status.public_key, Some(public_key(&id.key.unwrap()).unwrap()));
-            assert_eq!(status.identity, id.identity);
+            assert_eq!(status.public_key, Some(server_public_key));
+            assert_eq!(status.identity, server_address);
             assert!(status.attributes.has_id(0));
             assert_eq!(status.server_version, Some(version.to_string()));
             assert_eq!(status.timeout, Some(MANYSERVER_DEFAULT_TIMEOUT));
             assert_eq!(status.extras, BTreeMap::new());
         }
+    }
+
+    #[test]
+    fn validate_from_anonymous_fail() {
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .from(Address::anonymous())
+            .to(Address::anonymous())
+            .method("status".to_string())
+            .build()
+            .unwrap();
+        let id = generate_random_ed25519_identity();
+        let server = ManyServer::test(AnonymousIdentity);
+        let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
+        let response_e = smol::block_on(server.execute(envelope)).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        assert!(response.data.is_err());
+    }
+
+    #[test]
+    fn validate_from_different_fail() {
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .from(generate_random_ed25519_identity().address())
+            .to(Address::anonymous())
+            .method("status".to_string())
+            .build()
+            .unwrap();
+        let id = generate_random_ed25519_identity();
+        let server = ManyServer::test(AnonymousIdentity);
+        let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
+        let response_e = smol::block_on(server.execute(envelope)).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        assert!(response.data.is_err());
     }
 
     #[test]
@@ -437,10 +489,10 @@ mod tests {
                 .nonce(nonce.to_le_bytes().to_vec())
                 .build()
                 .unwrap();
-            encode_cose_sign1_from_request(request, &CoseKeyIdentity::anonymous()).unwrap()
+            encode_cose_sign1_from_request(request, &AnonymousIdentity).unwrap()
         }
 
-        let server = ManyServer::simple("test-server", CoseKeyIdentity::anonymous(), None, None);
+        let server = ManyServer::test(AnonymousIdentity);
         let timestamp = SystemTime::now();
         let now = Arc::new(RwLock::new(timestamp));
         let get_now = {
@@ -450,7 +502,8 @@ mod tests {
 
         // timestamp is now, so this should be fairly close to it and should pass.
         let response_e = smol::block_on(server.execute(create_request(timestamp, 0))).unwrap();
-        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
         assert!(response.data.is_ok());
 
         // Set time to present.
@@ -458,15 +511,17 @@ mod tests {
             server.lock().unwrap().set_time_fn(get_now);
         }
         let response_e = smol::block_on(server.execute(create_request(timestamp, 1))).unwrap();
-        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
         assert!(response.data.is_ok());
 
         // Set time to 10 minutes past.
         {
-            *now.write().unwrap() = timestamp.sub(Duration::from_secs(60 * 60 * 10));
+            *now.write().unwrap() = timestamp - Duration::from_secs(60 * 60 * 10);
         }
         let response_e = smol::block_on(server.execute(create_request(timestamp, 2))).unwrap();
-        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
         assert!(response.data.is_err());
         assert_eq!(
             response.data.unwrap_err().code(),
@@ -475,11 +530,12 @@ mod tests {
 
         // Set request timestamp 10 minutes in the past.
         let response_e = smol::block_on(server.execute(create_request(
-            timestamp.sub(Duration::from_secs(60 * 60 * 10)),
+            timestamp - Duration::from_secs(60 * 60 * 10),
             3,
         )))
         .unwrap();
-        let response = decode_response_from_cose_sign1(response_e, None).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
         assert!(response.data.is_ok());
     }
 }

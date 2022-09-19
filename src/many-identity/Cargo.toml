@@ -34,7 +34,6 @@ serde_test = "1.0.139"
 
 [features]
 default = ["coset", "minicbor"]
-hsm_test = []
 raw = []
 serde = []
 testing = []

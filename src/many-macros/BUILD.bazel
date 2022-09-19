@@ -1,0 +1,19 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_proc_macro")
+
+package(default_visibility = [
+    "//src/many-modules:__pkg__",
+    "//src/many-server:__pkg__",
+])
+
+rust_proc_macro(
+    name = "many-macros",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ),
+)

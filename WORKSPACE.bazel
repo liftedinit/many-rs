@@ -1,0 +1,60 @@
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "rules_rust",
+    sha256 = "0cc7e6b39e492710b819e00d48f2210ae626b717a3ab96e048c43ab57e61d204",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_rust/releases/download/0.10.0/rules_rust-v0.10.0.tar.gz",
+        "https://github.com/bazelbuild/rules_rust/releases/download/0.10.0/rules_rust-v0.10.0.tar.gz",
+    ],
+)
+
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
+
+rules_rust_dependencies()
+
+RUST_VERSION = "1.62.0"
+
+rust_register_toolchains(
+    edition = "2021",
+    version = RUST_VERSION,
+)
+
+load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
+
+crate_universe_dependencies()
+
+# Generate `rust-analyser` "rust-project.json"
+load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
+
+rust_analyzer_dependencies()
+
+load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
+
+crates_repository(
+    name = "crate_index",
+    cargo_lockfile = "//:Cargo.Bazel.lock",
+    lockfile = "//:cargo-bazel-lock.json",
+    manifests = [
+        "//:Cargo.toml",
+        "//src/many:Cargo.toml",
+        "//src/many-client:Cargo.toml",
+        "//src/many-client-macros:Cargo.toml",
+        "//src/many-error:Cargo.toml",
+        "//src/many-identity:Cargo.toml",
+        "//src/many-identity-dsa:Cargo.toml",
+        "//src/many-identity-hsm:Cargo.toml",
+        "//src/many-identity-webauthn:Cargo.toml",
+        "//src/many-macros:Cargo.toml",
+        "//src/many-mock:Cargo.toml",
+        "//src/many-modules:Cargo.toml",
+        "//src/many-protocol:Cargo.toml",
+        "//src/many-server:Cargo.toml",
+        "//src/many-types:Cargo.toml",
+    ],
+    rust_version = RUST_VERSION,
+)
+
+load("@crate_index//:defs.bzl", "crate_repositories")
+
+crate_repositories()

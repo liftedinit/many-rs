@@ -1,17 +1,19 @@
 use anyhow::anyhow;
+use async_recursion::async_recursion;
 use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
 use many_client::ManyClient;
 use many_error::ManyError;
-use many_identity::hsm::{Hsm, HsmMechanismType, HsmSessionType, HsmUserType};
-use many_identity::{Address, CoseKeyIdentity};
+use many_identity::verifiers::AnonymousVerifier;
+use many_identity::{Address, AnonymousIdentity, Identity};
+use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
+use many_identity_hsm::{Hsm, HsmIdentity, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_mock::{parse_mockfile, server::ManyMockServer, MockEntries};
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
 use many_protocol::{
-    decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessage,
-    RequestMessageBuilder, ResponseMessage,
+    encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
 };
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
@@ -20,6 +22,7 @@ use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tracing::{error, info, level_filters::LevelFilter, trace};
 use url::Url;
@@ -109,7 +112,7 @@ struct MessageOpt {
 
     /// The server to connect to.
     #[clap(long)]
-    server: Option<url::Url>,
+    server: Option<Url>,
 
     /// If true, prints out the hex value of the message bytes.
     #[clap(long)]
@@ -182,16 +185,17 @@ struct GetTokenIdOpt {
     symbol: String,
 }
 
-fn show_response(
-    response: ResponseMessage,
-    client: ManyClient,
+#[async_recursion(?Send)]
+async fn show_response<'a>(
+    response: &'a ResponseMessage,
+    client: ManyClient<impl Identity + 'a>,
     r#async: bool,
 ) -> Result<(), anyhow::Error> {
     let ResponseMessage {
         data, attributes, ..
     } = response;
 
-    let payload = data?;
+    let payload = data.clone()?;
     if payload.is_empty() {
         let attr = attributes.get::<AsyncAttribute>().unwrap();
         info!("Async token: {}", hex::encode(&attr.token));
@@ -214,17 +218,19 @@ fn show_response(
             // TODO: improve on this by using duration and thread and watchdog.
             // Wait for the server for ~60 seconds by pinging it every second.
             for _ in 0..60 {
-                let response = client.call(
-                    "async.status",
-                    StatusArgs {
-                        token: attr.token.clone(),
-                    },
-                )?;
+                let response = client
+                    .call(
+                        "async.status",
+                        StatusArgs {
+                            token: attr.token.clone(),
+                        },
+                    )
+                    .await?;
                 let status: StatusReturn = minicbor::decode(&response.data?)?;
                 match status {
                     StatusReturn::Done { response } => {
                         progress(".", true);
-                        return show_response(*response, client, r#async);
+                        return show_response(&*response, client, r#async).await;
                     }
                     StatusReturn::Expired => {
                         progress(".", true);
@@ -248,16 +254,17 @@ fn show_response(
     Ok(())
 }
 
-fn message(
+async fn message(
     s: Url,
     to: Address,
-    key: CoseKeyIdentity,
+    key: impl Identity,
     method: String,
     data: Vec<u8>,
     timestamp: Option<SystemTime>,
     r#async: bool,
 ) -> Result<(), anyhow::Error> {
-    let client = ManyClient::new(s, to, key.clone()).unwrap();
+    let address = key.address();
+    let client = ManyClient::new(s, to, key).unwrap();
 
     let mut nonce = [0u8; 16];
     rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut nonce);
@@ -265,7 +272,7 @@ fn message(
     let mut builder = many_protocol::RequestMessageBuilder::default();
     builder
         .version(1)
-        .from(key.identity)
+        .from(address)
         .to(to)
         .method(method)
         .data(data)
@@ -279,15 +286,15 @@ fn message(
         .build()
         .map_err(|_| ManyError::internal_server_error())?;
 
-    let response = client.send_message(message)?;
+    let response = client.send_message(message).await?;
 
-    show_response(response, client, r#async)
+    show_response(&response, client, r#async).await
 }
 
-fn message_from_hex(
+async fn message_from_hex(
     s: Url,
     to: Address,
-    key: CoseKeyIdentity,
+    key: impl Identity,
     hex: String,
     r#async: bool,
 ) -> Result<(), anyhow::Error> {
@@ -296,13 +303,16 @@ fn message_from_hex(
     let data = hex::decode(hex)?;
     let envelope = CoseSign1::from_slice(&data).map_err(|e| anyhow!(e))?;
 
-    let cose_sign1 = ManyClient::send_envelope(s, envelope)?;
-    let response = decode_response_from_cose_sign1(cose_sign1, None).map_err(|e| anyhow!(e))?;
+    let cose_sign1 = many_client::client::send_envelope(s, envelope).await?;
+    let response =
+        ResponseMessage::decode_and_verify(&cose_sign1, &(AnonymousVerifier, CoseKeyVerifier))
+            .map_err(|e| anyhow!(e))?;
 
-    show_response(response, client, r#async)
+    show_response(&response, client, r#async).await
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let Opts {
         verbose,
         quiet,
@@ -346,7 +356,7 @@ fn main() {
                 println!("{}", hex::encode(&i.to_vec()));
             } else if let Ok(pem_content) = std::fs::read_to_string(&o.arg) {
                 // Create the identity from the public key hash.
-                let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().identity;
+                let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().address();
                 if let Some(subid) = o.subid {
                     i = i
                         .with_subresource_id(subid)
@@ -372,9 +382,9 @@ fn main() {
                     .expect("Failed to open HSM session");
             }
 
-            let mut id = CoseKeyIdentity::from_hsm(HsmMechanismType::ECDSA)
+            let mut id = HsmIdentity::new(HsmMechanismType::ECDSA)
                 .expect("Unable to create CoseKeyIdentity from HSM")
-                .identity;
+                .address();
 
             if let Some(subid) = o.subid {
                 id = id
@@ -385,7 +395,19 @@ fn main() {
             println!("{}", id);
         }
         SubCommand::Message(o) => {
-            let key = if let (Some(module), Some(slot), Some(keyid)) = (o.module, o.slot, o.keyid) {
+            let to_identity = o.to.unwrap_or_default();
+            let timestamp = o.timestamp.map(|secs| {
+                SystemTime::UNIX_EPOCH
+                    .checked_add(Duration::new(secs, 0))
+                    .expect("Invalid timestamp")
+            });
+            let data = o
+                .data
+                .map_or(vec![], |d| cbor_diag::parse_diag(&d).unwrap().to_bytes());
+
+            let from_identity: Box<dyn Identity> = if let (Some(module), Some(slot), Some(keyid)) =
+                (o.module, o.slot, o.keyid)
+            {
                 trace!("Getting user PIN");
                 let pin = rpassword::prompt_password("Please enter the HSM user PIN: ")
                     .expect("I/O error when reading HSM PIN");
@@ -401,45 +423,33 @@ fn main() {
                         .expect("Failed to open HSM session");
                 }
 
-                trace!("Creating CoseKeyIdentity");
-                // Only ECDSA is supported at the moment. It should be easy to add support for new EC mechanisms
-                CoseKeyIdentity::from_hsm(HsmMechanismType::ECDSA)
-                    .expect("Unable to create CoseKeyIdentity from HSM")
-            } else if o.pem.is_some() {
+                // Only ECDSA is supported at the moment. It should be easy to add support for
+                // new EC mechanisms.
+                Box::new(
+                    HsmIdentity::new(HsmMechanismType::ECDSA)
+                        .expect("Unable to create CoseKeyIdentity from HSM"),
+                )
+            } else if let Some(p) = o.pem {
                 // If `pem` is not provided, use anonymous and don't sign.
-                o.pem.map_or_else(CoseKeyIdentity::anonymous, |p| {
-                    CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap()
-                })
+                Box::new(CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap())
             } else {
-                CoseKeyIdentity::anonymous()
+                Box::new(AnonymousIdentity)
             };
-
-            let from_identity = key.identity;
-            let to_identity = o.to.unwrap_or_default();
-
-            let timestamp = o.timestamp.map(|secs| {
-                SystemTime::UNIX_EPOCH
-                    .checked_add(Duration::new(secs, 0))
-                    .expect("Invalid timestamp")
-            });
-
-            let data = o
-                .data
-                .map_or(vec![], |d| cbor_diag::parse_diag(&d).unwrap().to_bytes());
 
             if let Some(s) = o.server {
                 let result = if let Some(hex) = o.from_hex {
-                    message_from_hex(s, to_identity, key, hex, o.r#async)
+                    message_from_hex(s, to_identity, from_identity, hex, o.r#async).await
                 } else {
                     message(
                         s,
                         to_identity,
-                        key,
+                        from_identity,
                         o.method.expect("--method is required"),
                         data,
                         timestamp,
                         o.r#async,
                     )
+                    .await
                 };
 
                 match result {
@@ -458,14 +468,14 @@ fn main() {
             } else {
                 let message: RequestMessage = RequestMessageBuilder::default()
                     .version(1)
-                    .from(from_identity)
+                    .from(from_identity.address())
                     .to(to_identity)
                     .method(o.method.expect("--method is required"))
                     .data(data)
                     .build()
                     .unwrap();
 
-                let cose = encode_cose_sign1_from_request(message, &key).unwrap();
+                let cose = encode_cose_sign1_from_request(message, &from_identity).unwrap();
                 let bytes = cose.to_vec().unwrap();
                 if o.hex {
                     println!("{}", hex::encode(&bytes));
@@ -478,14 +488,16 @@ fn main() {
         }
         SubCommand::Server(o) => {
             let pem = std::fs::read_to_string(&o.pem).expect("Could not read PEM file.");
-            let key = CoseKeyIdentity::from_pem(&pem)
-                .expect("Could not generate identity from PEM file.");
+            let key = Arc::new(
+                CoseKeyIdentity::from_pem(&pem)
+                    .expect("Could not generate identity from PEM file."),
+            );
 
             let many = ManyServer::simple(
                 o.name,
-                key.clone(),
+                Arc::clone(&key),
+                (AnonymousVerifier, CoseKeyVerifier),
                 Some(std::env!("CARGO_PKG_VERSION").to_string()),
-                None,
             );
             let mockfile = o.mockfile.unwrap_or_default();
             if !mockfile.is_empty() {
@@ -493,13 +505,12 @@ fn main() {
                 let mock_server = ManyMockServer::new(mockfile, None, key);
                 many_locked.set_fallback_module(mock_server);
             }
-            HttpServer::new(many).bind(o.addr).unwrap();
+            HttpServer::new(many).bind(o.addr).await.unwrap();
         }
         SubCommand::GetTokenId(o) => {
-            let client =
-                ManyClient::new(o.server, Address::anonymous(), CoseKeyIdentity::anonymous())
-                    .expect("Could not create a client");
-            let status = client.status().expect("Cannot get status of server");
+            let client = ManyClient::new(o.server, Address::anonymous(), AnonymousIdentity)
+                .expect("Could not create a client");
+            let status = client.status().await.expect("Cannot get status of server");
 
             if !status.attributes.contains(&ledger::LEDGER_MODULE_ATTRIBUTE) {
                 error!("Server does not implement Ledger Attribute.");
@@ -509,6 +520,7 @@ fn main() {
             let info: ledger::InfoReturns = minicbor::decode(
                 &client
                     .call("ledger.info", ledger::InfoArgs {})
+                    .await
                     .unwrap()
                     .data
                     .expect("An error happened during the call to ledger.info"),

@@ -32,7 +32,7 @@ pub struct InfoReturns {
     pub retained_height: Option<u64>,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct BlockArgs {
     #[n(0)]
@@ -46,7 +46,7 @@ pub struct BlockReturns {
     pub block: Block,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct TransactionArgs {
     #[n(0)]

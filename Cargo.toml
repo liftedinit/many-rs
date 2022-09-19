@@ -2,8 +2,12 @@
 members = [
     "src/many",
     "src/many-client",
+    "src/many-client-macros",
     "src/many-error",
     "src/many-identity",
+    "src/many-identity-dsa",
+    "src/many-identity-hsm",
+    "src/many-identity-webauthn",
     "src/many-macros",
     "src/many-mock",
     "src/many-modules",

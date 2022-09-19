@@ -1,0 +1,52 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = [
+    "//src/many:__pkg__",
+    "//src/many-client:__pkg__",
+    "//src/many-identity:__pkg__",
+    "//src/many-identity-dsa:__pkg__",
+    "//src/many-identity-hsm:__pkg__",
+    "//src/many-identity-webauthn:__pkg__",
+    "//src/many-mock:__pkg__",
+    "//src/many-modules:__pkg__",
+    "//src/many-server:__pkg__",
+])
+
+rust_library(
+    name = "many-protocol",
+    srcs = glob(include = ["src/**/*.rs"]),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-types",
+    ],
+)
+
+rust_library(
+    name = "many-protocol-for-test",
+    srcs = glob(include = ["src/**/*.rs"]),
+    crate_name = "many_protocol",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        "//src/many-error",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-types:many-types-for-test",
+    ],
+)
+
+rust_test(
+    name = "many-protocol-test",
+    crate = ":many-protocol-for-test",
+)

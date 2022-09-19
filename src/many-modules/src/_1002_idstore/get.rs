@@ -5,11 +5,11 @@ use super::{
 use many_identity::Address;
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct GetFromRecallPhraseArgs(#[n(0)] pub RecallPhrase);
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct GetFromAddressArgs(#[n(0)] pub Address);
 

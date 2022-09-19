@@ -8,7 +8,7 @@ use minicbor::{Decode, Encode};
 const KVSTORE_KEY_MAX_SIZE: usize = 248; // size is u8 but storage is in "/store/" (7 bytes long);
 const KVSTORE_VALUE_MAX_SIZE: usize = 64000; // 64kB
 
-#[derive(Clone, Builder, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Builder, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct PutArgs {
     #[n(0)]

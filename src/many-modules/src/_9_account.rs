@@ -76,9 +76,13 @@ impl<'it> Iterator for AccountMapIterator<'it> {
     type Item = (Address, &'it Account);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.1
-            .next()
-            .map(|(k, v)| (self.0.with_subresource_id_unchecked(*k), v))
+        self.1.next().map(|(k, v)| {
+            (
+                self.0
+                    .with_subresource_id_unchecked((*k).try_into().unwrap()),
+                v,
+            )
+        })
     }
 }
 
@@ -274,7 +278,7 @@ impl Account {
     }
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct CreateArgs {
     #[n(0)]
@@ -287,14 +291,14 @@ pub struct CreateArgs {
     pub features: features::FeatureSet,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct CreateReturn {
     #[n(0)]
     pub id: Address,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct SetDescriptionArgs {
     #[n(0)]
@@ -306,7 +310,7 @@ pub struct SetDescriptionArgs {
 
 pub type SetDescriptionReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct ListRolesArgs {
     #[n(0)]
@@ -320,7 +324,7 @@ pub struct ListRolesReturn {
     pub roles: BTreeSet<Role>,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct GetRolesArgs {
     #[n(0)]
@@ -337,7 +341,7 @@ pub struct GetRolesReturn {
     pub roles: BTreeMap<Address, BTreeSet<Role>>,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct AddRolesArgs {
     #[n(0)]
@@ -349,7 +353,7 @@ pub struct AddRolesArgs {
 
 pub type AddRolesReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct RemoveRolesArgs {
     #[n(0)]
@@ -361,7 +365,7 @@ pub struct RemoveRolesArgs {
 
 pub type RemoveRolesReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct InfoArgs {
     #[n(0)]
@@ -384,7 +388,7 @@ pub struct InfoReturn {
     pub disabled: Option<Either<bool, Reason<u64>>>,
 }
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct DisableArgs {
     #[n(0)]
@@ -393,7 +397,7 @@ pub struct DisableArgs {
 
 pub type DisableReturn = EmptyReturn;
 
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct AddFeaturesArgs {
     #[n(0)]
@@ -469,9 +473,7 @@ mod module_tests {
     // TODO: split this to get easier to maintain tests.
     #[test]
     fn module_works() {
-        let account_map = Arc::new(RwLock::new(AccountMap::new(Address::public_key_raw(
-            [0; 28],
-        ))));
+        let account_map = Arc::new(RwLock::new(AccountMap::new(identity(0))));
         let mut mock = MockAccountModuleBackend::new();
 
         mock.expect_create().returning({
@@ -655,7 +657,9 @@ fn roles_from_str() {
 
 #[test]
 fn needs_role() {
-    let owner = Address::public_key_raw([0; 28]);
+    use many_identity::testing::identity;
+
+    let owner = identity(0);
     let account = Account::create(
         &owner,
         CreateArgs {
@@ -668,14 +672,14 @@ fn needs_role() {
     assert!(account
         .needs_role(&owner, [Role::CanMultisigSubmit])
         .is_err());
-    assert!(account
-        .needs_role(&Address::public_key_raw([1; 28]), [Role::Owner])
-        .is_err());
+    assert!(account.needs_role(&identity(1), [Role::Owner]).is_err());
 }
 
 #[test]
 fn remove_empty_role() {
-    let owner = Address::public_key_raw([0; 28]);
+    use many_identity::testing::identity;
+
+    let owner = identity(0);
     let mut account = Account::create(
         &owner,
         CreateArgs {
@@ -684,11 +688,10 @@ fn remove_empty_role() {
             features: Default::default(),
         },
     );
-    account.add_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit);
-    assert!(account.has_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit));
+    assert!(!account.has_role(&identity(1), Role::CanMultisigSubmit));
+    account.add_role(&identity(1), Role::CanMultisigSubmit);
+    assert!(account.has_role(&identity(1), Role::CanMultisigSubmit));
 
-    account.remove_role(&Address::public_key_raw([1; 28]), Role::CanMultisigSubmit);
-    assert!(!account
-        .roles
-        .contains_key(&Address::public_key_raw([1; 28])));
+    account.remove_role(&identity(1), Role::CanMultisigSubmit);
+    assert!(!account.roles.contains_key(&identity(1)));
 }

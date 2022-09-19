@@ -11,10 +11,13 @@ coset = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.5"
 regex = "1.5.4"
+many-error = { path = "../many-error", version = "0.1.0" }
+many-identity = { path = "../many-identity", version = "0.1.0" }
+many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0", features = ["ed25519"] }
+many-identity-webauthn = { path = "../many-identity-webauthn", version = "0.1.0" }
+many-modules = { path = "../many-modules", version = "0.1.0" }
 many-protocol = { path = "../many-protocol", version = "0.1.0" }
 many-server = { path = "../many-server", version = "0.1.0" }
-many-identity = { path = "../many-identity", version = "0.1.0" }
-many-modules = { path = "../many-modules", version = "0.1.0" }
 cbor-diag = "0.1"
 
 [dev-dependencies]
@@ -23,6 +26,7 @@ futures = "0.3"
 many-client = { path = "../many-client", version = "0.1.0" }
 serde_json = "1.0"
 ciborium = "0.2"
+tokio = "1.20"
 
 [[test]]
 name = "integration"

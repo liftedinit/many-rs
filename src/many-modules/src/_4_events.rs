@@ -27,7 +27,7 @@ pub trait EventsModuleBackend: Send {
     fn list(&self, args: ListArgs) -> Result<ListReturns, ManyError>;
 }
 
-#[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct EventId(ByteVec);
 
@@ -128,7 +128,7 @@ impl From<EventId> for Vec<u8> {
     }
 }
 
-#[derive(Clone, Debug, Default, Encode, Decode, PartialEq)]
+#[derive(Clone, Debug, Default, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct EventFilter {
     #[n(0)]
@@ -249,50 +249,50 @@ macro_rules! define_event_info_symbol {
     };
 }
 
-macro_rules! define_event_info_is_about {
-    (@check_id $id: ident) => {};
-    (@check_id $id: ident $name: ident id $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        if $name == $id {
-            return true;
-        }
-        define_event_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
+macro_rules! define_event_info_addresses {
+    (@field $set: ident) => {};
+    (@field $set: ident $name: ident id $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        $set.insert(&$name);
+        define_event_info_addresses!(@field $set $( $name_ $( $tag_ )*, )* );
     };
-    (@check_id $id: ident $name: ident id_non_null $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        if $name.is_some() && $name == $id {
-            return true;
+    (@field $set: ident $name: ident id_non_null $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if let Some(n) = $name.as_ref() {
+            $set.insert(n);
         }
-        define_event_info_is_about!(@check_id $id $( $name_ $( $tag_ )*, )* )
+        define_event_info_addresses!(@field $set $( $name_ $( $tag_ )*, )* );
     };
-    (@check_id $id: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_event_info_is_about!(@check_id $id $( $name $( $tag )*, )* )
+    (@field $set: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
+        define_event_info_addresses!(@field $set $( $name $( $tag )*, )* );
     };
 
-    (@inner $id: ident) => {};
-    (@inner $id: ident $name: ident inner $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        if $name .is_about($id) {
-            return true;
-        }
-        define_event_info_is_about!(@inner $id $( $name_ $( $tag_ )*, )* )
+    (@inner $set: ident) => {};
+    (@inner $set: ident $name: ident inner $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        $set.append( &mut $name.addresses() );
+        define_event_info_addresses!(@inner $set $( $name_ $( $tag_ )*, )* );
     };
-    (@inner $id: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_event_info_is_about!(@inner $id $( $name $( $tag )*, )* )
+    (@inner $set: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
+        define_event_info_addresses!(@inner $set $( $name $( $tag )*, )* );
     };
 
     ( $( $name: ident { $( $fname: ident $( $tag: ident )* , )* } )* ) => {
-        pub fn is_about(&self, id: &Address) -> bool {
+        pub fn addresses(&self) -> BTreeSet<&Address> {
             match self {
                 $( EventInfo :: $name {
                     $( $fname, )*
                 } => {
                     // Remove warnings.
                     $( let _ = $fname; )*
-                    define_event_info_is_about!(@check_id id $( $fname $( $tag )*, )* );
+
+                    let mut set = BTreeSet::<&Address>::new();
+
+                    define_event_info_addresses!(@field set $( $fname $( $tag )*, )* );
 
                     // Inner fields might match the address.
-                    define_event_info_is_about!(@inner id $( $fname $( $tag )*, )* );
+                    define_event_info_addresses!(@inner set $( $fname $( $tag )*, )* );
+
+                    return set;
                 } )*
             }
-            false
         }
     };
 }
@@ -309,7 +309,11 @@ macro_rules! define_event_info {
 
         impl EventInfo {
             define_event_info_symbol!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
-            define_event_info_is_about!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
+            define_event_info_addresses!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
+
+            fn is_about(&self, id: &Address) -> bool {
+                self.addresses().contains(id)
+            }
         }
 
         encode_event_info!( $( $name { $( $idx => $fname : $type, )* }, )* );
@@ -383,7 +387,7 @@ macro_rules! encode_event_info {
 
 macro_rules! define_multisig_event {
     ( $( $name: ident $(: $arg: ty )?, )* ) => {
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, Eq, PartialEq)]
         #[non_exhaustive]
         pub enum AccountMultisigTransaction {
             $( $( $name($arg), )? )*
@@ -394,6 +398,10 @@ macro_rules! define_multisig_event {
                 // TODO: implement this for recursively checking if inner infos
                 // has a symbol defined.
                 None
+            }
+
+            pub fn addresses(&self) -> BTreeSet<&Address> {
+                BTreeSet::new()
             }
 
             pub fn is_about(&self, _id: &Address) -> bool {
@@ -583,6 +591,7 @@ impl EventLog {
 #[cfg(test)]
 mod test {
     use super::*;
+    use many_identity::testing::identity;
 
     #[test]
     fn eventid_from_bytevec() {
@@ -646,11 +655,52 @@ mod test {
     }
 
     #[test]
+    fn event_info_addresses() {
+        let i0 = identity(0);
+        let i01 = i0.with_subresource_id(1).unwrap();
+
+        let s0 = EventInfo::Send {
+            from: i0,
+            to: i01,
+            symbol: Default::default(),
+            amount: Default::default(),
+        };
+        assert_eq!(s0.addresses(), BTreeSet::from_iter(&[i0, i01]));
+    }
+
+    #[test]
+    fn event_info_addresses_inner() {
+        // TODO: reenable this when inner for multisig transactions work.
+        // let i0 = identity(0);
+        // let i1 = identity(1);
+        // let i01 = i0.with_subresource_id(1).unwrap();
+        // let i11 = i1.with_subresource_id(1).unwrap();
+        //
+        // let s0 = EventInfo::AccountMultisigSubmit {
+        //     submitter: i0,
+        //     account: i1,
+        //     memo: None,
+        //     transaction: Box::new(AccountMultisigTransaction::Send(SendArgs {
+        //         from: Some(i01),
+        //         to: i11,
+        //         amount: Default::default(),
+        //         symbol: Default::default(),
+        //     })),
+        //     token: None,
+        //     threshold: 0,
+        //     timeout: Timestamp::now(),
+        //     execute_automatically: false,
+        //     data: None,
+        // };
+        // assert_eq!(s0.addresses(), BTreeSet::from_iter(&[i0, i01, i1, i11]));
+    }
+
+    #[test]
     fn event_info_is_about() {
-        let i0 = Address::public_key_raw([0; 28]);
-        let i1 = Address::public_key_raw([1; 28]);
-        let i01 = i0.with_subresource_id_unchecked(1);
-        let i11 = i1.with_subresource_id_unchecked(1);
+        let i0 = identity(0);
+        let i1 = identity(1);
+        let i01 = i0.with_subresource_id(1).unwrap();
+        let i11 = i1.with_subresource_id(1).unwrap();
 
         let s0 = EventInfo::Send {
             from: i0,
@@ -666,8 +716,8 @@ mod test {
 
     #[test]
     fn event_info_is_about_null() {
-        let i0 = Address::public_key_raw([0; 28]);
-        let i01 = i0.with_subresource_id_unchecked(1);
+        let i0 = identity(0);
+        let i01 = i0.with_subresource_id(1).unwrap();
         let token = Vec::new().into();
 
         let s0 = EventInfo::AccountMultisigExecute {
@@ -682,9 +732,9 @@ mod test {
 
     #[test]
     fn event_info_symbol() {
-        let i0 = Address::public_key_raw([0; 28]);
-        let i1 = Address::public_key_raw([1; 28]);
-        let i01 = i0.with_subresource_id_unchecked(1);
+        let i0 = identity(0);
+        let i1 = identity(1);
+        let i01 = i0.with_subresource_id(1).unwrap();
 
         let event = EventInfo::Send {
             from: i0,
@@ -702,6 +752,7 @@ mod test {
         use crate::account::features::multisig::Memo;
 
         use super::super::*;
+        use many_identity::testing::identity;
         use proptest::prelude::*;
         use proptest::string::string_regex;
 
@@ -711,8 +762,8 @@ mod test {
             transaction: AccountMultisigTransaction,
         ) -> EventInfo {
             EventInfo::AccountMultisigSubmit {
-                submitter: Address::public_key_raw([0; 28]),
-                account: Address::public_key_raw([1; 28]),
+                submitter: identity(0),
+                account: identity(1),
                 memo: Some(memo),
                 transaction: Box::new(transaction),
                 token: None,
@@ -742,9 +793,9 @@ mod test {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
                     _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::Send(module::ledger::SendArgs {
-                        from: Some(Address::public_key_raw([2; 28])),
-                        to: Address::public_key_raw([3; 28]),
-                        symbol: Address::public_key_raw([4; 28]),
+                        from: Some(identity(2)),
+                        to: identity(3),
+                        symbol: identity(4),
                         amount: amount.into(),
                     })),
                 );
@@ -756,22 +807,22 @@ mod test {
                 let memo2 = memo2.try_into().unwrap();
                 _assert_serde(
                     _create_event_info(memo, vec![].try_into().unwrap(),
-                                       AccountMultisigTransaction::AccountMultisigSubmit(
-                                           module::account::features::multisig::SubmitTransactionArgs {
-                                               account: Address::public_key_raw([2; 28]),
-                                               memo: Some(memo2),
-                                               transaction: Box::new(AccountMultisigTransaction::Send(module::ledger::SendArgs {
-                                                   from: Some(Address::public_key_raw([2; 28])),
-                                                   to: Address::public_key_raw([3; 28]),
-                                                   symbol: Address::public_key_raw([4; 28]),
-                                                   amount: amount.into(),
-                                               })),
-                                               threshold: None,
-                                               timeout_in_secs: None,
-                                               execute_automatically: None,
-                                               data: None,
-                                           }
-                                       )
+                        AccountMultisigTransaction::AccountMultisigSubmit(
+                            module::account::features::multisig::SubmitTransactionArgs {
+                                account: identity(2),
+                                memo: Some(memo2),
+                                transaction: Box::new(AccountMultisigTransaction::Send(module::ledger::SendArgs {
+                                    from: Some(identity(2)),
+                                    to: identity(3),
+                                    symbol: identity(4),
+                                    amount: amount.into(),
+                                })),
+                                threshold: None,
+                                timeout_in_secs: None,
+                                execute_automatically: None,
+                                data: None,
+                            }
+                        )
                     )
                 );
             }
@@ -781,7 +832,7 @@ mod test {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
                     _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
-                        account: Address::public_key_raw([2; 28]),
+                        account: identity(2),
                         threshold: Some(2),
                         timeout_in_secs: None,
                         execute_automatically: Some(false),

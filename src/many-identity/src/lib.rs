@@ -1,18 +1,10 @@
-use many_error::ManyError;
-
 mod address;
-
-#[cfg(feature = "coset")]
-pub mod cose_helpers;
-
-#[cfg(feature = "coset")]
-mod identity;
-
 pub use address::Address;
-#[cfg(feature = "coset")]
+
+mod identity;
 pub use identity::*;
 
-pub mod hsm;
+pub mod cose;
 
 #[cfg(feature = "testing")]
 pub mod testing {
