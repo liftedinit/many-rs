@@ -4,7 +4,7 @@ use many_identity::Address;
 use minicbor::bytes::ByteVec;
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Builder, Debug, Encode, Decode, PartialEq)]
+#[derive(Clone, Builder, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct DisableArgs {
     #[n(0)]
