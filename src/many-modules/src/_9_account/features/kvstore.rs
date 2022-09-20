@@ -19,6 +19,6 @@ impl super::FeatureInfo for AccountKvStore {
     }
 
     fn roles() -> BTreeSet<Role> {
-        BTreeSet::from([Role::CanKvStoreWrite, Role::CanKvStoreDisable])
+        BTreeSet::from([Role::CanKvStorePut, Role::CanKvStoreDisable])
     }
 }

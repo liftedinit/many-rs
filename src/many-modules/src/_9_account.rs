@@ -30,7 +30,7 @@ pub enum Role {
     CanLedgerTransact,
     CanMultisigSubmit,
     CanMultisigApprove,
-    CanKvStoreWrite,
+    CanKvStorePut,
     CanKvStoreDisable,
 }
 

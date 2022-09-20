@@ -1,6 +1,6 @@
 use crate as module;
 use crate::account::features::multisig::{Data, Memo};
-use many_error::ManyError;
+use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
 use many_protocol::ResponseMessage;
@@ -487,6 +487,7 @@ define_event! {
     [7, 1]      KvStoreDisable (module::kvstore::DisableArgs) {
         1     | key:                    ByteVec,
         2     | owner:                  Address                                [ id ],
+        3     | reason:                 Option<Reason<u64>> ,
     },
     [9, 0]      AccountCreate (module::account::CreateArgs) {
         1     | account:                Address                                [ id ],
