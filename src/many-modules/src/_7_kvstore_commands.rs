@@ -55,6 +55,7 @@ mod tests {
         let data = DisableArgs {
             key: ByteVec::from(vec![1]),
             alternative_owner: None,
+            reason: None,
         };
 
         let mut mock = MockKvStoreCommandsModuleBackend::new();
