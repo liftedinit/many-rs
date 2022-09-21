@@ -80,7 +80,7 @@ mod tests {
             .times(1)
             .returning(|_id, _args| {
                 Ok(QueryReturns {
-                    owner: identity(666),
+                    owner: Some(identity(666)),
                     disabled: None,
                 })
             });

@@ -482,11 +482,11 @@ define_event! {
     [7, 0]      KvStorePut (module::kvstore::PutArgs) {
         1     | key:                    ByteVec,
         2     | value:                  ByteVec,
-        3     | owner:                  Address                                [ id ],
+        3     | owner:                  Option<Address>                        [ id_non_null ],
     },
     [7, 1]      KvStoreDisable (module::kvstore::DisableArgs) {
         1     | key:                    ByteVec,
-        2     | owner:                  Address                                [ id ],
+        2     | owner:                  Option<Address>                        [ id_non_null ],
         3     | reason:                 Option<Reason<u64>> ,
     },
     [9, 0]      AccountCreate (module::account::CreateArgs) {

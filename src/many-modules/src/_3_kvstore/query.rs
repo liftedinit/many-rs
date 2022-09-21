@@ -15,7 +15,7 @@ pub struct QueryArgs {
 #[cbor(map)]
 pub struct QueryReturns {
     #[n(0)]
-    pub owner: Address,
+    pub owner: Option<Address>,
 
     #[n(1)]
     pub disabled: Option<Either<bool, Reason<u64>>>,
