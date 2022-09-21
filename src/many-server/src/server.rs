@@ -3,8 +3,9 @@ use async_trait::async_trait;
 use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
 use many_identity::{Identity, Verifier};
+use many_modules::delegation::{DelegationResolver, DELEGATION_MODULE_ATTRIBUTE};
 use many_modules::{base, ManyModule, ManyModuleInfo};
-use many_protocol::{RequestMessage, ResponseMessage};
+use many_protocol::{BaseIdentityResolver, IdentityResolver, RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Formatter};
@@ -58,6 +59,8 @@ pub struct ManyServer {
     method_cache: BTreeSet<String>,
     identity: Box<dyn Identity>,
     verifier: Box<dyn Verifier>,
+    r_verifier: Option<Box<dyn Verifier>>,
+    resolver: Box<dyn IdentityResolver>,
     public_key: Option<CoseKey>,
     name: String,
     version: Option<String>,
@@ -70,7 +73,7 @@ pub struct ManyServer {
 impl ManyServer {
     /// Create a test server. This should never be used in prod.
     #[cfg(feature = "testing")]
-    pub fn test(identity: impl Identity + 'static) -> Arc<Mutex<Self>> {
+    pub fn test(identity: impl Identity + Clone + 'static) -> Arc<Mutex<Self>> {
         Self::simple(
             "test-many-server",
             identity,
@@ -82,7 +85,7 @@ impl ManyServer {
     pub fn simple(
         name: impl ToString,
         identity: impl Identity + 'static,
-        verifier: impl Verifier + 'static,
+        verifier: impl Verifier + Clone + 'static,
         version: Option<String>,
     ) -> Arc<Mutex<Self>> {
         let public_key = identity.public_key();
@@ -99,14 +102,17 @@ impl ManyServer {
     pub fn new<N: ToString>(
         name: N,
         identity: impl Identity + 'static,
-        verifier: impl Verifier + 'static,
+        verifier: impl Verifier + Clone + 'static,
         public_key: Option<CoseKey>,
     ) -> Arc<Mutex<Self>> {
+        let r_verifier = verifier.clone();
         Arc::new(Mutex::new(Self {
             modules: vec![],
             name: name.to_string(),
             identity: Box::new(identity),
             verifier: Box::new(verifier),
+            r_verifier: Some(Box::new(r_verifier)),
+            resolver: Box::new(BaseIdentityResolver),
             public_key,
             timeout: MANYSERVER_DEFAULT_TIMEOUT,
             fallback: None,
@@ -157,6 +163,14 @@ impl ManyServer {
                     m.info().name,
                     id
                 );
+            }
+
+            // Set handle_delegation to true if attribute 10 is added.
+            if id == &DELEGATION_MODULE_ATTRIBUTE.id {
+                if let Some(verifier) = self.r_verifier.take() {
+                    self.resolver =
+                        Box::new((DelegationResolver::new(verifier), BaseIdentityResolver));
+                }
             }
         }
 
@@ -284,7 +298,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
         let request = {
             let this = self.lock().unwrap();
-            many_protocol::decode_request_from_cose_sign1(&envelope, &this.verifier)
+            many_protocol::decode_request_from_cose_sign1(&envelope, &this.verifier, &this.resolver)
         };
         let mut id = None;
 
@@ -405,7 +419,7 @@ mod tests {
 
             let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
             let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
-            let response_message = decode_response_from_cose_sign1(&response, None, &AcceptAllVerifier).unwrap();
+            let response_message = decode_response_from_cose_sign1(&response, None, &AcceptAllVerifier, &BaseIdentityResolver).unwrap();
 
             let status: Status = minicbor::decode(&response_message.data.unwrap()).unwrap();
 
@@ -432,8 +446,13 @@ mod tests {
         let server = ManyServer::test(AnonymousIdentity);
         let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
         let response_e = smol::block_on(server.execute(envelope)).unwrap();
-        let response =
-            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        let response = decode_response_from_cose_sign1(
+            &response_e,
+            None,
+            &AcceptAllVerifier,
+            &BaseIdentityResolver,
+        )
+        .unwrap();
         assert!(response.data.is_err());
     }
 
@@ -449,8 +468,13 @@ mod tests {
         let server = ManyServer::test(AnonymousIdentity);
         let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
         let response_e = smol::block_on(server.execute(envelope)).unwrap();
-        let response =
-            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        let response = decode_response_from_cose_sign1(
+            &response_e,
+            None,
+            &AcceptAllVerifier,
+            &BaseIdentityResolver,
+        )
+        .unwrap();
         assert!(response.data.is_err());
     }
 
@@ -502,8 +526,13 @@ mod tests {
 
         // timestamp is now, so this should be fairly close to it and should pass.
         let response_e = smol::block_on(server.execute(create_request(timestamp, 0))).unwrap();
-        let response =
-            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        let response = decode_response_from_cose_sign1(
+            &response_e,
+            None,
+            &AcceptAllVerifier,
+            &BaseIdentityResolver,
+        )
+        .unwrap();
         assert!(response.data.is_ok());
 
         // Set time to present.
@@ -511,8 +540,13 @@ mod tests {
             server.lock().unwrap().set_time_fn(get_now);
         }
         let response_e = smol::block_on(server.execute(create_request(timestamp, 1))).unwrap();
-        let response =
-            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        let response = decode_response_from_cose_sign1(
+            &response_e,
+            None,
+            &AcceptAllVerifier,
+            &BaseIdentityResolver,
+        )
+        .unwrap();
         assert!(response.data.is_ok());
 
         // Set time to 10 minutes past.
@@ -520,8 +554,13 @@ mod tests {
             *now.write().unwrap() = timestamp - Duration::from_secs(60 * 60 * 10);
         }
         let response_e = smol::block_on(server.execute(create_request(timestamp, 2))).unwrap();
-        let response =
-            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        let response = decode_response_from_cose_sign1(
+            &response_e,
+            None,
+            &AcceptAllVerifier,
+            &BaseIdentityResolver,
+        )
+        .unwrap();
         assert!(response.data.is_err());
         assert_eq!(
             response.data.unwrap_err().code(),
@@ -534,8 +573,13 @@ mod tests {
             3,
         )))
         .unwrap();
-        let response =
-            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        let response = decode_response_from_cose_sign1(
+            &response_e,
+            None,
+            &AcceptAllVerifier,
+            &BaseIdentityResolver,
+        )
+        .unwrap();
         assert!(response.data.is_ok());
     }
 }

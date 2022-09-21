@@ -1,4 +1,4 @@
-use crate::RequestMessage;
+use crate::{IdentityResolver, RequestMessage};
 use coset::CoseSign1;
 use derive_builder::Builder;
 use many_error::ManyError;
@@ -87,6 +87,7 @@ impl ResponseMessage {
     pub fn decode_and_verify(
         envelope: &CoseSign1,
         verifier: &impl Verifier,
+        resolver: &impl IdentityResolver,
     ) -> Result<Self, ManyError> {
         let address = verifier.verify_1(envelope)?;
 
@@ -94,14 +95,11 @@ impl ResponseMessage {
             .payload
             .as_ref()
             .ok_or_else(ManyError::empty_envelope)?;
-        let message =
+        let mut message =
             ResponseMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
 
-        if address != message.from {
-            Err(ManyError::invalid_from_identity())
-        } else {
-            Ok(message)
-        }
+        message.from = resolver.resolve_response(&message, address)?;
+        Ok(message)
     }
 
     pub fn with_attribute(mut self, attr: Attribute) -> Self {

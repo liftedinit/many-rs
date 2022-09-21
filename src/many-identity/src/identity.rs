@@ -47,6 +47,7 @@ mod testing {
 
     /// Accept ALL envelopes, and uses the key id as is to resolve the address.
     /// No verification is made. This should NEVER BE used for production.
+    #[derive(Clone)]
     pub struct AcceptAllVerifier;
 
     impl Verifier for AcceptAllVerifier {

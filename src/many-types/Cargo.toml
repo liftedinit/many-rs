@@ -19,5 +19,6 @@ proptest = { version = "1.0.0", optional = true }
 serde = "1.0.139"
 
 [dev-dependencies]
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ed25519", "testing"] }
 many-types = { path = ".", features = ["proptest"] }
 serde_test = "1.0.139"

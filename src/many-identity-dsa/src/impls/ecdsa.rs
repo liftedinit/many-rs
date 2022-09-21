@@ -402,6 +402,7 @@ pub mod tests {
         many_protocol::decode_request_from_cose_sign1(
             &envelope,
             &EcDsaVerifier::from_key(&pubkey).unwrap(),
+            &many_protocol::BaseIdentityResolver,
         )
         .unwrap();
     }
@@ -424,6 +425,7 @@ pub mod tests {
             &envelope,
             None,
             &EcDsaVerifier::from_key(&pubkey).unwrap(),
+            &many_protocol::BaseIdentityResolver,
         )
         .unwrap();
     }

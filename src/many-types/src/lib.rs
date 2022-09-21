@@ -9,6 +9,7 @@ use std::ops::{Bound, RangeBounds, Shl};
 pub mod attributes;
 pub mod blockchain;
 pub mod cbor;
+pub mod delegation;
 pub mod either;
 pub mod identity {
     pub use many_identity::*;

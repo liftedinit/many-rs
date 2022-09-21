@@ -22,6 +22,7 @@ coset = "0.3"
 crc-any = "2.4.0"
 cryptoki = { version = "0.3", features = ["generate-bindings"] }
 derive_builder = "0.10.2"
+dyn-clone = "1.0.9"
 ecdsa = "0.12.4"
 ed25519 = { version = "1.2.0", features = [ "std" ] }
 ed25519-dalek = { version = "1.0.1", features = [ "std" ] }

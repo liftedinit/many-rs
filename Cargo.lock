@@ -1026,6 +1026,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1435fa1053d8b2fbbe9be7e97eca7f33d37b28409959813daefc1446a14247f1"
 
 [[package]]
+name = "dyn-clone"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f94fa09c2aeea5b8839e414b7b841bf429fd25b9c522116ac97ee87856d88b2"
+
+[[package]]
 name = "ecdsa"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2023,6 +2029,7 @@ dependencies = [
  "crc-any",
  "cryptoki",
  "derive_builder 0.10.2",
+ "dyn-clone",
  "ecdsa",
  "ed25519",
  "ed25519-dalek",
@@ -2073,6 +2080,7 @@ dependencies = [
  "hex",
  "many-error",
  "many-identity",
+ "many-identity-dsa",
  "many-types",
  "minicbor",
  "num-bigint",

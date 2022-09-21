@@ -399,6 +399,7 @@ pub mod tests {
         many_protocol::decode_request_from_cose_sign1(
             &envelope,
             &Ed25519Verifier::from_key(&pubkey).unwrap(),
+            &many_protocol::BaseIdentityResolver,
         )
         .unwrap();
     }
@@ -421,6 +422,7 @@ pub mod tests {
             &envelope,
             None,
             &Ed25519Verifier::from_key(&pubkey).unwrap(),
+            &many_protocol::BaseIdentityResolver,
         )
         .unwrap();
     }

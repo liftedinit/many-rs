@@ -13,7 +13,8 @@ use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
 use many_protocol::{
-    encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
+    encode_cose_sign1_from_request, BaseIdentityResolver, RequestMessage, RequestMessageBuilder,
+    ResponseMessage,
 };
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
@@ -304,9 +305,12 @@ async fn message_from_hex(
     let envelope = CoseSign1::from_slice(&data).map_err(|e| anyhow!(e))?;
 
     let cose_sign1 = many_client::client::send_envelope(s, envelope).await?;
-    let response =
-        ResponseMessage::decode_and_verify(&cose_sign1, &(AnonymousVerifier, CoseKeyVerifier))
-            .map_err(|e| anyhow!(e))?;
+    let response = ResponseMessage::decode_and_verify(
+        &cose_sign1,
+        &(AnonymousVerifier, CoseKeyVerifier),
+        &BaseIdentityResolver,
+    )
+    .map_err(|e| anyhow!(e))?;
 
     show_response(&response, client, r#async).await
 }

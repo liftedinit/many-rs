@@ -10,8 +10,10 @@ use many_identity::verifiers::AnonymousVerifier;
 use many_identity::{verifiers, Identity};
 use many_identity_dsa::CoseKeyVerifier;
 use many_modules::base::Status;
+use many_modules::delegation::DelegationResolver;
 use many_protocol::{
-    encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
+    encode_cose_sign1_from_request, BaseIdentityResolver, RequestMessage, RequestMessageBuilder,
+    ResponseMessage,
 };
 use many_server::{Address, ManyError};
 use minicbor::Encode;
@@ -24,6 +26,10 @@ pub struct ManyClient<I: Identity> {
     to: Option<Address>,
     url: Url,
     verifier: (AnonymousVerifier, CoseKeyVerifier),
+    resolver: (
+        DelegationResolver<(AnonymousVerifier, CoseKeyVerifier)>,
+        BaseIdentityResolver,
+    ),
 }
 
 impl<I: Identity + Debug> Debug for ManyClient<I> {
@@ -59,12 +65,17 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
 impl<I: Identity> ManyClient<I> {
     pub fn new<S: IntoUrl>(url: S, to: Address, identity: I) -> Result<Self, String> {
         let verifier = (verifiers::AnonymousVerifier, CoseKeyVerifier);
+        let resolver = (
+            DelegationResolver::new(verifier.clone()),
+            BaseIdentityResolver,
+        );
 
         Ok(Self {
             identity,
             to: Some(to),
             url: url.into_url().map_err(|e| format!("{}", e))?,
             verifier,
+            resolver,
         })
     }
 
@@ -75,7 +86,7 @@ impl<I: Identity> ManyClient<I> {
         let cose = encode_cose_sign1_from_request(message, &self.identity).unwrap();
         let cose_sign1 = send_envelope(self.url.clone(), cose).await?;
 
-        ResponseMessage::decode_and_verify(&cose_sign1, &self.verifier)
+        ResponseMessage::decode_and_verify(&cose_sign1, &self.verifier, &self.resolver)
     }
 
     pub async fn call_raw<M>(

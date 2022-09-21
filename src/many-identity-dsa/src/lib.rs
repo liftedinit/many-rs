@@ -209,7 +209,12 @@ fn ecdsa_sign_and_verify_request() {
     )
     .unwrap();
 
-    many_protocol::decode_request_from_cose_sign1(&envelope, &CoseKeyVerifier).unwrap();
+    many_protocol::decode_request_from_cose_sign1(
+        &envelope,
+        &CoseKeyVerifier,
+        &many_protocol::BaseIdentityResolver,
+    )
+    .unwrap();
 }
 
 #[test]
@@ -226,5 +231,11 @@ fn sign_and_verify_response() {
     )
     .unwrap();
 
-    many_protocol::decode_response_from_cose_sign1(&envelope, None, &CoseKeyVerifier).unwrap();
+    many_protocol::decode_response_from_cose_sign1(
+        &envelope,
+        None,
+        &CoseKeyVerifier,
+        &many_protocol::BaseIdentityResolver,
+    )
+    .unwrap();
 }
