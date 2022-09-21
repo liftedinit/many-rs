@@ -1,3 +1,5 @@
+mod delegation;
+
 use anyhow::anyhow;
 use async_recursion::async_recursion;
 use clap::{ArgGroup, Parser};
@@ -9,6 +11,8 @@ use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
 use many_identity_hsm::{Hsm, HsmIdentity, HsmMechanismType, HsmSessionType, HsmUserType};
 use many_mock::{parse_mockfile, server::ManyMockServer, MockEntries};
+use many_modules::delegation::attributes::DelegationAttribute;
+use many_modules::delegation::DelegationModuleBackend;
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
@@ -22,10 +26,10 @@ use many_types::Timestamp;
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::process;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use tracing::{error, info, level_filters::LevelFilter, trace};
+use std::{fs, process, sync};
+use tracing::{debug, error, info, level_filters::LevelFilter, trace};
 use url::Url;
 
 #[derive(Parser)]
@@ -61,6 +65,9 @@ enum SubCommand {
 
     /// Get the token ID per string of a ledger's token.
     GetTokenId(GetTokenIdOpt),
+
+    /// Manage delegation certificates.
+    Delegation(delegation::DelegationOpt),
 }
 
 #[derive(Parser)]
@@ -106,6 +113,10 @@ struct MessageOpt {
     /// A pem file to sign the message. If this is omitted, the message will be anonymous.
     #[clap(long)]
     pem: Option<PathBuf>,
+
+    /// An optional delegation certificate list to use for the message.
+    #[clap(long)]
+    delegation: Option<Vec<PathBuf>>,
 
     /// Timestamp (in seconds since epoch).
     #[clap(long)]
@@ -174,12 +185,16 @@ struct ServerOpt {
     /// Default is mockfile.toml, gives an error if the file does not exist
     #[clap(long, short, value_parser = parse_mockfile)]
     mockfile: Option<MockEntries>,
+
+    /// Add support for delegation.
+    #[clap(long)]
+    delegation: bool,
 }
 
 #[derive(Parser)]
 struct GetTokenIdOpt {
     /// The server to call. It MUST implement the ledger attribute (2).
-    server: url::Url,
+    server: Url,
 
     /// The token to get. If not listed in the list of tokens, this will
     /// error.
@@ -261,10 +276,15 @@ async fn message(
     key: impl Identity,
     method: String,
     data: Vec<u8>,
-    timestamp: Option<SystemTime>,
+    timestamp: Timestamp,
     r#async: bool,
+    delegation: Option<(Address, DelegationAttribute)>,
 ) -> Result<(), anyhow::Error> {
-    let address = key.address();
+    let address = if let Some(d) = &delegation {
+        d.0
+    } else {
+        key.address()
+    };
     let client = ManyClient::new(s, to, key).unwrap();
 
     let mut nonce = [0u8; 16];
@@ -276,16 +296,19 @@ async fn message(
         .from(address)
         .to(to)
         .method(method)
+        .timestamp(timestamp)
         .data(data)
         .nonce(nonce.to_vec());
-
-    if let Some(ts) = timestamp {
-        builder.timestamp(Timestamp::from_system_time(ts)?);
-    }
 
     let message: RequestMessage = builder
         .build()
         .map_err(|_| ManyError::internal_server_error())?;
+
+    let message = if let Some(d) = delegation {
+        message.with_attribute(d.1.try_into().unwrap())
+    } else {
+        message
+    };
 
     let response = client.send_message(message).await?;
 
@@ -348,7 +371,7 @@ async fn main() {
                     }
                     Err(e) => {
                         error!("Identity did not parse: {:?}", e.to_string());
-                        std::process::exit(1);
+                        process::exit(1);
                     }
                 }
             } else if let Ok(mut i) = Address::try_from(o.arg.clone()) {
@@ -370,7 +393,7 @@ async fn main() {
                 println!("{}", i);
             } else {
                 error!("Could not understand the argument.");
-                std::process::exit(2);
+                process::exit(2);
             }
         }
         SubCommand::HsmId(o) => {
@@ -400,10 +423,13 @@ async fn main() {
         }
         SubCommand::Message(o) => {
             let to_identity = o.to.unwrap_or_default();
-            let timestamp = o.timestamp.map(|secs| {
-                SystemTime::UNIX_EPOCH
-                    .checked_add(Duration::new(secs, 0))
-                    .expect("Invalid timestamp")
+            let timestamp = o.timestamp.map_or_else(Timestamp::now, |secs| {
+                Timestamp::from_system_time(
+                    SystemTime::UNIX_EPOCH
+                        .checked_add(Duration::new(secs, 0))
+                        .expect("Invalid timestamp"),
+                )
+                .expect("Invalid time")
             });
             let data = o
                 .data
@@ -440,6 +466,33 @@ async fn main() {
                 Box::new(AnonymousIdentity)
             };
 
+            let delegation = o.delegation.map(|values| {
+                let certificates = values
+                    .iter()
+                    .flat_map(|p| pem::parse_many(fs::read_to_string(p).unwrap()).unwrap())
+                    .filter(|pem| pem.tag == "MANY DELEGATION CERTIFICATE")
+                    .map(|pem| CoseSign1::from_slice(&pem.contents).unwrap())
+                    .collect::<Vec<CoseSign1>>();
+
+                // Create the attribute.
+                let attr = DelegationAttribute::new(certificates.clone());
+
+                // Verify that the identity can delegate to the new identity.
+                let resolved_id = attr
+                    .resolve(
+                        from_identity.address(),
+                        &(AnonymousVerifier, CoseKeyVerifier),
+                        timestamp,
+                    )
+                    .unwrap();
+                debug!(
+                    "Resolved Identity from delegation: {}",
+                    resolved_id.to_string()
+                );
+
+                (resolved_id, attr)
+            });
+
             if let Some(s) = o.server {
                 let result = if let Some(hex) = o.from_hex {
                     message_from_hex(s, to_identity, from_identity, hex, o.r#async).await
@@ -452,6 +505,7 @@ async fn main() {
                         data,
                         timestamp,
                         o.r#async,
+                        delegation,
                     )
                     .await
                 };
@@ -466,7 +520,7 @@ async fn main() {
                                 .collect::<Vec<&str>>()
                                 .join("\n|  ")
                         );
-                        std::process::exit(1);
+                        process::exit(1);
                     }
                 }
             } else {
@@ -501,8 +555,18 @@ async fn main() {
                 o.name,
                 Arc::clone(&key),
                 (AnonymousVerifier, CoseKeyVerifier),
-                Some(std::env!("CARGO_PKG_VERSION").to_string()),
+                Some(env!("CARGO_PKG_VERSION").to_string()),
             );
+            if o.delegation {
+                struct DelegationImpl;
+                impl DelegationModuleBackend for DelegationImpl {}
+
+                let mut many_locked = many.lock().unwrap();
+                many_locked.add_module(many_modules::delegation::DelegationModule::new(Arc::new(
+                    sync::Mutex::new(DelegationImpl),
+                )));
+            }
+
             let mockfile = o.mockfile.unwrap_or_default();
             if !mockfile.is_empty() {
                 let mut many_locked = many.lock().unwrap();
@@ -541,6 +605,9 @@ async fn main() {
                 .unwrap();
 
             println!("{}", id);
+        }
+        SubCommand::Delegation(o) => {
+            delegation::delegation(&o).unwrap();
         }
     }
 }

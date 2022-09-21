@@ -7,9 +7,6 @@ use many_types::attributes::TryFromAttributeSet;
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 
-#[cfg(test)]
-use mockall::{automock, predicate::*};
-
 pub mod attributes {
     use coset::{CoseSign1, TaggedCborSerializable};
     use many_error::ManyError;
@@ -22,10 +19,14 @@ pub mod attributes {
     pub const DELEGATION: Attribute = Attribute::id(2);
 
     pub struct DelegationAttribute {
-        pub inner: Vec<CoseSign1>,
+        inner: Vec<CoseSign1>,
     }
 
     impl DelegationAttribute {
+        pub fn new(inner: Vec<CoseSign1>) -> Self {
+            Self { inner }
+        }
+
         fn create_from_bytes(bytes: Vec<u8>) -> Result<Self, ManyError> {
             let cose_sign_1 =
                 CoseSign1::from_tagged_slice(&bytes).map_err(ManyError::deserialization_error)?;
@@ -186,7 +187,7 @@ pub struct CreateCertificateReturn {
 
 impl<C> Encode<C> for CreateCertificateReturn {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _ctx: &mut C) -> Result<(), Error<W::Error>> {
-        e.bytes(
+        e.map(1)?.i8(0)?.bytes(
             &self
                 .certificate
                 .clone()
@@ -198,6 +199,10 @@ impl<C> Encode<C> for CreateCertificateReturn {
 }
 impl<'b, C> Decode<'b, C> for CreateCertificateReturn {
     fn decode(d: &mut Decoder<'b>, _ctx: &mut C) -> Result<Self, decode::Error> {
+        if d.map()? != Some(1) {
+            return Err(decode::Error::message("Need one item"));
+        }
+
         let bytes = d.bytes()?;
         let cose_sign_1 = CoseSign1::from_tagged_slice(bytes)
             .map_err(|e| decode::Error::message(e.to_string()))?;
@@ -207,8 +212,21 @@ impl<'b, C> Decode<'b, C> for CreateCertificateReturn {
     }
 }
 
-#[many_module(name = DelegationModule, id = 10, many_modules_crate = crate)]
-#[cfg_attr(test, automock)]
+#[derive(Debug, Clone, Encode, Decode)]
+#[cbor(map)]
+pub struct WhoAmIReturn {
+    #[n(0)]
+    pub address: Address,
+}
+
+#[many_module(name = DelegationModule, namespace = "delegation", id = 10, many_modules_crate = crate)]
 pub trait DelegationModuleBackend: Send {
-    fn create_certificate(&self) -> Result<CreateCertificateReturn, ManyError>;
+    fn create_certificate(&self) -> Result<CreateCertificateReturn, ManyError> {
+        Err(ManyError::unknown("Server does not support delegation."))
+    }
+
+    #[many(no_payload)]
+    fn who_am_i(&self, sender: &Address) -> Result<WhoAmIReturn, ManyError> {
+        Ok(WhoAmIReturn { address: *sender })
+    }
 }

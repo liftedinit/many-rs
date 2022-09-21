@@ -1758,6 +1758,7 @@ dependencies = [
  "many-server",
  "many-types",
  "minicbor",
+ "pem",
  "rand 0.8.5",
  "rpassword",
  "tokio",

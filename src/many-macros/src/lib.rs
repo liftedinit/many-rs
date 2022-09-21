@@ -20,6 +20,7 @@ struct ManyModuleAttributes {
 struct EndpointManyAttribute {
     deny_anonymous: Option<bool>,
     check_webauthn: Option<bool>,
+    no_payload: Option<bool>,
 }
 
 impl EndpointManyAttribute {
@@ -29,6 +30,10 @@ impl EndpointManyAttribute {
 
     pub fn check_webauthn(&self) -> bool {
         self.check_webauthn == Some(true)
+    }
+
+    pub fn no_payload(&self) -> bool {
+        self.no_payload == Some(true)
     }
 
     pub fn merge(self, other: Self) -> syn::Result<Self> {
@@ -47,6 +52,7 @@ impl EndpointManyAttribute {
         Ok(Self {
             deny_anonymous: either(self.deny_anonymous, other.deny_anonymous)?,
             check_webauthn: either(self.check_webauthn, other.check_webauthn)?,
+            no_payload: either(self.no_payload, other.no_payload)?,
         })
     }
 }
@@ -59,11 +65,19 @@ impl syn::parse::Parse for EndpointManyAttribute {
             Ok(Self {
                 deny_anonymous: Some(true),
                 check_webauthn: None,
+                no_payload: None,
             })
         } else if arg_name == "check_webauthn" {
             Ok(Self {
                 deny_anonymous: None,
                 check_webauthn: Some(true),
+                no_payload: None,
+            })
+        } else if arg_name == "no_payload" {
+            Ok(Self {
+                deny_anonymous: None,
+                check_webauthn: None,
+                no_payload: Some(true),
             })
         } else {
             Err(syn::Error::new_spanned(arg_name, "unsupported attribute"))
@@ -114,6 +128,23 @@ impl Endpoint {
             ));
         };
 
+        let (meta_attrs, attributes): (Vec<syn::Attribute>, Vec<syn::Attribute>) = item
+            .attrs
+            .clone()
+            .into_iter()
+            .partition(|attr| attr.path.is_ident("many"));
+
+        let metadata =
+            meta_attrs
+                .into_iter()
+                .try_fold(EndpointManyAttribute::default(), |meta, attr| {
+                    let list: Punctuated<EndpointManyAttribute, Token![,]> =
+                        attr.parse_args_with(Punctuated::parse_terminated)?;
+
+                    list.into_iter()
+                        .try_fold(meta, EndpointManyAttribute::merge)
+                })?;
+
         let maybe_identity = inputs.next();
         let maybe_argument = inputs.next();
 
@@ -126,12 +157,25 @@ impl Endpoint {
                 })),
                 Some(FnArg::Typed(PatType { ty, pat, .. })),
             ) => {
+                // If there are no payload, this is an error.
+                if metadata.no_payload() {
+                    return Err(syn::Error::new(
+                        maybe_argument.span(),
+                        "no_payload attribute cannot be specified with a payload",
+                    ));
+                }
+
                 sender = Some((id_pat.clone(), id_ty.clone()));
                 arg = Some((pat.clone(), ty.clone()));
             }
             (Some(FnArg::Typed(PatType { ty, pat, .. })), None) => {
-                sender = None;
-                arg = Some((pat.clone(), ty.clone()));
+                if metadata.no_payload() {
+                    sender = Some((pat.clone(), ty.clone()));
+                    arg = None;
+                } else {
+                    sender = None;
+                    arg = Some((pat.clone(), ty.clone()));
+                }
             }
             (None, None) => {
                 sender = None;
@@ -170,23 +214,6 @@ impl Endpoint {
                 "Must have a result return type.".to_string(),
             ));
         }
-
-        let (meta_attrs, attributes): (Vec<syn::Attribute>, Vec<syn::Attribute>) = item
-            .attrs
-            .clone()
-            .into_iter()
-            .partition(|attr| attr.path.is_ident("many"));
-
-        let metadata =
-            meta_attrs
-                .into_iter()
-                .try_fold(EndpointManyAttribute::default(), |meta, attr| {
-                    let list: Punctuated<EndpointManyAttribute, Token![,]> =
-                        attr.parse_args_with(Punctuated::parse_terminated)?;
-
-                    list.into_iter()
-                        .try_fold(meta, EndpointManyAttribute::merge)
-                })?;
 
         Ok(Self {
             metadata,
