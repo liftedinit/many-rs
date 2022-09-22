@@ -57,7 +57,7 @@ enum SubCommand {
     HsmId(HsmIdOpt),
 
     /// Creates a message and output it.
-    Message(MessageOpt),
+    Message(Box<MessageOpt>),
 
     /// Starts a base server that can also be used for reverse proxying
     /// to another MANY server.
@@ -270,6 +270,7 @@ async fn show_response<'a>(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn message(
     s: Url,
     to: Address,
@@ -475,7 +476,7 @@ async fn main() {
                     .collect::<Vec<CoseSign1>>();
 
                 // Create the attribute.
-                let attr = DelegationAttribute::new(certificates.clone());
+                let attr = DelegationAttribute::new(certificates);
 
                 // Verify that the identity can delegate to the new identity.
                 let resolved_id = attr

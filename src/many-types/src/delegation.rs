@@ -1,5 +1,5 @@
 use crate::Timestamp;
-use coset::CoseSign1;
+use coset::{CoseSign1, CoseSign1Builder};
 use many_error::ManyError;
 use many_identity::{Address, Identity, Verifier};
 use minicbor::{Decode, Encode};
@@ -40,9 +40,9 @@ impl Certificate {
         }
 
         // Create the CoseSign1, then sign it.
-        let mut cose_sign_1 = CoseSign1::default();
-        cose_sign_1.payload =
-            Some(minicbor::to_vec(self).map_err(|e| ManyError::deserialization_error(e))?);
+        let cose_sign_1 = CoseSign1Builder::new()
+            .payload(minicbor::to_vec(self).map_err(ManyError::deserialization_error)?)
+            .build();
 
         id.sign_1(cose_sign_1)
     }
@@ -58,7 +58,7 @@ impl Certificate {
             .as_ref()
             .ok_or_else(|| ManyError::unknown("Empty envelope."))?;
         let certificate: Self =
-            minicbor::decode(payload).map_err(|e| ManyError::deserialization_error(e))?;
+            minicbor::decode(payload).map_err(ManyError::deserialization_error)?;
 
         if !certificate.from.matches(&from) {
             return Err(ManyError::unknown("From does not match identity."));
