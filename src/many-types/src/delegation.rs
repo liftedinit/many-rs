@@ -75,7 +75,7 @@ impl Certificate {
 mod tests {
     use super::Certificate;
     use crate::Timestamp;
-    use coset::CoseSign1;
+    use coset::CoseSign1Builder;
     use many_identity::{AnonymousIdentity, Identity};
     use many_identity_dsa::ed25519::generate_random_ed25519_identity;
     use many_identity_dsa::CoseKeyVerifier;
@@ -127,8 +127,9 @@ mod tests {
         let certificate = Certificate::new(AnonymousIdentity.address(), id2.address(), now);
 
         // Create envelope using the wrong signing identity.
-        let mut cose_sign_1 = CoseSign1::default();
-        cose_sign_1.payload = Some(minicbor::to_vec(certificate).unwrap());
+        let cose_sign_1 = CoseSign1Builder::new()
+            .payload(minicbor::to_vec(certificate).unwrap())
+            .build();
         let envelope = id1.sign_1(cose_sign_1).unwrap();
 
         let result = Certificate::decode_and_verify(&envelope, &CoseKeyVerifier, Timestamp::now());

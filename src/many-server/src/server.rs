@@ -368,6 +368,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 
 #[cfg(test)]
 mod tests {
+    use coset::CoseSign1Builder;
     use semver::{BuildMetadata, Prerelease, Version};
     use std::sync::RwLock;
     use std::time::Duration;
@@ -695,12 +696,9 @@ mod tests {
         let certificate = delegation::Certificate::new(id1.address(), id2.address(), expiration);
 
         // Create a valid envelope.
-        let mut cose_sign_1 = CoseSign1::default();
-        cose_sign_1.payload = Some(
-            minicbor::to_vec(certificate)
-                .map_err(|e| ManyError::deserialization_error(e))
-                .unwrap(),
-        );
+        let cose_sign_1 = CoseSign1Builder::new()
+            .payload(minicbor::to_vec(certificate).unwrap())
+            .build();
 
         let invalid_envelope = id3.sign_1(cose_sign_1).unwrap();
 
