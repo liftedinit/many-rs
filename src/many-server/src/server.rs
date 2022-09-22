@@ -376,10 +376,11 @@ mod tests {
     use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity};
     use many_identity_dsa::ed25519::generate_random_ed25519_identity;
     use many_modules::base::Status;
+    use many_modules::delegation::attributes::DelegationAttribute;
     use many_protocol::{
         decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessageBuilder,
     };
-    use many_types::Timestamp;
+    use many_types::{delegation, Timestamp};
     use proptest::prelude::*;
 
     const ALPHA_NUM_DASH_REGEX: &str = "[a-zA-Z0-9-]";
@@ -581,5 +582,150 @@ mod tests {
         )
         .unwrap();
         assert!(response.data.is_ok());
+    }
+
+    #[test]
+    fn server_understands_delegation_with_attr_10() {
+        use many_modules::delegation::*;
+
+        let server = ManyServer::test(AnonymousIdentity);
+
+        {
+            struct DelegationImpl;
+            impl DelegationModuleBackend for DelegationImpl {}
+
+            let mut s = server.lock().unwrap();
+            s.add_module(many_modules::delegation::DelegationModule::new(Arc::new(
+                std::sync::Mutex::new(DelegationImpl),
+            )));
+        }
+
+        let id1 = generate_random_ed25519_identity();
+        let id2 = generate_random_ed25519_identity();
+        let expiration = Timestamp::now() + 86400;
+
+        // Create a certificate.
+        let certificate = delegation::Certificate::new(id1.address(), id2.address(), expiration);
+
+        // Create a valid envelope.
+        let valid = certificate.sign(&id1).unwrap();
+
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .from(id1.address())
+            .to(Address::anonymous())
+            .method("delegation.whoAmI".to_string())
+            .build()
+            .unwrap();
+        let request =
+            request.with_attribute(DelegationAttribute::new(vec![valid]).try_into().unwrap());
+
+        let envelope = encode_cose_sign1_from_request(request, &id2).unwrap();
+        let response_envelope = smol::block_on(server.execute(envelope)).unwrap();
+
+        let response_message = decode_response_from_cose_sign1(
+            &response_envelope,
+            None,
+            &AcceptAllVerifier,
+            &BaseIdentityResolver,
+        )
+        .unwrap();
+
+        let who_i_am: WhoAmIReturn = response_message.decode().unwrap();
+        assert_eq!(who_i_am.address, id1.address());
+    }
+
+    #[test]
+    fn server_does_not_understand_delegation_without_attr_10() {
+        let server = ManyServer::test(AnonymousIdentity);
+
+        let id1 = generate_random_ed25519_identity();
+        let id2 = generate_random_ed25519_identity();
+        let expiration = Timestamp::now() + 86400;
+
+        // Create a certificate.
+        let certificate = delegation::Certificate::new(id1.address(), id2.address(), expiration);
+
+        // Create a valid envelope.
+        let valid = certificate.sign(&id1).unwrap();
+
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .from(id1.address())
+            .to(Address::anonymous())
+            .method("delegation.whoAmI".to_string())
+            .build()
+            .unwrap();
+        let request =
+            request.with_attribute(DelegationAttribute::new(vec![valid]).try_into().unwrap());
+
+        let envelope = encode_cose_sign1_from_request(request, &id2).unwrap();
+        let response_envelope = smol::block_on(server.execute(envelope)).unwrap();
+
+        let response_message = decode_response_from_cose_sign1(
+            &response_envelope,
+            None,
+            &AcceptAllVerifier,
+            &BaseIdentityResolver,
+        )
+        .unwrap();
+        assert!(response_message.data.is_err());
+    }
+
+    #[test]
+    fn delegation_fails_on_invalid_envelope() {
+        use many_modules::delegation::*;
+
+        let server = ManyServer::test(AnonymousIdentity);
+
+        {
+            struct DelegationImpl;
+            impl DelegationModuleBackend for DelegationImpl {}
+
+            let mut s = server.lock().unwrap();
+            s.add_module(many_modules::delegation::DelegationModule::new(Arc::new(
+                std::sync::Mutex::new(DelegationImpl),
+            )));
+        }
+
+        let id1 = generate_random_ed25519_identity();
+        let id2 = generate_random_ed25519_identity();
+        let id3 = generate_random_ed25519_identity();
+        let expiration = Timestamp::now() + 86400;
+
+        // Create a certificate.
+        let certificate = delegation::Certificate::new(id1.address(), id2.address(), expiration);
+
+        // Create a valid envelope.
+        let mut cose_sign_1 = CoseSign1::default();
+        cose_sign_1.payload = Some(
+            minicbor::to_vec(certificate)
+                .map_err(|e| ManyError::deserialization_error(e))
+                .unwrap(),
+        );
+
+        let invalid_envelope = id3.sign_1(cose_sign_1).unwrap();
+
+        let request: RequestMessage = RequestMessageBuilder::default()
+            .from(id1.address())
+            .to(Address::anonymous())
+            .method("delegation.whoAmI".to_string())
+            .build()
+            .unwrap();
+        let request = request.with_attribute(
+            DelegationAttribute::new(vec![invalid_envelope])
+                .try_into()
+                .unwrap(),
+        );
+
+        let envelope = encode_cose_sign1_from_request(request, &id2).unwrap();
+        let response_envelope = smol::block_on(server.execute(envelope)).unwrap();
+
+        let response_message = decode_response_from_cose_sign1(
+            &response_envelope,
+            None,
+            &AcceptAllVerifier,
+            &BaseIdentityResolver,
+        )
+        .unwrap();
+        assert!(response_message.data.is_err());
     }
 }

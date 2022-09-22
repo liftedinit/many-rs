@@ -107,6 +107,15 @@ impl ResponseMessage {
         self
     }
 
+    pub fn decode<'a, T: Decode<'a, ()> + 'static>(&'a self) -> Result<T, ManyError> {
+        match &self.data {
+            Ok(ref bytes) => {
+                minicbor::decode(bytes.as_slice()).map_err(|e| ManyError::deserialization_error(e))
+            }
+            Err(ref error) => Err(error.clone()),
+        }
+    }
+
     pub fn to_bytes(&self) -> Result<Vec<u8>, String> {
         minicbor::to_vec(self).map_err(|e| format!("{}", e))
     }
