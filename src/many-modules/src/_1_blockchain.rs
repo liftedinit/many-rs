@@ -1,10 +1,11 @@
 use many_error::{define_attribute_many_error, ManyError};
 use many_macros::many_module;
 use many_types::blockchain::{
-    Block, BlockIdentifier, SingleBlockQuery, SingleTransactionQuery, Transaction,
+    Block, BlockIdentifier, RangeBlockQuery, SingleBlockQuery, SingleTransactionQuery, Transaction,
 };
 use minicbor::{Decode, Encode};
 
+use many_types::SortOrder;
 #[cfg(test)]
 use mockall::{automock, predicate::*};
 
@@ -60,12 +61,66 @@ pub struct TransactionReturns {
     pub txn: Transaction,
 }
 
+#[derive(Clone, Debug, Default, Encode, Decode, Eq, PartialEq)]
+#[cbor(map)]
+pub struct ListArgs {
+    #[n(0)]
+    pub count: Option<u64>,
+
+    #[n(1)]
+    pub order: Option<SortOrder>,
+
+    #[n(2)]
+    pub filter: Option<RangeBlockQuery>,
+}
+
+#[derive(Clone, Encode, Decode)]
+#[cbor(map)]
+pub struct ListReturns {
+    #[n(0)]
+    pub height: u64,
+
+    #[n(1)]
+    pub blocks: Vec<Block>,
+}
+
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
+#[cbor(map)]
+pub struct RequestArgs {
+    #[n(0)]
+    pub query: SingleTransactionQuery,
+}
+
+#[derive(Clone, Encode, Decode)]
+#[cbor(map)]
+pub struct RequestReturns {
+    #[n(0)]
+    pub request: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
+#[cbor(map)]
+pub struct ResponseArgs {
+    #[n(0)]
+    pub query: SingleTransactionQuery,
+}
+
+#[derive(Clone, Encode, Decode)]
+#[cbor(map)]
+pub struct ResponseReturns {
+    #[n(0)]
+    pub response: Vec<u8>,
+}
+
 #[many_module(name = BlockchainModule, id = 1, namespace = blockchain, many_modules_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait BlockchainModuleBackend: Send {
     fn info(&self) -> Result<InfoReturns, ManyError>;
     fn block(&self, args: BlockArgs) -> Result<BlockReturns, ManyError>;
     fn transaction(&self, args: TransactionArgs) -> Result<TransactionReturns, ManyError>;
+    fn list(&self, args: ListArgs) -> Result<ListReturns, ManyError>;
+    fn request(&self, args: RequestArgs) -> Result<RequestReturns, ManyError>;
+    fn response(&self, args: ResponseArgs) -> Result<ResponseReturns, ManyError>;
 }
 
 #[cfg(test)]

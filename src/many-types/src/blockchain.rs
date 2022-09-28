@@ -1,4 +1,4 @@
-use crate::Timestamp;
+use crate::{CborRange, Timestamp};
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 
@@ -156,4 +156,12 @@ impl<'d, C> Decode<'d, C> for SingleTransactionQuery {
 
         result
     }
+}
+
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+pub enum RangeBlockQuery {
+    #[n(1)]
+    Height(#[n(0)] CborRange<u64>),
+    #[n(2)]
+    Time(#[n(0)] CborRange<Timestamp>),
 }
