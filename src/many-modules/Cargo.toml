@@ -19,6 +19,7 @@ minicbor = { version = "0.18.0", features = ["derive"] }
 num-bigint = "0.4.3"
 strum = "0.24.1"
 strum_macros = "0.24.2"
+tracing = "0.1.36"
 
 [dev-dependencies]
 cbor-diag = "0.1.9"

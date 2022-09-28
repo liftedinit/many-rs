@@ -67,6 +67,10 @@ pub mod attributes {
                 }
             }
 
+            if !self.inner.is_empty() {
+                tracing::trace!("Resolved delegation from {} to {}", to, current_address);
+            }
+
             Ok(current_address)
         }
     }

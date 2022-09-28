@@ -1989,6 +1989,7 @@ dependencies = [
  "smol",
  "strum",
  "strum_macros",
+ "tracing",
 ]
 
 [[package]]
