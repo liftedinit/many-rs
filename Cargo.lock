@@ -2071,6 +2071,7 @@ dependencies = [
 name = "many-types"
 version = "0.1.0"
 dependencies = [
+ "cbor-diag",
  "coset",
  "fixed",
  "hex",

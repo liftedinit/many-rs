@@ -1,11 +1,10 @@
 use crate as module;
-use crate::account::features::multisig::Memo;
 use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
 use many_protocol::ResponseMessage;
 use many_types::ledger::{Symbol, TokenAmount};
-use many_types::{AttributeRelatedIndex, CborRange, Timestamp, VecOrSingle};
+use many_types::{AttributeRelatedIndex, CborRange, Memo, Timestamp, VecOrSingle};
 use minicbor::bytes::ByteVec;
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::BigUint;
@@ -749,10 +748,9 @@ mod test {
     }
 
     mod event_info {
-        use crate::account::features::multisig::Memo;
-
         use super::super::*;
         use many_identity::testing::identity;
+        use many_types::Memo;
         use proptest::prelude::*;
         use proptest::string::string_regex;
 
