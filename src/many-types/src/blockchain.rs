@@ -158,11 +158,51 @@ impl<'d, C> Decode<'d, C> for SingleTransactionQuery {
     }
 }
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-#[cbor(map)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RangeBlockQuery {
-    #[n(1)]
-    Height(#[n(0)] CborRange<u64>),
-    #[n(2)]
-    Time(#[n(0)] CborRange<Timestamp>),
+    Height(CborRange<u64>),
+    Time(CborRange<Timestamp>),
+}
+
+// ; A block query over a range of height or time. This cannot be a hash or
+// ; specific height (use `blockchain.block` for specific height/hash).
+// range-block-query =
+//     ; Height range.
+//     { 1 => range<uint> }
+//     ; Time value or time range.
+//     / { 2 => range<time> }
+impl<C> Encode<C> for RangeBlockQuery {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
+        match &self {
+            RangeBlockQuery::Height(range) => e.map(1)?.u8(1)?.encode(range)?,
+            RangeBlockQuery::Time(range) => e.map(1)?.u8(2)?.encode(range)?,
+        };
+        Ok(())
+    }
+}
+
+impl<'d, C> Decode<'d, C> for RangeBlockQuery {
+    fn decode(d: &mut Decoder<'d>, _: &mut C) -> Result<Self, decode::Error> {
+        let mut indefinite = false;
+        let key = match d.map()? {
+            None => {
+                indefinite = true;
+                d.u8()
+            }
+            Some(1) => d.u8(),
+            Some(_) => Err(decode::Error::message("Invalid key for range block query.")),
+        }?;
+
+        let result = match key {
+            1 => Ok(RangeBlockQuery::Height(d.decode()?)),
+            2 => Ok(RangeBlockQuery::Time(d.decode()?)),
+            x => Err(decode::Error::unknown_variant(u32::from(x))),
+        };
+
+        if indefinite {
+            d.skip()?;
+        }
+
+        result
+    }
 }
