@@ -505,7 +505,7 @@ async fn main() {
                 let mock_server = ManyMockServer::new(mockfile, None, key);
                 many_locked.set_fallback_module(mock_server);
             }
-            HttpServer::new(many).bind(o.addr).unwrap();
+            HttpServer::new(many).bind(o.addr).await.unwrap();
         }
         SubCommand::GetTokenId(o) => {
             let client = ManyClient::new(o.server, Address::anonymous(), AnonymousIdentity)

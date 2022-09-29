@@ -7,14 +7,17 @@ use mockall::{automock, predicate::*};
 
 pub mod get;
 pub mod info;
+pub mod query;
 pub use get::*;
 pub use info::*;
+pub use query::*;
 
 #[many_module(name = KvStoreModule, id = 3, namespace = kvstore, many_modules_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait KvStoreModuleBackend: Send {
     fn info(&self, sender: &Address, args: InfoArg) -> Result<InfoReturns, ManyError>;
     fn get(&self, sender: &Address, args: GetArgs) -> Result<GetReturns, ManyError>;
+    fn query(&self, sender: &Address, args: QueryArgs) -> Result<QueryReturns, ManyError>;
 }
 
 #[cfg(test)]
@@ -64,5 +67,31 @@ mod tests {
         .unwrap();
 
         assert_eq!(get_returns.value, Some(ByteVec::from(vec![1, 2, 3, 4])));
+    }
+
+    #[test]
+    fn query() {
+        let data = QueryArgs {
+            key: ByteVec::from(vec![5, 6, 7]),
+        };
+        let mut mock = MockKvStoreModuleBackend::new();
+        mock.expect_query()
+            .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
+            .times(1)
+            .returning(|_id, _args| {
+                Ok(QueryReturns {
+                    owner: Some(identity(666)),
+                    disabled: None,
+                })
+            });
+        let module = super::KvStoreModule::new(Arc::new(Mutex::new(mock)));
+
+        let query_returns: QueryReturns = minicbor::decode(
+            &call_module_cbor(1, &module, "kvstore.query", minicbor::to_vec(data).unwrap())
+                .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(query_returns.owner, identity(666));
     }
 }

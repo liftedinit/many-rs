@@ -3,7 +3,6 @@ use std::{
     convert::Infallible,
     path::Path,
     sync::{atomic::AtomicBool, Arc},
-    thread,
 };
 
 use async_trait::async_trait;
@@ -52,8 +51,8 @@ impl cucumber::World for World {
         let mut server = HttpServer::new(many);
 
         let finish_server = server.term_signal();
-        thread::spawn(move || {
-            server.bind("0.0.0.0:8000").unwrap();
+        tokio::task::spawn(async move {
+            server.bind("0.0.0.0:8000").await.unwrap();
         });
 
         let address = Address::anonymous();

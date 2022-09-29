@@ -1,5 +1,6 @@
 pub mod base;
 pub mod blockchain;
+pub mod blocking;
 pub mod ledger;
 
 pub use ledger::LedgerClient;
