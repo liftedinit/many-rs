@@ -159,6 +159,7 @@ impl<'d, C> Decode<'d, C> for SingleTransactionQuery {
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[cbor(map)]
 pub enum RangeBlockQuery {
     #[n(1)]
     Height(#[n(0)] CborRange<u64>),
