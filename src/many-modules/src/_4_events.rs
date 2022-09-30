@@ -1,11 +1,10 @@
 use crate as module;
-use crate::account::features::multisig::{Data, Memo};
-use many_error::ManyError;
+use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
 use many_protocol::ResponseMessage;
 use many_types::ledger::{Symbol, TokenAmount};
-use many_types::{AttributeRelatedIndex, CborRange, Timestamp, VecOrSingle};
+use many_types::{AttributeRelatedIndex, CborRange, Memo, Timestamp, VecOrSingle};
 use minicbor::bytes::ByteVec;
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::BigUint;
@@ -479,6 +478,16 @@ define_event! {
         3     | symbol:                 Symbol                                 [ symbol ],
         4     | amount:                 TokenAmount,
     },
+    [7, 0]      KvStorePut (module::kvstore::PutArgs) {
+        1     | key:                    ByteVec,
+        2     | value:                  ByteVec,
+        3     | owner:                  Option<Address>                        [ id_non_null ],
+    },
+    [7, 1]      KvStoreDisable (module::kvstore::DisableArgs) {
+        1     | key:                    ByteVec,
+        2     | owner:                  Option<Address>                        [ id_non_null ],
+        3     | reason:                 Option<Reason<u64>> ,
+    },
     [9, 0]      AccountCreate (module::account::CreateArgs) {
         1     | account:                Address                                [ id ],
         2     | description:            Option<String>,
@@ -508,13 +517,12 @@ define_event! {
     [9, 1, 0]   AccountMultisigSubmit (module::account::features::multisig::SubmitTransactionArgs) {
         1     | submitter:              Address                                [ id ],
         2     | account:                Address                                [ id ],
-        3     | memo:                   Option<Memo<String>>,
+        3     | memo:                   Option<Memo>,
         4     | transaction:            Box<AccountMultisigTransaction>        [ inner ],
         5     | token:                  Option<ByteVec>,
         6     | threshold:              u64,
         7     | timeout:                Timestamp,
         8     | execute_automatically:  bool,
-        9     | data:                   Option<Data>,
     },
     [9, 1, 1]   AccountMultisigApprove (module::account::features::multisig::ApproveArgs) {
         1     | account:                Address                                [ id ],
@@ -740,18 +748,13 @@ mod test {
     }
 
     mod event_info {
-        use crate::account::features::multisig::Memo;
-
         use super::super::*;
         use many_identity::testing::identity;
+        use many_types::Memo;
         use proptest::prelude::*;
         use proptest::string::string_regex;
 
-        fn _create_event_info(
-            memo: Memo<String>,
-            data: Data,
-            transaction: AccountMultisigTransaction,
-        ) -> EventInfo {
+        fn _create_event_info(memo: Memo, transaction: AccountMultisigTransaction) -> EventInfo {
             EventInfo::AccountMultisigSubmit {
                 submitter: identity(0),
                 account: identity(1),
@@ -761,7 +764,6 @@ mod test {
                 threshold: 1,
                 timeout: Timestamp::now(),
                 execute_automatically: false,
-                data: Some(data),
             }
         }
 
@@ -775,7 +777,7 @@ mod test {
         proptest! {
             #[test]
             fn huge_memo(memo in string_regex("[A-Za-z0-9\\., ]{4001,5000}").unwrap()) {
-                let memo: Option<Memo<String>> = memo.try_into().ok();
+                let memo: Option<Memo> = memo.try_into().ok();
                 assert!(memo.is_none());
             }
 
@@ -783,7 +785,7 @@ mod test {
             fn submit_send(memo in string_regex("[A-Za-z0-9\\., ]{0,4000}").unwrap(), amount: u64) {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::Send(module::ledger::SendArgs {
+                    _create_event_info(memo, AccountMultisigTransaction::Send(module::ledger::SendArgs {
                         from: Some(identity(2)),
                         to: identity(3),
                         symbol: identity(4),
@@ -797,7 +799,7 @@ mod test {
                 let memo = memo.try_into().unwrap();
                 let memo2 = memo2.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![].try_into().unwrap(),
+                    _create_event_info(memo,
                         AccountMultisigTransaction::AccountMultisigSubmit(
                             module::account::features::multisig::SubmitTransactionArgs {
                                 account: identity(2),
@@ -811,7 +813,6 @@ mod test {
                                 threshold: None,
                                 timeout_in_secs: None,
                                 execute_automatically: None,
-                                data: None,
                             }
                         )
                     )
@@ -822,7 +823,7 @@ mod test {
             fn submit_set_defaults(memo in string_regex("[A-Za-z0-9\\., ]{0,4000}").unwrap()) {
                 let memo = memo.try_into().unwrap();
                 _assert_serde(
-                    _create_event_info(memo, vec![].try_into().unwrap(), AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
+                    _create_event_info(memo, AccountMultisigTransaction::AccountMultisigSetDefaults(module::account::features::multisig::SetDefaultsArgs {
                         account: identity(2),
                         threshold: Some(2),
                         timeout_in_secs: None,

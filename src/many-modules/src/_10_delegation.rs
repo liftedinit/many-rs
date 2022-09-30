@@ -56,9 +56,11 @@ pub mod attributes {
             now: Timestamp,
         ) -> Result<Address, ManyError> {
             let mut current_address = to;
-            for envelope in &self.inner {
+            let mut it = self.inner.iter().peekable();
+            while let Some(envelope) = it.next() {
+                let is_last = it.peek().is_none();
                 let cert = many_types::delegation::Certificate::decode_and_verify(
-                    envelope, verifier, now,
+                    envelope, verifier, now, is_last,
                 )?;
                 if cert.to == current_address {
                     current_address = cert.from;

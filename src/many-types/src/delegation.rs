@@ -1,11 +1,11 @@
-use crate::Timestamp;
+use crate::{Memo, Timestamp};
 use coset::{CoseSign1, CoseSign1Builder};
 use many_error::ManyError;
 use many_identity::{Address, Identity, Verifier};
 use minicbor::{Decode, Encode};
 
 /// A delegation certificate.
-#[derive(Debug, Encode, Decode, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct Certificate {
     /// The address of the delegated identity (`Alice` in the example).
@@ -20,9 +20,12 @@ pub struct Certificate {
     /// invalid and the server MUST return an error without opening the envelope further.
     #[n(2)]
     pub expiration: Timestamp,
-    // TODO: uncomment this when PR #201 is in.
-    // #[n(3)]
-    // memo: Option<Memo>,
+
+    #[n(3)]
+    pub memo: Option<Memo>,
+
+    #[n(4)]
+    pub r#final: Option<bool>,
 }
 
 impl Certificate {
@@ -31,7 +34,20 @@ impl Certificate {
             from,
             to,
             expiration,
+            memo: None,
+            r#final: None,
         }
+    }
+
+    pub fn with_final(self, v: bool) -> Self {
+        Self {
+            r#final: if v { Some(true) } else { None },
+            ..self
+        }
+    }
+
+    pub fn is_final(&self) -> bool {
+        self.r#final == Some(true)
     }
 
     pub fn sign(&self, id: &impl Identity) -> Result<CoseSign1, ManyError> {
@@ -51,6 +67,7 @@ impl Certificate {
         envelope: &CoseSign1,
         verifier: &impl Verifier,
         now: Timestamp,
+        is_last: bool,
     ) -> Result<Self, ManyError> {
         let from = verifier.verify_1(envelope)?;
         let payload = envelope
@@ -65,6 +82,9 @@ impl Certificate {
         }
         if certificate.expiration <= now {
             return Err(ManyError::unknown("Delegation certificate expired."));
+        }
+        if certificate.is_final() && !is_last {
+            return Err(ManyError::unknown("Delegation certificate is final."));
         }
 
         Ok(certificate)
@@ -89,7 +109,24 @@ mod tests {
         let certificate = Certificate::new(id1.address(), id2.address(), now + 1000);
 
         let envelope = certificate.sign(&id1).unwrap();
-        let result = Certificate::decode_and_verify(&envelope, &CoseKeyVerifier, Timestamp::now());
+        let result =
+            Certificate::decode_and_verify(&envelope, &CoseKeyVerifier, Timestamp::now(), true);
+
+        assert_eq!(result, Ok(certificate));
+    }
+
+    #[test]
+    fn valid_final() {
+        let id1 = generate_random_ed25519_identity();
+        let id2 = generate_random_ed25519_identity();
+
+        let now = Timestamp::now();
+        let mut certificate = Certificate::new(id1.address(), id2.address(), now + 1000);
+        certificate.r#final = Some(true);
+
+        let envelope = certificate.sign(&id1).unwrap();
+        let result =
+            Certificate::decode_and_verify(&envelope, &CoseKeyVerifier, Timestamp::now(), true);
 
         assert_eq!(result, Ok(certificate));
     }
@@ -103,7 +140,8 @@ mod tests {
         let certificate = Certificate::new(id1.address(), id2.address(), now);
 
         let envelope = certificate.sign(&id1).unwrap();
-        let result = Certificate::decode_and_verify(&envelope, &CoseKeyVerifier, Timestamp::now());
+        let result =
+            Certificate::decode_and_verify(&envelope, &CoseKeyVerifier, Timestamp::now(), true);
 
         assert!(result.is_err());
     }
@@ -132,7 +170,28 @@ mod tests {
             .build();
         let envelope = id1.sign_1(cose_sign_1).unwrap();
 
-        let result = Certificate::decode_and_verify(&envelope, &CoseKeyVerifier, Timestamp::now());
+        let result =
+            Certificate::decode_and_verify(&envelope, &CoseKeyVerifier, Timestamp::now(), true);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invalid_final() {
+        let id1 = generate_random_ed25519_identity();
+        let id2 = generate_random_ed25519_identity();
+
+        let now = Timestamp::now();
+        let mut certificate = Certificate::new(AnonymousIdentity.address(), id2.address(), now);
+        certificate.r#final = Some(true);
+
+        // Create envelope using the wrong signing identity.
+        let cose_sign_1 = CoseSign1Builder::new()
+            .payload(minicbor::to_vec(certificate).unwrap())
+            .build();
+        let envelope = id1.sign_1(cose_sign_1).unwrap();
+
+        let result =
+            Certificate::decode_and_verify(&envelope, &CoseKeyVerifier, Timestamp::now(), false);
         assert!(result.is_err());
     }
 }
