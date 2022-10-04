@@ -128,7 +128,7 @@ impl From<EventId> for Vec<u8> {
     }
 }
 
-#[derive(Clone, Debug, Default, Encode, Decode, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Encode, Decode, PartialEq)]
 #[cbor(map)]
 pub struct EventFilter {
     #[n(0)]
