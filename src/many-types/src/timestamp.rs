@@ -138,6 +138,16 @@ fn timestamp_encode_decode_works() {
 }
 
 #[test]
+fn timestamp_now() {
+    let timestamp = Timestamp::now();
+    let encoded = minicbor::to_vec(timestamp).unwrap();
+    let decoded: Timestamp = minicbor::decode(&encoded).unwrap();
+    // The conversion to and from f64 might change the nanos value,
+    // but seconds should be pretty stable
+    assert_eq!(decoded.as_secs(), timestamp.as_secs());
+}
+
+#[test]
 fn timestamp_big_ranges() {
     let max_duration = std::time::Duration::MAX;
     let timestamp =
