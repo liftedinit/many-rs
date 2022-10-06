@@ -94,7 +94,7 @@ pub struct RequestArgs {
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct RequestReturns {
-    #[n(0)]
+    #[cbor(n(0), with = "minicbor::bytes")]
     pub request: Vec<u8>,
 }
 
@@ -108,7 +108,7 @@ pub struct ResponseArgs {
 #[derive(Clone, Encode, Decode)]
 #[cbor(map)]
 pub struct ResponseReturns {
-    #[n(0)]
+    #[cbor(n(0), with = "minicbor::bytes")]
     pub response: Vec<u8>,
 }
 
