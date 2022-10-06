@@ -1,10 +1,7 @@
 use many_error::ManyError;
-use minicbor::{
-    data::{Tag, Type},
-    decode,
-    encode::{self, Write},
-    Decode, Decoder, Encode, Encoder,
-};
+use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
+use minicbor::data::{Tag, Type};
+use minicbor::encode::Write;
 
 /// NOTE: DO NOT ADD Default TO THIS TYPE.
 #[repr(C)]
