@@ -82,10 +82,14 @@ impl<'b, C, const M: usize> Decode<'b, C> for MemoInner<M> {
 /// type that requires meta information.
 #[derive(Clone, Debug, PartialOrd, Eq, PartialEq)]
 pub struct Memo<const MAX_LENGTH: usize = MEMO_DATA_DEFAULT_MAX_SIZE> {
+    /// This has an invariant that the vector should never be empty. This is verified by being
+    /// impossible to create an empty memo using methods or `From`/`TryFrom`s, and also during
+    /// decoding of the Memo.
     inner: Vec<MemoInner<MAX_LENGTH>>,
 }
 
 impl<const M: usize> Memo<M> {
+    /// Adds a string at the end.
     pub fn push_str(&mut self, str: String) -> Result<(), ManyError> {
         self.inner.push(MemoInner::<M>::try_from(str)?);
         Ok(())
@@ -96,6 +100,7 @@ impl<const M: usize> Memo<M> {
         Ok(())
     }
 
+    /// Returns an iterator over all strings of the memo.
     pub fn iter_str(&self) -> impl Iterator<Item = &String> {
         self.inner.iter().filter_map(|inner| match inner {
             MemoInner::String(s) => Some(s),
@@ -103,6 +108,7 @@ impl<const M: usize> Memo<M> {
         })
     }
 
+    /// Returns an iterator over all bytestrings of the memo.
     pub fn iter_bytes(&self) -> impl Iterator<Item = &[u8]> {
         self.inner.iter().filter_map(|inner| match inner {
             MemoInner::String(_) => None,
@@ -121,12 +127,7 @@ impl<const M: usize> TryFrom<Either<String, ByteVec>> for Memo<M> {
     type Error = ManyError;
 
     fn try_from(s: Either<String, ByteVec>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            inner: vec![match s {
-                Either::Left(str) => MemoInner::String(str),
-                Either::Right(bstr) => MemoInner::ByteString(bstr),
-            }],
-        })
+        Ok(Self::from(MemoInner::<M>::try_from(s)?))
     }
 }
 
