@@ -321,4 +321,43 @@ mod tests {
         let memo = minicbor::decode::<Memo>(&cbor_bytes).unwrap();
         assert_eq!(memo.iter_bytes().next(), Some(bytes.as_slice()));
     }
+
+    #[test]
+    fn backward_compatibility_empty_str() {
+        let data = String::new();
+        let cbor = format!(r#" "{data}" "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        let memo = minicbor::decode::<Memo>(&bytes).unwrap();
+        assert_eq!(memo.iter_str().next(), Some(&data));
+    }
+
+    #[test]
+    fn backward_compatibility_empty_bytes() {
+        let bytes = Vec::new();
+        let data = hex::encode(&bytes);
+        let cbor = format!(r#" h'{data}' "#);
+        let cbor_bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        let memo = minicbor::decode::<Memo>(&cbor_bytes).unwrap();
+        assert_eq!(memo.iter_bytes().next(), Some(bytes.as_slice()));
+    }
+
+    #[test]
+    fn mixed_iterators() {
+        let cbor = format!(r#" [ "1", h'02', "3", h'04', h'05', "6", "7", "8", h'09' ] "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        let memo = minicbor::decode::<Memo>(&bytes).unwrap();
+        assert_eq!(
+            memo.iter_str().collect::<Vec<&String>>(),
+            &["1", "3", "6", "7", "8"]
+        );
+        assert_eq!(
+            memo.iter_bytes()
+                .map(|b| hex::encode(b).to_string())
+                .collect::<Vec<String>>(),
+            &["02", "04", "05", "09"]
+        );
+    }
 }
