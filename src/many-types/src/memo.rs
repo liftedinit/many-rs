@@ -176,11 +176,14 @@ impl<'b, C, const M: usize> Decode<'b, C> for Memo<M> {
             _ => {}
         }
 
-        Ok(Self {
-            inner: d
-                .array_iter_with(ctx)?
-                .collect::<Result<Vec<MemoInner<M>>, _>>()?,
-        })
+        let inner = d
+            .array_iter_with(ctx)?
+            .collect::<Result<Vec<MemoInner<M>>, _>>()?;
+        if inner.is_empty() {
+            Err(decode::Error::message("Cannot build empty Memo."))
+        } else {
+            Ok(Self { inner })
+        }
     }
 }
 
@@ -217,7 +220,6 @@ mod tests {
                 assert!(result.is_err());
             }
         }
-
     }
 
     #[test]
@@ -233,6 +235,14 @@ mod tests {
     fn memo_decode_too_large() {
         let data = String::from_utf8(vec![b'A'; MEMO_DATA_DEFAULT_MAX_SIZE + 1]).unwrap();
         let cbor = format!(r#" [ "{data}" ] "#);
+        let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
+
+        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+    }
+
+    #[test]
+    fn memo_decode_empty() {
+        let cbor = " [] ";
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
         assert!(minicbor::decode::<Memo>(&bytes).is_err());
