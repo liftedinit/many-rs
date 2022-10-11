@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn mixed_iterators() {
-        let cbor = format!(r#" [ "1", h'02', "3", h'04', h'05', "6", "7", "8", h'09' ] "#);
+        let cbor = r#" [ "1", h'02', "3", h'04', h'05', "6", "7", "8", h'09' ] "#.to_string();
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
         let memo = minicbor::decode::<Memo>(&bytes).unwrap();
@@ -354,9 +354,7 @@ mod tests {
             &["1", "3", "6", "7", "8"]
         );
         assert_eq!(
-            memo.iter_bytes()
-                .map(|b| hex::encode(b).to_string())
-                .collect::<Vec<String>>(),
+            memo.iter_bytes().map(hex::encode).collect::<Vec<String>>(),
             &["02", "04", "05", "09"]
         );
     }
