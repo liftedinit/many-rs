@@ -203,25 +203,15 @@ impl<'b, C> Decode<'b, C> for StatusReturn {
                 Some(result) => {
                     let cose =
                         CoseSign1::from_slice(result).map_err(minicbor::decode::Error::message)?;
-                    let _response = ResponseMessage::from_bytes(
-                        cose.payload
-                            .as_ref()
-                            .ok_or_else(|| {
-                                minicbor::decode::Error::message(
-                                    "CoseSign1 payload must contain a ResponseMessage.",
-                                )
-                            })
-                            .map_err(|_| {
-                                minicbor::decode::Error::message(
-                                    "Invalid result type, expected CoseSign1.",
-                                )
-                            })?,
-                    )
-                    .map_err(|_| {
-                        minicbor::decode::Error::message(
-                            "Invalid result payload type, expected ResponseMessage.",
-                        )
-                    })?;
+                    let _response =
+                        ResponseMessage::from_bytes(cose.payload.as_ref().ok_or_else(|| {
+                            minicbor::decode::Error::message("Empty payload, expected CoseSign1.")
+                        })?)
+                        .map_err(|_| {
+                            minicbor::decode::Error::message(
+                                "Invalid envelope payload type, expected ResponseMessage.",
+                            )
+                        })?;
                     Some(cose)
                 }
                 _ => None,
