@@ -283,15 +283,10 @@ impl<'b> Decode<'b, EventFilterAttributeSpecificIndex> for EventFilterAttributeS
         d: &mut Decoder<'b>,
         ctx: &mut EventFilterAttributeSpecificIndex,
     ) -> Result<Self, minicbor::decode::Error> {
-        let state_key = EventFilterAttributeSpecificIndex::MultisigTransactionState;
-
-        if ctx == &state_key {
-            Ok(Self::MultisigTransactionState(d.decode()?))
-        } else {
-            Err(minicbor::decode::Error::message(format!(
-                "Unknown key {:?}",
-                ctx
-            )))
+        match ctx {
+            EventFilterAttributeSpecificIndex::MultisigTransactionState => {
+                Ok(Self::MultisigTransactionState(d.decode()?))
+            }
         }
     }
 }
