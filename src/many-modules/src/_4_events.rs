@@ -215,7 +215,7 @@ impl<'b, C> Decode<'b, C> for EventFilter {
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum EventsFilterAttributeSpecific {
-    MultisigTransactionState(MultisigTransactionState),
+    MultisigTransactionState(VecOrSingle<MultisigTransactionState>),
 }
 
 impl<C> Encode<C> for EventsFilterAttributeSpecific {
@@ -1033,9 +1033,10 @@ f756e742077697468204944207b69647d20756e6b6e6f776e2e02a162696478326d61666\
     #[test]
     fn encode_decode_event_filter() {
         let state_key = AttributeRelatedIndex::new(9).with_index(1).with_index(0);
-        let pending_state = EventsFilterAttributeSpecific::MultisigTransactionState(
-            MultisigTransactionState::Pending,
-        );
+        let pending_state =
+            EventsFilterAttributeSpecific::MultisigTransactionState(VecOrSingle(vec![
+                MultisigTransactionState::Pending,
+            ]));
         let event_filter = EventFilter {
             account: None,
             kind: None,
