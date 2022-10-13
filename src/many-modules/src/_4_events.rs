@@ -141,7 +141,7 @@ pub struct EventFilter {
     pub date_range: Option<CborRange<Timestamp>>,
 
     pub events_filter_attribute_specific:
-        BTreeMap<AttributeRelatedIndex, EventsFilterAttributeSpecific>,
+        BTreeMap<EventFilterAttributeSpecificIndex, EventFilterAttributeSpecific>,
 }
 
 impl<C> Encode<C> for EventFilter {
@@ -196,7 +196,7 @@ impl<'b, C> Decode<'b, C> for EventFilter {
                     }
                 }
                 Type::Array => {
-                    let mut key: AttributeRelatedIndex = d.decode()?;
+                    let mut key: EventFilterAttributeSpecificIndex = d.decode()?;
                     events_filter_attribute_specific.insert(key, d.decode_with(&mut key)?);
                 }
                 t => return Err(minicbor::decode::Error::message(format!("Unknown key {t}"))),
@@ -213,30 +213,77 @@ impl<'b, C> Decode<'b, C> for EventFilter {
     }
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Ord, PartialOrd)]
+pub enum EventFilterAttributeSpecificIndex {
+    MultisigTransactionState,
+}
+
+impl From<EventFilterAttributeSpecificIndex> for AttributeRelatedIndex {
+    fn from(idx: EventFilterAttributeSpecificIndex) -> Self {
+        match idx {
+            EventFilterAttributeSpecificIndex::MultisigTransactionState => {
+                Self::new(9).with_index(1).with_index(0)
+            }
+        }
+    }
+}
+
+impl TryFrom<AttributeRelatedIndex> for EventFilterAttributeSpecificIndex {
+    type Error = minicbor::decode::Error;
+    fn try_from(idx: AttributeRelatedIndex) -> Result<Self, Self::Error> {
+        if idx == AttributeRelatedIndex::new(9).with_index(1).with_index(0) {
+            return Ok(EventFilterAttributeSpecificIndex::MultisigTransactionState);
+        }
+        Err(minicbor::decode::Error::message(format!(
+            "Unknown variant {:?}",
+            idx
+        )))
+    }
+}
+
+impl<C> Encode<C> for EventFilterAttributeSpecificIndex {
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), encode::Error<W::Error>> {
+        let a: AttributeRelatedIndex = (*self).into();
+        e.encode(a)?;
+        Ok(())
+    }
+}
+
+impl<'b, C> Decode<'b, C> for EventFilterAttributeSpecificIndex {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
+        let a: AttributeRelatedIndex = d.decode()?;
+        a.try_into()
+    }
+}
+
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub enum EventsFilterAttributeSpecific {
+pub enum EventFilterAttributeSpecific {
     MultisigTransactionState(VecOrSingle<MultisigTransactionState>),
 }
 
-impl<C> Encode<C> for EventsFilterAttributeSpecific {
+impl<C> Encode<C> for EventFilterAttributeSpecific {
     fn encode<W: encode::Write>(
         &self,
         e: &mut Encoder<W>,
         _: &mut C,
     ) -> Result<(), encode::Error<W::Error>> {
         match self {
-            EventsFilterAttributeSpecific::MultisigTransactionState(state) => e.encode(state),
+            EventFilterAttributeSpecific::MultisigTransactionState(state) => e.encode(state),
         }
         .map(|_| ())
     }
 }
 
-impl<'b> Decode<'b, AttributeRelatedIndex> for EventsFilterAttributeSpecific {
+impl<'b> Decode<'b, EventFilterAttributeSpecificIndex> for EventFilterAttributeSpecific {
     fn decode(
         d: &mut Decoder<'b>,
-        ctx: &mut AttributeRelatedIndex,
+        ctx: &mut EventFilterAttributeSpecificIndex,
     ) -> Result<Self, minicbor::decode::Error> {
-        let state_key = AttributeRelatedIndex::new(9).with_index(1).with_index(0);
+        let state_key = EventFilterAttributeSpecificIndex::MultisigTransactionState;
 
         if ctx == &state_key {
             Ok(Self::MultisigTransactionState(d.decode()?))
@@ -1032,9 +1079,9 @@ f756e742077697468204944207b69647d20756e6b6e6f776e2e02a162696478326d61666\
 
     #[test]
     fn encode_decode_event_filter() {
-        let state_key = AttributeRelatedIndex::new(9).with_index(1).with_index(0);
+        let state_key = EventFilterAttributeSpecificIndex::MultisigTransactionState;
         let pending_state =
-            EventsFilterAttributeSpecific::MultisigTransactionState(VecOrSingle(vec![
+            EventFilterAttributeSpecific::MultisigTransactionState(VecOrSingle(vec![
                 MultisigTransactionState::Pending,
             ]));
         let event_filter = EventFilter {
