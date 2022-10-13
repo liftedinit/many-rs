@@ -170,6 +170,8 @@ impl<C> Encode<C> for EventFilter {
 
 impl<'b, C> Decode<'b, C> for EventFilter {
     fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
+        use minicbor::decode::Error;
+
         let len = d.map()?;
         let mut account = None;
         let mut kind = None;
@@ -188,18 +190,14 @@ impl<'b, C> Decode<'b, C> for EventFilter {
                         2 => symbol = d.decode()?,
                         3 => id_range = d.decode()?,
                         4 => date_range = d.decode()?,
-                        i => {
-                            return Err(minicbor::decode::Error::message(format!(
-                                "Unknown key {i}"
-                            )))
-                        }
+                        i => return Err(Error::message(format!("Unknown key {i}"))),
                     }
                 }
                 Type::Array => {
                     let mut key: EventFilterAttributeSpecificIndex = d.decode()?;
                     events_filter_attribute_specific.insert(key, d.decode_with(&mut key)?);
                 }
-                t => return Err(minicbor::decode::Error::message(format!("Unknown key {t}"))),
+                t => return Err(Error::type_mismatch(t)),
             }
         }
         Ok(EventFilter {
@@ -234,10 +232,7 @@ impl TryFrom<AttributeRelatedIndex> for EventFilterAttributeSpecificIndex {
         if idx == AttributeRelatedIndex::new(9).with_index(1).with_index(0) {
             return Ok(EventFilterAttributeSpecificIndex::MultisigTransactionState);
         }
-        Err(minicbor::decode::Error::message(format!(
-            "Unknown variant {:?}",
-            idx
-        )))
+        Err(Self::Error::message(format!("Unknown variant {:?}", idx)))
     }
 }
 
