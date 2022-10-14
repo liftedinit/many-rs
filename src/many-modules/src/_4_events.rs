@@ -211,6 +211,7 @@ impl<'b, C> Decode<'b, C> for EventFilter {
     }
 }
 
+// TODO refactor to a trait object
 #[derive(Clone, Copy, Eq, PartialEq, Debug, Ord, PartialOrd)]
 pub enum EventFilterAttributeSpecificIndex {
     MultisigTransactionState,
@@ -255,6 +256,7 @@ impl<'b, C> Decode<'b, C> for EventFilterAttributeSpecificIndex {
     }
 }
 
+// TODO refactor to a trait object
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum EventFilterAttributeSpecific {
     MultisigTransactionState(VecOrSingle<MultisigTransactionState>),
