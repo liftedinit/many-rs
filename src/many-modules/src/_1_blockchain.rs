@@ -128,7 +128,7 @@ mod tests {
     use super::*;
     use crate::testutils::{call_module, call_module_cbor};
     use many_types::blockchain::TransactionIdentifier;
-    use many_types::Timestamp;
+    use many_types::{CborRange, Timestamp};
     use mockall::predicate;
     use std::sync::{Arc, Mutex};
 
@@ -278,5 +278,115 @@ mod tests {
 
         assert_eq!(transaction_returns.txn.id.hash, vec![6u8; 8]);
         assert_eq!(transaction_returns.txn.content, None);
+    }
+
+    #[test]
+    fn list() {
+        let data = ListArgs {
+            count: None,
+            order: None,
+            filter: Some(RangeBlockQuery::Height(CborRange::default())),
+        };
+        let blocks = vec![Block {
+            id: BlockIdentifier {
+                hash: vec![1, 0],
+                height: 1,
+            },
+            parent: BlockIdentifier {
+                hash: vec![],
+                height: 0,
+            },
+            app_hash: Some(vec![2, 3, 4]),
+            timestamp: Timestamp::now(),
+            txs_count: 0,
+            txs: vec![],
+        }];
+        let blocks2 = blocks.clone();
+        let mut mock = MockBlockchainModuleBackend::new();
+        mock.expect_list()
+            .with(predicate::eq(data.clone()))
+            .times(1)
+            .returning(move |args| match args.filter {
+                Some(RangeBlockQuery::Height(_)) => Ok(ListReturns {
+                    height: 1,
+                    blocks: blocks.clone(),
+                }),
+                _ => unimplemented!(),
+            });
+        let module = super::BlockchainModule::new(Arc::new(Mutex::new(mock)));
+
+        let list_returns: ListReturns = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "blockchain.list",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(list_returns.height, 1);
+        assert_eq!(list_returns.blocks, blocks2);
+    }
+
+    #[test]
+    fn request() {
+        let data = RequestArgs {
+            query: SingleTransactionQuery::Hash(vec![0, 1, 2, 3]),
+        };
+        let mut mock = MockBlockchainModuleBackend::new();
+        mock.expect_request()
+            .with(predicate::eq(data.clone()))
+            .times(1)
+            .returning(|_args| {
+                Ok(RequestReturns {
+                    request: vec![3, 2, 1, 0],
+                })
+            });
+        let module = super::BlockchainModule::new(Arc::new(Mutex::new(mock)));
+
+        let request_returns: RequestReturns = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "blockchain.request",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(request_returns.request, vec![3, 2, 1, 0]);
+    }
+
+    #[test]
+    fn response() {
+        let data = ResponseArgs {
+            query: SingleTransactionQuery::Hash(vec![6, 7, 8, 9]),
+        };
+        let mut mock = MockBlockchainModuleBackend::new();
+        mock.expect_response()
+            .with(predicate::eq(data.clone()))
+            .times(1)
+            .returning(|_args| {
+                Ok(ResponseReturns {
+                    response: vec![9, 8, 7, 6],
+                })
+            });
+        let module = super::BlockchainModule::new(Arc::new(Mutex::new(mock)));
+
+        let response_returns: ResponseReturns = minicbor::decode(
+            &call_module_cbor(
+                1,
+                &module,
+                "blockchain.response",
+                minicbor::to_vec(data).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(response_returns.response, vec![9, 8, 7, 6]);
     }
 }
