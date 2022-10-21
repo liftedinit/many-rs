@@ -230,7 +230,11 @@ async fn show_response<'a>(
                 match status {
                     StatusReturn::Done { response } => {
                         progress(".", true);
-                        return show_response(&*response, client, r#async).await;
+                        let response: ResponseMessage =
+                            minicbor::decode(&response.payload.ok_or_else(|| {
+                                anyhow!("Envelope with empty payload. Expected ResponseMessage")
+                            })?)?;
+                        return show_response(&response, client, r#async).await;
                     }
                     StatusReturn::Expired => {
                         progress(".", true);
