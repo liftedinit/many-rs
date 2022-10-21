@@ -1972,7 +1972,6 @@ dependencies = [
  "many-identity",
  "many-identity-dsa",
  "many-macros",
- "many-protocol",
  "many-types",
  "minicbor",
  "mockall",
