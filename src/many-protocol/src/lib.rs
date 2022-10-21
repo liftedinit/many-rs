@@ -9,7 +9,7 @@ pub mod response;
 pub use request::{RequestMessage, RequestMessageBuilder};
 pub use response::{ResponseMessage, ResponseMessageBuilder};
 
-pub type ManyUrl = reqwest::Url;
+pub type ManyUrl = url::Url;
 
 pub fn decode_request_from_cose_sign1(
     envelope: &CoseSign1,
