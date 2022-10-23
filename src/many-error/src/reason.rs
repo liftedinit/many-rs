@@ -31,8 +31,28 @@ impl<T> Reason<T> {
     }
 
     #[inline]
+    pub fn set_code(&mut self, code: T) {
+        self.code = code;
+    }
+
+    #[inline]
     pub fn message(&self) -> Option<&str> {
         self.message.as_deref()
+    }
+
+    #[inline]
+    pub fn set_message(&mut self, message: Option<String>) {
+        self.message = message;
+    }
+
+    #[inline]
+    pub fn add_argument(&mut self, key: String, value: String) {
+        self.arguments.insert(key, value);
+    }
+
+    #[inline]
+    pub fn remove_argument(&mut self, key: &String) {
+        self.arguments.remove(key);
     }
 
     #[inline]

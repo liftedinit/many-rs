@@ -239,6 +239,11 @@ impl ManyError {
     }
 
     #[inline]
+    pub fn set_message(&mut self, message: Option<String>) {
+        self.0.set_message(message)
+    }
+
+    #[inline]
     pub fn argument<S: AsRef<str>>(&self, field: S) -> Option<&str> {
         self.0.argument(field)
     }
