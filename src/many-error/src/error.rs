@@ -254,6 +254,11 @@ impl ManyError {
     }
 
     #[inline]
+    pub fn add_argument(&mut self, key: String, value: String) {
+        self.0.add_argument(key, value);
+    }
+
+    #[inline]
     pub const fn is_attribute_specific(&self) -> bool {
         self.code().is_attribute_specific()
     }
