@@ -30,6 +30,8 @@ pub enum Role {
     CanLedgerTransact,
     CanMultisigSubmit,
     CanMultisigApprove,
+    CanKvStorePut,
+    CanKvStoreDisable,
 }
 
 impl PartialEq<&str> for Role {

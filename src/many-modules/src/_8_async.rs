@@ -1,4 +1,5 @@
 use crate::ResponseMessage;
+use coset::{CborSerializable, CoseSign1};
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
@@ -116,7 +117,7 @@ pub enum StatusReturn {
     Unknown,
     Queued,
     Processing,
-    Done { response: Box<ResponseMessage> },
+    Done { response: Box<CoseSign1> },
     Expired,
 }
 
@@ -131,7 +132,7 @@ impl StatusReturn {
         }
     }
 
-    fn from_kind(kind: u8, response: Option<ResponseMessage>) -> Result<Self, ()> {
+    fn from_kind(kind: u8, response: Option<CoseSign1>) -> Result<Self, ()> {
         match (kind, response) {
             (0, None) => Ok(Self::Unknown),
             (1, None) => Ok(Self::Queued),
@@ -149,13 +150,8 @@ impl<C> Encode<C> for StatusReturn {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         if let StatusReturn::Done { response } = self {
             e.map(2)?;
-            e.u8(1)?.bytes(
-                response
-                    .clone()
-                    .to_bytes()
-                    .map_err(|_err| Error::message("Response could not be encoded."))?
-                    .as_ref(),
-            )?
+            e.u8(1)?
+                .bytes(response.clone().to_vec().map_err(Error::message)?.as_ref())?
         } else {
             e.map(1)?
         }
@@ -204,11 +200,20 @@ impl<'b, C> Decode<'b, C> for StatusReturn {
             key.map_or(Err("Invalid variant."), Ok)
                 .map_err(minicbor::decode::Error::message)?,
             match result {
-                Some(result) => Some(ResponseMessage::from_bytes(result).map_err(|_| {
-                    minicbor::decode::Error::message(
-                        "Invalid result type, expected ResponseMessage.",
-                    )
-                })?),
+                Some(result) => {
+                    let cose =
+                        CoseSign1::from_slice(result).map_err(minicbor::decode::Error::message)?;
+                    let _response =
+                        ResponseMessage::from_bytes(cose.payload.as_ref().ok_or_else(|| {
+                            minicbor::decode::Error::message("Empty payload, expected CoseSign1.")
+                        })?)
+                        .map_err(|_| {
+                            minicbor::decode::Error::message(
+                                "Invalid envelope payload type, expected ResponseMessage.",
+                            )
+                        })?;
+                    Some(cose)
+                }
                 _ => None,
             },
         )
@@ -228,6 +233,8 @@ mod tests {
     use super::*;
     use crate::r#async::attributes::ASYNC;
     use crate::testutils::call_module_cbor;
+    use many_identity::AnonymousIdentity;
+    use many_protocol::encode_cose_sign1_from_response;
     use many_types::attributes::{Attribute, AttributeSet, TryFromAttributeSet};
     use many_types::cbor::CborAny;
     use mockall::predicate;
@@ -240,7 +247,10 @@ mod tests {
             Just(StatusReturn::Queued),
             Just(StatusReturn::Processing),
             Just(StatusReturn::Done {
-                response: Box::new(ResponseMessage::default())
+                response: Box::new(
+                    encode_cose_sign1_from_response(ResponseMessage::default(), &AnonymousIdentity)
+                        .unwrap()
+                )
             }),
             Just(StatusReturn::Expired),
         ]
