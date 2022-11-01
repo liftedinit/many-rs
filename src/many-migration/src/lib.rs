@@ -10,7 +10,7 @@ use tracing::trace;
 pub type FnPtr<T, E> = dyn Sync + Fn(&mut T) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
 
-#[derive(Default, Deserialize, Display, PartialEq, Eq)]
+#[derive(Debug, Default, Deserialize, Display, PartialEq, Eq)]
 pub enum Status {
     Enabled,
     #[default]
@@ -52,8 +52,18 @@ pub enum MigrationType<'a, T, E> {
     Hotfix(HotfixMigration),
 }
 
+// TODO: DRY
 impl<'a, T, E> fmt::Display for MigrationType<'a, T, E> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str(match self {
+            MigrationType::Regular(_) => "Regular",
+            MigrationType::Hotfix(_) => "Hotfix",
+        })
+    }
+}
+
+impl<'a, T, E> fmt::Debug for MigrationType<'a, T, E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> std::fmt::Result {
         formatter.write_str(match self {
             MigrationType::Regular(_) => "Regular",
             MigrationType::Hotfix(_) => "Hotfix",
@@ -90,6 +100,17 @@ impl<'a, T, E> fmt::Display for InnerMigration<'a, T, E> {
     }
 }
 
+impl<'a, T, E> fmt::Debug for InnerMigration<'a, T, E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> std::fmt::Result {
+        formatter
+            .debug_struct("InnerMigration")
+            .field("type", &self.r#type)
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .finish()
+    }
+}
+
 pub struct Migration<'a, T, E> {
     pub migration: &'a InnerMigration<'a, T, E>,
     pub metadata: Metadata,
@@ -104,6 +125,15 @@ impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
             self.metadata(),
             self.status()
         ))
+    }
+}
+impl<'a, T, E> fmt::Debug for Migration<'a, T, E> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Migration")
+            .field("migration", &self.migration)
+            .field("metadata", &self.metadata)
+            .field("status", &self.status)
+            .finish()
     }
 }
 
