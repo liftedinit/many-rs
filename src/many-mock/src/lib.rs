@@ -32,7 +32,7 @@ where
             let mut result = BTreeMap::new();
             while let Some((key, value)) = map.next_entry::<String, String>()? {
                 let value_data = cbor_diag::parse_diag(value).map_err(|e| {
-                    serde::de::Error::custom(format!("Deserialization error: {:?}", e))
+                    serde::de::Error::custom(format!("Deserialization error: {e:?}"))
                 })?;
                 let value = value_data.to_bytes();
                 result.insert(key, value);
@@ -48,7 +48,7 @@ where
 pub fn parse_mockfile(mockfile_arg: &str) -> Result<MockEntries, String> {
     let path = std::path::Path::new(mockfile_arg);
     if !path.exists() {
-        return Err(format!("File {:?} does not exist", path));
+        return Err(format!("File {path:?} does not exist"));
     }
     let contents = std::fs::read_to_string(path).map_err(|_| "Error reading file".to_string())?;
     let parsed: MockEntriesWrapper = toml::from_str(&contents)

@@ -63,7 +63,7 @@ impl TryInto<SubresourceId> for u32 {
         if self > MAX_SUBRESOURCE_ID {
             Err(ManyError::invalid_identity_subid())
         } else {
-            Ok(SubresourceId(self as u32))
+            Ok(SubresourceId(self))
         }
     }
 }

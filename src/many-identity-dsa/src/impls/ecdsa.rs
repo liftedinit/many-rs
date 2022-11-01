@@ -224,7 +224,7 @@ impl EcDsaVerifier {
             .as_slice();
         let points = p256::EncodedPoint::from_affine_coordinates(x.into(), y.into(), false);
         let pk = p256::ecdsa::VerifyingKey::from_encoded_point(&points)
-            .map_err(|e| ManyError::unknown(format!("Could not create a verifying key: {}", e)))?;
+            .map_err(|e| ManyError::unknown(format!("Could not create a verifying key: {e}")))?;
 
         Ok(Self { address, pk })
     }
@@ -247,8 +247,8 @@ impl Verifier for EcDsaVerifier {
             Ok(address)
         } else {
             Err(ManyError::unknown(format!(
-                "Address in envelope does not match expected address. Expected: {}, Actual: {}",
-                self.address, address
+                "Address in envelope does not match expected address. Expected: {}, Actual: {address}",
+                self.address
             )))
         }
     }

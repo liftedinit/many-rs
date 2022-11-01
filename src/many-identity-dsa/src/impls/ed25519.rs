@@ -294,8 +294,8 @@ impl Verifier for Ed25519Verifier {
             Ok(address)
         } else {
             Err(ManyError::unknown(format!(
-                "Address in envelope does not match expected address. Expected: {}, Actual: {}",
-                self.address, address
+                "Address in envelope does not match expected address. Expected: {}, Actual: {address}",
+                self.address
             )))
         }
     }
