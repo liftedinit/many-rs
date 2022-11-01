@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use strum::Display;
-use tracing::trace;
+use tracing::{debug, trace};
 
 pub type FnPtr<T, E> = dyn Sync + Fn(&mut T) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
@@ -152,17 +152,19 @@ impl<'a, T, E> Migration<'a, T, E> {
 
     /// This function gets executed when the storage block height == the migration block height
     pub fn initialize(&self, storage: &mut T, h: u64) -> Result<(), E> {
-        if self.status == Status::Enabled && self.metadata().block_height == h {
-            trace!("Trying to initialize migration - {}", self.name());
+        if self.status == Status::Enabled && h == self.metadata().block_height {
+            debug!("Trying to initialize migration - {}", self.name());
+            trace!("Migration: {}", self);
             return self.migration.initialize(storage);
         }
         Ok(())
     }
 
-    /// This function gets executed when the storage block height >= the migration block height
+    /// This function gets executed when the storage block height > the migration block height
     pub fn update(&self, storage: &mut T, h: u64) -> Result<(), E> {
-        if self.status == Status::Enabled && self.metadata().block_height >= h {
-            trace!("Trying to update migration - {}", self.name());
+        if self.status == Status::Enabled && h > self.metadata().block_height {
+            debug!("Trying to update migration - {}", self.name());
+            trace!("Migration: {}", self);
             return self.migration.update(storage);
         }
         Ok(())
@@ -170,8 +172,9 @@ impl<'a, T, E> Migration<'a, T, E> {
 
     /// This function gets executed when the storage block height == the migration block height
     pub fn hotfix<'b>(&'b self, b: &'b [u8], h: u64) -> Option<Vec<u8>> {
-        if self.status == Status::Enabled && self.metadata().block_height == h {
-            trace!("Trying to execute hotfix - {}", self.name());
+        if self.status == Status::Enabled && h == self.metadata().block_height {
+            debug!("Trying to execute hotfix - {}", self.name());
+            trace!("Migration: {}", self);
             return self.migration.hotfix(b);
         }
         None
