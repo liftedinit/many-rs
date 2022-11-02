@@ -1,9 +1,19 @@
-use crate::account::features::multisig::Memo;
-use many_types::AttributeRelatedIndex;
+use many_types::{AttributeRelatedIndex, Memo};
 use std::collections::BTreeSet;
+use visual_logo::VisualTokenLogo;
 
-pub enum ExtendedInfo {
-    memo(Box<Memo<4000>>),
+pub mod visual_logo;
+
+#[derive()]
+enum ExtendedInfo {
+    Memo(Box<Memo>),
+    VisualLogo(VisualTokenLogo),
+}
+
+impl PartialEq for ExtendedInfo {
+    fn eq(&self, other: &Self) -> bool {
+        todo!()
+    }
 }
 
 pub struct TokenExtendedInfo {

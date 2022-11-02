@@ -1,11 +1,9 @@
-use crate::_6_ledger_commands::{SendArgs, SendReturns};
 use crate::ledger::TokenInfoSummary;
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
 use many_types::ledger;
 use minicbor::{Decode, Encode};
-use mockall::automock;
 
 pub mod extended_info;
 
@@ -13,7 +11,7 @@ pub mod extended_info;
 #[cbor(map)]
 pub struct TokenInfo {}
 
-#[derive(Clone, Debug, Decode, Encode)]
+#[derive(Debug, Decode, Encode)]
 #[cbor(map)]
 pub struct TokenCreateArgs {
     #[n(0)]
