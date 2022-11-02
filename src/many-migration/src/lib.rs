@@ -1,6 +1,7 @@
 #![feature(const_mut_refs)]
 
-use serde::Deserialize;
+use minicbor::{encode::Error, encode::Write, Decode, Decoder, Encode, Encoder};
+use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
@@ -10,10 +11,14 @@ use tracing::{debug, trace};
 pub type FnPtr<T, E> = dyn Sync + Fn(&mut T) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
 
-#[derive(Debug, Default, Deserialize, Display, PartialEq, Eq)]
+#[derive(Debug, Default, Deserialize, Encode, Serialize, Decode, Display, PartialEq, Eq)]
+#[cbor(index_only)]
 pub enum Status {
+    #[n(0)]
     Enabled,
+
     #[default]
+    #[n(1)]
     Disabled,
 }
 
@@ -27,7 +32,7 @@ impl Status {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Metadata {
     pub block_height: u64,
     pub issue: Option<String>,
@@ -46,28 +51,44 @@ impl Default for Metadata {
     }
 }
 
-#[derive(Clone)]
+/// Encode Metadata to CBOR
+/// We do NOT encode the extra fields
+impl<C> Encode<C> for Metadata {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
+        e.map(2)?
+            .u8(0)?
+            .u64(self.block_height)?
+            .u8(1)?
+            .encode(&self.issue)?;
+        Ok(())
+    }
+}
+
+impl<'b, C> Decode<'b, C> for Metadata {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
+        d.map()?;
+        d.u8()?;
+        let block_height = d.u64()?;
+        d.u8()?;
+        let issue = d.decode()?;
+
+        Ok(Metadata {
+            block_height,
+            issue,
+            ..Default::default()
+        })
+    }
+}
+
+#[derive(Clone, Display)]
 pub enum MigrationType<'a, T, E> {
     Regular(RegularMigration<'a, T, E>),
     Hotfix(HotfixMigration),
 }
 
-// TODO: DRY
-impl<'a, T, E> fmt::Display for MigrationType<'a, T, E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str(match self {
-            MigrationType::Regular(_) => "Regular",
-            MigrationType::Hotfix(_) => "Hotfix",
-        })
-    }
-}
-
 impl<'a, T, E> fmt::Debug for MigrationType<'a, T, E> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str(match self {
-            MigrationType::Regular(_) => "Regular",
-            MigrationType::Hotfix(_) => "Hotfix",
-        })
+        formatter.write_str(&format!("{}", self))
     }
 }
 
@@ -111,11 +132,70 @@ impl<'a, T, E> fmt::Debug for InnerMigration<'a, T, E> {
     }
 }
 
+#[derive(Encode)]
+#[cbor(map)]
 pub struct Migration<'a, T, E> {
+    #[n(0)]
+    #[cbor(encode_with = "encode_inner_migration", decode_with = "decode_inner_migration")]
     pub migration: &'a InnerMigration<'a, T, E>,
+
+    #[n(1)]
     pub metadata: Metadata,
+
+    #[n(2)]
     pub status: Status,
 }
+
+fn encode_inner_migration<'a, C, T, E, W: Write>(v: &InnerMigration<'a, T, E>, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), Error<W::Error>> {
+    e.encode(v.name)?;
+    Ok(())
+}
+
+fn decode_inner_migration<'a, 'b, C: Copy + IntoIterator<Item = &'a InnerMigration<'a, T, E>>, T, E>(d: &mut Decoder<'b>, ctx: &mut C) -> Result<T, minicbor::decode::Error> {
+    Err(minicbor::decode::Error::message("foo"))
+}
+
+impl<'a, T, E> Serialize for Migration<'a, T, E> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Migration", 3)?;
+        state.serialize_field("type", &self.migration.r#type.to_string())?;
+        state.serialize_field("metadata", &self.metadata)?;
+        state.serialize_field("status", &self.status)?;
+        state.end()
+    }
+}
+
+// impl<'a, 'b, C: Copy + IntoIterator<Item = &'a InnerMigration<'a, T, E>>, T, E> Decode<'b, C>
+//     for Migration<'a, T, E>
+// {
+//     fn decode(d: &mut Decoder<'b>, registry: &mut C) -> Result<Migration<'a, T, E>, minicbor::decode::Error> {
+//         // TODO: Cache this
+//         // Build a BTreeMap from the linear registry
+//         // let registry = registry
+//         //     .into_iter()
+//         //     .map(|m| (m.name, m))
+//         //     .collect::<BTreeMap<&'a str, &InnerMigration<'a, T, E>>>();
+//         //
+//         // dbg!(registry);
+//
+//         // for migration in d.array_iter()? {
+//         //     dbg!(migration);
+//         // }
+//
+//
+//         // dbg!(&registry);
+//         //
+//         // let &inner = registry.get(r#type).ok_or_else(|| {
+//         //     minicbor::decode::Error::message(format!("Unsupported migration type {}", r#type))
+//         // })?;
+//
+//         // Ok(Migration::new(inner.clone(), metadata, status))
+//         Err(minicbor::decode::Error::message("foo"))
+//     }
+// }
 
 impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -327,7 +407,7 @@ struct IO<'a> {
     metadata: Metadata,
 }
 
-pub fn load_migrations<'de: 'a, 'a, 'b, E, T>(
+pub fn load_migrations<'a, 'b, E, T>(
     registry: &'b [InnerMigration<'b, T, E>],
     data: &'a str,
 ) -> Result<BTreeMap<&'b str, Migration<'b, T, E>>, String> {

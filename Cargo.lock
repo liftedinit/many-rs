@@ -1929,6 +1929,7 @@ dependencies = [
 name = "many-migration"
 version = "0.1.0"
 dependencies = [
+ "minicbor",
  "serde",
  "serde_json",
  "strum",
