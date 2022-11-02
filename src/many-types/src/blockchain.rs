@@ -1,4 +1,4 @@
-use crate::Timestamp;
+use crate::{CborRange, Timestamp};
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 
@@ -70,14 +70,14 @@ impl BlockIdentifier {
     }
 }
 
-#[derive(Debug, Clone, Decode, Encode)]
+#[derive(Debug, Clone, Decode, Encode, PartialEq, Eq)]
 #[cbor(map)]
 pub struct TransactionIdentifier {
     #[cbor(n(0), with = "minicbor::bytes")]
     pub hash: Vec<u8>,
 }
 
-#[derive(Debug, Clone, Decode, Encode)]
+#[derive(Debug, Clone, Decode, Encode, PartialEq, Eq)]
 #[cbor(map)]
 pub struct Transaction {
     #[n(0)]
@@ -87,7 +87,7 @@ pub struct Transaction {
     pub content: Option<Vec<u8>>,
 }
 
-#[derive(Debug, Clone, Decode, Encode)]
+#[derive(Debug, Clone, Decode, Encode, PartialEq, Eq)]
 #[cbor(map)]
 pub struct Block {
     #[n(0)]
@@ -147,6 +147,55 @@ impl<'d, C> Decode<'d, C> for SingleTransactionQuery {
 
         let result = match key {
             0 => Ok(SingleTransactionQuery::Hash(d.bytes()?.to_vec())),
+            x => Err(decode::Error::unknown_variant(u32::from(x))),
+        };
+
+        if indefinite {
+            d.skip()?;
+        }
+
+        result
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum RangeBlockQuery {
+    Height(CborRange<u64>),
+    Time(CborRange<Timestamp>),
+}
+
+// ; A block query over a range of height or time. This cannot be a hash or
+// ; specific height (use `blockchain.block` for specific height/hash).
+// range-block-query =
+//     ; Height range.
+//     { 1 => range<uint> }
+//     ; Time value or time range.
+//     / { 2 => range<time> }
+impl<C> Encode<C> for RangeBlockQuery {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
+        match &self {
+            RangeBlockQuery::Height(range) => e.map(1)?.u8(1)?.encode(range)?,
+            RangeBlockQuery::Time(range) => e.map(1)?.u8(2)?.encode(range)?,
+        };
+        Ok(())
+    }
+}
+
+impl<'d, C> Decode<'d, C> for RangeBlockQuery {
+    fn decode(d: &mut Decoder<'d>, _: &mut C) -> Result<Self, decode::Error> {
+        let mut indefinite = false;
+        let key = match d.map()? {
+            None => {
+                indefinite = true;
+                d.u8()
+            }
+            Some(1) => d.u8(),
+            Some(_) => Err(decode::Error::message("Invalid key for range block query.")),
+        }?;
+
+        let result = match key {
+            1 => Ok(RangeBlockQuery::Height(d.decode()?)),
+            2 => Ok(RangeBlockQuery::Time(d.decode()?)),
             x => Err(decode::Error::unknown_variant(u32::from(x))),
         };
 

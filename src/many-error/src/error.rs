@@ -239,6 +239,11 @@ impl ManyError {
     }
 
     #[inline]
+    pub fn set_message(&mut self, message: Option<String>) {
+        self.0.set_message(message)
+    }
+
+    #[inline]
     pub fn argument<S: AsRef<str>>(&self, field: S) -> Option<&str> {
         self.0.argument(field)
     }
@@ -246,6 +251,11 @@ impl ManyError {
     #[inline]
     pub fn arguments(&self) -> &BTreeMap<String, String> {
         self.0.arguments()
+    }
+
+    #[inline]
+    pub fn add_argument(&mut self, key: String, value: String) {
+        self.0.add_argument(key, value);
     }
 
     #[inline]

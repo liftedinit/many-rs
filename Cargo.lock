@@ -1831,22 +1831,15 @@ dependencies = [
 name = "many-identity"
 version = "0.1.0"
 dependencies = [
- "asn1 0.11.0",
  "base32",
  "coset",
  "crc-any",
- "cryptoki",
- "ed25519",
- "ed25519-dalek",
  "hex",
  "many-error",
  "many-identity",
  "minicbor",
  "once_cell",
- "p256",
- "pkcs8 0.8.0",
  "proptest",
- "rand 0.7.3",
  "serde",
  "serde_test",
  "sha2 0.10.2",
@@ -2004,12 +1997,12 @@ dependencies = [
  "num-traits",
  "once_cell",
  "proptest",
- "reqwest",
  "serde",
  "serde_json",
  "sha2 0.10.2",
  "signature",
  "tracing",
+ "url",
 ]
 
 [[package]]

@@ -1,5 +1,8 @@
 use crate as module;
-use crate::account::features::multisig::MultisigTransactionState;
+<<<<<<< HEAD
+=======
+use crate::account::features::multisig::{Data, Memo, MultisigTransactionState};
+>>>>>>> main
 use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
