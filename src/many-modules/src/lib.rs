@@ -23,7 +23,7 @@ macro_rules! reexport_module {
 reexport_module!(
     base: _0_base;
     blockchain: _1_blockchain;
-    ledger: _2_ledger + _6_ledger_commands;
+    ledger: _2_ledger + _6_ledger_commands + _11_ledger_tokens;
     events: _4_events;
     data: _5_data;
     kvstore: _3_kvstore + _7_kvstore_commands;

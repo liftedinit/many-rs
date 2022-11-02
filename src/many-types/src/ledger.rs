@@ -6,11 +6,15 @@ use num_bigint::{BigInt, BigUint};
 use num_traits::Num;
 use serde::de::Unexpected;
 use serde::Deserialize;
+use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
 
 /// A Symbol is represented by a non-anonymous identity.
 pub type Symbol = Address;
+
+/// A map of owners => tokens.
+pub type LedgerTokensAddressMap = BTreeMap<Address, TokenAmount>;
 
 /// Transaction fees.
 #[derive(Default, Clone, Encode, Decode)]
