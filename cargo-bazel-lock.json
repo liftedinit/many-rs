@@ -1,5 +1,5 @@
 {
-  "checksum": "323f3107b6376e33f21bfc03eb48dbe6d2d461994f3175f4784dda74ae946abc",
+  "checksum": "0ff0a9d310f42f2e515794b9cfdd4e93964520346cba504b51757501ef1b8072",
   "crates": {
     "aes 0.7.5": {
       "name": "aes",
@@ -8188,13 +8188,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "hyper 0.14.21": {
+    "hyper 0.14.22": {
       "name": "hyper",
-      "version": "0.14.21",
+      "version": "0.14.22",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/hyper/0.14.21/download",
-          "sha256": "41a2df176f359a22aee9c8657e674f7aa54e9ba48b512a798e5ca36a1f51065c"
+          "url": "https://crates.io/api/v1/crates/hyper/0.14.22/download",
+          "sha256": "abfba89e19b959ca163c7752ba59d737c1ceea53a5d31a149c805446fc958064"
         }
       },
       "targets": [
@@ -8295,7 +8295,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.14.21"
+        "version": "0.14.22"
       },
       "license": "MIT"
     },
@@ -8334,11 +8334,11 @@
               "target": "bytes"
             },
             {
-              "id": "hyper 0.14.21",
+              "id": "hyper 0.14.22",
               "target": "hyper"
             },
             {
-              "id": "native-tls 0.2.10",
+              "id": "native-tls 0.2.11",
               "target": "native_tls"
             },
             {
@@ -9115,6 +9115,104 @@
         "version": "0.5.6"
       },
       "license": "MIT/Apache-2.0"
+    },
+    "linkme 0.3.5": {
+      "name": "linkme",
+      "version": "0.3.5",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/linkme/0.3.5/download",
+          "sha256": "cab56277eeaacac09e1398bcefc113319c6c8d4fb464f11c54ba247cdb65776e"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "linkme",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "linkme",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": [
+          "used_linker"
+        ],
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "linkme-impl 0.3.5",
+              "target": "linkme_impl"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.3.5"
+      },
+      "license": "MIT OR Apache-2.0"
+    },
+    "linkme-impl 0.3.5": {
+      "name": "linkme-impl",
+      "version": "0.3.5",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/linkme-impl/0.3.5/download",
+          "sha256": "624b78e5a5f99b2c751812a14785a2c661f894a34bc3dd1f2ec3e3fffb4605e7"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "linkme_impl",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "linkme_impl",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": [
+          "used_linker"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.47",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.21",
+              "target": "quote"
+            },
+            {
+              "id": "syn 1.0.103",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.3.5"
+      },
+      "license": "MIT OR Apache-2.0"
     },
     "lock_api 0.4.9": {
       "name": "lock_api",
@@ -10072,6 +10170,10 @@
         "deps": {
           "common": [
             {
+              "id": "minicbor 0.18.0",
+              "target": "minicbor"
+            },
+            {
               "id": "serde 1.0.147",
               "target": "serde"
             },
@@ -10086,6 +10188,15 @@
             {
               "id": "tracing 0.1.37",
               "target": "tracing"
+            }
+          ],
+          "selects": {}
+        },
+        "deps_dev": {
+          "common": [
+            {
+              "id": "linkme 0.3.5",
+              "target": "linkme"
             }
           ],
           "selects": {}
@@ -11147,13 +11258,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "native-tls 0.2.10": {
+    "native-tls 0.2.11": {
       "name": "native-tls",
-      "version": "0.2.10",
+      "version": "0.2.11",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/native-tls/0.2.10/download",
-          "sha256": "fd7e2f3618557f980e0b17e8856252eee3c97fa12c54dff0ca290fb6266ca4a9"
+          "url": "https://crates.io/api/v1/crates/native-tls/0.2.11/download",
+          "sha256": "07226173c32f2926027b63cce4bcd8076c3552846cbe7925f3aaffeac0a3b92e"
         }
       },
       "targets": [
@@ -11190,7 +11301,7 @@
         "deps": {
           "common": [
             {
-              "id": "native-tls 0.2.10",
+              "id": "native-tls 0.2.11",
               "target": "build_script_build"
             }
           ],
@@ -11244,7 +11355,7 @@
           }
         },
         "edition": "2015",
-        "version": "0.2.10"
+        "version": "0.2.11"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -11879,13 +11990,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "num_cpus 1.13.1": {
+    "num_cpus 1.14.0": {
       "name": "num_cpus",
-      "version": "1.13.1",
+      "version": "1.14.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/num_cpus/1.13.1/download",
-          "sha256": "19e64526ebdee182341572e50e9ad03965aa510cd94427a4549448f285e957a1"
+          "url": "https://crates.io/api/v1/crates/num_cpus/1.14.0/download",
+          "sha256": "f6058e64324c71e02bc2b150e4f3bc8286db6c83092132ffa3f6b1eab0f9def5"
         }
       },
       "targets": [
@@ -11925,7 +12036,7 @@
           }
         },
         "edition": "2015",
-        "version": "1.13.1"
+        "version": "1.14.0"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -14784,7 +14895,7 @@
                 "target": "http_body"
               },
               {
-                "id": "hyper 0.14.21",
+                "id": "hyper 0.14.22",
                 "target": "hyper"
               },
               {
@@ -14804,7 +14915,7 @@
                 "target": "mime"
               },
               {
-                "id": "native-tls 0.2.10",
+                "id": "native-tls 0.2.11",
                 "target": "native_tls",
                 "alias": "native_tls_crate"
               },
@@ -18306,7 +18417,7 @@
               "target": "mio"
             },
             {
-              "id": "num_cpus 1.13.1",
+              "id": "num_cpus 1.14.0",
               "target": "num_cpus"
             },
             {
@@ -18456,7 +18567,7 @@
         "deps": {
           "common": [
             {
-              "id": "native-tls 0.2.10",
+              "id": "native-tls 0.2.11",
               "target": "native_tls"
             },
             {

@@ -1,3 +1,5 @@
+#![feature(used_with_arg)] // Required to build the test with Bazel
+
 use linkme::distributed_slice;
 use many_migration::{
     load_enable_all_regular_migrations, load_migrations, InnerMigration, Migration, Status,
