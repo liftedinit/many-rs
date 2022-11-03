@@ -1,7 +1,7 @@
 #![feature(const_mut_refs)]
 
 use minicbor::{encode::Error, encode::Write, Decode, Decoder, Encode, Encoder};
-use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
@@ -22,17 +22,7 @@ pub enum Status {
     Disabled,
 }
 
-impl Status {
-    pub fn enabled() -> Self {
-        Status::Enabled
-    }
-
-    pub fn disabled() -> Self {
-        Status::Disabled
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Metadata {
     pub block_height: u64,
     pub issue: Option<String>,
@@ -172,19 +162,6 @@ fn encode_inner_migration<'a, C, T, E, W: Write>(
 ) -> Result<(), Error<W::Error>> {
     e.encode(v.name)?;
     Ok(())
-}
-
-impl<'a, T, E> Serialize for Migration<'a, T, E> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("Migration", 3)?;
-        state.serialize_field("type", &self.migration.r#type.to_string())?;
-        state.serialize_field("metadata", &self.metadata)?;
-        state.serialize_field("status", &self.status)?;
-        state.end()
-    }
 }
 
 impl<'a, 'b, C: Copy + IntoIterator<Item = &'a InnerMigration<'a, T, E>>, T, E> Decode<'b, C>
@@ -454,6 +431,7 @@ pub fn load_migrations<'a, 'b, E, T>(
     // TODO: Do not hardcode the deserializer
     let config: Vec<IO> = serde_json::from_str(data).unwrap();
 
+    // TODO: Cache this
     // Build a BTreeMap from the linear registry
     let registry = registry
         .iter()
