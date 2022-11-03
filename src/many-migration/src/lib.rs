@@ -66,11 +66,30 @@ impl<C> Encode<C> for Metadata {
 
 impl<'b, C> Decode<'b, C> for Metadata {
     fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
-        d.map()?;
-        d.u8()?;
-        let block_height = d.u64()?;
-        d.u8()?;
-        let issue = d.decode()?;
+        let l = d
+            .map()?
+            .ok_or_else(|| minicbor::decode::Error::message("Unsupported indefinite map."))?;
+        if l != 2 {
+            return Err(minicbor::decode::Error::message("Invalid number of keys."));
+        }
+
+        let mut block_height = None;
+        let mut issue = None;
+
+        for _ in 0..l {
+            match d.u8()? {
+                0 => {
+                    block_height = Some(d.u64()?);
+                }
+                1 => issue = Some(d.decode()?),
+                _ => return Err(minicbor::decode::Error::message("Unknown key.")),
+            }
+        }
+
+        let (block_height, issue) = (
+            block_height.ok_or_else(|| minicbor::decode::Error::message("Missing field name."))?,
+            issue.ok_or_else(|| minicbor::decode::Error::message("Missing field metadata."))?,
+        );
 
         Ok(Metadata {
             block_height,
@@ -88,7 +107,7 @@ pub enum MigrationType<'a, T, E> {
 
 impl<'a, T, E> fmt::Debug for MigrationType<'a, T, E> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str(&format!("{}", self))
+        formatter.write_str(&format!("{self}"))
     }
 }
 
@@ -136,7 +155,7 @@ impl<'a, T, E> fmt::Debug for InnerMigration<'a, T, E> {
 #[cbor(map)]
 pub struct Migration<'a, T, E> {
     #[n(0)]
-    #[cbor(encode_with = "encode_inner_migration", decode_with = "decode_inner_migration")]
+    #[cbor(encode_with = "encode_inner_migration")]
     pub migration: &'a InnerMigration<'a, T, E>,
 
     #[n(1)]
@@ -146,13 +165,13 @@ pub struct Migration<'a, T, E> {
     pub status: Status,
 }
 
-fn encode_inner_migration<'a, C, T, E, W: Write>(v: &InnerMigration<'a, T, E>, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), Error<W::Error>> {
+fn encode_inner_migration<'a, C, T, E, W: Write>(
+    v: &InnerMigration<'a, T, E>,
+    e: &mut Encoder<W>,
+    _: &mut C,
+) -> Result<(), Error<W::Error>> {
     e.encode(v.name)?;
     Ok(())
-}
-
-fn decode_inner_migration<'a, 'b, C: Copy + IntoIterator<Item = &'a InnerMigration<'a, T, E>>, T, E>(d: &mut Decoder<'b>, ctx: &mut C) -> Result<T, minicbor::decode::Error> {
-    Err(minicbor::decode::Error::message("foo"))
 }
 
 impl<'a, T, E> Serialize for Migration<'a, T, E> {
@@ -168,34 +187,55 @@ impl<'a, T, E> Serialize for Migration<'a, T, E> {
     }
 }
 
-// impl<'a, 'b, C: Copy + IntoIterator<Item = &'a InnerMigration<'a, T, E>>, T, E> Decode<'b, C>
-//     for Migration<'a, T, E>
-// {
-//     fn decode(d: &mut Decoder<'b>, registry: &mut C) -> Result<Migration<'a, T, E>, minicbor::decode::Error> {
-//         // TODO: Cache this
-//         // Build a BTreeMap from the linear registry
-//         // let registry = registry
-//         //     .into_iter()
-//         //     .map(|m| (m.name, m))
-//         //     .collect::<BTreeMap<&'a str, &InnerMigration<'a, T, E>>>();
-//         //
-//         // dbg!(registry);
-//
-//         // for migration in d.array_iter()? {
-//         //     dbg!(migration);
-//         // }
-//
-//
-//         // dbg!(&registry);
-//         //
-//         // let &inner = registry.get(r#type).ok_or_else(|| {
-//         //     minicbor::decode::Error::message(format!("Unsupported migration type {}", r#type))
-//         // })?;
-//
-//         // Ok(Migration::new(inner.clone(), metadata, status))
-//         Err(minicbor::decode::Error::message("foo"))
-//     }
-// }
+impl<'a, 'b, C: Copy + IntoIterator<Item = &'a InnerMigration<'a, T, E>>, T, E> Decode<'b, C>
+    for Migration<'a, T, E>
+{
+    fn decode(d: &mut Decoder<'b>, registry: &mut C) -> Result<Self, minicbor::decode::Error> {
+        // TODO: Cache this
+        // Build a BTreeMap from the linear registry
+        let registry = registry
+            .into_iter()
+            .map(|m| (m.name, m))
+            .collect::<BTreeMap<&'a str, &InnerMigration<'a, T, E>>>();
+
+        let l = d
+            .map()?
+            .ok_or_else(|| minicbor::decode::Error::message("Unsupported indefinite map."))?;
+        if l != 3 {
+            return Err(minicbor::decode::Error::message("Invalid number of keys."));
+        }
+
+        let mut name = None;
+        let mut metadata = None;
+        let mut status = None;
+        for _ in 0..l {
+            match d.u8()? {
+                0 => {
+                    name = Some(d.str()?);
+                }
+                1 => metadata = Some(d.decode()?),
+                2 => status = Some(d.decode()?),
+                _ => return Err(minicbor::decode::Error::message("Unknown key.")),
+            }
+        }
+
+        let (name, metadata, status) = (
+            name.ok_or_else(|| minicbor::decode::Error::message("Missing field name."))?,
+            metadata.ok_or_else(|| minicbor::decode::Error::message("Missing field metadata."))?,
+            status.ok_or_else(|| minicbor::decode::Error::message("Missing fields status."))?,
+        );
+
+        let migration = *registry
+            .get(name)
+            .ok_or_else(|| minicbor::decode::Error::message("Invalid migration name."))?;
+
+        Ok(Self {
+            migration,
+            metadata,
+            status,
+        })
+    }
+}
 
 impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
