@@ -1,5 +1,8 @@
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
+use std::cmp::Ordering;
+use std::collections::VecDeque;
 
+#[derive(Debug)]
 pub enum SingleVisualTokenLogo {
     /// A single character. This is limited to a single character for now.
     UnicodeChar(char),
@@ -105,11 +108,30 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
     }
 }
 
-#[derive(Default)]
-pub struct VisualTokenLogo(Vec<SingleVisualTokenLogo>);
+#[derive(Default, Debug, Encode, Decode)]
+#[cbor(transparent)]
+pub struct VisualTokenLogo(#[n(0)] VecDeque<SingleVisualTokenLogo>);
 
 impl VisualTokenLogo {
-    pub fn unicode(&mut self, c: char) {
-        self.0.push(SingleVisualTokenLogo::char(c))
+    pub fn unicode_front(&mut self, c: char) {
+        self.0.push_front(SingleVisualTokenLogo::char(c))
+    }
+    pub fn image_front(&mut self, content_type: String, data: Vec<u8>) {
+        self.0
+            .push_front(SingleVisualTokenLogo::image(content_type, data))
+    }
+    pub fn unicode_back(&mut self, c: char) {
+        self.0.push_back(SingleVisualTokenLogo::char(c))
+    }
+    pub fn image_back(&mut self, content_type: String, data: Vec<u8>) {
+        self.0
+            .push_back(SingleVisualTokenLogo::image(content_type, data))
+    }
+
+    pub fn sort(
+        &mut self,
+        sorting_fn: impl Fn(&SingleVisualTokenLogo, &SingleVisualTokenLogo) -> Ordering,
+    ) {
+        self.0.make_contiguous().sort_by(sorting_fn);
     }
 }

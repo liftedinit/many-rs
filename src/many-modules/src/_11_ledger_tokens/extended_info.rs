@@ -1,21 +1,202 @@
+use many_error::ManyError;
 use many_types::{AttributeRelatedIndex, Memo};
-use std::collections::BTreeSet;
+use minicbor::encode::{Error, Write};
+use minicbor::{decode, Decode, Decoder, Encode, Encoder};
+use std::cmp::Ordering;
+use std::collections::BTreeMap;
 use visual_logo::VisualTokenLogo;
 
 pub mod visual_logo;
 
-#[derive()]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[repr(u8)]
+enum ExtendedInfoKey {
+    Memo = 0,
+    VisualLogo = 1,
+}
+
+impl Into<AttributeRelatedIndex> for ExtendedInfoKey {
+    fn into(self) -> AttributeRelatedIndex {
+        AttributeRelatedIndex::new(self as u32)
+    }
+}
+
+impl TryFrom<AttributeRelatedIndex> for ExtendedInfoKey {
+    type Error = ();
+
+    fn try_from(value: AttributeRelatedIndex) -> Result<Self, Self::Error> {
+        match value.attribute {
+            0 => Ok(Self::Memo),
+            1 => Ok(Self::VisualLogo),
+            _ => Err(()),
+        }
+    }
+}
+
+impl<C> Encode<C> for ExtendedInfoKey {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), Error<W::Error>> {
+        e.encode_with(Into::<AttributeRelatedIndex>::into(*self), ctx)?;
+        Ok(())
+    }
+}
+
+impl<'b, C> Decode<'b, C> for ExtendedInfoKey {
+    fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
+        let attr: AttributeRelatedIndex = d.decode_with(ctx)?;
+        Ok(attr
+            .try_into()
+            .map_err(|_| decode::Error::message("Invalid attribute."))?)
+    }
+}
+
+#[derive(Debug)]
 enum ExtendedInfo {
     Memo(Box<Memo>),
-    VisualLogo(VisualTokenLogo),
+    VisualLogo(Box<VisualTokenLogo>),
+}
+
+impl ExtendedInfo {
+    pub fn as_key(&self) -> ExtendedInfoKey {
+        match self {
+            ExtendedInfo::Memo(_) => ExtendedInfoKey::Memo,
+            ExtendedInfo::VisualLogo(_) => ExtendedInfoKey::VisualLogo,
+        }
+    }
+
+    pub(super) fn index(&self) -> AttributeRelatedIndex {
+        match self {
+            ExtendedInfo::Memo(_) => AttributeRelatedIndex::new(ExtendedInfoKey::Memo as u32),
+            ExtendedInfo::VisualLogo(_) => {
+                AttributeRelatedIndex::new(ExtendedInfoKey::VisualLogo as u32)
+            }
+        }
+    }
+}
+
+impl PartialEq<ExtendedInfoKey> for ExtendedInfo {
+    fn eq(&self, other: &ExtendedInfoKey) -> bool {
+        self.as_key() == *other
+    }
 }
 
 impl PartialEq for ExtendedInfo {
     fn eq(&self, other: &Self) -> bool {
-        todo!()
+        self.index().eq(&other.index())
     }
 }
 
+impl PartialOrd for ExtendedInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.index().partial_cmp(&other.index())
+    }
+}
+
+impl Eq for ExtendedInfo {}
+
+impl Ord for ExtendedInfo {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.index().cmp(&other.index())
+    }
+}
+
+#[derive(Debug)]
 pub struct TokenExtendedInfo {
-    inner: BTreeSet<ExtendedInfo>,
+    inner: BTreeMap<ExtendedInfoKey, ExtendedInfo>,
+}
+
+impl TokenExtendedInfo {
+    fn insert(&mut self, value: ExtendedInfo) {
+        self.inner.insert(value.as_key(), value);
+    }
+
+    pub fn with_memo(
+        mut self,
+        memo: impl TryInto<Memo, Error = ManyError>,
+    ) -> Result<Self, ManyError> {
+        self.insert(ExtendedInfo::Memo(Box::new(memo.try_into()?)));
+        Ok(self)
+    }
+
+    pub fn with_visual_logo(mut self, logo: VisualTokenLogo) -> Result<Self, ManyError> {
+        self.insert(ExtendedInfo::VisualLogo(Box::new(logo)));
+        Ok(self)
+    }
+
+    pub fn memo(&self) -> Option<&Memo> {
+        self.inner
+            .get(&ExtendedInfoKey::Memo)
+            .and_then(|e| match e {
+                ExtendedInfo::Memo(m) => Some(m.as_ref()),
+                _ => None,
+            })
+    }
+    pub fn memo_mut(&mut self) -> Option<&mut Memo> {
+        self.inner
+            .get_mut(&ExtendedInfoKey::Memo)
+            .and_then(|e| match e {
+                ExtendedInfo::Memo(m) => Some(m.as_mut()),
+                _ => None,
+            })
+    }
+
+    pub fn visual_logo(&self) -> Option<&VisualTokenLogo> {
+        self.inner
+            .get(&ExtendedInfoKey::VisualLogo)
+            .and_then(|e| match e {
+                ExtendedInfo::VisualLogo(m) => Some(m.as_ref()),
+                _ => None,
+            })
+    }
+    pub fn visual_logo_mut(&mut self) -> Option<&mut VisualTokenLogo> {
+        self.inner
+            .get_mut(&ExtendedInfoKey::VisualLogo)
+            .and_then(|e| match e {
+                ExtendedInfo::VisualLogo(m) => Some(m.as_mut()),
+                _ => None,
+            })
+    }
+}
+
+impl<C> Encode<C> for TokenExtendedInfo {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), Error<W::Error>> {
+        e.map(self.inner.len() as u64)?;
+        for (k, v) in self.inner.iter() {
+            e.encode_with(k, ctx)?;
+
+            match v {
+                ExtendedInfo::Memo(m) => {
+                    e.encode_with(m, ctx)?;
+                }
+                ExtendedInfo::VisualLogo(v) => {
+                    e.encode_with(v, ctx)?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<'b, C> Decode<'b, C> for TokenExtendedInfo {
+    fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
+        let l = d
+            .map()
+            .and_then(|l| l.ok_or(decode::Error::message("Indefinite length map unsupported.")))?;
+
+        let mut inner = BTreeMap::new();
+        for _ in 0..l {
+            let key: ExtendedInfoKey = d.decode_with(ctx)?;
+            match key {
+                ExtendedInfoKey::Memo => {
+                    let memo: Memo = d.decode_with(ctx)?;
+                    inner.insert(key, ExtendedInfo::Memo(Box::new(memo)));
+                }
+                ExtendedInfoKey::VisualLogo => {
+                    let visual_logo: VisualTokenLogo = d.decode_with(ctx)?;
+                    inner.insert(key, ExtendedInfo::VisualLogo(Box::new(visual_logo)));
+                }
+            }
+        }
+
+        Ok(Self { inner })
+    }
 }

@@ -17,9 +17,6 @@ pub struct TokenInfoSummary {
 
     #[n(2)]
     pub decimals: u32,
-
-    #[n(3)]
-    pub transaction_fee: ledger::TransactionFee,
 }
 
 #[derive(Clone, Debug, Decode, Encode)]
@@ -32,12 +29,6 @@ pub struct InfoReturns {
     #[n(1)]
     pub hash: ByteVec,
 
-    // TODO: this.
-    // #[n(2)]
-    // pub fees: BTreeMap<Symbol, TransactionFee>,
-    // #[n(3)]
-    // pub conversion: BTreeMap<(Symbol, Symbol),>,
-    //
     /// The list of local names for the symbol. If a symbol is missing from
     /// this map, it may not have a local name but can still be a valid
     /// symbol (refer to the list of symbols above).

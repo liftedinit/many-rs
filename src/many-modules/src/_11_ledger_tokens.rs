@@ -38,7 +38,7 @@ pub struct TokenCreateReturns {
 }
 
 #[many_module(name = LedgerTokensModule, id = 11, namespace = ledger, many_modules_crate = crate)]
-#[cfg_attr(test, automock)]
+#[cfg_attr(test, mockall::automock)]
 pub trait LedgerTokensModuleBackend: Send {
     fn create(
         &mut self,
