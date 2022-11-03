@@ -4,6 +4,7 @@ use minicbor::encode::{Error, Write};
 use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use visual_logo::VisualTokenLogo;
 
 pub mod visual_logo;
@@ -49,10 +50,10 @@ impl<'b, C> Decode<'b, C> for ExtendedInfoKey {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum ExtendedInfo {
-    Memo(Box<Memo>),
-    VisualLogo(Box<VisualTokenLogo>),
+    Memo(Arc<Memo>),
+    VisualLogo(Arc<VisualTokenLogo>),
 }
 
 impl ExtendedInfo {
@@ -99,7 +100,7 @@ impl Ord for ExtendedInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TokenExtendedInfo {
     inner: BTreeMap<ExtendedInfoKey, ExtendedInfo>,
 }
@@ -113,12 +114,12 @@ impl TokenExtendedInfo {
         mut self,
         memo: impl TryInto<Memo, Error = ManyError>,
     ) -> Result<Self, ManyError> {
-        self.insert(ExtendedInfo::Memo(Box::new(memo.try_into()?)));
+        self.insert(ExtendedInfo::Memo(Arc::new(memo.try_into()?)));
         Ok(self)
     }
 
     pub fn with_visual_logo(mut self, logo: VisualTokenLogo) -> Result<Self, ManyError> {
-        self.insert(ExtendedInfo::VisualLogo(Box::new(logo)));
+        self.insert(ExtendedInfo::VisualLogo(Arc::new(logo)));
         Ok(self)
     }
 
@@ -134,7 +135,7 @@ impl TokenExtendedInfo {
         self.inner
             .get_mut(&ExtendedInfoKey::Memo)
             .and_then(|e| match e {
-                ExtendedInfo::Memo(m) => Some(m.as_mut()),
+                ExtendedInfo::Memo(m) => Some(Arc::make_mut(m)),
                 _ => None,
             })
     }
@@ -151,7 +152,7 @@ impl TokenExtendedInfo {
         self.inner
             .get_mut(&ExtendedInfoKey::VisualLogo)
             .and_then(|e| match e {
-                ExtendedInfo::VisualLogo(m) => Some(m.as_mut()),
+                ExtendedInfo::VisualLogo(m) => Some(Arc::make_mut(m)),
                 _ => None,
             })
     }
@@ -165,10 +166,10 @@ impl<C> Encode<C> for TokenExtendedInfo {
 
             match v {
                 ExtendedInfo::Memo(m) => {
-                    e.encode_with(m, ctx)?;
+                    e.encode_with(m.as_ref(), ctx)?;
                 }
                 ExtendedInfo::VisualLogo(v) => {
-                    e.encode_with(v, ctx)?;
+                    e.encode_with(v.as_ref(), ctx)?;
                 }
             }
         }
@@ -188,11 +189,11 @@ impl<'b, C> Decode<'b, C> for TokenExtendedInfo {
             match key {
                 ExtendedInfoKey::Memo => {
                     let memo: Memo = d.decode_with(ctx)?;
-                    inner.insert(key, ExtendedInfo::Memo(Box::new(memo)));
+                    inner.insert(key, ExtendedInfo::Memo(Arc::new(memo)));
                 }
                 ExtendedInfoKey::VisualLogo => {
                     let visual_logo: VisualTokenLogo = d.decode_with(ctx)?;
-                    inner.insert(key, ExtendedInfo::VisualLogo(Box::new(visual_logo)));
+                    inner.insert(key, ExtendedInfo::VisualLogo(Arc::new(visual_logo)));
                 }
             }
         }

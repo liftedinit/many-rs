@@ -20,6 +20,34 @@ use attributes::AttributeId;
 pub use either::Either;
 pub use memo::Memo;
 
+/// A simple macro to create CBOR types. This only covers a few cases but will
+/// save a lot of boilerplate for those cases. Any use case that isn't covered
+/// by this macro should simply be implemented on its own.
+/// TODO: the next step to improve this is to have a proc_macro that reads the
+///       CDDL directly.
+#[macro_export]
+macro_rules! cbor_type_decl {
+    (
+        $(
+            $vis: vis struct $name: ident {
+                $(
+                    $($tag: ident)* $fidx: literal => $fname: ident: $ftype: ty
+                ),+ $(,)?
+            }
+        )*
+    ) => {
+        $(
+            #[derive(Clone, Debug, Decode, Encode)]
+            #[cbor(map)]
+            $vis struct $name {
+                $(
+                    #[n( $fidx )] pub $fname: $ftype,
+                )+
+            }
+        )*
+    };
+}
+
 /// A deterministic (fixed point) percent value that can be multiplied with
 /// numbers and rounded down.
 #[repr(transparent)]

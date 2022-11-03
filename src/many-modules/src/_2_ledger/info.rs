@@ -8,19 +8,6 @@ pub type InfoArgs = EmptyArg;
 
 #[derive(Clone, Debug, Decode, Encode)]
 #[cbor(map)]
-pub struct TokenInfoSummary {
-    #[n(0)]
-    pub name: String,
-
-    #[n(1)]
-    pub ticker: String,
-
-    #[n(2)]
-    pub decimals: u32,
-}
-
-#[derive(Clone, Debug, Decode, Encode)]
-#[cbor(map)]
 pub struct InfoReturns {
     // TODO: remove this. Kept for backward compatibility.
     #[n(0)]
@@ -37,5 +24,5 @@ pub struct InfoReturns {
     pub local_names: BTreeMap<ledger::Symbol, String>,
 
     #[n(5)]
-    pub tokens: BTreeMap<ledger::Symbol, TokenInfoSummary>,
+    pub tokens: BTreeMap<ledger::Symbol, ledger::TokenInfoSummary>,
 }

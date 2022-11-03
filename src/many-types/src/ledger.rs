@@ -1,4 +1,4 @@
-use crate::Percent;
+use crate::{cbor_type_decl, Percent};
 use many_identity::Address;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
@@ -292,6 +292,41 @@ impl<'de> Deserialize<'de> for TokenAmount {
         deserializer.deserialize_any(Visitor)
     }
 }
+
+#[derive(Clone, Debug, Decode, Encode)]
+#[cbor(map)]
+pub struct TokenInfoSummary {
+    #[n(0)]
+    pub name: String,
+
+    #[n(1)]
+    pub ticker: String,
+
+    #[n(2)]
+    pub decimals: u32,
+}
+
+#[derive(Clone, Debug, Decode, Encode)]
+#[cbor(map)]
+pub struct TokenInfoSupply {
+    #[n(0)]
+    pub total: TokenAmount,
+
+    #[n(1)]
+    pub circulating: TokenAmount,
+
+    #[n(2)]
+    pub maximum: Option<TokenAmount>,
+}
+
+cbor_type_decl!(
+    pub struct TokenInfo {
+        0 => symbol: Symbol,
+        1 => summary: TokenInfoSummary,
+        2 => supply: TokenInfoSupply,
+        3 => owner: Option<Address>,
+    }
+);
 
 #[cfg(test)]
 mod test {

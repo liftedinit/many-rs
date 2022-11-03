@@ -1,14 +1,15 @@
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use std::cmp::Ordering;
 use std::collections::VecDeque;
+use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SingleVisualTokenLogo {
     /// A single character. This is limited to a single character for now.
     UnicodeChar(char),
     Image {
         content_type: String,
-        binary: Vec<u8>,
+        binary: Arc<Vec<u8>>,
     },
 }
 
@@ -19,7 +20,7 @@ impl SingleVisualTokenLogo {
     pub fn image(content_type: String, binary: Vec<u8>) -> Self {
         Self::Image {
             content_type,
-            binary,
+            binary: Arc::new(binary),
         }
     }
 }
@@ -108,7 +109,7 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
     }
 }
 
-#[derive(Default, Debug, Encode, Decode)]
+#[derive(Default, Clone, Debug, Encode, Decode)]
 #[cbor(transparent)]
 pub struct VisualTokenLogo(#[n(0)] VecDeque<SingleVisualTokenLogo>);
 
