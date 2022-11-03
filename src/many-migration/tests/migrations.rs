@@ -8,7 +8,7 @@ use std::str::FromStr;
 type Storage = BTreeMap<String, String>;
 
 #[distributed_slice]
-static MIGRATIONS: [InnerMigration<'static, Storage, String>] = [..];
+static SOME_MANY_RS_MIGRATIONS: [InnerMigration<'static, Storage, String>] = [..];
 
 fn _initialize(s: &mut Storage) -> Result<(), String> {
     s.insert("Init".to_string(), "Okay".to_string());
@@ -34,23 +34,23 @@ fn _hotfix(data: &[u8]) -> Option<Vec<u8>> {
     None
 }
 
-#[distributed_slice(MIGRATIONS)]
+#[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
 static A: InnerMigration<Storage, String> =
     InnerMigration::new_initialize(&_initialize, "A", "A desc");
 
-#[distributed_slice(MIGRATIONS)]
+#[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
 static B: InnerMigration<Storage, String> = InnerMigration::new_update(&_update, "B", "B desc");
 
-#[distributed_slice(MIGRATIONS)]
+#[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
 static C: InnerMigration<Storage, String> =
     InnerMigration::new_initialize_update(&_initialize, &_update, "C", "C desc");
 
-#[distributed_slice(MIGRATIONS)]
+#[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
 static D: InnerMigration<Storage, String> = InnerMigration::new_hotfix(_hotfix, "D", "D desc");
 
 #[test]
 fn initialize() {
-    let migrations = load_enable_all_regular_migrations(&MIGRATIONS);
+    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     assert!(migrations.contains_key("A"));
 
     let mut storage = Storage::new();
@@ -73,7 +73,7 @@ fn initialize() {
 
 #[test]
 fn update() {
-    let migrations = load_enable_all_regular_migrations(&MIGRATIONS);
+    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     assert!(migrations.contains_key("B"));
 
     let mut storage = Storage::new();
@@ -96,7 +96,7 @@ fn update() {
 
 #[test]
 fn initialize_update() {
-    let migrations = load_enable_all_regular_migrations(&MIGRATIONS);
+    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     assert!(migrations.contains_key("C"));
 
     let mut storage = Storage::new();
@@ -150,7 +150,7 @@ fn hotfix() {
         }
     ]
     "#;
-    let migrations = load_migrations(&MIGRATIONS, content).unwrap();
+    let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
     assert!(migrations.contains_key("D"));
 
     let data = [1u8; 8];
@@ -170,21 +170,21 @@ fn hotfix() {
 
 #[test]
 fn name() {
-    let migrations = load_enable_all_regular_migrations(&MIGRATIONS);
+    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     assert!(migrations.contains_key("A"));
     assert_eq!(migrations["A"].name(), "A");
 }
 
 #[test]
 fn description() {
-    let migrations = load_enable_all_regular_migrations(&MIGRATIONS);
+    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     assert!(migrations.contains_key("A"));
     assert_eq!(migrations["A"].description(), "A desc");
 }
 
 #[test]
 fn load_enable_all_regular_hotfix_disabled() {
-    let migrations = load_enable_all_regular_migrations(&MIGRATIONS);
+    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     for k in ["A", "B", "C", "D"] {
         assert!(migrations.contains_key(k));
         match k {
@@ -199,7 +199,7 @@ fn load_enable_all_regular_hotfix_disabled() {
 
 #[test]
 fn metadata() {
-    let migrations = load_enable_all_regular_migrations(&MIGRATIONS);
+    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     for migration in migrations.values() {
         let metadata = migration.metadata();
         assert_eq!(metadata.block_height, 1);
@@ -217,7 +217,7 @@ fn metadata() {
         }
     ]
     "#;
-    let migrations = load_migrations(&MIGRATIONS, content).unwrap();
+    let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
     let metadata = migrations["D"].metadata();
     assert_eq!(metadata.block_height, 200);
     assert_eq!(metadata.issue, Some("foobar".to_string()));
@@ -229,7 +229,7 @@ fn metadata() {
 
 #[test]
 fn status() {
-    let migrations = load_enable_all_regular_migrations(&MIGRATIONS);
+    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     for i in ["A", "B", "C", "D"] {
         let migration = &migrations[i];
         let status = migration.status();
@@ -244,11 +244,11 @@ fn status() {
 
 #[test]
 fn encode_decode() {
-    let migrations = load_enable_all_regular_migrations(&MIGRATIONS);
+    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     let cbor = minicbor::to_vec(&migrations).unwrap();
 
     let result: BTreeMap<&str, Migration<Storage, String>> =
-        minicbor::decode_with(&cbor, &mut MIGRATIONS.clone()).unwrap();
+        minicbor::decode_with(&cbor, &mut SOME_MANY_RS_MIGRATIONS.clone()).unwrap();
     for ((orig_name, orig_mig), (res_name, res_mig)) in
         result.into_iter().zip(migrations.into_iter())
     {
