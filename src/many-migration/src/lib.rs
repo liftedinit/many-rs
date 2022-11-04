@@ -460,7 +460,7 @@ pub fn load_enable_all_regular_migrations<'a, E, T>(
     registry: &'a [InnerMigration<'a, T, E>],
 ) -> BTreeMap<&'a str, Migration<'a, T, E>> {
     registry
-        .into_iter()
+        .iter()
         .map(|m| {
             (
                 m.name,
