@@ -8,7 +8,7 @@ use std::fmt;
 use strum::Display;
 use tracing::{debug, trace};
 
-pub type FnPtr<T, E> = dyn Sync + Fn(&mut T) -> Result<(), E>;
+pub type FnPtr<T, E> = fn(&mut T) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
 
 #[derive(Debug, Default, Deserialize, Encode, Serialize, Decode, Display, PartialEq, Eq)]
@@ -90,21 +90,21 @@ impl<'b, C> Decode<'b, C> for Metadata {
 }
 
 #[derive(Clone, Display)]
-pub enum MigrationType<'a, T, E> {
-    Regular(RegularMigration<'a, T, E>),
+pub enum MigrationType<T, E> {
+    Regular(RegularMigration<T, E>),
     Hotfix(HotfixMigration),
 }
 
-impl<'a, T, E> fmt::Debug for MigrationType<'a, T, E> {
+impl<T, E> fmt::Debug for MigrationType<T, E> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> std::fmt::Result {
         formatter.write_str(&format!("{self}"))
     }
 }
 
 #[derive(Clone)]
-pub struct RegularMigration<'a, T, E> {
-    initialize_fn: &'a FnPtr<T, E>,
-    update_fn: &'a FnPtr<T, E>,
+pub struct RegularMigration<T, E> {
+    initialize_fn: FnPtr<T, E>,
+    update_fn: FnPtr<T, E>,
 }
 
 #[derive(Clone)]
@@ -114,7 +114,7 @@ pub struct HotfixMigration {
 
 #[derive(Clone)]
 pub struct InnerMigration<'a, T, E> {
-    r#type: MigrationType<'a, T, E>,
+    r#type: MigrationType<T, E>,
     name: &'a str,
     description: &'a str,
 }
@@ -187,9 +187,7 @@ impl<'a, 'b, C: Copy + IntoIterator<Item = &'a InnerMigration<'a, T, E>>, T, E> 
         let mut status = None;
         for _ in 0..l {
             match d.u8()? {
-                0 => {
-                    name = Some(d.str()?);
-                }
+                0 => name = Some(d.str()?),
                 1 => metadata = Some(d.decode()?),
                 2 => status = Some(d.decode()?),
                 _ => return Err(minicbor::decode::Error::message("Unknown key.")),
@@ -306,8 +304,12 @@ impl<'a, T, E> Migration<'a, T, E> {
     }
 }
 
-impl<'a, T, E> InnerMigration<'a, T, E> {
-    pub const fn new_hotfix(hotfix_fn: FnByte, name: &'a str, description: &'a str) -> Self {
+impl<T, E> InnerMigration<'static, T, E> {
+    pub const fn new_hotfix(
+        hotfix_fn: FnByte,
+        name: &'static str,
+        description: &'static str,
+    ) -> Self {
         Self {
             r#type: MigrationType::Hotfix(HotfixMigration { hotfix_fn }),
             name,
@@ -316,10 +318,10 @@ impl<'a, T, E> InnerMigration<'a, T, E> {
     }
 
     pub const fn new_initialize_update(
-        initialize_fn: &'a FnPtr<T, E>,
-        update_fn: &'a FnPtr<T, E>,
-        name: &'a str,
-        description: &'a str,
+        initialize_fn: FnPtr<T, E>,
+        update_fn: FnPtr<T, E>,
+        name: &'static str,
+        description: &'static str,
     ) -> Self {
         Self {
             r#type: MigrationType::Regular(RegularMigration {
@@ -332,14 +334,14 @@ impl<'a, T, E> InnerMigration<'a, T, E> {
     }
 
     pub const fn new_initialize(
-        initialize_fn: &'a FnPtr<T, E>,
-        name: &'a str,
-        description: &'a str,
+        initialize_fn: FnPtr<T, E>,
+        name: &'static str,
+        description: &'static str,
     ) -> Self {
         Self {
             r#type: MigrationType::Regular(RegularMigration {
                 initialize_fn,
-                update_fn: &|_| Ok(()),
+                update_fn: |_| Ok(()),
             }),
             name,
             description,
@@ -347,20 +349,22 @@ impl<'a, T, E> InnerMigration<'a, T, E> {
     }
 
     pub const fn new_update(
-        update_fn: &'a FnPtr<T, E>,
-        name: &'a str,
-        description: &'a str,
+        update_fn: FnPtr<T, E>,
+        name: &'static str,
+        description: &'static str,
     ) -> Self {
         Self {
             r#type: MigrationType::Regular(RegularMigration {
-                initialize_fn: &|_| Ok(()),
+                initialize_fn: |_| Ok(()),
                 update_fn,
             }),
             name,
             description,
         }
     }
+}
 
+impl<'a, T, E> InnerMigration<'a, T, E> {
     pub const fn name(&self) -> &'a str {
         self.name
     }
@@ -369,7 +373,7 @@ impl<'a, T, E> InnerMigration<'a, T, E> {
         self.description
     }
 
-    pub const fn r#type(&self) -> &MigrationType<'a, T, E> {
+    pub const fn r#type(&self) -> &'_ MigrationType<T, E> {
         &self.r#type
     }
 

@@ -38,14 +38,14 @@ fn _hotfix(data: &[u8]) -> Option<Vec<u8>> {
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
 static A: InnerMigration<Storage, String> =
-    InnerMigration::new_initialize(&_initialize, "A", "A desc");
+    InnerMigration::new_initialize(_initialize, "A", "A desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static B: InnerMigration<Storage, String> = InnerMigration::new_update(&_update, "B", "B desc");
+static B: InnerMigration<Storage, String> = InnerMigration::new_update(_update, "B", "B desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
 static C: InnerMigration<Storage, String> =
-    InnerMigration::new_initialize_update(&_initialize, &_update, "C", "C desc");
+    InnerMigration::new_initialize_update(_initialize, _update, "C", "C desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
 static D: InnerMigration<Storage, String> = InnerMigration::new_hotfix(_hotfix, "D", "D desc");
