@@ -421,7 +421,7 @@ impl<'a, T, E> InnerMigration<'a, T, E> {
 }
 
 #[derive(Deserialize)]
-struct IO<'a> {
+struct MigrationJson<'a> {
     r#type: &'a str,
 
     #[serde(flatten)]
@@ -433,7 +433,7 @@ pub fn load_migrations<'a, 'b, E, T>(
     data: &'a str,
 ) -> Result<BTreeMap<&'b str, Migration<'b, T, E>>, String> {
     // TODO: Do not hardcode the deserializer
-    let config: Vec<IO> = serde_json::from_str(data).unwrap();
+    let config: Vec<MigrationJson> = serde_json::from_str(data).unwrap();
 
     // TODO: Cache this
     // Build a BTreeMap from the linear registry
@@ -455,12 +455,12 @@ pub fn load_migrations<'a, 'b, E, T>(
         .collect())
 }
 
-/// Enable all migrations from the registry EXCEPT the hotfix
+// /// Enable all migrations from the registry EXCEPT the hotfix
 pub fn load_enable_all_regular_migrations<'a, E, T>(
     registry: &'a [InnerMigration<'a, T, E>],
 ) -> BTreeMap<&'a str, Migration<'a, T, E>> {
     registry
-        .iter()
+        .into_iter()
         .map(|m| {
             (
                 m.name,

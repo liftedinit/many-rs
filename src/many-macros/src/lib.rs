@@ -274,7 +274,7 @@ impl Endpoint {
             quote_spanned! { span => {
                 let protected = std::collections::BTreeMap::from_iter(envelope.protected.header.rest.clone().into_iter());
                 if !protected.contains_key(&coset::Label::Text("webauthn".to_string())) {
-                    return Err( many_error::ManyError::non_webauthn_request_denied(method))
+                    return Err(many_error::ManyError::non_webauthn_request_denied(method))
                 }
             }}
         } else {
