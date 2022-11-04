@@ -205,9 +205,9 @@ async fn show_response<'a>(
         fn progress(str: &str, done: bool) {
             if atty::is(atty::Stream::Stderr) {
                 if done {
-                    eprintln!("{}", str);
+                    eprintln!("{str}");
                 } else {
-                    eprint!("{}", str);
+                    eprint!("{str}");
                 }
             }
         }
@@ -344,7 +344,7 @@ async fn main() {
                                 .with_subresource_id(subid)
                                 .expect("Invalid subresource id");
                         }
-                        println!("{}", i)
+                        println!("{i}")
                     }
                     Err(e) => {
                         error!("Identity did not parse: {:?}", e.to_string());
@@ -357,17 +357,17 @@ async fn main() {
                         .with_subresource_id(subid)
                         .expect("Invalid subresource id");
                 }
-                println!("{}", hex::encode(&i.to_vec()));
+                println!("{}", hex::encode(i.to_vec()));
             } else if let Ok(pem_content) = std::fs::read_to_string(&o.arg) {
                 // Create the identity from the public key hash.
-                let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().address();
+                let mut i = CoseKeyIdentity::from_pem(pem_content).unwrap().address();
                 if let Some(subid) = o.subid {
                     i = i
                         .with_subresource_id(subid)
                         .expect("Invalid subresource id");
                 }
 
-                println!("{}", i);
+                println!("{i}");
             } else {
                 error!("Could not understand the argument.");
                 std::process::exit(2);
@@ -396,7 +396,7 @@ async fn main() {
                     .expect("Invalid subresource id");
             }
 
-            println!("{}", id);
+            println!("{id}");
         }
         SubCommand::Message(o) => {
             let to_identity = o.to.unwrap_or_default();
@@ -407,7 +407,7 @@ async fn main() {
             });
             let data = o
                 .data
-                .map_or(vec![], |d| cbor_diag::parse_diag(&d).unwrap().to_bytes());
+                .map_or(vec![], |d| cbor_diag::parse_diag(d).unwrap().to_bytes());
 
             let from_identity: Box<dyn Identity> = if let (Some(module), Some(slot), Some(keyid)) =
                 (o.module, o.slot, o.keyid)
@@ -435,7 +435,7 @@ async fn main() {
                 )
             } else if let Some(p) = o.pem {
                 // If `pem` is not provided, use anonymous and don't sign.
-                Box::new(CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap())
+                Box::new(CoseKeyIdentity::from_pem(std::fs::read_to_string(p).unwrap()).unwrap())
             } else {
                 Box::new(AnonymousIdentity)
             };
@@ -540,7 +540,7 @@ async fn main() {
                 .ok_or_else(|| format!("Could not resolve symbol '{}'", &symbol))
                 .unwrap();
 
-            println!("{}", id);
+            println!("{id}");
         }
     }
 }

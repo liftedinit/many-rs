@@ -13,11 +13,12 @@ load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_regi
 
 rules_rust_dependencies()
 
-RUST_VERSION = "1.62.0"
+RUST_VERSION = "nightly"
 
 rust_register_toolchains(
     edition = "2021",
     version = RUST_VERSION,
+    iso_date = "2022-10-31",
 )
 
 load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
@@ -46,6 +47,7 @@ crates_repository(
         "//src/many-identity-hsm:Cargo.toml",
         "//src/many-identity-webauthn:Cargo.toml",
         "//src/many-macros:Cargo.toml",
+        "//src/many-migration:Cargo.toml",
         "//src/many-mock:Cargo.toml",
         "//src/many-modules:Cargo.toml",
         "//src/many-protocol:Cargo.toml",

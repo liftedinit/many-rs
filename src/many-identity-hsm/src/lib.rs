@@ -216,7 +216,7 @@ impl Hsm {
         trace!("Decoding EC_POINT using ASN.1 DER");
         let raw_points: &[u8] = asn1::parse_single(ec_points)
             .map_err(|e| ManyError::hsm_ec_point_error(format!("{e:?}")))?;
-        trace!("Raw, uncompressed EC_POINT: {}", hex::encode(&raw_points));
+        trace!("Raw, uncompressed EC_POINT: {}", hex::encode(raw_points));
         Ok((raw_points.to_vec(), ec_params.clone()))
     }
 

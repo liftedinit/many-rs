@@ -17,12 +17,12 @@ pub enum CborAny {
 impl Debug for CborAny {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CborAny::Bool(b) => write!(f, "{}", b),
-            CborAny::Int(i) => write!(f, "{}", i),
+            CborAny::Bool(b) => write!(f, "{b}"),
+            CborAny::Int(i) => write!(f, "{i}"),
             CborAny::String(s) => f.write_str(s),
             CborAny::Bytes(b) => write!(f, r#"b"{}""#, hex::encode(b)),
-            CborAny::Array(a) => write!(f, "{:?}", a),
-            CborAny::Map(m) => write!(f, "{:?}", m),
+            CborAny::Array(a) => write!(f, "{a:?}"),
+            CborAny::Map(m) => write!(f, "{m:?}"),
         }
     }
 }
@@ -53,7 +53,7 @@ impl<C> Encode<C> for CborAny {
                 }
             }
             CborAny::Map(m) => {
-                e.encode(&m)?;
+                e.encode(m)?;
             }
         }
 

@@ -41,11 +41,11 @@ pub struct Status {
 
 impl Status {
     pub fn to_bytes(&self) -> Result<Vec<u8>, String> {
-        minicbor::to_vec(self).map_err(|e| format!("{}", e))
+        minicbor::to_vec(self).map_err(|e| e.to_string())
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
-        minicbor::decode(bytes).map_err(|e| format!("{}", e))
+        minicbor::decode(bytes).map_err(|e| e.to_string())
     }
 }
 
@@ -61,7 +61,7 @@ impl<C> Encode<C> for Status {
         }
 
         e.u8(3)?
-            .encode(&self.identity)?
+            .encode(self.identity)?
             .u8(4)?
             .encode(&self.attributes)?;
 

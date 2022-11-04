@@ -256,7 +256,7 @@ impl Endpoint {
         let span = self.span;
         let name = self.name.as_str().to_camel_case();
         let ep = match namespace {
-            Some(ref namespace) => format!("{}.{}", namespace, name),
+            Some(ref namespace) => format!("{namespace}.{name}"),
             None => name,
         };
 
@@ -274,7 +274,7 @@ impl Endpoint {
             quote_spanned! { span => {
                 let protected = std::collections::BTreeMap::from_iter(envelope.protected.header.rest.clone().into_iter());
                 if !protected.contains_key(&coset::Label::Text("webauthn".to_string())) {
-                    return Err( many_error::ManyError::non_webauthn_request_denied(&method))
+                    return Err(many_error::ManyError::non_webauthn_request_denied(method))
                 }
             }}
         } else {
@@ -303,7 +303,7 @@ impl Endpoint {
         let span = self.span;
         let name = self.name.as_str().to_camel_case();
         let ep = match namespace {
-            Some(ref namespace) => format!("{}.{}", namespace, name),
+            Some(ref namespace) => format!("{namespace}.{name}"),
             None => name,
         };
         let ep_ident = &self.func;
@@ -381,17 +381,17 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
 
     let vis = tr.vis.clone();
     let trait_ident = if attrs.name.is_none() {
-        Ident::new(&format!("{}Backend", struct_name), tr.ident.span())
+        Ident::new(&format!("{struct_name}Backend"), tr.ident.span())
     } else {
         tr.ident.clone()
     };
 
     let attr_id = attrs.id.iter();
     let attr_name =
-        inflections::Inflect::to_constant_case(format!("{}Attribute", struct_name).as_str());
+        inflections::Inflect::to_constant_case(format!("{struct_name}Attribute").as_str());
     let attr_ident = Ident::new(&attr_name, attr.span());
 
-    let info_name = format!("{}Info", struct_name);
+    let info_name = format!("{struct_name}Info");
     let info_ident = Ident::new(&info_name, attr.span());
 
     let endpoints: Vec<Endpoint> = tr
@@ -422,7 +422,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         .map(|e| {
             let name = e.name.as_str().to_camel_case();
             match &namespace {
-                Some(ref namespace) => format!("{}.{}", namespace, name),
+                Some(ref namespace) => format!("{namespace}.{name}"),
                 None => name,
             }
         })

@@ -479,7 +479,7 @@ impl<L, R> Either<L, R> {
         match self {
             Either::Left(l) => l,
             Either::Right(r) => {
-                panic!("called `Either::unwrap_left()` on a `Right` value: {:?}", r)
+                panic!("called `Either::unwrap_left()` on a `Right` value: {r:?}")
             }
         }
     }
@@ -509,7 +509,7 @@ impl<L, R> Either<L, R> {
     {
         match self {
             Either::Right(r) => r,
-            Either::Left(l) => panic!("called `Either::unwrap_right()` on a `Left` value: {:?}", l),
+            Either::Left(l) => panic!("called `Either::unwrap_right()` on a `Left` value: {l:?}"),
         }
     }
 
@@ -538,7 +538,7 @@ impl<L, R> Either<L, R> {
     {
         match self {
             Either::Left(l) => l,
-            Either::Right(r) => panic!("{}: {:?}", msg, r),
+            Either::Right(r) => panic!("{msg}: {r:?}"),
         }
     }
 
@@ -567,7 +567,7 @@ impl<L, R> Either<L, R> {
     {
         match self {
             Either::Right(r) => r,
-            Either::Left(l) => panic!("{}: {:?}", msg, l),
+            Either::Left(l) => panic!("{msg}: {l:?}"),
         }
     }
 }
@@ -871,7 +871,7 @@ where
     type Target = L::Target;
 
     fn deref(&self) -> &Self::Target {
-        either!(*self, ref inner => &**inner)
+        either!(*self, ref inner => inner)
     }
 }
 
@@ -930,7 +930,7 @@ fn basic() {
 fn deref() {
     fn is_str(_: &str) {}
     let value: Either<String, &str> = Left(String::from("test"));
-    is_str(&*value);
+    is_str(&value);
 }
 
 #[test]
