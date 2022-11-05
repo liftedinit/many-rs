@@ -373,19 +373,14 @@ impl<'b, C> Decode<'b, C> for SortOrder {
     }
 }
 
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Copy, Clone, Default, Ord, PartialOrd, Eq, PartialEq)]
 enum AttributeRelatedIndexInner {
+    #[default]
     None,
     One([u32; 1]),
     Two([u32; 2]),
     Three([u32; 3]),
     Four([u32; 4]),
-}
-
-impl Default for AttributeRelatedIndexInner {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -396,14 +391,14 @@ pub struct AttributeRelatedIndex {
 }
 
 impl AttributeRelatedIndex {
-    pub fn new(attribute: AttributeId) -> Self {
+    pub const fn new(attribute: AttributeId) -> Self {
         Self {
             attribute,
-            indices: AttributeRelatedIndexInner::default(),
+            indices: AttributeRelatedIndexInner::None,
         }
     }
 
-    pub fn with_index(self, index: u32) -> Self {
+    pub const fn with_index(self, index: u32) -> Self {
         let indices = match self.indices {
             AttributeRelatedIndexInner::None => AttributeRelatedIndexInner::One([index]),
             AttributeRelatedIndexInner::One(a) => AttributeRelatedIndexInner::Two([a[0], index]),
@@ -422,7 +417,7 @@ impl AttributeRelatedIndex {
         }
     }
 
-    pub fn indices(&self) -> &[u32] {
+    pub const fn indices(&self) -> &[u32] {
         match &self.indices {
             AttributeRelatedIndexInner::None => &[],
             AttributeRelatedIndexInner::One(a) => a,
