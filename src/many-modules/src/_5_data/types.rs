@@ -14,6 +14,7 @@ use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::{BigInt, Sign};
 use num_traits::cast::ToPrimitive;
 use std::borrow::Cow;
+use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, PoisonError, RwLock, RwLockReadGuard};
 
@@ -89,9 +90,9 @@ impl DataIndex {
     }
 }
 
-impl Into<DataIndex> for AttributeRelatedIndex {
-    fn into(self) -> DataIndex {
-        DataIndex(self)
+impl From<AttributeRelatedIndex> for DataIndex {
+    fn from(index: AttributeRelatedIndex) -> Self {
+        Self(index)
     }
 }
 
@@ -115,7 +116,7 @@ impl DataSet {
     pub fn with_known_types(mut self) -> Result<Self, ManyError> {
         // Check for duplicate first (don't modify if fails).
         for (index, _info) in accounts_count::ALL {
-            if self.types.contains_key(&index) {
+            if self.types.contains_key(index) {
                 return Err(ManyError::unknown("Type already registered."));
             }
         }
@@ -131,15 +132,15 @@ impl DataSet {
     }
 
     pub fn with_type(mut self, index: DataIndex, info: &DataInfo) -> Result<Self, ManyError> {
-        if self.types.contains_key(&index) {
-            Err(ManyError::unknown("Type already registered."))
-        } else {
-            self.types.insert(index, (*info).clone());
+        if let Entry::Vacant(e) = self.types.entry(index) {
+            e.insert((*info).clone());
             self.values.insert(
                 index,
                 Arc::new(RwLock::new(DataValue::create(&info.r#type))),
             );
             Ok(self)
+        } else {
+            Err(ManyError::unknown("Type already registered."))
         }
     }
 
@@ -172,11 +173,9 @@ impl DataSet {
                     break;
                 }
                 *l -= 1;
-            } else {
-                if d.datatype()? == Type::Break {
-                    d.skip()?;
-                    break;
-                }
+            } else if d.datatype()? == Type::Break {
+                d.skip()?;
+                break;
             }
 
             let index: DataIndex = d.decode()?;
@@ -202,7 +201,7 @@ impl DataSet {
     pub fn decode_merge(&mut self, d: &mut Decoder, skip: bool) -> Result<(), ManyError> {
         let map = self
             .decode_inner(d, skip)
-            .map_err(|e| ManyError::deserialization_error(e))?;
+            .map_err(ManyError::deserialization_error)?;
 
         self.merge(map)
     }
@@ -358,10 +357,10 @@ impl DataValue {
                 DataType::GaugeInt => match cbor {
                     CborAny::Int(v) => Ok(Self::GaugeInt(BigInt::from(*v))),
                     CborAny::Tagged(Tag::PosBignum, box CborAny::Bytes(v)) => {
-                        Ok(Self::GaugeInt(BigInt::from_bytes_be(Sign::Plus, &v)))
+                        Ok(Self::GaugeInt(BigInt::from_bytes_be(Sign::Plus, v)))
                     }
                     CborAny::Tagged(Tag::NegBignum, box CborAny::Bytes(v)) => {
-                        Ok(Self::GaugeInt(BigInt::from_bytes_be(Sign::Minus, &v)))
+                        Ok(Self::GaugeInt(BigInt::from_bytes_be(Sign::Minus, v)))
                     }
                     _ => Err(ManyError::deserialization_error(
                         "Expected unsigned integer value.",
@@ -429,17 +428,11 @@ impl<'b> Decode<'b, DataType> for DataValue {
                 | Type::I16
                 | Type::I32
                 | Type::I64 => d.i64()?.into(),
-                Type::Tag => {
-                    let bigint = match d.tag()? {
-                        Tag::PosBignum => BigInt::from_bytes_be(Sign::Plus, d.bytes()?),
-                        Tag::NegBignum => BigInt::from_bytes_be(Sign::Minus, d.bytes()?),
-                        _ => {
-                            return Err(decode::Error::message("Unsupported tag for big numbers."))
-                        }
-                    };
-
-                    bigint
-                }
+                Type::Tag => match d.tag()? {
+                    Tag::PosBignum => BigInt::from_bytes_be(Sign::Plus, d.bytes()?),
+                    Tag::NegBignum => BigInt::from_bytes_be(Sign::Minus, d.bytes()?),
+                    _ => return Err(decode::Error::message("Unsupported tag for big numbers.")),
+                },
                 x => return Err(decode::Error::type_mismatch(x)),
             }),
         })
