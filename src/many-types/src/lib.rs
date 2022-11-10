@@ -391,6 +391,7 @@ pub struct AttributeRelatedIndex {
 }
 
 impl AttributeRelatedIndex {
+    #[inline]
     pub const fn new(attribute: AttributeId) -> Self {
         Self {
             attribute,
@@ -398,6 +399,7 @@ impl AttributeRelatedIndex {
         }
     }
 
+    #[inline]
     pub const fn with_index(self, index: u32) -> Self {
         let indices = match self.indices {
             AttributeRelatedIndexInner::None => AttributeRelatedIndexInner::One([index]),
@@ -417,6 +419,7 @@ impl AttributeRelatedIndex {
         }
     }
 
+    #[inline]
     pub const fn indices(&self) -> &[u32] {
         match &self.indices {
             AttributeRelatedIndexInner::None => &[],

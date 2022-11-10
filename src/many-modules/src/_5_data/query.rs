@@ -1,11 +1,12 @@
 use std::collections::BTreeMap;
 
 use many_types::VecOrSingle;
-use minicbor::{Encode, Decode};
+use minicbor::{Decode, Encode};
 
 use crate::data::{DataIndex, DataValue};
 
 #[derive(Clone, Encode, Decode)]
+#[cbor(map)]
 pub struct DataQueryArgs {
     #[n(0)]
     pub indices: VecOrSingle<DataIndex>,

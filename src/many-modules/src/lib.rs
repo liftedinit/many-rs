@@ -1,3 +1,5 @@
+#![feature(box_patterns)]
+
 use async_trait::async_trait;
 use many_error::ManyError;
 use many_protocol::{RequestMessage, ResponseMessage};

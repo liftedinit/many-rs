@@ -1,4 +1,4 @@
-use minicbor::data::Type;
+use minicbor::data::{Tag, Type};
 use minicbor::encode::Write;
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeMap;
@@ -6,23 +6,42 @@ use std::fmt::{Debug, Formatter};
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum CborAny {
+    Undefined(),
     Bool(bool),
     Int(i64),
     String(String),
     Bytes(Vec<u8>),
     Array(Vec<CborAny>),
     Map(BTreeMap<CborAny, CborAny>),
+    Tagged(Tag, Box<CborAny>),
+}
+
+impl CborAny {
+    pub fn as_u64(&self) -> Option<u64> {
+        match self {
+            Self::Int(i) if i >= &0 => Some(*i as u64),
+            _ => None,
+        }
+    }
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            Self::Int(i) => Some(*i),
+            _ => None,
+        }
+    }
 }
 
 impl Debug for CborAny {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            CborAny::Undefined() => write!(f, "undefined"),
             CborAny::Bool(b) => write!(f, "{b}"),
             CborAny::Int(i) => write!(f, "{i}"),
             CborAny::String(s) => f.write_str(s),
             CborAny::Bytes(b) => write!(f, r#"b"{}""#, hex::encode(b)),
             CborAny::Array(a) => write!(f, "{a:?}"),
             CborAny::Map(m) => write!(f, "{m:?}"),
+            CborAny::Tagged(t, v) => write!(f, "tagged({t:?}, {v:?})"),
         }
     }
 }
@@ -34,6 +53,9 @@ impl<C> Encode<C> for CborAny {
         _: &mut C,
     ) -> Result<(), minicbor::encode::Error<W::Error>> {
         match self {
+            CborAny::Undefined() => {
+                e.undefined()?;
+            }
             CborAny::Bool(b) => {
                 e.bool(*b)?;
             }
@@ -54,6 +76,9 @@ impl<C> Encode<C> for CborAny {
             }
             CborAny::Map(m) => {
                 e.encode(m)?;
+            }
+            CborAny::Tagged(t, v) => {
+                e.tag(*t)?.encode(v)?;
             }
         }
 
@@ -84,6 +109,11 @@ impl<'d, C> Decode<'d, C> for CborAny {
                     BTreeMap<CborAny, CborAny>,
                     minicbor::decode::Error,
                 >>()?))
+            }
+            Type::Tag => {
+                let tag = d.tag()?;
+                let value: CborAny = d.decode()?;
+                Ok(CborAny::Tagged(tag, Box::new(value)))
             }
             x => Err(minicbor::decode::Error::type_mismatch(x)),
         }
