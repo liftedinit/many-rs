@@ -399,7 +399,7 @@ impl<'b> Decode<'b, ()> for DataValue {
                 }
                 _ => Err(decode::Error::type_mismatch(Type::U64)),
             },
-            _ => return Err(decode::Error::message("Unsupported tag for big numbers.")),
+            _ => Err(decode::Error::message("Unsupported tag for big numbers.")),
         }
     }
 }
