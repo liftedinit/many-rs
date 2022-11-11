@@ -132,11 +132,7 @@ mod tests {
         // Check that both the dataset and the results match their expected value.
         assert_eq!(&ds.get_value(account_total_count).unwrap(), &act_value);
         assert_eq!(
-            &results
-                .get(&account_total_count)
-                .unwrap()
-                .convert(DataType::GaugeInt)
-                .unwrap(),
+            &results.get(&account_total_count).unwrap().clone(),
             &act_value
         );
         assert_eq!(
@@ -144,11 +140,7 @@ mod tests {
             &nzatc_value
         );
         assert_eq!(
-            &results
-                .get(&non_zero_account_total_count)
-                .unwrap()
-                .convert(DataType::GaugeInt)
-                .unwrap(),
+            &results.get(&non_zero_account_total_count).unwrap().clone(),
             &nzatc_value
         );
     }

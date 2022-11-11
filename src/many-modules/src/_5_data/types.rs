@@ -1,13 +1,13 @@
 //! All data holders for holding data in a MANY framework server.
 //!
-//! A server/module is expected to have a single `DataSet` where each sub-
-//! modules register their data types, and then can access it to increment
+//! A server/module is expected to have a single `DataSet` where each
+//! submodule register their data types, and then can access it to increment
 //! or change their values.
 //!
-//! The DataSet can
+//! Data values include the type expected of them, so DataSet is for storage,
+//! and DataValue should be passed on the wire.
 use many_error::ManyError;
 use many_types::attributes::AttributeId;
-use many_types::cbor::CborAny;
 use many_types::AttributeRelatedIndex;
 use minicbor::data::{Tag, Type};
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
@@ -19,8 +19,15 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, PoisonError, RwLock, RwLockReadGuard};
 
 macro_rules! decl_type {
+    ( ($index_name: ident, $info_name: ident) => ( $short: literal, $index: tt, counter ) ) => {
+        pub const $index_name: DataIndex = DataIndex::from($index);
+        pub const $info_name: DataInfo = DataInfo {
+            r#type: DataType::Counter,
+            shortname: std::borrow::Cow::Borrowed($short),
+        };
+    };
     ( ($index_name: ident, $info_name: ident) => ( $short: literal, $index: tt, gauge_int ) ) => {
-        pub const $index_name: DataIndex = DataIndex::new_array($index);
+        pub const $index_name: DataIndex = DataIndex::from($index);
         pub const $info_name: DataInfo = DataInfo {
             r#type: DataType::GaugeInt,
             shortname: std::borrow::Cow::Borrowed($short),
@@ -71,39 +78,25 @@ impl DataIndex {
     pub const fn with_index(self, index: u32) -> Self {
         Self(self.0.with_index(index))
     }
-
-    #[inline]
-    const fn new_array<const N: usize>(arr: [u32; N]) -> Self {
-        let mut index = Self::new(arr[0]);
-
-        if N > 1 {
-            index = index.with_index(arr[1])
-        }
-        if N > 2 {
-            index = index.with_index(arr[2])
-        }
-        if N > 3 {
-            index = index.with_index(arr[3])
-        }
-
-        index
-    }
 }
 
-impl From<AttributeRelatedIndex> for DataIndex {
-    fn from(index: AttributeRelatedIndex) -> Self {
-        Self(index)
+impl<T> const From<T> for DataIndex
+where
+    T: Into<AttributeRelatedIndex>,
+{
+    fn from(index: T) -> Self {
+        Self(index.into())
     }
 }
 
 #[derive(Copy, Clone, Debug, Decode, Encode, Eq, PartialEq)]
-#[repr(C)]
 #[cbor(index_only)]
+#[repr(u32)]
 pub enum DataType {
-    #[n(0)]
-    Counter = 0,
-    #[n(1)]
-    GaugeInt = 1,
+    #[n(10100)]
+    Counter = 10100,
+    #[n(10101)]
+    GaugeInt = 10101,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -179,15 +172,15 @@ impl DataSet {
             }
 
             let index: DataIndex = d.decode()?;
-            let mut ty = if let Some(ty) = self.type_of(index) {
-                *ty
-            } else if skip {
-                continue;
-            } else {
-                return Err(Box::new(ManyError::unknown("Unknown data type.")));
-            };
+            if self.type_of(index).is_none() {
+                if skip {
+                    continue;
+                } else {
+                    return Err(Box::new(ManyError::unknown("Unknown data type.")));
+                }
+            }
 
-            let value = d.decode_with(&mut ty)?;
+            let value = d.decode()?;
             new_values.insert(index, value);
         }
 
@@ -212,12 +205,8 @@ impl DataSet {
     ) -> Result<(), ManyError> {
         for (index, v) in it.into_iter() {
             if let Some(lock) = self.values.get(&index) {
-                let ty = self
-                    .types
-                    .get(&index)
-                    .ok_or_else(|| ManyError::deserialization_error("Unknown index."))?;
                 let mut guard = lock.write().map_err(ManyError::deserialization_error)?;
-                *guard = v.convert(ty.r#type)?;
+                guard.set(v)?;
             }
         }
         Ok(())
@@ -246,7 +235,7 @@ impl DataSet {
         self.types.iter()
     }
 
-    /// Get multiple cloned values from a list of indices. If an indice in the list isn't in the
+    /// Get multiple cloned values from a list of indices. If an indices in the list isn't in the
     /// set, it will not contain a value on the output BTreeMap.
     /// If any lock is poisoned, this function will return the first poisoned error.
     pub fn get_multiple(
@@ -323,7 +312,6 @@ impl Encode<BTreeSet<DataIndex>> for DataSet {
 pub enum DataValue {
     Counter(u64),
     GaugeInt(BigInt),
-    Unknown(CborAny),
 }
 
 impl DataValue {
@@ -332,6 +320,16 @@ impl DataValue {
             DataType::Counter => Self::Counter(0),
             DataType::GaugeInt => Self::GaugeInt(BigInt::default()),
         }
+    }
+
+    pub fn set(&mut self, new: DataValue) -> Result<(), ManyError> {
+        match (self, new) {
+            (DataValue::Counter(inner), DataValue::Counter(x)) => *inner = x,
+            (DataValue::GaugeInt(inner), DataValue::GaugeInt(x)) => *inner = x,
+            _ => return Err(ManyError::unknown("Incompatible Data types.")),
+        }
+
+        Ok(())
     }
 
     pub fn as_counter(&self) -> Option<u64> {
@@ -347,30 +345,6 @@ impl DataValue {
             _ => None,
         }
     }
-
-    pub fn convert(&self, ty: DataType) -> Result<Self, ManyError> {
-        match self {
-            Self::Unknown(cbor) => match ty {
-                DataType::Counter => Ok(Self::Counter(cbor.as_u64().ok_or_else(|| {
-                    ManyError::deserialization_error("Expected unsigned integer value.")
-                })?)),
-                DataType::GaugeInt => match cbor {
-                    CborAny::Int(v) => Ok(Self::GaugeInt(BigInt::from(*v))),
-                    CborAny::Tagged(Tag::PosBignum, box CborAny::Bytes(v)) => {
-                        Ok(Self::GaugeInt(BigInt::from_bytes_be(Sign::Plus, v)))
-                    }
-                    CborAny::Tagged(Tag::NegBignum, box CborAny::Bytes(v)) => {
-                        Ok(Self::GaugeInt(BigInt::from_bytes_be(Sign::Minus, v)))
-                    }
-                    _ => Err(ManyError::deserialization_error(
-                        "Expected unsigned integer value.",
-                    )),
-                },
-            },
-            DataValue::Counter(v) => Ok(Self::Counter(*v)),
-            DataValue::GaugeInt(bi) => Ok(Self::GaugeInt(bi.clone())),
-        }
-    }
 }
 
 impl<C> Encode<C> for DataValue {
@@ -381,9 +355,10 @@ impl<C> Encode<C> for DataValue {
     ) -> Result<(), encode::Error<W::Error>> {
         match self {
             DataValue::Counter(v) => {
-                e.u64(*v)?;
+                e.tag(Tag::Unassigned(DataType::Counter as u64))?.u64(*v)?;
             }
             DataValue::GaugeInt(v) => {
+                e.tag(Tag::Unassigned(DataType::GaugeInt as u64))?;
                 if let Some(v) = v.to_i64() {
                     e.i64(v)?;
                 } else {
@@ -400,9 +375,6 @@ impl<C> Encode<C> for DataValue {
                     };
                 }
             }
-            DataValue::Unknown(v) => {
-                e.encode(v)?;
-            }
         }
 
         Ok(())
@@ -411,31 +383,24 @@ impl<C> Encode<C> for DataValue {
 
 impl<'b> Decode<'b, ()> for DataValue {
     fn decode(d: &mut Decoder<'b>, _: &mut ()) -> Result<Self, decode::Error> {
-        Ok(DataValue::Unknown(d.decode()?))
-    }
-}
-
-impl<'b> Decode<'b, DataType> for DataValue {
-    fn decode(d: &mut Decoder<'b>, ty: &mut DataType) -> Result<Self, decode::Error> {
-        Ok(match ty {
-            DataType::Counter => Self::Counter(d.u64()?),
-            DataType::GaugeInt => Self::GaugeInt(match d.datatype()? {
-                Type::U8
-                | Type::U16
-                | Type::U32
-                | Type::U64
-                | Type::I8
-                | Type::I16
-                | Type::I32
-                | Type::I64 => d.i64()?.into(),
-                Type::Tag => match d.tag()? {
-                    Tag::PosBignum => BigInt::from_bytes_be(Sign::Plus, d.bytes()?),
-                    Tag::NegBignum => BigInt::from_bytes_be(Sign::Minus, d.bytes()?),
-                    _ => return Err(decode::Error::message("Unsupported tag for big numbers.")),
-                },
-                x => return Err(decode::Error::type_mismatch(x)),
-            }),
-        })
+        match d.tag()? {
+            Tag::Unassigned(10100) => Ok(Self::Counter(d.u64()?)),
+            Tag::Unassigned(10101) => match d.datatype()? {
+                Type::U8 | Type::U16 | Type::U32 | Type::U64 => Ok(Self::GaugeInt(d.u64()?.into())),
+                Type::Tag => {
+                    let bigint = match d.tag()? {
+                        Tag::PosBignum => BigInt::from_bytes_be(Sign::Plus, d.bytes()?),
+                        Tag::NegBignum => BigInt::from_bytes_be(Sign::Minus, d.bytes()?),
+                        _ => {
+                            return Err(decode::Error::message("Unsupported tag for big numbers."))
+                        }
+                    };
+                    Ok(Self::GaugeInt(bigint))
+                }
+                _ => Err(decode::Error::type_mismatch(Type::U64)),
+            },
+            _ => return Err(decode::Error::message("Unsupported tag for big numbers.")),
+        }
     }
 }
 
@@ -456,10 +421,11 @@ mod tests {
     fn supports_bigint() {
         use num_traits::Num;
 
-        let query_return =
-            cbor_diag::parse_diag(r#"{ [0, [2, 0]]: 2(h'0102030405060708090A0B0C0D0E0F') }"#)
-                .unwrap()
-                .to_bytes();
+        let query_return = cbor_diag::parse_diag(
+            r#"{ [0, [2, 0]]: 10101(2(h'0102030405060708090A0B0C0D0E0F')) }"#,
+        )
+        .unwrap()
+        .to_bytes();
 
         let mut ds = DataSet::default()
             .with_type(TOTAL_COUNT_INDEX, &TOTAL_COUNT_INFO)
@@ -482,7 +448,7 @@ mod tests {
 
     #[test]
     fn supports_u64() {
-        let query_return = cbor_diag::parse_diag(r#"{ [0, [2, 0]]: 66051 }"#)
+        let query_return = cbor_diag::parse_diag(r#"{ [0, [2, 0]]: 10101(66051) }"#)
             .unwrap()
             .to_bytes();
 
@@ -535,7 +501,7 @@ mod tests {
 
     #[test]
     fn encodes_selectively() {
-        let query_return = cbor_diag::parse_diag(r#"{ [0, [2, 0]]: 66051 }"#)
+        let query_return = cbor_diag::parse_diag(r#"{ [0, [2, 0]]: 10101(66051) }"#)
             .unwrap()
             .to_bytes();
 

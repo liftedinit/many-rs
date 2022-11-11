@@ -1,3 +1,5 @@
+#![feature(const_trait_impl)]
+
 use many_error::ManyError;
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
@@ -432,6 +434,35 @@ impl AttributeRelatedIndex {
 
     pub fn flattened(&self) -> Vec<u32> {
         [&[self.attribute], self.indices()].concat().to_vec()
+    }
+}
+
+impl const From<[u32; 1]> for AttributeRelatedIndex {
+    fn from(arr: [u32; 1]) -> Self {
+        AttributeRelatedIndex::new(arr[0])
+    }
+}
+
+impl const From<[u32; 2]> for AttributeRelatedIndex {
+    fn from(arr: [u32; 2]) -> Self {
+        AttributeRelatedIndex::new(arr[0]).with_index(arr[1])
+    }
+}
+
+impl const From<[u32; 3]> for AttributeRelatedIndex {
+    fn from(arr: [u32; 3]) -> Self {
+        AttributeRelatedIndex::new(arr[0])
+            .with_index(arr[1])
+            .with_index(arr[2])
+    }
+}
+
+impl const From<[u32; 4]> for AttributeRelatedIndex {
+    fn from(arr: [u32; 4]) -> Self {
+        AttributeRelatedIndex::new(arr[0])
+            .with_index(arr[1])
+            .with_index(arr[2])
+            .with_index(arr[3])
     }
 }
 

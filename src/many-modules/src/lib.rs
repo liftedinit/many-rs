@@ -1,4 +1,6 @@
 #![feature(box_patterns)]
+#![feature(const_convert)]
+#![feature(const_trait_impl)]
 
 use async_trait::async_trait;
 use many_error::ManyError;
