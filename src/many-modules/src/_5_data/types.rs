@@ -82,7 +82,8 @@ impl DataIndex {
 
 impl<T> const From<T> for DataIndex
 where
-    T: Into<AttributeRelatedIndex>,
+    T: ~const Into<AttributeRelatedIndex>,
+    // AttributeRelatedIndex: ~const From<T>
 {
     fn from(index: T) -> Self {
         Self(index.into())
