@@ -9,8 +9,7 @@ use many_macros::many_module;
 use many_protocol::ResponseMessage;
 use many_types::cbor::CborAny;
 use many_types::ledger::TokenAmount;
-use many_types::legacy::MemoLegacy;
-use many_types::memo::DataLegacy;
+use many_types::legacy::{DataLegacy, MemoLegacy};
 use many_types::{legacy, Memo, Timestamp};
 use minicbor::bytes::ByteVec;
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
@@ -257,7 +256,7 @@ pub struct InfoReturn {
     pub timeout: Timestamp,
 
     #[n(7)]
-    pub data_: Option<legacy::DataLegacy>,
+    pub data_: Option<DataLegacy>,
 
     #[n(8)]
     pub state: MultisigTransactionState,
