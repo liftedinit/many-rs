@@ -666,7 +666,7 @@ define_event! {
         6     | threshold:              u64,
         7     | timeout:                Timestamp,
         8     | execute_automatically:  bool,
-        9     | data:                   Option<DataLegacy>,
+        9     | data_:                  Option<DataLegacy>,
         10    | memo:                   Option<Memo>,
     },
     [9, 1, 1]   AccountMultisigApprove (module::account::features::multisig::ApproveArgs) {
@@ -910,7 +910,7 @@ mod test {
                 timeout: Timestamp::now(),
                 execute_automatically: false,
                 memo_: None,
-                data: None,
+                data_: None,
             }
         }
 
@@ -960,6 +960,8 @@ mod test {
                                 threshold: None,
                                 timeout_in_secs: None,
                                 execute_automatically: None,
+                                data_: None,
+                                memo_: None,
                             }
                         )
                     )

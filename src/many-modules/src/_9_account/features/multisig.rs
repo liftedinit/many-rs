@@ -9,7 +9,9 @@ use many_macros::many_module;
 use many_protocol::ResponseMessage;
 use many_types::cbor::CborAny;
 use many_types::ledger::TokenAmount;
-use many_types::{Memo, Timestamp};
+use many_types::legacy::MemoLegacy;
+use many_types::memo::DataLegacy;
+use many_types::{legacy, Memo, Timestamp};
 use minicbor::bytes::ByteVec;
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
@@ -128,7 +130,7 @@ pub struct SubmitTransactionArgs {
     pub account: Address,
 
     #[n(1)]
-    pub memo: Option<Memo>,
+    pub memo_: Option<MemoLegacy<String>>,
 
     #[n(2)]
     pub transaction: Box<AccountMultisigTransaction>,
@@ -141,13 +143,18 @@ pub struct SubmitTransactionArgs {
 
     #[n(5)]
     pub execute_automatically: Option<bool>,
+
+    #[n(6)]
+    pub data_: Option<DataLegacy>,
+
+    #[n(7)]
+    pub memo: Option<Memo>,
 }
 
 impl SubmitTransactionArgs {
     pub fn send(from: Address, to: Address, symbol: Address, amount: TokenAmount) -> Self {
         Self {
             account: from,
-            memo: None,
             transaction: Box::new(AccountMultisigTransaction::Send(SendArgs {
                 from: Some(from),
                 to,
@@ -157,6 +164,9 @@ impl SubmitTransactionArgs {
             threshold: None,
             timeout_in_secs: None,
             execute_automatically: None,
+            memo_: None,
+            data_: None,
+            memo: None,
         }
     }
 }
@@ -226,7 +236,7 @@ impl<'b, C> Decode<'b, C> for MultisigTransactionState {
 #[cbor(map)]
 pub struct InfoReturn {
     #[n(0)]
-    pub memo: Option<Memo>,
+    pub memo_: Option<legacy::MemoLegacy<String>>,
 
     #[n(1)]
     pub transaction: AccountMultisigTransaction,
@@ -246,8 +256,14 @@ pub struct InfoReturn {
     #[n(6)]
     pub timeout: Timestamp,
 
+    #[n(7)]
+    pub data_: Option<legacy::DataLegacy>,
+
     #[n(8)]
     pub state: MultisigTransactionState,
+
+    #[n(9)]
+    pub memo: Option<Memo>,
 }
 
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
