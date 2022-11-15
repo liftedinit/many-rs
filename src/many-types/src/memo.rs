@@ -6,6 +6,10 @@ use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 
 const MEMO_DATA_DEFAULT_MAX_SIZE: usize = 4000; // 4kB
 
+mod legacy;
+pub use legacy::Data as DataLegacy;
+pub use legacy::Memo as MemoLegacy;
+
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 enum MemoInner<const MAX_LENGTH: usize> {
     String(String),

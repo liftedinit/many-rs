@@ -5,6 +5,7 @@ use many_identity::Address;
 use many_macros::many_module;
 use many_protocol::ResponseMessage;
 use many_types::ledger::{Symbol, TokenAmount};
+use many_types::legacy::{DataLegacy, MemoLegacy};
 use many_types::{AttributeRelatedIndex, CborRange, Memo, Timestamp, VecOrSingle};
 use minicbor::bytes::ByteVec;
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
@@ -659,12 +660,14 @@ define_event! {
     [9, 1, 0]   AccountMultisigSubmit (module::account::features::multisig::SubmitTransactionArgs) {
         1     | submitter:              Address                                [ id ],
         2     | account:                Address                                [ id ],
-        3     | memo:                   Option<Memo>,
+        3     | memo_:                  Option<MemoLegacy<String>>,
         4     | transaction:            Box<AccountMultisigTransaction>        [ inner ],
         5     | token:                  Option<ByteVec>,
         6     | threshold:              u64,
         7     | timeout:                Timestamp,
         8     | execute_automatically:  bool,
+        9     | data:                   Option<DataLegacy>,
+        10    | memo:                   Option<Memo>,
     },
     [9, 1, 1]   AccountMultisigApprove (module::account::features::multisig::ApproveArgs) {
         1     | account:                Address                                [ id ],
