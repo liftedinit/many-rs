@@ -19,9 +19,6 @@ proptest = { version = "1.0.0", optional = true }
 serde = "1.0.139"
 
 [dev-dependencies]
-cbor-diag = "0.1.10"
+cbor-diag = "0.1.11"
 many-types = { path = ".", features = ["proptest"] }
 serde_test = "1.0.139"
-
-[features]
-memo-backward-compatible = []

@@ -9,6 +9,24 @@ const MULTISIG_MEMO_DATA_MAX_SIZE: usize = 4000; //4kB
 // We might want to borrow with a Memo<&str> instead of a &Memo<String>
 pub struct Memo<S: AsRef<str>>(S);
 
+impl<S> AsRef<str> for Memo<S>
+where
+    S: AsRef<str>,
+{
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl<S> ToString for Memo<S>
+where
+    S: AsRef<str>,
+{
+    fn to_string(&self) -> String {
+        self.0.as_ref().to_string()
+    }
+}
+
 impl<S, C> Encode<C> for Memo<S>
 where
     S: AsRef<str>,
@@ -63,7 +81,7 @@ impl Memo<String> {
 
 /// Data inside a transaction
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Data(ByteVec);
+pub struct Data(pub(crate) ByteVec);
 
 impl<C> Encode<C> for Data {
     fn encode<W: encode::Write>(

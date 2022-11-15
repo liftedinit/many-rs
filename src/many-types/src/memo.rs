@@ -81,7 +81,7 @@ impl<'b, C, const M: usize> Decode<'b, C> for MemoInner<M> {
     }
 }
 
-/// A memo contains a human readable portion and/or a machine readable portion.
+/// A memo contains a human-readable portion and/or a machine readable portion.
 /// It is meant to be a note regarding a message, transaction, info or any
 /// type that requires meta information.
 #[derive(Clone, Debug, PartialOrd, Eq, PartialEq)]
@@ -104,10 +104,20 @@ impl<const M: usize> Memo<M> {
         Ok(())
     }
 
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
     /// Returns an iterator over all strings of the memo.
     pub fn iter_str(&self) -> impl Iterator<Item = &String> {
         self.inner.iter().filter_map(|inner| match inner {
-            MemoInner::String(s) => Some(s),
+            MemoInner::String(ref s) => Some(s),
             MemoInner::ByteString(_) => None,
         })
     }
@@ -168,19 +178,6 @@ impl<C, const M: usize> Encode<C> for Memo<M> {
 
 impl<'b, C, const M: usize> Decode<'b, C> for Memo<M> {
     fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
-        // Allow for backward compatibility when using a feature.
-        // We need this if we move a database with existing memos.
-        #[cfg(feature = "memo-backward-compatible")]
-        match d.datatype()? {
-            Type::Bytes => {
-                return Self::try_from(d.bytes()?.to_vec()).map_err(decode::Error::message);
-            }
-            Type::String => {
-                return Self::try_from(d.str()?.to_string()).map_err(decode::Error::message);
-            }
-            _ => {}
-        }
-
         let inner = d
             .array_iter_with(ctx)?
             .collect::<Result<Vec<MemoInner<M>>, _>>()?;
@@ -192,9 +189,23 @@ impl<'b, C, const M: usize> Decode<'b, C> for Memo<M> {
     }
 }
 
+// Moving from Legacy to new type can be done safely if the limit is the same.
+impl<S: AsRef<str>> From<MemoLegacy<S>> for Memo<MEMO_DATA_DEFAULT_MAX_SIZE> {
+    fn from(value: MemoLegacy<S>) -> Self {
+        Self::from(MemoInner::try_from(value.as_ref()).unwrap())
+    }
+}
+
+// Moving from Legacy to new type can be done safely if the limit is the same.
+impl From<DataLegacy> for Memo<MEMO_DATA_DEFAULT_MAX_SIZE> {
+    fn from(value: DataLegacy) -> Self {
+        Self::from(MemoInner::try_from(value.0).unwrap())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Memo, MEMO_DATA_DEFAULT_MAX_SIZE};
+    use super::*;
     use proptest::proptest;
 
     proptest! {
@@ -206,23 +217,36 @@ mod tests {
 
             let result = minicbor::decode::<Memo<1000>>(&bytes);
             if len <= 1000 {
-                assert!(result.is_ok());
+                let result = result.unwrap();
+                let mut it_str = result.iter_str();
+                assert_eq!(it_str.next(), Some(&data));
+                assert_eq!(it_str.next(), None);
+                let mut it_bytes = result.iter_bytes();
+                assert_eq!(it_bytes.next(), None);
             } else {
-                assert!(result.is_err());
+                let err = result.unwrap_err();
+                assert!(err.to_string().contains(&format!("Data size ({len}) over limit (1000)")))
             }
         }
 
         #[test]
         fn memo_bytes_decode_prop(len in 900..1100usize) {
-            let data = hex::encode(vec![1u8; len]);
+            let data_raw = vec![1u8; len];
+            let data = hex::encode(&data_raw);
             let cbor = format!(r#" [ h'{data}' ] "#);
             let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
             let result = minicbor::decode::<Memo<1000>>(&bytes);
             if len <= 1000 {
-                assert!(result.is_ok());
+                let result = result.unwrap();
+                let mut it_str = result.iter_str();
+                assert_eq!(it_str.next(), None);
+                let mut it_bytes = result.iter_bytes();
+                assert_eq!(it_bytes.next(), Some(data_raw.as_slice()));
+                assert_eq!(it_bytes.next(), None);
             } else {
-                assert!(result.is_err());
+                let err = result.unwrap_err();
+                assert!(err.to_string().contains(&format!("Data size ({len}) over limit (1000)")))
             }
         }
     }
@@ -233,7 +257,12 @@ mod tests {
         let cbor = format!(r#" [ "{data}" ] "#);
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        assert!(minicbor::decode::<Memo>(&bytes).is_ok());
+        let memo = minicbor::decode::<Memo>(&bytes).unwrap();
+        let mut it_str = memo.iter_str();
+        let mut it_bytes = memo.iter_bytes();
+        assert_eq!(it_str.next(), Some(&data));
+        assert_eq!(it_str.next(), None);
+        assert_eq!(it_bytes.next(), None);
     }
 
     #[test]
@@ -242,7 +271,11 @@ mod tests {
         let cbor = format!(r#" [ "{data}" ] "#);
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+        let result = minicbor::decode::<Memo>(&bytes);
+        assert!(result.unwrap_err().to_string().contains(&format!(
+            "Data size ({}) over limit ({MEMO_DATA_DEFAULT_MAX_SIZE})",
+            MEMO_DATA_DEFAULT_MAX_SIZE + 1
+        )))
     }
 
     #[test]
@@ -250,59 +283,90 @@ mod tests {
         let cbor = " [] ";
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+        let result = minicbor::decode::<Memo>(&bytes);
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Cannot build empty Memo"))
     }
 
     #[test]
-    fn data_decode_ok() {
-        let data = hex::encode(vec![1u8; MEMO_DATA_DEFAULT_MAX_SIZE]);
+    fn bytes_decode_ok() {
+        let data_raw = vec![1u8; MEMO_DATA_DEFAULT_MAX_SIZE];
+        let data = hex::encode(&data_raw);
         let cbor = format!(r#" [ h'{data}' ] "#);
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        assert!(minicbor::decode::<Memo>(&bytes).is_ok());
+        let memo = minicbor::decode::<Memo>(&bytes).unwrap();
+        let mut it_str = memo.iter_str();
+        let mut it_bytes = memo.iter_bytes();
+        assert_eq!(it_str.next(), None);
+        assert_eq!(it_bytes.next(), Some(data_raw.as_slice()));
+        assert_eq!(it_bytes.next(), None);
     }
 
     #[test]
-    fn data_decode_large() {
+    fn bytes_decode_large() {
         let data = hex::encode(vec![1u8; MEMO_DATA_DEFAULT_MAX_SIZE + 1]);
         let cbor = format!(r#" [ h'{data}' ] "#);
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+        let result = minicbor::decode::<Memo>(&bytes);
+        assert!(result.unwrap_err().to_string().contains(&format!(
+            "Data size ({}) over limit ({MEMO_DATA_DEFAULT_MAX_SIZE})",
+            MEMO_DATA_DEFAULT_MAX_SIZE + 1
+        )))
     }
 
     #[test]
     fn mixed_decode_ok() {
-        let data = hex::encode(vec![1u8; MEMO_DATA_DEFAULT_MAX_SIZE]);
+        let data_raw = vec![1u8; MEMO_DATA_DEFAULT_MAX_SIZE];
+        let data = hex::encode(&data_raw);
         let cbor = format!(r#" [ "", h'{data}', "" ] "#);
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        assert!(minicbor::decode::<Memo>(&bytes).is_ok());
+        let memo = minicbor::decode::<Memo>(&bytes).unwrap();
+        let mut it_str = memo.iter_str();
+        let mut it_bytes = memo.iter_bytes();
+        assert_eq!(it_str.next(), Some(&String::new()));
+        assert_eq!(it_str.next(), Some(&String::new()));
+        assert_eq!(it_str.next(), None);
+        assert_eq!(it_bytes.next(), Some(data_raw.as_slice()));
+        assert_eq!(it_bytes.next(), None);
     }
 
     #[test]
-    fn mixed_decode_data_too_lare() {
+    fn mixed_decode_bytes_too_large() {
         let data = hex::encode(vec![1u8; MEMO_DATA_DEFAULT_MAX_SIZE + 1]);
         let cbor = format!(r#" [ "", h'{data}', "" ] "#);
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+        let result = minicbor::decode::<Memo>(&bytes);
+        assert!(result.unwrap_err().to_string().contains(&format!(
+            "Data size ({}) over limit ({MEMO_DATA_DEFAULT_MAX_SIZE})",
+            MEMO_DATA_DEFAULT_MAX_SIZE + 1
+        )))
     }
 
     #[test]
-    fn mixed_decode_data_type_mismatch() {
+    fn mixed_decode_type_mismatch() {
         let cbor = r#" 0 "#;
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+        let result = minicbor::decode::<Memo>(&bytes);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "unexpected type u8 at position 0: expected array"
+        );
     }
 
     #[test]
-    fn mixed_decode_data_type_mismatch_array() {
+    fn mixed_decode_type_mismatch_array() {
         let cbor = r#" [ "", 0, "" ] "#;
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        assert!(minicbor::decode::<Memo>(&bytes).is_err());
+        let result = minicbor::decode::<Memo>(&bytes);
+        assert_eq!(result.unwrap_err().to_string(), "unexpected type string");
     }
 
     #[test]
@@ -311,8 +375,12 @@ mod tests {
         let cbor = format!(r#" "{data}" "#);
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        let memo = minicbor::decode::<Memo>(&bytes).unwrap();
-        assert_eq!(memo.iter_str().next(), Some(&data));
+        let memo: Memo = minicbor::decode::<MemoLegacy<String>>(&bytes)
+            .unwrap()
+            .into();
+        let mut it_str = memo.iter_str();
+        assert_eq!(it_str.next(), Some(&data));
+        assert_eq!(it_str.next(), None);
     }
 
     #[test]
@@ -322,8 +390,11 @@ mod tests {
         let cbor = format!(r#" h'{data}' "#);
         let cbor_bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        let memo = minicbor::decode::<Memo>(&cbor_bytes).unwrap();
-        assert_eq!(memo.iter_bytes().next(), Some(bytes.as_slice()));
+        let data_legacy = minicbor::decode::<DataLegacy>(&cbor_bytes).unwrap();
+        let memo: Memo = data_legacy.into();
+        let mut it = memo.iter_bytes();
+        assert_eq!(it.next(), Some(bytes.as_slice()));
+        assert_eq!(it.next(), None);
     }
 
     #[test]
@@ -332,8 +403,11 @@ mod tests {
         let cbor = format!(r#" "{data}" "#);
         let bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        let memo = minicbor::decode::<Memo>(&bytes).unwrap();
-        assert_eq!(memo.iter_str().next(), Some(&data));
+        let memo_legacy = minicbor::decode::<MemoLegacy<String>>(&bytes).unwrap();
+        let memo: Memo = memo_legacy.into();
+        let mut it = memo.iter_str();
+        assert_eq!(it.next(), Some(&data));
+        assert_eq!(it.next(), None);
     }
 
     #[test]
@@ -343,7 +417,7 @@ mod tests {
         let cbor = format!(r#" h'{data}' "#);
         let cbor_bytes = cbor_diag::parse_diag(cbor).unwrap().to_bytes();
 
-        let memo = minicbor::decode::<Memo>(&cbor_bytes).unwrap();
+        let memo: Memo = minicbor::decode::<DataLegacy>(&cbor_bytes).unwrap().into();
         assert_eq!(memo.iter_bytes().next(), Some(bytes.as_slice()));
     }
 
