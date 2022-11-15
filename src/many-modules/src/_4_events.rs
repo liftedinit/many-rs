@@ -909,6 +909,8 @@ mod test {
                 threshold: 1,
                 timeout: Timestamp::now(),
                 execute_automatically: false,
+                memo_: None,
+                data: None,
             }
         }
 
@@ -983,7 +985,6 @@ mod test {
 #[cfg(test)]
 mod tests {
     use crate::testutils::{call_module, call_module_cbor};
-    use mockall::predicate;
     use std::sync::{Arc, Mutex};
 
     use super::*;
@@ -992,7 +993,7 @@ mod tests {
     fn info() {
         let mut mock = MockEventsModuleBackend::new();
         mock.expect_info()
-            .with(predicate::eq(InfoArgs {}))
+            .with(eq(InfoArgs {}))
             .times(1)
             .returning(|_args| {
                 Ok(InfoReturn {
@@ -1018,7 +1019,7 @@ mod tests {
         };
         let mut mock = MockEventsModuleBackend::new();
         mock.expect_list()
-            .with(predicate::eq(data.clone()))
+            .with(eq(data.clone()))
             .times(1)
             .returning(|_args| {
                 Ok(ListReturns {
