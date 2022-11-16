@@ -3,6 +3,7 @@ use many_error::ManyError;
 use minicbor::bytes::ByteVec;
 use minicbor::data::Type;
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
+use std::borrow::Cow;
 
 const MEMO_DATA_DEFAULT_MAX_SIZE: usize = 4000; // 4kB
 
@@ -14,6 +15,15 @@ pub use legacy::Memo as MemoLegacy;
 enum MemoInner<const MAX_LENGTH: usize> {
     String(String),
     ByteString(ByteVec),
+}
+
+impl<const M: usize> MemoInner<M> {
+    pub fn as_string(&self) -> Option<&String> {
+        match self {
+            Self::String(s) => Some(s),
+            _ => None,
+        }
+    }
 }
 
 macro_rules! declare_try_from {
@@ -40,6 +50,7 @@ macro_rules! declare_try_from {
 declare_try_from!(
     String = Self::String;
     &str = Self::String;
+    Cow<'_, str> = Self::String;
     ByteVec = Self::ByteString;
     Vec<u8> = Self::ByteString;
 );
@@ -116,10 +127,7 @@ impl<const M: usize> Memo<M> {
 
     /// Returns an iterator over all strings of the memo.
     pub fn iter_str(&self) -> impl Iterator<Item = &String> {
-        self.inner.iter().filter_map(|inner| match inner {
-            MemoInner::String(ref s) => Some(s),
-            MemoInner::ByteString(_) => None,
-        })
+        self.inner.iter().filter_map(MemoInner::as_string)
     }
 
     /// Returns an iterator over all bytestrings of the memo.
@@ -128,6 +136,17 @@ impl<const M: usize> Memo<M> {
             MemoInner::String(_) => None,
             MemoInner::ByteString(bstr) => Some(bstr.as_slice()),
         })
+    }
+}
+
+// This helps comparisons.
+impl<const M: usize> PartialEq<str> for Memo<M> {
+    fn eq(&self, other: &str) -> bool {
+        if self.len() == 1 {
+            return self.iter_str().next().map(String::as_str) == Some(other);
+        }
+
+        false
     }
 }
 
@@ -148,6 +167,20 @@ impl<const M: usize> TryFrom<Either<String, ByteVec>> for Memo<M> {
 impl<const M: usize> TryFrom<String> for Memo<M> {
     type Error = ManyError;
     fn try_from(s: String) -> Result<Self, Self::Error> {
+        Ok(Self::from(MemoInner::<M>::try_from(s)?))
+    }
+}
+
+impl<'a, const M: usize> TryFrom<Cow<'a, str>> for Memo<M> {
+    type Error = ManyError;
+    fn try_from(s: Cow<'a, str>) -> Result<Self, Self::Error> {
+        Ok(Self::from(MemoInner::<M>::try_from(s)?))
+    }
+}
+
+impl<const M: usize> TryFrom<&str> for Memo<M> {
+    type Error = ManyError;
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         Ok(Self::from(MemoInner::<M>::try_from(s)?))
     }
 }
