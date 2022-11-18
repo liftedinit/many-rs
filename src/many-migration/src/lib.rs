@@ -307,6 +307,7 @@ impl MigrationConfig {
     }
 }
 
+#[derive(Debug)]
 pub struct MigrationSet<'a, T: 'a, E: 'a = many_error::ManyError> {
     inner: BTreeMap<String, Migration<'a, T, E>>,
     height: u64,
