@@ -1955,6 +1955,7 @@ name = "many-migration"
 version = "0.1.0"
 dependencies = [
  "linkme",
+ "many-error",
  "minicbor",
  "serde",
  "serde_json",

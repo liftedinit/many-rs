@@ -7,6 +7,7 @@ package(default_visibility = [
     "//src/many-identity-dsa:__pkg__",
     "//src/many-identity-hsm:__pkg__",
     "//src/many-identity-webauthn:__pkg__",
+    "//src/many-migration:__pkg__",
     "//src/many-mock:__pkg__",
     "//src/many-modules:__pkg__",
     "//src/many-protocol:__pkg__",

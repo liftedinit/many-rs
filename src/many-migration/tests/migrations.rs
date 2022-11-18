@@ -1,16 +1,14 @@
 #![feature(used_with_arg)] // Required to build the test with Bazel
 
 use linkme::distributed_slice;
-use many_migration::{
-    load_enable_all_regular_migrations, load_migrations, InnerMigration, Migration, Status,
-};
+use many_migration::{load_enable_all_regular_migrations, load_migrations, InnerMigration};
 use std::collections::{BTreeMap, HashMap};
 use std::str::FromStr;
 
 type Storage = BTreeMap<String, String>;
 
 #[distributed_slice]
-static SOME_MANY_RS_MIGRATIONS: [InnerMigration<'static, Storage, String>] = [..];
+static SOME_MANY_RS_MIGRATIONS: [InnerMigration<Storage, String>] = [..];
 
 fn _initialize(s: &mut Storage) -> Result<(), String> {
     s.insert("Init".to_string(), "Okay".to_string());
@@ -147,7 +145,7 @@ fn hotfix() {
     let content = r#"
     [
         {
-            "type": "D",
+            "name": "D",
             "block_height": 2
         }
     ]
@@ -212,7 +210,7 @@ fn metadata() {
     let content = r#"
     [
         {
-            "type": "D",
+            "name": "D",
             "block_height": 200,
             "issue": "foobar",
             "xtra": "Oh!"
@@ -234,30 +232,12 @@ fn status() {
     let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     for i in ["A", "B", "C", "D"] {
         let migration = &migrations[i];
-        let status = migration.status();
+        let status = migration.is_enabled();
 
         match i {
-            "A" | "B" | "C" => assert_eq!(status, &Status::Enabled),
-            "D" => assert_eq!(status, &Status::Disabled),
+            "A" | "B" | "C" => assert_eq!(status, true),
+            "D" => assert_eq!(status, false),
             _ => unimplemented!(),
         }
-    }
-}
-
-#[test]
-fn encode_decode() {
-    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
-    let cbor = minicbor::to_vec(&migrations).unwrap();
-
-    let result: BTreeMap<&str, Migration<Storage, String>> =
-        minicbor::decode_with(&cbor, &mut SOME_MANY_RS_MIGRATIONS.clone()).unwrap();
-    for ((orig_name, orig_mig), (res_name, res_mig)) in
-        result.into_iter().zip(migrations.into_iter())
-    {
-        assert_eq!(orig_name, res_name);
-        assert_eq!(orig_mig.name(), res_mig.name());
-        assert_eq!(orig_mig.description(), res_mig.description());
-        assert_eq!(orig_mig.metadata(), res_mig.metadata());
-        assert_eq!(orig_mig.status(), res_mig.status());
     }
 }
