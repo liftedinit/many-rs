@@ -1,5 +1,5 @@
 {
-  "checksum": "5746c2706f511fd937e2df500df28d8fed2f3f2abb1d98d8da3db5bc4bf1671a",
+  "checksum": "da1d8ae09ac50db59f40466a06279da6c64a4c0c18be377eac3d65ed3ba691be",
   "crates": {
     "aes 0.7.5": {
       "name": "aes",
@@ -7624,7 +7624,7 @@
               "target": "slab"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -8322,7 +8322,7 @@
               "target": "socket2"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -8388,7 +8388,7 @@
               "target": "native_tls"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -9475,7 +9475,7 @@
               "target": "rpassword"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -9636,7 +9636,7 @@
               "target": "tiny_http"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -10330,7 +10330,7 @@
               "target": "serde_json"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             }
           ],
@@ -10706,7 +10706,7 @@
               "target": "tiny_http"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -14948,7 +14948,7 @@
                 "target": "pin_project_lite"
               },
               {
-                "id": "tokio 1.21.2",
+                "id": "tokio 1.22.0",
                 "target": "tokio"
               },
               {
@@ -18342,13 +18342,13 @@
       },
       "license": "MIT OR Apache-2.0 OR Zlib"
     },
-    "tokio 1.21.2": {
+    "tokio 1.22.0": {
       "name": "tokio",
-      "version": "1.21.2",
+      "version": "1.22.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tokio/1.21.2/download",
-          "sha256": "a9e03c497dc955702ba729190dc4aac6f2a0ce97f913e5b1b5912fc5039d9099"
+          "url": "https://crates.io/api/v1/crates/tokio/1.22.0/download",
+          "sha256": "d76ce4a75fb488c605c54bf610f221cea8b0dafb53333c1a67e8ee199dcd2ae3"
         }
       },
       "targets": [
@@ -18434,7 +18434,7 @@
               "target": "pin_project_lite"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "build_script_build"
             }
           ],
@@ -18473,7 +18473,7 @@
           ],
           "selects": {}
         },
-        "version": "1.21.2"
+        "version": "1.22.0"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -18576,7 +18576,7 @@
               "target": "native_tls"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             }
           ],
@@ -18639,7 +18639,7 @@
               "target": "pin_project_lite"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
+use std::fmt::Formatter;
 use std::ops::Index;
 use strum::Display;
 use tracing::trace;
@@ -51,11 +52,23 @@ pub struct HotfixMigration {
     hotfix_fn: FnByte,
 }
 
-#[derive(Copy, Debug, Clone)]
+#[derive(Copy, Clone)]
 pub struct InnerMigration<T, E> {
     r#type: MigrationType<T, E>,
     name: &'static str,
     description: &'static str,
+}
+
+// The Debug derive requires that _all_ parametric types also implement Debug,
+// even if the sub-types don't. So we have to implement our own version.
+impl<T, E> fmt::Debug for InnerMigration<T, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("InnerMigration")
+            .field("type", &self.r#type)
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .finish()
+    }
 }
 
 impl<T, E> fmt::Display for InnerMigration<T, E> {
@@ -175,7 +188,6 @@ impl<T, E> InnerMigration<T, E> {
     }
 }
 
-#[derive(Debug)]
 pub struct Migration<'a, T, E> {
     migration: &'a InnerMigration<T, E>,
 
@@ -187,6 +199,19 @@ pub struct Migration<'a, T, E> {
 
     /// Whether the block height has been reached.
     active: bool,
+}
+
+// The Debug derive requires that _all_ parametric types also implement Debug,
+// even if the sub-types don't. So we have to implement our own version.
+impl<'a, T, E> fmt::Debug for Migration<'a, T, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Migration")
+            .field("migration", &self.migration)
+            .field("metadata", &self.metadata)
+            .field("enabled", &self.enabled)
+            .field("active", &self.active)
+            .finish()
+    }
 }
 
 impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
@@ -307,10 +332,18 @@ impl MigrationConfig {
     }
 }
 
-#[derive(Debug)]
 pub struct MigrationSet<'a, T: 'a, E: 'a = many_error::ManyError> {
     inner: BTreeMap<String, Migration<'a, T, E>>,
     height: u64,
+}
+
+impl<'a, T, E: fmt::Debug> fmt::Debug for MigrationSet<'a, T, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MigrationSet")
+            .field("inner", &self.inner)
+            .field("height", &self.height)
+            .finish()
+    }
 }
 
 impl<'a, T, E> MigrationSet<'a, T, E> {
@@ -403,6 +436,8 @@ impl<'a, T, E, IDX: AsRef<str>> Index<IDX> for MigrationSet<'a, T, E> {
     }
 }
 
+/// Kept for backward compatibility.
+#[deprecated = "Should use MigrationSet::load() instead."]
 pub fn load_migrations<'a, T, E>(
     registry: &'a [InnerMigration<T, E>],
     config: &str,
@@ -416,6 +451,7 @@ pub fn load_migrations<'a, T, E>(
 pub fn load_enable_all_regular_migrations<T, E>(
     registry: &[InnerMigration<T, E>],
 ) -> MigrationSet<T, E> {
+    // Keep a default of block height 1 for backward compatibility.
     let metadata = Metadata {
         block_height: 1,
         ..Metadata::default()
