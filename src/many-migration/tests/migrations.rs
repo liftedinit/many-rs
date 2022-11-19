@@ -1,25 +1,31 @@
 #![feature(used_with_arg)] // Required to build the test with Bazel
 
 use linkme::distributed_slice;
-use many_migration::{load_enable_all_regular_migrations, load_migrations, InnerMigration};
+use many_migration::{
+    load_enable_all_regular_migrations, load_migrations, InnerMigration, Metadata, MigrationConfig,
+    MigrationSet,
+};
 use std::collections::{BTreeMap, HashMap};
-use std::str::FromStr;
 
-type Storage = BTreeMap<String, String>;
+type Storage = BTreeMap<StorageKey, u64>;
+
+#[derive(Ord, PartialOrd, Eq, PartialEq)]
+enum StorageKey {
+    Init = 0,
+    Counter = 1,
+}
 
 #[distributed_slice]
 static SOME_MANY_RS_MIGRATIONS: [InnerMigration<Storage, String>] = [..];
 
 fn _initialize(s: &mut Storage) -> Result<(), String> {
-    s.insert("Init".to_string(), "Okay".to_string());
+    s.insert(StorageKey::Init, 1);
     Ok(())
 }
 
 fn _update(s: &mut Storage) -> Result<(), String> {
-    if let Some(counter) = s.get("Counter") {
-        let mut counter = u8::from_str(counter).unwrap();
-        counter += 1;
-        s.insert("Counter".to_string(), counter.to_string());
+    if let Some(counter) = s.get_mut(&StorageKey::Counter) {
+        *counter += 1;
         return Ok(());
     }
     Err("Counter entry not found".to_string())
@@ -63,8 +69,8 @@ fn initialize() {
     migrations["A"].initialize(&mut storage, 1).unwrap();
     assert!(!storage.is_empty());
     assert_eq!(storage.len(), 1);
-    assert!(storage.contains_key("Init"));
-    assert_eq!(storage.get("Init").unwrap(), "Okay");
+    assert!(storage.contains_key(&StorageKey::Init));
+    assert_eq!(storage[&StorageKey::Init], 1);
 
     // Should not do anything after it ran once
     migrations["A"].initialize(&mut storage, 2).unwrap();
@@ -77,20 +83,20 @@ fn update() {
     assert!(migrations.contains_key("B"));
 
     let mut storage = Storage::new();
-    storage.insert("Counter".to_string(), "0".to_string());
+    storage.insert(StorageKey::Counter, 0);
 
     // Should not run when block height == 0
     migrations["B"].update(&mut storage, 0).unwrap();
-    assert_eq!(storage["Counter"], "0".to_string());
+    assert_eq!(storage[&StorageKey::Counter], 0);
 
     // Should not run when block height == 1
     migrations["B"].update(&mut storage, 1).unwrap();
-    assert_eq!(storage["Counter"], "0".to_string());
+    assert_eq!(storage[&StorageKey::Counter], 0);
 
     // Should run when block height is > 1
     for i in 2..10 {
         migrations["B"].update(&mut storage, 2).unwrap();
-        assert_eq!(storage["Counter"], (i - 1).to_string());
+        assert_eq!(storage[&StorageKey::Counter], i - 1);
     }
 }
 
@@ -99,8 +105,7 @@ fn initialize_update() {
     let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     assert!(migrations.contains_key("C"));
 
-    let mut storage = Storage::new();
-    storage.insert("Counter".to_string(), "0".to_string());
+    let mut storage = Storage::from_iter([(StorageKey::Counter, 0)]);
 
     for i in 0..4 {
         migrations["C"].initialize(&mut storage, i).unwrap();
@@ -108,8 +113,8 @@ fn initialize_update() {
             0 => assert_eq!(storage.len(), 1),
             1 => {
                 assert_eq!(storage.len(), 2);
-                assert!(storage.contains_key("Init"));
-                assert_eq!(storage.get("Init").unwrap(), "Okay");
+                assert!(storage.contains_key(&StorageKey::Init));
+                assert_eq!(storage[&StorageKey::Init], 1);
             }
             2 => assert_eq!(storage.len(), 2),
             3 => assert_eq!(storage.len(), 2),
@@ -121,19 +126,19 @@ fn initialize_update() {
         match i {
             0 => {
                 assert_eq!(storage.len(), 1);
-                assert_eq!(storage["Counter"], "0".to_string());
+                assert_eq!(storage[&StorageKey::Counter], 0);
             }
             1 => {
                 assert_eq!(storage.len(), 2);
-                assert_eq!(storage["Counter"], "0".to_string());
+                assert_eq!(storage[&StorageKey::Counter], 0);
             }
             2 => {
                 assert_eq!(storage.len(), 2);
-                assert_eq!(storage["Counter"], "1".to_string());
+                assert_eq!(storage[&StorageKey::Counter], 1);
             }
             3 => {
                 assert_eq!(storage.len(), 2);
-                assert_eq!(storage["Counter"], "2".to_string());
+                assert_eq!(storage[&StorageKey::Counter], 2);
             }
             _ => unimplemented!(),
         }
@@ -240,4 +245,47 @@ fn status() {
             _ => unimplemented!(),
         }
     }
+}
+
+#[test]
+fn empty_config() {
+    let migration_set =
+        MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, MigrationConfig::default(), 1).unwrap();
+    assert_eq!(migration_set.values().count(), 0);
+}
+
+#[test]
+fn basic() {
+    let mut migration_set = MigrationSet::load(
+        &SOME_MANY_RS_MIGRATIONS,
+        [
+            (&A, Metadata::enabled(1)),
+            (&B, Metadata::enabled(2)),
+            (&C, Metadata::disabled(1)),
+        ]
+        .into(),
+        0,
+    )
+    .unwrap();
+    assert_eq!(migration_set.values().count(), 3);
+    assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
+    assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 0);
+
+    let mut storage = Storage::new();
+    storage.insert(StorageKey::Counter, 0);
+
+    migration_set.update_at_height(&mut storage, 1).unwrap();
+    assert_eq!(migration_set.values().count(), 3);
+    assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
+    assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 1);
+
+    migration_set.update_at_height(&mut storage, 2).unwrap();
+    assert_eq!(migration_set.values().count(), 3);
+    assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
+    assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);
+
+    migration_set.update_at_height(&mut storage, 3).unwrap();
+    assert_eq!(migration_set.values().count(), 3);
+    assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
+    assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);
 }

@@ -25,6 +25,26 @@ pub struct Metadata {
     pub extra: HashMap<String, Value>,
 }
 
+impl Metadata {
+    pub fn enabled(block_height: u64) -> Self {
+        Self {
+            block_height,
+            disabled: false,
+            issue: None,
+            extra: Default::default(),
+        }
+    }
+
+    pub fn disabled(block_height: u64) -> Self {
+        Self {
+            block_height,
+            disabled: true,
+            issue: None,
+            extra: Default::default(),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Display)]
 #[non_exhaustive]
 pub enum MigrationType<T, E> {
@@ -237,9 +257,13 @@ impl<'a, T, E> Migration<'a, T, E> {
     }
 
     /// Check the height and call the inner migration's methods.
-    pub fn apply_height(&mut self, storage: &mut T, block_height: u64) -> Result<(), E> {
+    pub fn maybe_initialize_update_at_height(
+        &mut self,
+        storage: &mut T,
+        block_height: u64,
+    ) -> Result<(), E> {
         if self.is_enabled() {
-            if block_height > self.metadata.block_height && !self.active {
+            if block_height == self.metadata.block_height && !self.active {
                 self.active = true;
                 self.migration.initialize(storage)?;
             } else if block_height > self.metadata.block_height {
@@ -306,7 +330,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     }
 
     pub fn is_active(&self) -> bool {
-        !self.active
+        self.active
     }
 }
 
@@ -318,17 +342,40 @@ pub struct SingleMigrationConfig {
     metadata: Metadata,
 }
 
+impl<T, E> From<(&InnerMigration<T, E>, Metadata)> for SingleMigrationConfig {
+    fn from((migration, metadata): (&InnerMigration<T, E>, Metadata)) -> Self {
+        Self {
+            name: migration.name.to_string(),
+            metadata,
+        }
+    }
+}
+
 #[derive(Default, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct MigrationConfig(Vec<SingleMigrationConfig>);
 
 impl MigrationConfig {
-    pub fn with_migration<T, E>(mut self, migration: &InnerMigration<T, E>) -> Self {
+    pub fn with_migration<T, E>(self, migration: &InnerMigration<T, E>) -> Self {
+        self.with_migration_opts(migration, Metadata::default())
+    }
+
+    pub fn with_migration_opts<T, E>(
+        mut self,
+        migration: &InnerMigration<T, E>,
+        metadata: Metadata,
+    ) -> Self {
         self.0.push(SingleMigrationConfig {
             name: migration.name.to_string(),
-            metadata: Default::default(),
+            metadata,
         });
         self
+    }
+}
+
+impl<T: IntoIterator<Item = impl Into<SingleMigrationConfig>>> From<T> for MigrationConfig {
+    fn from(value: T) -> Self {
+        Self(value.into_iter().map(Into::into).collect())
     }
 }
 
@@ -373,8 +420,8 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
             .collect();
 
         // Activate all already active migrations. Do not call initialize though.
-        for (_k, v) in inner.iter_mut() {
-            if v.metadata.block_height >= height {
+        for v in inner.values_mut().filter(|m| m.is_enabled()) {
+            if height >= v.metadata.block_height {
                 v.active = true;
             }
         }
@@ -383,10 +430,10 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
     }
 
     #[inline]
-    pub fn update(&mut self, storage: &mut T, block_height: u64) -> Result<(), E> {
+    pub fn update_at_height(&mut self, storage: &mut T, block_height: u64) -> Result<(), E> {
         self.height = block_height;
         for migration in self.inner.values_mut().filter(|m| m.is_regular()) {
-            migration.apply_height(storage, block_height)?;
+            migration.maybe_initialize_update_at_height(storage, block_height)?;
         }
         Ok(())
     }
@@ -448,6 +495,7 @@ pub fn load_migrations<'a, T, E>(
 
 /// Enable all migrations from the registry EXCEPT the hotfix.
 /// Should not be used outside of tests.
+#[deprecated = "Should use MigrationSet::load() instead."]
 pub fn load_enable_all_regular_migrations<T, E>(
     registry: &[InnerMigration<T, E>],
 ) -> MigrationSet<T, E> {
