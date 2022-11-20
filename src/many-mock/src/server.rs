@@ -51,6 +51,7 @@ impl<I: Identity + Debug + Send + Sync> LowLevelManyRequestHandler for ManyMockS
             .get(&message.method)
             .ok_or_else(|| "No mock entry for that".to_string())?;
         let response = ResponseMessage {
+            from: id.address(),
             data: Ok(response.clone()),
             ..Default::default()
         };

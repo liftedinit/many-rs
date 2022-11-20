@@ -1,5 +1,5 @@
 {
-  "checksum": "da1d8ae09ac50db59f40466a06279da6c64a4c0c18be377eac3d65ed3ba691be",
+  "checksum": "a17f395521e509d03c7ceb80a8332ec49fb3545b3016626df2bfc659d418bc0c",
   "crates": {
     "aes 0.7.5": {
       "name": "aes",
@@ -5377,34 +5377,6 @@
         "version": "0.9.0"
       },
       "license": "MIT OR Apache-2.0"
-    },
-    "direct-cargo-bazel-deps 0.0.1": {
-      "name": "direct-cargo-bazel-deps",
-      "version": "0.0.1",
-      "repository": null,
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "direct_cargo_bazel_deps",
-            "crate_root": ".direct_cargo_bazel_deps.rs",
-            "srcs": {
-              "include": [
-                "**/*.rs"
-              ],
-              "exclude": []
-            }
-          }
-        }
-      ],
-      "library_target_name": "direct_cargo_bazel_deps",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "edition": "2018",
-        "version": "0.0.1"
-      },
-      "license": null
     },
     "downcast 0.11.0": {
       "name": "downcast",
@@ -21871,7 +21843,6 @@
     "wait-timeout 0.2.0"
   ],
   "workspace_members": {
-    "direct-cargo-bazel-deps 0.0.1": "",
     "many 0.1.0": "src/many",
     "many-client 0.1.0": "src/many-client",
     "many-client-macros 0.1.0": "src/many-client-macros",
