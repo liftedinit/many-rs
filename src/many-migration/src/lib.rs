@@ -100,6 +100,12 @@ impl<T, E> fmt::Display for InnerMigration<T, E> {
     }
 }
 
+impl<T, E> AsRef<str> for InnerMigration<T, E> {
+    fn as_ref(&self) -> &str {
+        self.name()
+    }
+}
+
 impl<T, E> InnerMigration<T, E> {
     pub const fn new_hotfix(
         hotfix_fn: FnByte,
@@ -457,8 +463,11 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
     }
 
     #[inline]
-    pub fn is_active(&self, name: &str) -> bool {
-        self.inner.get(name).map(|m| m.is_active()).unwrap_or(false)
+    pub fn is_active(&self, name: impl AsRef<str>) -> bool {
+        self.inner
+            .get(name.as_ref())
+            .map(|m| m.is_active())
+            .unwrap_or(false)
     }
 }
 

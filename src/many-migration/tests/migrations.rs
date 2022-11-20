@@ -237,11 +237,11 @@ fn status() {
     let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     for i in ["A", "B", "C", "D"] {
         let migration = &migrations[i];
-        let status = migration.is_enabled();
+        let enabled = migration.is_enabled();
 
         match i {
-            "A" | "B" | "C" => assert_eq!(status, true),
-            "D" => assert_eq!(status, false),
+            "A" | "B" | "C" => assert!(enabled),
+            "D" => assert!(!enabled),
             _ => unimplemented!(),
         }
     }
