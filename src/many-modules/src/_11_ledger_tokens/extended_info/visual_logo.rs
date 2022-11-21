@@ -1,4 +1,5 @@
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
+use num_enum::TryFromPrimitive;
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -6,12 +7,24 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub enum SingleVisualTokenLogo {
     /// A single character. This is limited to a single character for now.
-    UnicodeChar(char),
+    UnicodeChar(char), // TODO: Match spec. Do not limit to a single char
     Image {
         content_type: String,
         binary: Arc<Vec<u8>>,
     },
 }
+
+#[derive(Copy, Clone, Debug, Decode, Encode, Ord, PartialOrd, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u8)]
+#[cbor(index_only)]
+enum SingleVisualTokenLogoKey {
+    #[n(0)]
+    UnicodeChar = 0,
+
+    #[n(1)]
+    Image = 1,
+}
+
 
 impl SingleVisualTokenLogo {
     pub fn char(c: char) -> Self {
@@ -33,7 +46,7 @@ impl<C> Encode<C> for SingleVisualTokenLogo {
     ) -> Result<(), encode::Error<W::Error>> {
         match self {
             SingleVisualTokenLogo::UnicodeChar(c) => {
-                e.map(2)?.u8(0)?.u8(0)?.u8(1)?.str(&String::from(*c))?;
+                e.map(2)?.u8(0)?.u8(SingleVisualTokenLogoKey::UnicodeChar as u8)?.u8(1)?.str(&String::from(*c))?;
             }
             SingleVisualTokenLogo::Image {
                 content_type,
@@ -41,7 +54,7 @@ impl<C> Encode<C> for SingleVisualTokenLogo {
             } => {
                 e.map(3)?
                     .u8(0)?
-                    .u8(0)?
+                    .u8(SingleVisualTokenLogoKey::Image as u8)?
                     .u8(1)?
                     .str(content_type)?
                     .u8(2)?
@@ -64,9 +77,9 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
             return Err(decode::Error::message("Expected key 0 first"));
         }
 
-        let this = match d.u8()? {
-            0 => {
-                // Unicode character.
+        let key: SingleVisualTokenLogoKey = d.decode()?;
+        let this = match key {
+            SingleVisualTokenLogoKey::UnicodeChar => {
                 if d.u8()? != 1 {
                     Err(decode::Error::message("Expected key 1"))
                 } else {
@@ -76,8 +89,7 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
                     )?))
                 }
             }
-            1 => {
-                // Visual Token.
+            SingleVisualTokenLogoKey::Image => {
                 let mut content_type = None;
                 let mut binary = None;
                 let l_ = l;
@@ -100,7 +112,6 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
                     binary.ok_or_else(|| decode::Error::message("Missing binary data."))?,
                 ))
             }
-            i => Err(decode::Error::message(format!("Unknown key {i}"))),
         }?;
         if l > 0 {
             return Err(decode::Error::message("Too many keys in the map."));
