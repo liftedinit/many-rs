@@ -486,6 +486,10 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
     pub fn len(&self) -> usize {
         self.inner.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
 }
 
 impl<'a, T, E, IDX: AsRef<str>> Index<IDX> for MigrationSet<'a, T, E> {
