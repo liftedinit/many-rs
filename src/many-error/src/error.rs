@@ -344,7 +344,7 @@ mod tests {
             arguments,
         );
 
-        assert_eq!(format!("{}", e), "Hello ZERO and TWO.");
+        assert_eq!(e.to_string(), "Hello ZERO and TWO.");
     }
 
     #[test]
@@ -356,7 +356,7 @@ mod tests {
 
         let e = ManyError::new(ErrorCode::Unknown, Some("{2}".to_string()), arguments);
 
-        assert_eq!(format!("{}", e), "TWO");
+        assert_eq!(e.to_string(), "TWO");
     }
 
     #[test]
@@ -372,7 +372,7 @@ mod tests {
             arguments,
         );
 
-        assert_eq!(format!("{}", e), "@.");
+        assert_eq!(e.to_string(), "@.");
     }
 
     #[test]
@@ -388,6 +388,6 @@ mod tests {
             arguments,
         );
 
-        assert_eq!(format!("{}", e), "/{}{ZERO}{}}{TWO.");
+        assert_eq!(e.to_string(), "/{}{ZERO}{}}{TWO.");
     }
 }

@@ -87,11 +87,11 @@ impl RequestMessage {
     }
 
     pub fn to_bytes(&self) -> Result<Vec<u8>, String> {
-        minicbor::to_vec(self).map_err(|e| format!("{}", e))
+        minicbor::to_vec(self).map_err(|e| format!("{e}"))
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
-        minicbor::decode(bytes).map_err(|e| format!("{}", e))
+        minicbor::decode(bytes).map_err(|e| format!("{e}"))
     }
 
     pub fn from(&self) -> Address {
@@ -102,16 +102,13 @@ impl RequestMessage {
 impl<C> Encode<C> for RequestMessage {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         e.tag(Tag::Unassigned(10001))?;
-        let l =
-            2 + if self.from.is_none() || self.from == Some(Address::anonymous()) {
-                0
-            } else {
-                1
-            } + if self.to.is_anonymous() { 0 } else { 1 }
-                + if self.data.is_empty() { 0 } else { 1 }
-                + if self.id.is_none() { 0 } else { 1 }
-                + if self.nonce.is_none() { 0 } else { 1 }
-                + if self.attributes.is_empty() { 0 } else { 1 };
+        let l = 2
+            + u64::from(!(self.from.is_none() || self.from == Some(Address::anonymous())))
+            + u64::from(!self.to.is_anonymous())
+            + u64::from(!self.data.is_empty())
+            + u64::from(self.id.is_some())
+            + u64::from(self.nonce.is_some())
+            + u64::from(!self.attributes.is_empty());
         e.map(l)?;
 
         // Skip version for this version of the protocol. This message implementation
@@ -121,12 +118,12 @@ impl<C> Encode<C> for RequestMessage {
         // No need to send the anonymous identity.
         if let Some(ref i) = self.from {
             if !i.is_anonymous() {
-                e.i8(RequestMessageCborKey::From as i8)?.encode(&i)?;
+                e.i8(RequestMessageCborKey::From as i8)?.encode(i)?;
             }
         }
 
         if !self.to.is_anonymous() {
-            e.i8(RequestMessageCborKey::To as i8)?.encode(&self.to)?;
+            e.i8(RequestMessageCborKey::To as i8)?.encode(self.to)?;
         }
 
         e.i8(RequestMessageCborKey::Endpoint as i8)?

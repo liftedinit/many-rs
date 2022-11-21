@@ -160,7 +160,7 @@ impl<C> Encode<C> for EventFilter {
             .u8(3)?
             .encode(&self.id_range)?
             .u8(4)?
-            .encode(&self.date_range)?;
+            .encode(self.date_range)?;
         for (key, value) in self.events_filter_attribute_specific.iter() {
             e.encode(key)?.encode(value)?;
         }
@@ -233,7 +233,7 @@ impl TryFrom<AttributeRelatedIndex> for EventFilterAttributeSpecificIndex {
         if idx == AttributeRelatedIndex::new(9).with_index(1).with_index(0) {
             return Ok(EventFilterAttributeSpecificIndex::MultisigTransactionState);
         }
-        Err(Self::Error::message(format!("Unknown variant {:?}", idx)))
+        Err(Self::Error::message(format!("Unknown variant {idx:?}")))
     }
 }
 
@@ -913,7 +913,7 @@ mod test {
             let bytes = minicbor::to_vec(info.clone()).expect("Could not serialize");
             let decoded: EventInfo = minicbor::decode(&bytes).expect("Could not decode");
 
-            assert_eq!(format!("{:?}", decoded), format!("{:?}", info));
+            assert_eq!(format!("{decoded:?}"), format!("{info:?}"));
         }
 
         proptest! {

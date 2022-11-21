@@ -126,10 +126,10 @@ impl Ord for Attribute {
 impl<C> Encode<C> for Attribute {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         if self.arguments.is_empty() {
-            e.u32(self.id as u32)?;
+            e.u32(self.id)?;
         } else {
             e.array(1 + self.arguments.len() as u64)?;
-            e.u32(self.id as u32)?;
+            e.u32(self.id)?;
             for a in &self.arguments {
                 e.encode(a)?;
             }
@@ -159,7 +159,7 @@ impl<'d, C> Decode<'d, C> for Attribute {
                     )),
                 }
             }
-            _ => Ok(Self::id(d.u32()? as u32)),
+            _ => Ok(Self::id(d.u32()?)),
         }
     }
 }
@@ -256,7 +256,7 @@ mod tests {
 
         #[test]
         fn debug_fmt(attr in arb_attr()) {
-            assert_eq!(format!("Attribute {{ id: {}, arguments: {:?} }}", attr.id, attr.arguments), format!("{:?}", attr));
+            assert_eq!(format!("Attribute {{ id: {}, arguments: {:?} }}", attr.id, attr.arguments), format!("{attr:?}"));
         }
     }
 }
