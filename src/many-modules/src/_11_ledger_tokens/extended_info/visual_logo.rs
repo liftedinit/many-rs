@@ -30,9 +30,9 @@ impl SingleVisualTokenLogo {
     pub fn char(c: char) -> Self {
         Self::UnicodeChar(c)
     }
-    pub fn image(content_type: String, binary: Vec<u8>) -> Self {
+    pub fn image(content_type: impl AsRef<str>, binary: Vec<u8>) -> Self {
         Self::Image {
-            content_type,
+            content_type: content_type.as_ref().into(),
             binary: Arc::new(binary),
         }
     }
@@ -113,7 +113,7 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
                 ))
             }
         }?;
-        if l > 0 {
+        if l != 1 {
             return Err(decode::Error::message("Too many keys in the map."));
         }
 
@@ -126,6 +126,7 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
 pub struct VisualTokenLogo(#[n(0)] VecDeque<SingleVisualTokenLogo>);
 
 impl VisualTokenLogo {
+    pub fn new() -> Self { Self(Default::default()) }
     pub fn unicode_front(&mut self, c: char) {
         self.0.push_front(SingleVisualTokenLogo::char(c))
     }
@@ -146,5 +147,46 @@ impl VisualTokenLogo {
         sorting_fn: impl Fn(&SingleVisualTokenLogo, &SingleVisualTokenLogo) -> Ordering,
     ) {
         self.0.make_contiguous().sort_by(sorting_fn);
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encode_decode_unicode_char() {
+        let logo = SingleVisualTokenLogo::char('∑');
+
+        let enc = minicbor::to_vec(logo).unwrap();
+        let res: SingleVisualTokenLogo = minicbor::decode(&enc).unwrap();
+
+        match res {
+            SingleVisualTokenLogo::UnicodeChar(c) => assert_eq!(c, '∑'),
+            _ => panic!("Invalid logo type")
+        }
+    }
+
+    #[test]
+    fn encode_decode_image() {
+        let logo = SingleVisualTokenLogo::image("png", vec![1u8; 10]);
+
+        let enc = minicbor::to_vec(logo).unwrap();
+        let res: SingleVisualTokenLogo = minicbor::decode(&enc).unwrap();
+
+        match res {
+            SingleVisualTokenLogo::Image {content_type, binary } => {
+                assert_eq!(content_type, "png");
+                assert_eq!(*binary, vec![1u8; 10]);
+            },
+            _ => panic!("Invalid logo type")
+        }
+    }
+
+    #[test]
+    fn encode_decode_logos() {
+        let mut logos = VisualTokenLogo::new();
+        logos.unicode_front('∑');
     }
 }
