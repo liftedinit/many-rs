@@ -445,8 +445,8 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
     }
 
     #[inline]
-    pub fn hotfix(&mut self, b: &[u8], block_height: u64) -> Result<Option<Vec<u8>>, E> {
-        for migration in self.inner.values_mut().filter(|m| m.is_hotfix()) {
+    pub fn hotfix(&self, b: &[u8], block_height: u64) -> Result<Option<Vec<u8>>, E> {
+        for migration in self.inner.values().filter(|m| m.is_hotfix()) {
             if let Some(r) = migration.hotfix(b, block_height) {
                 return Ok(Some(r));
             }
@@ -481,6 +481,10 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
 
     pub fn values(&self) -> impl Iterator<Item = &Migration<'a, T, E>> {
         self.inner.values()
+    }
+
+    pub fn len(&self) -> usize {
+        self.inner.len()
     }
 }
 
