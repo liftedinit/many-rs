@@ -66,6 +66,17 @@ impl<const M: usize> TryFrom<Either<String, ByteVec>> for MemoInner<M> {
     }
 }
 
+impl<const M: usize> TryFrom<Either<String, Vec<u8>>> for MemoInner<M> {
+    type Error = ManyError;
+
+    fn try_from(value: Either<String, Vec<u8>>) -> Result<Self, Self::Error> {
+        match value {
+            Either::Left(str) => Self::try_from(str),
+            Either::Right(bstr) => Self::try_from(ByteVec::from(bstr)),
+        }
+    }
+}
+
 impl<C, const M: usize> Encode<C> for MemoInner<M> {
     fn encode<W: encode::Write>(
         &self,
@@ -95,7 +106,7 @@ impl<'b, C, const M: usize> Decode<'b, C> for MemoInner<M> {
 /// A memo contains a human-readable portion and/or a machine readable portion.
 /// It is meant to be a note regarding a message, transaction, info or any
 /// type that requires meta information.
-#[derive(Clone, Debug, PartialOrd, Eq, PartialEq)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Memo<const MAX_LENGTH: usize = MEMO_DATA_DEFAULT_MAX_SIZE> {
     /// This has an invariant that the vector should never be empty. This is verified by being
     /// impossible to create an empty memo using methods or `From`/`TryFrom`s, and also during
@@ -104,6 +115,19 @@ pub struct Memo<const MAX_LENGTH: usize = MEMO_DATA_DEFAULT_MAX_SIZE> {
 }
 
 impl<const M: usize> Memo<M> {
+    pub fn try_from_iter(
+        iter: impl IntoIterator<Item = impl Into<Either<String, Vec<u8>>>>,
+    ) -> Result<Self, ManyError> {
+        let inner = iter
+            .into_iter()
+            .map(|item| {
+                let either: Either<String, Vec<u8>> = item.into();
+                either.try_into()
+            })
+            .collect::<Result<_, ManyError>>()?;
+        Ok(Self { inner })
+    }
+
     /// Adds a string at the end.
     pub fn push_str(&mut self, str: String) -> Result<(), ManyError> {
         self.inner.push(MemoInner::<M>::try_from(str)?);
@@ -144,6 +168,16 @@ impl<const M: usize> PartialEq<str> for Memo<M> {
     fn eq(&self, other: &str) -> bool {
         if self.len() == 1 {
             return self.iter_str().next().map(String::as_str) == Some(other);
+        }
+
+        false
+    }
+}
+
+impl<const M: usize> PartialEq<&str> for Memo<M> {
+    fn eq(&self, other: &&str) -> bool {
+        if self.len() == 1 {
+            return self.iter_str().next().map(String::as_str) == Some(*other);
         }
 
         false
