@@ -16,9 +16,9 @@ enum ExtendedInfoKey {
     VisualLogo = 1,
 }
 
-impl Into<AttributeRelatedIndex> for ExtendedInfoKey {
-    fn into(self) -> AttributeRelatedIndex {
-        AttributeRelatedIndex::new(self as u32)
+impl From<ExtendedInfoKey> for AttributeRelatedIndex {
+    fn from(val: ExtendedInfoKey) -> Self {
+        AttributeRelatedIndex::new(val as u32)
     }
 }
 
@@ -44,9 +44,9 @@ impl<C> Encode<C> for ExtendedInfoKey {
 impl<'b, C> Decode<'b, C> for ExtendedInfoKey {
     fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
         let attr: AttributeRelatedIndex = d.decode_with(ctx)?;
-        Ok(attr
+        attr
             .try_into()
-            .map_err(|_| decode::Error::message("Invalid attribute."))?)
+            .map_err(|_| decode::Error::message("Invalid attribute."))
     }
 }
 
@@ -181,7 +181,7 @@ impl<'b, C> Decode<'b, C> for TokenExtendedInfo {
     fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
         let l = d
             .map()
-            .and_then(|l| l.ok_or(decode::Error::message("Indefinite length map unsupported.")))?;
+            .and_then(|l| l.ok_or_else(|| decode::Error::message("Indefinite length map unsupported.")))?;
 
         let mut inner = BTreeMap::new();
         for _ in 0..l {

@@ -45,7 +45,7 @@ impl<C> Encode<C> for SingleVisualTokenLogo {
                     .u8(1)?
                     .str(content_type)?
                     .u8(2)?
-                    .bytes(&binary)?;
+                    .bytes(binary)?;
             }
         }
         Ok(())
@@ -54,7 +54,7 @@ impl<C> Encode<C> for SingleVisualTokenLogo {
 
 impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
     fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
-        let mut l = d.map()?.ok_or(decode::Error::message(
+        let mut l = d.map()?.ok_or_else(|| decode::Error::message(
             "Indefinite length map not supported",
         ))?;
         if l < 2 {
@@ -71,7 +71,7 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
                     Err(decode::Error::message("Expected key 1"))
                 } else {
                     l -= 1;
-                    Ok(Self::char(d.str()?.chars().next().ok_or(
+                    Ok(Self::char(d.str()?.chars().next().ok_or_else(||
                         decode::Error::message("Unicode character empty"),
                     )?))
                 }
@@ -80,7 +80,8 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
                 // Visual Token.
                 let mut content_type = None;
                 let mut binary = None;
-                for _ in 1..l {
+                let l_ = l;
+                for _ in 1..l_ {
                     match d.u8()? {
                         1 => {
                             content_type = Some(d.str()?.to_string());
@@ -95,8 +96,8 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
                     l -= 1;
                 }
                 Ok(Self::image(
-                    content_type.ok_or(decode::Error::message("Missing content type."))?,
-                    binary.ok_or(decode::Error::message("Missing binary data."))?,
+                    content_type.ok_or_else(|| decode::Error::message("Missing content type."))?,
+                    binary.ok_or_else(|| decode::Error::message("Missing binary data."))?,
                 ))
             }
             i => Err(decode::Error::message(format!("Unknown key {i}"))),
