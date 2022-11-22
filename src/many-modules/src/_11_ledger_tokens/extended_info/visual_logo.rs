@@ -2,9 +2,10 @@ use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use num_enum::TryFromPrimitive;
 use std::cmp::Ordering;
 use std::collections::VecDeque;
+use std::ops::Deref;
 use std::sync::Arc;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SingleVisualTokenLogo {
     /// A single character. This is limited to a single character for now.
     UnicodeChar(char), // TODO: Match spec. Do not limit to a single char
@@ -17,7 +18,7 @@ pub enum SingleVisualTokenLogo {
 #[derive(Copy, Clone, Debug, Decode, Encode, Ord, PartialOrd, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u8)]
 #[cbor(index_only)]
-enum SingleVisualTokenLogoKey {
+pub enum SingleVisualTokenLogoKey {
     #[n(0)]
     UnicodeChar = 0,
 
@@ -27,6 +28,12 @@ enum SingleVisualTokenLogoKey {
 
 
 impl SingleVisualTokenLogo {
+    pub fn as_key(&self) -> SingleVisualTokenLogoKey {
+        match self {
+            SingleVisualTokenLogo::UnicodeChar(_) => SingleVisualTokenLogoKey::UnicodeChar,
+            SingleVisualTokenLogo::Image {..} => SingleVisualTokenLogoKey::Image
+        }
+    }
     pub fn char(c: char) -> Self {
         Self::UnicodeChar(c)
     }
@@ -92,7 +99,7 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
             SingleVisualTokenLogoKey::Image => {
                 let mut content_type = None;
                 let mut binary = None;
-                let l_ = l;
+                let l_ = l; // Silence warning
                 for _ in 1..l_ {
                     match d.u8()? {
                         1 => {
@@ -130,14 +137,14 @@ impl VisualTokenLogo {
     pub fn unicode_front(&mut self, c: char) {
         self.0.push_front(SingleVisualTokenLogo::char(c))
     }
-    pub fn image_front(&mut self, content_type: String, data: Vec<u8>) {
+    pub fn image_front(&mut self, content_type: impl AsRef<str>, data: Vec<u8>) {
         self.0
             .push_front(SingleVisualTokenLogo::image(content_type, data))
     }
     pub fn unicode_back(&mut self, c: char) {
         self.0.push_back(SingleVisualTokenLogo::char(c))
     }
-    pub fn image_back(&mut self, content_type: String, data: Vec<u8>) {
+    pub fn image_back(&mut self, content_type: impl AsRef<str>, data: Vec<u8>) {
         self.0
             .push_back(SingleVisualTokenLogo::image(content_type, data))
     }
@@ -150,6 +157,13 @@ impl VisualTokenLogo {
     }
 }
 
+impl Deref for VisualTokenLogo {
+    type Target = VecDeque<SingleVisualTokenLogo>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -188,5 +202,38 @@ mod tests {
     fn encode_decode_logos() {
         let mut logos = VisualTokenLogo::new();
         logos.unicode_front('∑');
+        logos.unicode_back('π');
+        logos.image_front("foo", vec![2u8; 10]);
+        logos.image_back("bar", vec![5u8; 20]);
+
+        let enc = minicbor::to_vec(&logos).unwrap();
+        let res: VisualTokenLogo = minicbor::decode(&enc).unwrap();
+
+        for (i, j) in logos.iter().zip(res.iter()) {
+            assert_eq!(i, j);
+        }
+    }
+
+    #[test]
+    fn sort() {
+        let mut logos = VisualTokenLogo::new();
+        logos.unicode_front('∑');
+        logos.image_front("foo", vec![2u8; 10]);
+        logos.image_back("bar", vec![5u8; 20]);
+        logos.unicode_back('π');
+
+        let mut iter = logos.iter();
+        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::Image {..} ));
+        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::UnicodeChar(_)));
+        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::Image {..} ));
+        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::UnicodeChar(_)));
+
+        logos.sort(|a, b| { a.as_key().cmp(&b.as_key()) });
+
+        let mut iter = logos.iter();
+        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::UnicodeChar(_)));
+        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::UnicodeChar(_)));
+        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::Image {..} ));
+        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::Image {..} ));
     }
 }

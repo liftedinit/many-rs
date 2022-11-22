@@ -10,7 +10,7 @@ pub mod extended_info;
 cbor_type_decl!(
     pub struct TokenCreateArgs {
         0 => summary: ledger::TokenInfoSummary,
-        1 => owner: Option<Address>,
+        1 => owner: Option<Option<Address>>, // Some(None) can be used to remove the owner of a token
         2 => initial_distribution: Option<ledger::LedgerTokensAddressMap>,
         3 => maximum_supply: Option<ledger::TokenAmount>,
         4 => extended_info: Option<extended_info::TokenExtendedInfo>,
@@ -22,7 +22,7 @@ cbor_type_decl!(
 
     pub struct TokenInfoArgs {
         0 => symbol: ledger::Symbol,
-        1 => extended_info: Option<Vec<AttributeRelatedIndex>>,
+        1 => extended_info: Option<Vec<AttributeRelatedIndex>>, // TODO: This thing should be of at least length 1
     }
 
     pub struct TokenInfoReturns {
@@ -34,8 +34,8 @@ cbor_type_decl!(
         0 => symbol: ledger::Symbol,
         1 => name: Option<String>,
         2 => ticker: Option<String>,
-        3 => decimals: Option<u32>,
-        4 => owner: Option<Address>,
+        3 => decimals: Option<u64>,
+        4 => owner: Option<Option<Address>>,
         5 => memo: Option<Memo>,
     }
 
@@ -46,7 +46,7 @@ cbor_type_decl!(
 
     pub struct TokenRemoveExtendedInfoArgs {
         0 => symbol: ledger::Symbol,
-        1 => extended_info: Vec<AttributeRelatedIndex>,
+        1 => extended_info: Vec<AttributeRelatedIndex>, // TODO: This thing should be of at least length 1
     }
 );
 

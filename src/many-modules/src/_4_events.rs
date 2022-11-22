@@ -4,6 +4,7 @@ use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
 use many_protocol::ResponseMessage;
+use many_types::ledger;
 use many_types::ledger::{Symbol, TokenAmount};
 use many_types::{AttributeRelatedIndex, CborRange, Memo, Timestamp, VecOrSingle};
 use minicbor::bytes::ByteVec;
@@ -134,6 +135,7 @@ pub struct EventFilter {
 
     pub kind: Option<VecOrSingle<EventKind>>,
 
+    // TODO: remove this. Kept for backward compatibility.
     pub symbol: Option<VecOrSingle<Address>>,
 
     pub id_range: Option<CborRange<EventId>>,
@@ -402,6 +404,13 @@ macro_rules! define_event_info_addresses {
         }
         define_event_info_addresses!(@field $set $( $name_ $( $tag_ )*, )* );
     };
+    // TODO: Make this recursive...
+    (@field $set: ident $name: ident double_id_non_null $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if let Some(ref _r @ Some(ref n)) = $name.as_ref() {
+            $set.insert(n);
+        }
+        define_event_info_addresses!(@field $set $( $name_ $( $tag_ )*, )* );
+    };
     (@field $set: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
         define_event_info_addresses!(@field $set $( $name $( $tag )*, )* );
     };
@@ -619,6 +628,7 @@ define_event! {
         2     | to:                     Address                                [ id ],
         3     | symbol:                 Symbol                                 [ symbol ],
         4     | amount:                 TokenAmount,
+        5     | memo:                   Option<Memo>,
     },
     [7, 0]      KvStorePut (module::kvstore::PutArgs) {
         1     | key:                    ByteVec,
@@ -698,6 +708,40 @@ define_event! {
         1     | account:                Address                                [ id ],
         2     | token:                  ByteVec,
         3     | time:                   Timestamp,
+    },
+    [11, 0]     TokenCreate (module::ledger::TokenCreateArgs) {
+        1     | summary:                ledger::TokenInfoSummary,
+        2     | symbol:                 Address                                [ id ],
+        3     | owner:                  Option<Address>                        [ id_non_null ],
+        4     | initial_distribtion:    Option<ledger::LedgerTokensAddressMap>,
+        5     | maximum_supply:         Option<ledger::TokenAmount>,
+        6     | extended_info:          Option<module::ledger::extended_info::TokenExtendedInfo>,
+    },
+    [11, 1]     TokenUpdate (module::ledger::TokenUpdateArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | name:                   Option<String>,
+        3     | ticker:                 Option<String>,
+        4     | decimals:               Option<u64>,
+        5     | owner:                  Option<Option<Address>>                [ double_id_non_null ],
+        6     | memo:                   Option<Memo>,
+    },
+    [11, 2]     TokenAddExtendedInfo (module::ledger::TokenAddExtendedInfoArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | extended_info:          Vec<AttributeRelatedIndex>,
+    },
+    [11, 3]     TokenRemoveExtendedInfo (module::ledger::TokenRemoveExtendedInfoArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | extended_info:          Vec<AttributeRelatedIndex>,
+    },
+    [12, 0]     TokenMint (module::ledger::TokenMintArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | initial_distribtion:    Option<ledger::LedgerTokensAddressMap>,
+        3     | memo:                   Option<Memo>,
+    },
+    [12, 1]     TokenBurn (module::ledger::TokenBurnArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | distribtion:            Option<ledger::LedgerTokensAddressMap>,
+        3     | memo:                   Option<Memo>,
     },
 }
 
@@ -805,6 +849,7 @@ mod test {
             to: i01,
             symbol: Default::default(),
             amount: Default::default(),
+            memo: None,
         };
         assert_eq!(s0.addresses(), BTreeSet::from_iter(&[i0, i01]));
     }
@@ -848,6 +893,7 @@ mod test {
             to: i01,
             symbol: Default::default(),
             amount: Default::default(),
+            memo: None,
         };
         assert!(s0.is_about(&i0));
         assert!(s0.is_about(&i01));
@@ -882,6 +928,7 @@ mod test {
             to: i01,
             symbol: i1,
             amount: Default::default(),
+            memo: None,
         };
         assert_eq!(event.symbol(), Some(&i1));
 
@@ -932,6 +979,7 @@ mod test {
                         to: identity(3),
                         symbol: identity(4),
                         amount: amount.into(),
+                        memo: None,
                     })),
                 );
             }
@@ -951,6 +999,7 @@ mod test {
                                     to: identity(3),
                                     symbol: identity(4),
                                     amount: amount.into(),
+                                    memo: None,
                                 })),
                                 threshold: None,
                                 timeout_in_secs: None,
@@ -1028,6 +1077,7 @@ mod tests {
                             to: Address::anonymous(),
                             symbol: Default::default(),
                             amount: TokenAmount::from(1000u64),
+                            memo: None,
                         },
                     }],
                 })

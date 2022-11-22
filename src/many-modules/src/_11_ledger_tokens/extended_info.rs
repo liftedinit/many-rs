@@ -100,12 +100,14 @@ impl Ord for ExtendedInfo {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TokenExtendedInfo {
     inner: BTreeMap<ExtendedInfoKey, ExtendedInfo>,
 }
 
 impl TokenExtendedInfo {
+    fn new() -> Self { Self { inner: Default::default() } }
+
     fn insert(&mut self, value: ExtendedInfo) {
         self.inner.insert(value.as_key(), value);
     }
@@ -199,5 +201,26 @@ impl<'b, C> Decode<'b, C> for TokenExtendedInfo {
         }
 
         Ok(Self { inner })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encode_decode_extended_info() {
+        let mut logos = VisualTokenLogo::new();
+        logos.unicode_front('∑');
+        logos.image_back("foo", vec![2u8; 10]);
+
+        // TODO: Add Memo
+        let ext_info = TokenExtendedInfo::new()
+            .with_visual_logo(logos).unwrap();
+
+        let enc = minicbor::to_vec(&ext_info).unwrap();
+        let res: TokenExtendedInfo = minicbor::decode(&enc).unwrap();
+
+        assert_eq!(res, ext_info);
     }
 }

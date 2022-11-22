@@ -37,7 +37,7 @@ macro_rules! cbor_type_decl {
         )*
     ) => {
         $(
-            #[derive(Clone, Debug, Decode, Encode)]
+            #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
             #[cbor(map)]
             $vis struct $name {
                 $(

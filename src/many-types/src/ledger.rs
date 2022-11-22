@@ -293,7 +293,7 @@ impl<'de> Deserialize<'de> for TokenAmount {
     }
 }
 
-#[derive(Clone, Debug, Decode, Encode)]
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct TokenInfoSummary {
     #[n(0)]
@@ -303,10 +303,10 @@ pub struct TokenInfoSummary {
     pub ticker: String,
 
     #[n(2)]
-    pub decimals: u32,
+    pub decimals: u64,
 }
 
-#[derive(Clone, Debug, Decode, Encode)]
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct TokenInfoSupply {
     #[n(0)]
