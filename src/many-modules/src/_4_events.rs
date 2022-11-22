@@ -935,7 +935,7 @@ mod test {
         };
         assert_eq!(event.memo(), None);
 
-        let event = EventInfo::AccountMultisigSubmit {
+        let event = EventInfo::AccountMulmtisigSubmit {
             submitter: i0,
             account: i1,
             memo_: Some(MemoLegacy::try_from("Hello".to_string()).unwrap()),

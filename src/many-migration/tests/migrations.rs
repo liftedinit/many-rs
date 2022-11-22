@@ -332,10 +332,10 @@ fn migration_config() {
     );
 
     let migration_set = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
-    assert_eq!(migration_set.is_enabled(&A), true);
-    assert_eq!(migration_set.is_active(&A), false);
-    assert_eq!(migration_set.is_enabled(&B), true);
-    assert_eq!(migration_set.is_active(&B), true);
-    assert_eq!(migration_set.is_enabled(&C), false);
-    assert_eq!(migration_set.is_active(&C), false);
+    assert!(migration_set.is_enabled(&A));
+    assert!(!migration_set.is_active(&A));
+    assert!(migration_set.is_enabled(&B));
+    assert!(migration_set.is_active(&B));
+    assert!(!migration_set.is_enabled(&C));
+    assert!(!migration_set.is_active(&C));
 }

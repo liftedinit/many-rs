@@ -131,7 +131,7 @@ impl<const M: usize> Memo<M> {
     /// Adds a string at the end.
     pub fn push_str<'a>(&mut self, str: impl Into<Cow<'a, str>>) -> Result<(), ManyError> {
         self.inner
-            .push(MemoInner::<M>::try_from(str.into().to_owned())?);
+            .push(MemoInner::<M>::try_from(str.into().into_owned())?);
         Ok(())
     }
 
@@ -179,11 +179,7 @@ impl<const M: usize> PartialEq<str> for Memo<M> {
 
 impl<const M: usize> PartialEq<&str> for Memo<M> {
     fn eq(&self, other: &&str) -> bool {
-        if self.len() == 1 {
-            return self.iter_str().next().map(String::as_str) == Some(*other);
-        }
-
-        false
+        self == *other
     }
 }
 
@@ -525,6 +521,7 @@ mod tests {
         assert_eq!(memo.len(), 3);
 
         assert_ne!(memo, "Hello Other");
+        assert_ne!(memo, *"Hello Other");
         assert_eq!(memo.iter_str().count(), 2);
         assert_eq!(memo.iter_bytes().count(), 1);
     }
