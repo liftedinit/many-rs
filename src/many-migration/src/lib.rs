@@ -185,20 +185,20 @@ impl<T, E> InnerMigration<T, E> {
         match &self.r#type {
             MigrationType::Regular(migration) => (migration.initialize_fn)(storage),
             MigrationType::Hotfix(_) => Ok(()),
-            _ => {
-                trace!("Skipping migration {}", self.name());
+            x => {
+                trace!("Migration {} has unknown type {}", self.name(), x);
                 Ok(())
             }
         }
     }
 
-    /// This function gets executed when the storage block height >= the migration block height
+    /// This function gets executed when the storage block height > the migration block height
     fn update(&self, storage: &mut T) -> Result<(), E> {
         match &self.r#type {
             MigrationType::Regular(migration) => (migration.update_fn)(storage),
             MigrationType::Hotfix(_) => Ok(()),
-            _ => {
-                trace!("Skipping migration {}; not of type `Regular`", self.name());
+            x => {
+                trace!("Migration {} has unknown type {}", self.name(), x);
                 Ok(())
             }
         }
@@ -209,8 +209,8 @@ impl<T, E> InnerMigration<T, E> {
         match &self.r#type {
             MigrationType::Regular(_) => None,
             MigrationType::Hotfix(migration) => (migration.hotfix_fn)(b),
-            _ => {
-                trace!("Skipping migration {}; not of type `Hotfix`", self.name());
+            x => {
+                trace!("Migration {} has unknown type {}", self.name(), x);
                 None
             }
         }
@@ -355,7 +355,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SingleMigrationConfig {
     name: String,
 
@@ -372,7 +372,7 @@ impl<T, E> From<(&InnerMigration<T, E>, Metadata)> for SingleMigrationConfig {
     }
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct MigrationConfig(Vec<SingleMigrationConfig>);
 
@@ -402,23 +402,20 @@ impl<T: IntoIterator<Item = impl Into<SingleMigrationConfig>>> From<T> for Migra
 
 pub struct MigrationSet<'a, T: 'a, E: 'a = many_error::ManyError> {
     inner: BTreeMap<String, Migration<'a, T, E>>,
-    height: u64,
 }
 
 impl<'a, T, E: fmt::Debug> fmt::Debug for MigrationSet<'a, T, E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("MigrationSet")
             .field("inner", &self.inner)
-            .field("height", &self.height)
             .finish()
     }
 }
 
 impl<'a, T, E> MigrationSet<'a, T, E> {
-    pub fn empty(height: u64) -> Result<Self, String> {
+    pub fn empty() -> Result<Self, String> {
         Ok(Self {
             inner: Default::default(),
-            height,
         })
     }
 
@@ -454,12 +451,11 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
             }
         }
 
-        Ok(Self { inner, height })
+        Ok(Self { inner })
     }
 
     #[inline]
     pub fn update_at_height(&mut self, storage: &mut T, block_height: u64) -> Result<(), E> {
-        self.height = block_height;
         for migration in self.inner.values_mut().filter(|m| m.is_regular()) {
             migration.maybe_initialize_update_at_height(storage, block_height)?;
         }
@@ -481,9 +477,9 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
     }
 
     #[inline]
-    pub fn is_enabled(&self, name: &str) -> bool {
+    pub fn is_enabled(&self, name: impl AsRef<str>) -> bool {
         self.inner
-            .get(name)
+            .get(name.as_ref())
             .map(|m| m.is_enabled())
             .unwrap_or(false)
     }
@@ -562,5 +558,5 @@ pub fn load_enable_all_regular_migrations<T, E>(
         })
         .collect();
 
-    MigrationSet { inner, height: 0 }
+    MigrationSet { inner }
 }

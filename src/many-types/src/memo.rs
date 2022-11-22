@@ -129,13 +129,16 @@ impl<const M: usize> Memo<M> {
     }
 
     /// Adds a string at the end.
-    pub fn push_str(&mut self, str: String) -> Result<(), ManyError> {
-        self.inner.push(MemoInner::<M>::try_from(str)?);
+    pub fn push_str<'a>(&mut self, str: impl Into<Cow<'a, str>>) -> Result<(), ManyError> {
+        self.inner
+            .push(MemoInner::<M>::try_from(str.into().to_owned())?);
         Ok(())
     }
 
-    pub fn push_byte_vec(&mut self, bytes: ByteVec) -> Result<(), ManyError> {
-        self.inner.push(MemoInner::<M>::try_from(bytes)?);
+    pub fn push_bytes<'a>(&mut self, bytes: impl Into<Cow<'a, [u8]>>) -> Result<(), ManyError> {
+        let bytes = bytes.into();
+        self.inner
+            .push(MemoInner::<M>::try_from(ByteVec::from(bytes.to_vec()))?);
         Ok(())
     }
 
@@ -502,5 +505,27 @@ mod tests {
             memo.iter_bytes().map(hex::encode).collect::<Vec<String>>(),
             &["02", "04", "05", "09"]
         );
+    }
+
+    #[test]
+    fn memo_mut() {
+        let mut memo: Memo = Memo::try_from("Hello World".to_string()).unwrap();
+        assert_eq!(memo.len(), 1);
+        memo.push_str("Hello Other").unwrap();
+        assert_eq!(memo.len(), 2);
+        memo.push_bytes(b"Foobar".to_vec()).unwrap();
+        assert_eq!(memo.len(), 3);
+
+        // Too long?
+        assert!(memo
+            .push_str(String::from_utf8(vec![b'A'; 4001]).unwrap())
+            .is_err());
+        assert_eq!(memo.len(), 3);
+        assert!(memo.push_bytes(vec![b'A'; 4001]).is_err());
+        assert_eq!(memo.len(), 3);
+
+        assert_ne!(memo, "Hello Other");
+        assert_eq!(memo.iter_str().count(), 2);
+        assert_eq!(memo.iter_bytes().count(), 1);
     }
 }

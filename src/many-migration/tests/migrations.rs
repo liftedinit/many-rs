@@ -313,3 +313,29 @@ fn hotfix_basic() {
         }
     }
 }
+
+#[test]
+fn migration_config() {
+    let config = MigrationConfig::default()
+        .with_migration_opts(&A, Metadata::enabled(5))
+        .with_migration(&B)
+        .with_migration_opts(&C, Metadata::disabled(100));
+
+    assert_eq!(
+        config,
+        [
+            (&A, Metadata::enabled(5)),
+            (&B, Metadata::enabled(0)),
+            (&C, Metadata::disabled(100))
+        ]
+        .into()
+    );
+
+    let migration_set = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
+    assert_eq!(migration_set.is_enabled(&A), true);
+    assert_eq!(migration_set.is_active(&A), false);
+    assert_eq!(migration_set.is_enabled(&B), true);
+    assert_eq!(migration_set.is_active(&B), true);
+    assert_eq!(migration_set.is_enabled(&C), false);
+    assert_eq!(migration_set.is_active(&C), false);
+}
