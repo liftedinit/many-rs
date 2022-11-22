@@ -374,11 +374,16 @@ impl<T, E> From<(&InnerMigration<T, E>, Metadata)> for SingleMigrationConfig {
 
 #[derive(Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct MigrationConfig {
+    #[serde(skip)]
     strict: Option<bool>,
     migrations: Vec<SingleMigrationConfig>,
 }
 
 impl MigrationConfig {
+    pub fn is_strict(&self) -> bool {
+        self.strict.unwrap_or(false)
+    }
+
     pub fn strict(mut self) -> Self {
         self.strict = Some(true);
         self
@@ -434,6 +439,8 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
         config: MigrationConfig,
         height: u64,
     ) -> Result<Self, String> {
+        let is_strict = config.is_strict();
+
         // Build a BTreeMap from the linear registry
         let registry = registry
             .iter()
@@ -454,15 +461,8 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
             .into_iter()
             .collect();
 
-        // Activate all already active migrations. Do not call initialize though.
-        for v in inner.values_mut().filter(|m| m.is_enabled()) {
-            if height >= v.metadata.block_height {
-                v.active = true;
-            }
-        }
-
-        if let Some(true) = config.strict {
-            // In strict mode, ALL migrations must be listed.
+        // In strict mode, ALL migrations must be listed.
+        if is_strict {
             let maybe_missing = registry
                 .keys()
                 .into_iter()
@@ -475,6 +475,13 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
                 [name] => Err(format!(r#"Migration Config is missing migration "{name}""#)),
                 more => Err(format!("Migration Config is missing migrations {more:?}")),
             }?;
+        }
+
+        // Activate all already active migrations. Do not call initialize though.
+        for v in inner.values_mut().filter(|m| m.is_enabled()) {
+            if height >= v.metadata.block_height {
+                v.active = true;
+            }
         }
 
         Ok(Self { inner })

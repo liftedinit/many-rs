@@ -349,7 +349,7 @@ fn strict_config_one() {
 
     assert_eq!(
         MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap_err(),
-        r#"Migration Config is missing migration "D""#.to_string()
+        r#"Migration Config is missing migration "D""#.to_string(),
     );
 }
 
