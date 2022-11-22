@@ -147,14 +147,14 @@ fn initialize_update() {
 
 #[test]
 fn hotfix() {
-    let content = r#"
-    [
-        {
-            "name": "D",
-            "block_height": 2
-        }
-    ]
-    "#;
+    let content = r#"{
+    "migrations": [
+            {
+                "name": "D",
+                "block_height": 2
+            }
+        ]
+    }"#;
     let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
     assert!(migrations.contains_key("D"));
 
@@ -212,15 +212,14 @@ fn metadata() {
         assert_eq!(metadata.extra, HashMap::new());
     }
 
-    let content = r#"
-    [
+    let content = r#"{ "migrations": [
         {
             "name": "D",
             "block_height": 200,
             "issue": "foobar",
             "xtra": "Oh!"
         }
-    ]
+    ]}
     "#;
     let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
     let metadata = migrations["D"].metadata();
@@ -338,4 +337,31 @@ fn migration_config() {
     assert!(migration_set.is_active(&B));
     assert!(!migration_set.is_enabled(&C));
     assert!(!migration_set.is_active(&C));
+}
+
+#[test]
+fn strict_config_one() {
+    let config = MigrationConfig::default()
+        .with_migration_opts(&A, Metadata::enabled(5))
+        .with_migration(&B)
+        .with_migration_opts(&C, Metadata::disabled(100))
+        .strict();
+
+    assert_eq!(
+        MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap_err(),
+        r#"Migration Config is missing migration "D""#.to_string()
+    );
+}
+
+#[test]
+fn strict_config_many() {
+    let config = MigrationConfig::default()
+        .with_migration_opts(&A, Metadata::enabled(5))
+        .with_migration(&B)
+        .strict();
+
+    assert_eq!(
+        MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap_err(),
+        r#"Migration Config is missing migrations ["C", "D"]"#.to_string()
+    );
 }

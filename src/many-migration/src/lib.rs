@@ -373,10 +373,17 @@ impl<T, E> From<(&InnerMigration<T, E>, Metadata)> for SingleMigrationConfig {
 }
 
 #[derive(Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct MigrationConfig(Vec<SingleMigrationConfig>);
+pub struct MigrationConfig {
+    strict: Option<bool>,
+    migrations: Vec<SingleMigrationConfig>,
+}
 
 impl MigrationConfig {
+    pub fn strict(mut self) -> Self {
+        self.strict = Some(true);
+        self
+    }
+
     pub fn with_migration<T, E>(self, migration: &InnerMigration<T, E>) -> Self {
         self.with_migration_opts(migration, Metadata::default())
     }
@@ -386,7 +393,7 @@ impl MigrationConfig {
         migration: &InnerMigration<T, E>,
         metadata: Metadata,
     ) -> Self {
-        self.0.push(SingleMigrationConfig {
+        self.migrations.push(SingleMigrationConfig {
             name: migration.name.to_string(),
             metadata,
         });
@@ -396,7 +403,10 @@ impl MigrationConfig {
 
 impl<T: IntoIterator<Item = impl Into<SingleMigrationConfig>>> From<T> for MigrationConfig {
     fn from(value: T) -> Self {
-        Self(value.into_iter().map(Into::into).collect())
+        Self {
+            strict: None,
+            migrations: value.into_iter().map(Into::into).collect(),
+        }
     }
 }
 
@@ -431,7 +441,7 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
             .collect::<BTreeMap<&'static str, &'a InnerMigration<T, E>>>();
 
         let mut inner: BTreeMap<String, Migration<'a, T, E>> = config
-            .0
+            .migrations
             .into_iter()
             .map(|config: SingleMigrationConfig| {
                 let v: &'a InnerMigration<T, E> = registry
@@ -449,6 +459,22 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
             if height >= v.metadata.block_height {
                 v.active = true;
             }
+        }
+
+        if let Some(true) = config.strict {
+            // In strict mode, ALL migrations must be listed.
+            let maybe_missing = registry
+                .keys()
+                .into_iter()
+                .filter(|name| !inner.contains_key(&name.to_string()))
+                .cloned()
+                .collect::<Vec<_>>();
+
+            match maybe_missing.as_slice() {
+                [] => Ok(()),
+                [name] => Err(format!(r#"Migration Config is missing migration "{name}""#)),
+                more => Err(format!("Migration Config is missing migrations {more:?}")),
+            }?;
         }
 
         Ok(Self { inner })
