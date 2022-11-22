@@ -415,6 +415,13 @@ impl<'a, T, E: fmt::Debug> fmt::Debug for MigrationSet<'a, T, E> {
 }
 
 impl<'a, T, E> MigrationSet<'a, T, E> {
+    pub fn empty(height: u64) -> Result<Self, String> {
+        Ok(Self {
+            inner: Default::default(),
+            height,
+        })
+    }
+
     pub fn load(
         registry: &'a [InnerMigration<T, E>],
         config: MigrationConfig,
