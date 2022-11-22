@@ -289,3 +289,27 @@ fn basic() {
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);
 }
+
+#[test]
+fn hotfix_basic() {
+    let migration_set = MigrationSet::load(
+        &SOME_MANY_RS_MIGRATIONS,
+        [(&A, Metadata::enabled(1)), (&D, Metadata::enabled(2))].into(),
+        0,
+    )
+    .unwrap();
+
+    let data = [1u8; 8];
+    for i in 0..4 {
+        let maybe_new_data = migration_set.hotfix("D", &data, i).unwrap();
+
+        match i {
+            0..=1 | 3 => assert!(maybe_new_data.is_none()),
+            2 => {
+                assert!(maybe_new_data.is_some());
+                assert_eq!(maybe_new_data.unwrap(), vec![1, 1, 1, 1]);
+            }
+            _ => unimplemented!(),
+        }
+    }
+}

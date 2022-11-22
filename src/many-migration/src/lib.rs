@@ -165,14 +165,17 @@ impl<T, E> InnerMigration<T, E> {
         }
     }
 
+    #[inline]
     pub const fn name(&self) -> &str {
         self.name
     }
 
+    #[inline]
     pub const fn description(&self) -> &str {
         self.description
     }
 
+    #[inline]
     pub const fn r#type(&self) -> &'_ MigrationType<T, E> {
         &self.r#type
     }
@@ -281,6 +284,7 @@ impl<'a, T, E> Migration<'a, T, E> {
         Ok(())
     }
 
+    #[inline]
     pub fn initialize(&self, storage: &mut T, block_height: u64) -> Result<(), E> {
         if self.is_enabled() && block_height == self.metadata.block_height {
             self.migration.initialize(storage)?;
@@ -288,6 +292,7 @@ impl<'a, T, E> Migration<'a, T, E> {
         Ok(())
     }
 
+    #[inline]
     pub fn update(&self, storage: &mut T, block_height: u64) -> Result<(), E> {
         if self.is_enabled() && block_height > self.metadata.block_height {
             self.migration.update(storage)?;
@@ -295,6 +300,7 @@ impl<'a, T, E> Migration<'a, T, E> {
         Ok(())
     }
 
+    #[inline]
     pub fn hotfix(&self, b: &[u8], block_height: u64) -> Option<Vec<u8>> {
         if self.is_enabled() && self.metadata.block_height == block_height {
             self.migration.hotfix(b)
@@ -303,38 +309,47 @@ impl<'a, T, E> Migration<'a, T, E> {
         }
     }
 
+    #[inline]
     pub fn is_regular(&self) -> bool {
         matches!(self.migration.r#type, MigrationType::Regular(_))
     }
 
+    #[inline]
     pub fn is_hotfix(&self) -> bool {
         matches!(self.migration.r#type, MigrationType::Hotfix(_))
     }
 
+    #[inline]
     pub fn name(&self) -> &str {
         self.migration.name()
     }
 
+    #[inline]
     pub fn description(&self) -> &str {
         self.migration.description()
     }
 
+    #[inline]
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
 
+    #[inline]
     pub fn disable(&mut self) {
         self.enabled = false;
     }
 
+    #[inline]
     pub fn enable(&mut self) {
         self.enabled = true;
     }
 
+    #[inline]
     pub fn is_enabled(&self) -> bool {
         self.enabled
     }
 
+    #[inline]
     pub fn is_active(&self) -> bool {
         self.active
     }
@@ -445,8 +460,12 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
     }
 
     #[inline]
-    pub fn hotfix(&self, b: &[u8], block_height: u64) -> Result<Option<Vec<u8>>, E> {
-        for migration in self.inner.values().filter(|m| m.is_hotfix()) {
+    pub fn hotfix(&self, name: &str, b: &[u8], block_height: u64) -> Result<Option<Vec<u8>>, E> {
+        for migration in self
+            .inner
+            .values()
+            .filter(|m| m.is_hotfix() && m.name() == name)
+        {
             if let Some(r) = migration.hotfix(b, block_height) {
                 return Ok(Some(r));
             }
