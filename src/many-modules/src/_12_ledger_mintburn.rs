@@ -26,9 +26,9 @@ cbor_type_decl!(
 
 type TokenMintReturns = EmptyReturn;
 
-#[many_module(name = LedgerTokensModule, id = 12, namespace = tokens, many_modules_crate = crate)]
+#[many_module(name = LedgerMintBurnModule, id = 12, namespace = tokens, many_modules_crate = crate)]
 #[cfg_attr(test, mockall::automock)]
-pub trait LedgerTokensModuleBackend: Send {
+pub trait LedgerMintBurnModuleBackend: Send {
     fn mint(&mut self, sender: &Address, args: TokenMintArgs) -> Result<TokenMintReturns, ManyError>;
     fn burn(&mut self, sender: &Address, args: TokenBurnArgs) -> Result<TokenBurnReturns, ManyError>;
 }
@@ -43,7 +43,7 @@ mod tests {
 
     #[test]
     fn mint() {
-        let mut mock = MockLedgerTokensModuleBackend::new();
+        let mut mock = MockLedgerMintBurnModuleBackend::new();
         let data = TokenMintArgs {
             symbol: Default::default(),
             initial_distribution: Default::default(),
@@ -53,7 +53,7 @@ mod tests {
             .with(eq(identity(1)), eq(data.clone()))
             .times(1)
             .returning(|_, _| Ok(TokenMintReturns {}));
-        let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
+        let module = super::LedgerMintBurnModule::new(Arc::new(Mutex::new(mock)));
 
         let update_returns: TokenMintReturns =
             minicbor::decode(&call_module_cbor(1, &module, "tokens.mint", minicbor::to_vec(data).unwrap()).unwrap()).unwrap();
@@ -63,7 +63,7 @@ mod tests {
     
     #[test]
     fn burn() {
-        let mut mock = MockLedgerTokensModuleBackend::new();
+        let mut mock = MockLedgerMintBurnModuleBackend::new();
         let data = TokenBurnArgs {
             symbol: Default::default(),
             distribution: Default::default(),
@@ -74,7 +74,7 @@ mod tests {
             .with(eq(identity(1)), eq(data.clone()))
             .times(1)
             .return_const(Ok(TokenBurnReturns { distribution: Default::default() }));
-        let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
+        let module = super::LedgerMintBurnModule::new(Arc::new(Mutex::new(mock)));
 
         let update_returns: TokenBurnReturns =
             minicbor::decode(&call_module_cbor(1, &module, "tokens.burn", minicbor::to_vec(data).unwrap()).unwrap()).unwrap();
