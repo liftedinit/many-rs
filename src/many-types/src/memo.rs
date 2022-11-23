@@ -302,6 +302,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn backward_compatibility_str() {
         let data = String::from_utf8(vec![b'A'; MEMO_DATA_DEFAULT_MAX_SIZE]).unwrap();
         let cbor = format!(r#" "{data}" "#);
@@ -312,6 +313,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn backward_compatibility_bytes() {
         let bytes = vec![1u8; MEMO_DATA_DEFAULT_MAX_SIZE];
         let data = hex::encode(&bytes);
@@ -323,6 +325,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn backward_compatibility_empty_str() {
         let data = String::new();
         let cbor = format!(r#" "{data}" "#);
@@ -333,6 +336,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn backward_compatibility_empty_bytes() {
         let bytes = Vec::new();
         let data = hex::encode(&bytes);
