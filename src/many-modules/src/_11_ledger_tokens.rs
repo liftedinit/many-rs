@@ -54,7 +54,7 @@ pub type TokenUpdateReturns = EmptyReturn;
 pub type TokenAddExtendedInfoReturns = EmptyReturn;
 pub type TokenRemoveExtendedInfoReturns = EmptyReturn;
 
-#[many_module(name = LedgerTokensModule, id = 11, namespace = ledger, many_modules_crate = crate)]
+#[many_module(name = LedgerTokensModule, id = 11, namespace = tokens, many_modules_crate = crate)]
 #[cfg_attr(test, mockall::automock)]
 pub trait LedgerTokensModuleBackend: Send {
     fn create(
@@ -82,4 +82,108 @@ pub trait LedgerTokensModuleBackend: Send {
         sender: &Address,
         args: TokenRemoveExtendedInfoArgs,
     ) -> Result<TokenRemoveExtendedInfoReturns, ManyError>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, Mutex};
+    use mockall::predicate::eq;
+    use many_identity::testing::identity;
+    use many_types::ledger::{TokenInfo, TokenInfoSummary, TokenInfoSupply};
+    use crate::ledger::extended_info::TokenExtendedInfo;
+    use crate::testutils::call_module_cbor;
+
+    #[test]
+    fn create() {
+        let mut mock = MockLedgerTokensModuleBackend::new();
+        let summary = TokenInfoSummary {
+                    name: "Foobar".to_string(),
+                    ticker: "FBR".to_string(),
+                    decimals: 9
+                };
+        let data = TokenCreateArgs {
+                summary: summary.clone(),
+                owner: None,
+                initial_distribution: None,
+                maximum_supply: None,
+                extended_info: None
+            };
+        let info = TokenInfo {
+                symbol: Default::default(),
+                summary,
+                supply: TokenInfoSupply {
+                    total: Default::default(),
+                    circulating: Default::default(),
+                    maximum: None
+                },
+                owner: None
+            };
+        mock.expect_create()
+            .with(eq(identity(1)), eq(data.clone()))
+            .times(1)
+            .return_const(Ok(TokenCreateReturns { info: info.clone() }));
+        let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
+
+        let create_returns: TokenCreateReturns =
+            minicbor::decode(&call_module_cbor(1, &module, "tokens.create", minicbor::to_vec(data).unwrap()).unwrap()).unwrap();
+
+        assert_eq!(create_returns.info, info);
+    }
+
+    #[test]
+    fn update() {
+        let mut mock = MockLedgerTokensModuleBackend::new();
+        let data = TokenUpdateArgs {
+            symbol: Default::default(),
+            name: None,
+            ticker: None,
+            decimals: None,
+            owner: None,
+            memo: None
+        };
+        mock.expect_update()
+            .with(eq(identity(1)), eq(data.clone()))
+            .times(1)
+            .returning(|_, _| Ok(TokenUpdateReturns {}));
+        let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
+
+        let update_returns: TokenUpdateReturns =
+            minicbor::decode(&call_module_cbor(1, &module, "tokens.update", minicbor::to_vec(data).unwrap()).unwrap()).unwrap();
+
+        assert_eq!(update_returns, TokenUpdateReturns {});
+    }
+
+    #[test]
+    fn add_extended_info() {
+        let mut mock = MockLedgerTokensModuleBackend::new();
+        let extended_info = TokenExtendedInfo::new().with_memo("Foobar".to_string()).unwrap();
+        let data = TokenAddExtendedInfoArgs { symbol: Default::default(), extended_info };
+        mock.expect_add_extended_info()
+            .with(eq(identity(1)), eq(data.clone()))
+            .times(1)
+            .returning(|_, _| Ok(TokenAddExtendedInfoReturns {}));
+        let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
+
+        let add_ext_info_returns: TokenAddExtendedInfoReturns =
+            minicbor::decode(&call_module_cbor(1, &module, "tokens.addExtendedInfo", minicbor::to_vec(data).unwrap()).unwrap()).unwrap();
+
+        assert_eq!(add_ext_info_returns, TokenAddExtendedInfoReturns {});
+    }
+    
+    #[test]
+    fn remove_extended_info() {
+        let mut mock = MockLedgerTokensModuleBackend::new();
+        let data = TokenRemoveExtendedInfoArgs { symbol: Default::default(), extended_info: vec![AttributeRelatedIndex::new(11)] };
+        mock.expect_remove_extended_info()
+            .with(eq(identity(1)), eq(data.clone()))
+            .times(1)
+            .returning(|_, _| Ok(TokenRemoveExtendedInfoReturns {}));
+        let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
+
+        let rm_ext_info_returns: TokenRemoveExtendedInfoReturns =
+            minicbor::decode(&call_module_cbor(1, &module, "tokens.removeExtendedInfo", minicbor::to_vec(data).unwrap()).unwrap()).unwrap();
+
+        assert_eq!(rm_ext_info_returns, TokenRemoveExtendedInfoReturns {});
+    }
 }

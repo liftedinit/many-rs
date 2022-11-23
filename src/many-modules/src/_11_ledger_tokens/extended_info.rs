@@ -106,7 +106,7 @@ pub struct TokenExtendedInfo {
 }
 
 impl TokenExtendedInfo {
-    fn new() -> Self { Self { inner: Default::default() } }
+    pub fn new() -> Self { Self { inner: Default::default() } }
 
     fn insert(&mut self, value: ExtendedInfo) {
         self.inner.insert(value.as_key(), value);
@@ -159,6 +159,13 @@ impl TokenExtendedInfo {
             })
     }
 }
+
+ impl Default for TokenExtendedInfo {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 
 impl<C> Encode<C> for TokenExtendedInfo {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), Error<W::Error>> {
@@ -214,8 +221,8 @@ mod tests {
         logos.unicode_front('∑');
         logos.image_back("foo", vec![2u8; 10]);
 
-        // TODO: Add Memo
         let ext_info = TokenExtendedInfo::new()
+            .with_memo("Foobar".to_string()).unwrap()
             .with_visual_logo(logos).unwrap();
 
         let enc = minicbor::to_vec(&ext_info).unwrap();
