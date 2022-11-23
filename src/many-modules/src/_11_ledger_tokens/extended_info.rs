@@ -217,11 +217,11 @@ mod tests {
 
     #[test]
     fn encode_decode_extended_info() {
-        let mut logos = VisualTokenLogo::new();
+        let mut logos = VisualTokenLogo::default();
         logos.unicode_front('∑');
         logos.image_back("foo", vec![2u8; 10]);
 
-        let ext_info = TokenExtendedInfo::new()
+        let ext_info = TokenExtendedInfo::default()
             .with_memo("Foobar".to_string()).unwrap()
             .with_visual_logo(logos).unwrap();
 
@@ -229,5 +229,59 @@ mod tests {
         let res: TokenExtendedInfo = minicbor::decode(&enc).unwrap();
 
         assert_eq!(res, ext_info);
+    }
+
+    #[test]
+    fn get() {
+        let mut logos = VisualTokenLogo::default();
+        logos.unicode_front('∑');
+        logos.image_back("foo", vec![2u8; 10]);
+
+        let ext_info = TokenExtendedInfo::default()
+            .with_memo("Foobar".to_string()).unwrap()
+            .with_visual_logo(logos.clone()).unwrap();
+        assert!(ext_info.memo().is_some());
+        assert_eq!(ext_info.memo().unwrap(), &Memo::try_from("Foobar".to_string()).unwrap());
+        assert!(ext_info.visual_logo().is_some());
+        assert_eq!(ext_info.visual_logo().unwrap(), &logos);
+
+        let ext_info = TokenExtendedInfo::default()
+            .with_memo("Foobar".to_string()).unwrap();
+        assert!(ext_info.memo().is_some());
+        assert_eq!(ext_info.memo().unwrap(), &Memo::try_from("Foobar".to_string()).unwrap());
+        assert!(ext_info.visual_logo().is_none());
+
+        let ext_info = TokenExtendedInfo::default()
+            .with_visual_logo(logos.clone()).unwrap();
+        assert!(ext_info.memo().is_none());
+        assert!(ext_info.visual_logo().is_some());
+        assert_eq!(ext_info.visual_logo().unwrap(), &logos);
+    }
+
+    #[test]
+    fn get_mut() {
+        let mut logos = VisualTokenLogo::default();
+        logos.unicode_front('∑');
+        logos.image_back("foo", vec![2u8; 10]);
+
+        let mut ext_info = TokenExtendedInfo::default()
+            .with_memo("Foobar".to_string()).unwrap()
+            .with_visual_logo(logos.clone()).unwrap();
+        assert!(ext_info.memo_mut().is_some());
+        assert_eq!(ext_info.memo_mut().unwrap(), &Memo::try_from("Foobar".to_string()).unwrap());
+        assert!(ext_info.visual_logo_mut().is_some());
+        assert_eq!(ext_info.visual_logo_mut().unwrap(), &logos);
+
+        let mut ext_info = TokenExtendedInfo::default()
+            .with_memo("Foobar".to_string()).unwrap();
+        assert!(ext_info.memo_mut().is_some());
+        assert_eq!(ext_info.memo_mut().unwrap(), &Memo::try_from("Foobar".to_string()).unwrap());
+        assert!(ext_info.visual_logo_mut().is_none());
+
+        let mut ext_info = TokenExtendedInfo::default()
+            .with_visual_logo(logos.clone()).unwrap();
+        assert!(ext_info.memo_mut().is_none());
+        assert!(ext_info.visual_logo_mut().is_some());
+        assert_eq!(ext_info.visual_logo_mut().unwrap(), &logos);
     }
 }

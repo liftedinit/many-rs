@@ -128,7 +128,7 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
     }
 }
 
-#[derive(Default, Clone, Debug, Encode, Decode)]
+#[derive(Default, Clone, Debug, Encode, Decode, PartialEq, Eq)]
 #[cbor(transparent)]
 pub struct VisualTokenLogo(#[n(0)] VecDeque<SingleVisualTokenLogo>);
 
