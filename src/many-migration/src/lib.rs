@@ -1,98 +1,58 @@
 #![feature(const_mut_refs)]
 
-use minicbor::{encode::Error, encode::Write, Decode, Decoder, Encode, Encoder};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
+use std::fmt::Formatter;
+use std::ops::Index;
 use strum::Display;
-use tracing::{debug, trace};
+use tracing::trace;
 
 pub type FnPtr<T, E> = fn(&mut T) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
 
-#[derive(Debug, Default, Deserialize, Encode, Serialize, Decode, Display, PartialEq, Eq)]
-#[cbor(index_only)]
-pub enum Status {
-    #[n(0)]
-    Enabled,
-
-    #[default]
-    #[n(1)]
-    Disabled,
-}
-
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Metadata {
     pub block_height: u64,
+
+    #[serde(default)]
+    pub disabled: bool,
+
     pub issue: Option<String>,
 
     #[serde(flatten)]
     pub extra: HashMap<String, Value>,
 }
 
-impl Default for Metadata {
-    fn default() -> Self {
+impl Metadata {
+    pub fn enabled(block_height: u64) -> Self {
         Self {
-            block_height: 1,
-            issue: None,
-            extra: HashMap::default(),
-        }
-    }
-}
-
-/// Encode Metadata to CBOR
-/// We do NOT encode the extra fields
-impl<C> Encode<C> for Metadata {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
-        e.map(2)?
-            .u8(0)?
-            .u64(self.block_height)?
-            .u8(1)?
-            .encode(&self.issue)?;
-        Ok(())
-    }
-}
-
-impl<'b, C> Decode<'b, C> for Metadata {
-    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
-        let l = d
-            .map()?
-            .ok_or_else(|| minicbor::decode::Error::message("Unsupported indefinite map."))?;
-        if l != 2 {
-            return Err(minicbor::decode::Error::message("Invalid number of keys."));
-        }
-
-        let mut block_height = None;
-        let mut issue = None;
-
-        for _ in 0..l {
-            match d.u8()? {
-                0 => {
-                    block_height = Some(d.u64()?);
-                }
-                1 => issue = Some(d.decode()?),
-                _ => return Err(minicbor::decode::Error::message("Unknown key.")),
-            }
-        }
-
-        let (block_height, issue) = (
-            block_height.ok_or_else(|| minicbor::decode::Error::message("Missing field name."))?,
-            issue.ok_or_else(|| minicbor::decode::Error::message("Missing field metadata."))?,
-        );
-
-        Ok(Metadata {
             block_height,
-            issue,
-            ..Default::default()
-        })
+            disabled: false,
+            issue: None,
+            extra: Default::default(),
+        }
+    }
+
+    pub fn disabled(block_height: u64) -> Self {
+        Self {
+            block_height,
+            disabled: true,
+            issue: None,
+            extra: Default::default(),
+        }
     }
 }
 
-#[derive(Clone, Display)]
+#[derive(Copy, Clone, Display)]
+#[non_exhaustive]
 pub enum MigrationType<T, E> {
     Regular(RegularMigration<T, E>),
     Hotfix(HotfixMigration),
+
+    #[non_exhaustive]
+    _Unreachable,
 }
 
 impl<T, E> fmt::Debug for MigrationType<T, E> {
@@ -101,39 +61,29 @@ impl<T, E> fmt::Debug for MigrationType<T, E> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct RegularMigration<T, E> {
     initialize_fn: FnPtr<T, E>,
     update_fn: FnPtr<T, E>,
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct HotfixMigration {
     hotfix_fn: FnByte,
 }
 
-#[derive(Clone)]
-pub struct InnerMigration<'a, T, E> {
+#[derive(Copy, Clone)]
+pub struct InnerMigration<T, E> {
     r#type: MigrationType<T, E>,
-    name: &'a str,
-    description: &'a str,
+    name: &'static str,
+    description: &'static str,
 }
 
-impl<'a, T, E> fmt::Display for InnerMigration<'a, T, E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_fmt(format_args!(
-            "Type: \"{}\", Name: \"{}\", Description: \"{}\"",
-            self.r#type(),
-            self.name(),
-            self.description()
-        ))
-    }
-}
-
-impl<'a, T, E> fmt::Debug for InnerMigration<'a, T, E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> std::fmt::Result {
-        formatter
-            .debug_struct("InnerMigration")
+// The Debug derive requires that _all_ parametric types also implement Debug,
+// even if the sub-types don't. So we have to implement our own version.
+impl<T, E> fmt::Debug for InnerMigration<T, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("InnerMigration")
             .field("type", &self.r#type)
             .field("name", &self.name)
             .field("description", &self.description)
@@ -141,170 +91,22 @@ impl<'a, T, E> fmt::Debug for InnerMigration<'a, T, E> {
     }
 }
 
-#[derive(Encode)]
-#[cbor(map)]
-pub struct Migration<'a, T, E> {
-    #[n(0)]
-    #[cbor(encode_with = "encode_inner_migration")]
-    pub migration: &'a InnerMigration<'a, T, E>,
-
-    #[n(1)]
-    pub metadata: Metadata,
-
-    #[n(2)]
-    pub status: Status,
-}
-
-fn encode_inner_migration<'a, C, T, E, W: Write>(
-    v: &InnerMigration<'a, T, E>,
-    e: &mut Encoder<W>,
-    _: &mut C,
-) -> Result<(), Error<W::Error>> {
-    e.encode(v.name)?;
-    Ok(())
-}
-
-impl<'a, 'b, C: Copy + IntoIterator<Item = &'a InnerMigration<'a, T, E>>, T, E> Decode<'b, C>
-    for Migration<'a, T, E>
-{
-    fn decode(d: &mut Decoder<'b>, registry: &mut C) -> Result<Self, minicbor::decode::Error> {
-        // TODO: Cache this
-        // Build a BTreeMap from the linear registry
-        let registry = registry
-            .into_iter()
-            .map(|m| (m.name, m))
-            .collect::<BTreeMap<&'a str, &InnerMigration<'a, T, E>>>();
-
-        let l = d
-            .map()?
-            .ok_or_else(|| minicbor::decode::Error::message("Unsupported indefinite map."))?;
-        if l != 3 {
-            return Err(minicbor::decode::Error::message("Invalid number of keys."));
-        }
-
-        let mut name = None;
-        let mut metadata = None;
-        let mut status = None;
-        for _ in 0..l {
-            match d.u8()? {
-                0 => name = Some(d.str()?),
-                1 => metadata = Some(d.decode()?),
-                2 => status = Some(d.decode()?),
-                _ => return Err(minicbor::decode::Error::message("Unknown key.")),
-            }
-        }
-
-        let (name, metadata, status) = (
-            name.ok_or_else(|| minicbor::decode::Error::message("Missing field name."))?,
-            metadata.ok_or_else(|| minicbor::decode::Error::message("Missing field metadata."))?,
-            status.ok_or_else(|| minicbor::decode::Error::message("Missing fields status."))?,
-        );
-
-        let migration = *registry
-            .get(name)
-            .ok_or_else(|| minicbor::decode::Error::message("Invalid migration name."))?;
-
-        Ok(Self {
-            migration,
-            metadata,
-            status,
-        })
-    }
-}
-
-impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
+impl<T, E> fmt::Display for InnerMigration<T, E> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_fmt(format_args!(
-            "{}, Metadata: \"{:?}\", Status: \"{}\"",
-            self.migration,
-            self.metadata(),
-            self.status()
+            "Type: \"{}\", Name: \"{}\", Description: \"{}\"",
+            self.r#type, self.name, self.description
         ))
     }
 }
-impl<'a, T, E> fmt::Debug for Migration<'a, T, E> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        f.debug_struct("Migration")
-            .field("migration", &self.migration)
-            .field("metadata", &self.metadata)
-            .field("status", &self.status)
-            .finish()
+
+impl<T, E> AsRef<str> for InnerMigration<T, E> {
+    fn as_ref(&self) -> &str {
+        self.name()
     }
 }
 
-impl<'a, T, E> Migration<'a, T, E> {
-    pub const fn new(
-        migration: &'a InnerMigration<'a, T, E>,
-        metadata: Metadata,
-        status: Status,
-    ) -> Self {
-        Self {
-            migration,
-            metadata,
-            status,
-        }
-    }
-
-    /// This function gets executed when the storage block height == the migration block height
-    pub fn initialize(&self, storage: &mut T, h: u64) -> Result<(), E> {
-        if self.status == Status::Enabled && h == self.metadata().block_height {
-            debug!("Trying to initialize migration - {}", self.name());
-            trace!("Migration: {}", self);
-            return self.migration.initialize(storage);
-        }
-        Ok(())
-    }
-
-    /// This function gets executed when the storage block height > the migration block height
-    pub fn update(&self, storage: &mut T, h: u64) -> Result<(), E> {
-        if self.status == Status::Enabled && h > self.metadata().block_height {
-            debug!("Trying to update migration - {}", self.name());
-            trace!("Migration: {}", self);
-            return self.migration.update(storage);
-        }
-        Ok(())
-    }
-
-    /// This function gets executed when the storage block height == the migration block height
-    pub fn hotfix<'b>(&'b self, b: &'b [u8], h: u64) -> Option<Vec<u8>> {
-        if self.status == Status::Enabled && h == self.metadata().block_height {
-            debug!("Trying to execute hotfix - {}", self.name());
-            trace!("Migration: {}", self);
-            return self.migration.hotfix(b);
-        }
-        None
-    }
-
-    pub fn name(&self) -> &'a str {
-        self.migration.name()
-    }
-
-    pub fn description(&self) -> &'a str {
-        self.migration.description()
-    }
-
-    pub fn metadata(&self) -> &Metadata {
-        &self.metadata
-    }
-
-    pub fn status(&self) -> &Status {
-        &self.status
-    }
-
-    pub fn disable(&mut self) {
-        self.status = Status::Disabled
-    }
-
-    pub fn enable(&mut self) {
-        self.status = Status::Enabled
-    }
-
-    pub fn is_enabled(&self) -> bool {
-        self.status == Status::Enabled
-    }
-}
-
-impl<T, E> InnerMigration<'static, T, E> {
+impl<T, E> InnerMigration<T, E> {
     pub const fn new_hotfix(
         hotfix_fn: FnByte,
         name: &'static str,
@@ -362,117 +164,432 @@ impl<T, E> InnerMigration<'static, T, E> {
             description,
         }
     }
-}
 
-impl<'a, T, E> InnerMigration<'a, T, E> {
-    pub const fn name(&self) -> &'a str {
+    #[inline]
+    pub const fn name(&self) -> &str {
         self.name
     }
 
-    pub const fn description(&self) -> &'a str {
+    #[inline]
+    pub const fn description(&self) -> &str {
         self.description
     }
 
+    #[inline]
     pub const fn r#type(&self) -> &'_ MigrationType<T, E> {
         &self.r#type
     }
 
     /// This function gets executed when the storage block height == the migration block height
-    pub fn initialize(&self, storage: &mut T) -> Result<(), E> {
+    fn initialize(&self, storage: &mut T) -> Result<(), E> {
         match &self.r#type {
             MigrationType::Regular(migration) => (migration.initialize_fn)(storage),
-            _ => {
-                tracing::trace!(
-                    "Migration {} is not of type `Regular`, skipping",
-                    self.name()
-                );
+            MigrationType::Hotfix(_) => Ok(()),
+            x => {
+                trace!("Migration {} has unknown type {}", self.name(), x);
                 Ok(())
             }
         }
     }
 
-    /// This function gets executed when the storage block height >= the migration block height
-    pub fn update(&self, storage: &mut T) -> Result<(), E> {
+    /// This function gets executed when the storage block height > the migration block height
+    fn update(&self, storage: &mut T) -> Result<(), E> {
         match &self.r#type {
             MigrationType::Regular(migration) => (migration.update_fn)(storage),
-            _ => {
-                tracing::trace!(
-                    "Migration {} is not of type `Regular`, skipping",
-                    self.name()
-                );
+            MigrationType::Hotfix(_) => Ok(()),
+            x => {
+                trace!("Migration {} has unknown type {}", self.name(), x);
                 Ok(())
             }
         }
     }
 
     /// This function gets executed when the storage block height == the migration block height
-    pub fn hotfix<'b>(&'b self, b: &'b [u8]) -> Option<Vec<u8>> {
+    fn hotfix<'b>(&'b self, b: &'b [u8]) -> Option<Vec<u8>> {
         match &self.r#type {
+            MigrationType::Regular(_) => None,
             MigrationType::Hotfix(migration) => (migration.hotfix_fn)(b),
-            _ => {
-                tracing::trace!(
-                    "Migration {} is not of type `Hotfix`, skipping",
-                    self.name()
-                );
+            x => {
+                trace!("Migration {} has unknown type {}", self.name(), x);
                 None
             }
         }
     }
 }
 
-#[derive(Deserialize)]
-struct MigrationJson<'a> {
-    r#type: &'a str,
+pub struct Migration<'a, T, E> {
+    migration: &'a InnerMigration<T, E>,
+
+    /// The metadata used during creation of this migration.
+    metadata: Metadata,
+
+    /// Whether the migration is enabled (will initialize, update, etc).
+    enabled: bool,
+
+    /// Whether the block height has been reached.
+    active: bool,
+}
+
+// The Debug derive requires that _all_ parametric types also implement Debug,
+// even if the sub-types don't. So we have to implement our own version.
+impl<'a, T, E> fmt::Debug for Migration<'a, T, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Migration")
+            .field("migration", &self.migration)
+            .field("metadata", &self.metadata)
+            .field("enabled", &self.enabled)
+            .field("active", &self.active)
+            .finish()
+    }
+}
+
+impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_fmt(format_args!(
+            "{}, Metadata: \"{:?}\", Status: \"{}\"",
+            self.migration,
+            self.metadata(),
+            self.is_enabled()
+        ))
+    }
+}
+
+impl<'a, T, E> Migration<'a, T, E> {
+    fn new(migration: &'a InnerMigration<T, E>, metadata: Metadata) -> Self {
+        let enabled = !metadata.disabled;
+        Self {
+            migration,
+            metadata,
+            enabled,
+            active: false,
+        }
+    }
+
+    /// Check the height and call the inner migration's methods.
+    pub fn maybe_initialize_update_at_height(
+        &mut self,
+        storage: &mut T,
+        block_height: u64,
+    ) -> Result<(), E> {
+        if self.is_enabled() {
+            if block_height == self.metadata.block_height && !self.active {
+                self.active = true;
+                self.migration.initialize(storage)?;
+            } else if block_height > self.metadata.block_height {
+                self.migration.update(storage)?;
+            }
+        }
+
+        // Else ignore.
+        Ok(())
+    }
+
+    #[inline]
+    pub fn initialize(&self, storage: &mut T, block_height: u64) -> Result<(), E> {
+        if self.is_enabled() && block_height == self.metadata.block_height {
+            self.migration.initialize(storage)?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    pub fn update(&self, storage: &mut T, block_height: u64) -> Result<(), E> {
+        if self.is_enabled() && block_height > self.metadata.block_height {
+            self.migration.update(storage)?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    pub fn hotfix(&self, b: &[u8], block_height: u64) -> Option<Vec<u8>> {
+        if self.is_enabled() && self.metadata.block_height == block_height {
+            self.migration.hotfix(b)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub fn is_regular(&self) -> bool {
+        matches!(self.migration.r#type, MigrationType::Regular(_))
+    }
+
+    #[inline]
+    pub fn is_hotfix(&self) -> bool {
+        matches!(self.migration.r#type, MigrationType::Hotfix(_))
+    }
+
+    #[inline]
+    pub fn name(&self) -> &str {
+        self.migration.name()
+    }
+
+    #[inline]
+    pub fn description(&self) -> &str {
+        self.migration.description()
+    }
+
+    #[inline]
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
+    }
+
+    #[inline]
+    pub fn disable(&mut self) {
+        self.enabled = false;
+    }
+
+    #[inline]
+    pub fn enable(&mut self) {
+        self.enabled = true;
+    }
+
+    #[inline]
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
+    #[inline]
+    pub fn is_active(&self) -> bool {
+        self.active
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SingleMigrationConfig {
+    name: String,
 
     #[serde(flatten)]
     metadata: Metadata,
 }
 
-pub fn load_migrations<'a, 'b, E, T>(
-    registry: &'b [InnerMigration<'b, T, E>],
-    data: &'a str,
-) -> Result<BTreeMap<&'b str, Migration<'b, T, E>>, String> {
-    // TODO: Do not hardcode the deserializer
-    let config: Vec<MigrationJson> = serde_json::from_str(data).unwrap();
-
-    // TODO: Cache this
-    // Build a BTreeMap from the linear registry
-    let registry = registry
-        .iter()
-        .map(|m| (m.name, m))
-        .collect::<BTreeMap<&'b str, &InnerMigration<'b, T, E>>>();
-
-    Ok(config
-        .into_iter()
-        .map(|io| {
-            let (&k, &v) = registry
-                .get_key_value(io.r#type)
-                .ok_or_else(|| format!("Unsupported migration type {}", io.r#type))?;
-            Ok((k, Migration::new(v, io.metadata, Status::Enabled)))
-        })
-        .collect::<Result<BTreeMap<_, _>, String>>()?
-        .into_iter()
-        .collect())
+impl<T, E> From<(&InnerMigration<T, E>, Metadata)> for SingleMigrationConfig {
+    fn from((migration, metadata): (&InnerMigration<T, E>, Metadata)) -> Self {
+        Self {
+            name: migration.name.to_string(),
+            metadata,
+        }
+    }
 }
 
-// /// Enable all migrations from the registry EXCEPT the hotfix
-pub fn load_enable_all_regular_migrations<'a, E, T>(
-    registry: &'a [InnerMigration<'a, T, E>],
-) -> BTreeMap<&'a str, Migration<'a, T, E>> {
-    registry
+#[derive(Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct MigrationConfig {
+    #[serde(skip)]
+    strict: Option<bool>,
+    migrations: Vec<SingleMigrationConfig>,
+}
+
+impl MigrationConfig {
+    pub fn is_strict(&self) -> bool {
+        self.strict.unwrap_or(false)
+    }
+
+    pub fn strict(mut self) -> Self {
+        self.strict = Some(true);
+        self
+    }
+
+    pub fn with_migration<T, E>(self, migration: &InnerMigration<T, E>) -> Self {
+        self.with_migration_opts(migration, Metadata::default())
+    }
+
+    pub fn with_migration_opts<T, E>(
+        mut self,
+        migration: &InnerMigration<T, E>,
+        metadata: Metadata,
+    ) -> Self {
+        self.migrations.push(SingleMigrationConfig {
+            name: migration.name.to_string(),
+            metadata,
+        });
+        self
+    }
+}
+
+impl<T: IntoIterator<Item = impl Into<SingleMigrationConfig>>> From<T> for MigrationConfig {
+    fn from(value: T) -> Self {
+        Self {
+            strict: None,
+            migrations: value.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+pub struct MigrationSet<'a, T: 'a, E: 'a = many_error::ManyError> {
+    inner: BTreeMap<String, Migration<'a, T, E>>,
+}
+
+impl<'a, T, E: fmt::Debug> fmt::Debug for MigrationSet<'a, T, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MigrationSet")
+            .field("inner", &self.inner)
+            .finish()
+    }
+}
+
+impl<'a, T, E> MigrationSet<'a, T, E> {
+    pub fn empty() -> Result<Self, String> {
+        Ok(Self {
+            inner: Default::default(),
+        })
+    }
+
+    pub fn load(
+        registry: &'a [InnerMigration<T, E>],
+        config: MigrationConfig,
+        height: u64,
+    ) -> Result<Self, String> {
+        let is_strict = config.is_strict();
+
+        // Build a BTreeMap from the linear registry
+        let registry = registry
+            .iter()
+            .map(|m| (m.name, m))
+            .collect::<BTreeMap<&'static str, &'a InnerMigration<T, E>>>();
+
+        let mut inner: BTreeMap<String, Migration<'a, T, E>> = config
+            .migrations
+            .into_iter()
+            .map(|config: SingleMigrationConfig| {
+                let v: &'a InnerMigration<T, E> = registry
+                    .get(config.name.as_str())
+                    .ok_or_else(|| format!("Unsupported migration '{}'", config.name))?;
+
+                Ok((config.name, Migration::new(v, config.metadata)))
+            })
+            .collect::<Result<BTreeMap<_, _>, String>>()?
+            .into_iter()
+            .collect();
+
+        // In strict mode, ALL migrations must be listed.
+        if is_strict {
+            let maybe_missing = registry
+                .keys()
+                .into_iter()
+                .filter(|name| !inner.contains_key(&name.to_string()))
+                .cloned()
+                .collect::<Vec<_>>();
+
+            match maybe_missing.as_slice() {
+                [] => Ok(()),
+                [name] => Err(format!(r#"Migration Config is missing migration "{name}""#)),
+                more => Err(format!("Migration Config is missing migrations {more:?}")),
+            }?;
+        }
+
+        // Activate all already active migrations. Do not call initialize though.
+        for v in inner.values_mut().filter(|m| m.is_enabled()) {
+            if height >= v.metadata.block_height {
+                v.active = true;
+            }
+        }
+
+        Ok(Self { inner })
+    }
+
+    #[inline]
+    pub fn update_at_height(&mut self, storage: &mut T, block_height: u64) -> Result<(), E> {
+        for migration in self.inner.values_mut().filter(|m| m.is_regular()) {
+            migration.maybe_initialize_update_at_height(storage, block_height)?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    pub fn hotfix(&self, name: &str, b: &[u8], block_height: u64) -> Result<Option<Vec<u8>>, E> {
+        for migration in self
+            .inner
+            .values()
+            .filter(|m| m.is_hotfix() && m.name() == name)
+        {
+            if let Some(r) = migration.hotfix(b, block_height) {
+                return Ok(Some(r));
+            }
+        }
+        Ok(None)
+    }
+
+    #[inline]
+    pub fn is_enabled(&self, name: impl AsRef<str>) -> bool {
+        self.inner
+            .get(name.as_ref())
+            .map(|m| m.is_enabled())
+            .unwrap_or(false)
+    }
+
+    #[inline]
+    pub fn is_active(&self, name: impl AsRef<str>) -> bool {
+        self.inner
+            .get(name.as_ref())
+            .map(|m| m.is_active())
+            .unwrap_or(false)
+    }
+}
+
+/// Implement necessary BTreeMap<...> methods to have the same interface for
+/// existing code/tests.
+/// TODO: remove these and move to new Migration-specific APIs in tests.
+impl<'a, T, E> MigrationSet<'a, T, E> {
+    pub fn contains_key(&self, name: impl AsRef<str>) -> bool {
+        self.inner.contains_key(name.as_ref())
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &Migration<'a, T, E>> {
+        self.inner.values()
+    }
+
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+}
+
+impl<'a, T, E, IDX: AsRef<str>> Index<IDX> for MigrationSet<'a, T, E> {
+    type Output = Migration<'a, T, E>;
+
+    fn index(&self, index: IDX) -> &Self::Output {
+        &self.inner[index.as_ref()]
+    }
+}
+
+/// Kept for backward compatibility.
+#[deprecated = "Should use MigrationSet::load() instead."]
+pub fn load_migrations<'a, T, E>(
+    registry: &'a [InnerMigration<T, E>],
+    config: &str,
+) -> Result<MigrationSet<'a, T, E>, String> {
+    let config: MigrationConfig = serde_json::from_str(config).map_err(|e| e.to_string())?;
+    MigrationSet::load(registry, config, 0)
+}
+
+/// Enable all migrations from the registry EXCEPT the hotfix.
+/// Should not be used outside of tests.
+#[deprecated = "Should use MigrationSet::load() instead."]
+pub fn load_enable_all_regular_migrations<T, E>(
+    registry: &[InnerMigration<T, E>],
+) -> MigrationSet<T, E> {
+    // Keep a default of block height 1 for backward compatibility.
+    let metadata = Metadata {
+        block_height: 1,
+        ..Metadata::default()
+    };
+
+    let inner: BTreeMap<String, Migration<T, E>> = registry
         .iter()
         .map(|m| {
-            (
-                m.name,
-                Migration::new(
-                    m,
-                    Metadata::default(),
-                    match m.r#type {
-                        MigrationType::Regular(_) => Status::Enabled,
-                        MigrationType::Hotfix(_) => Status::Disabled,
-                    },
-                ),
-            )
+            let mut migration = Migration::new(m, metadata.clone());
+            match m.r#type {
+                MigrationType::Regular(_) => migration.enable(),
+                MigrationType::Hotfix(_) => migration.disable(),
+                _ => migration.disable(),
+            }
+
+            (m.name.to_string(), migration)
         })
-        .collect()
+        .collect();
+
+    MigrationSet { inner }
 }

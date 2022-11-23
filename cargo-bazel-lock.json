@@ -1,5 +1,5 @@
 {
-  "checksum": "4a38e60b0539db7fccc1e7f5424174dc81f1800b74073f4290e7b035d05aaecc",
+  "checksum": "a17f395521e509d03c7ceb80a8332ec49fb3545b3016626df2bfc659d418bc0c",
   "crates": {
     "aes 0.7.5": {
       "name": "aes",
@@ -2282,7 +2282,7 @@
               "target": "url"
             },
             {
-              "id": "uuid 1.2.1",
+              "id": "uuid 1.2.2",
               "target": "uuid"
             }
           ],
@@ -2912,7 +2912,7 @@
               "target": "clap_lex"
             },
             {
-              "id": "indexmap 1.9.1",
+              "id": "indexmap 1.9.2",
               "target": "indexmap"
             },
             {
@@ -5273,13 +5273,13 @@
       },
       "license": "MIT"
     },
-    "digest 0.10.5": {
+    "digest 0.10.6": {
       "name": "digest",
-      "version": "0.10.5",
+      "version": "0.10.6",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/digest/0.10.5/download",
-          "sha256": "adfbc57365a37acbd2ebf2b64d7e69bb766e2fea813521ed536f5d0520dcf86c"
+          "url": "https://crates.io/api/v1/crates/digest/0.10.6/download",
+          "sha256": "8168378f4e5023e7218c89c891c0fd8ecdb5e5e4f18cb78f38cf245dd021e76f"
         }
       },
       "targets": [
@@ -5328,7 +5328,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.10.5"
+        "version": "0.10.6"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -7275,7 +7275,7 @@
               "target": "serde"
             },
             {
-              "id": "serde_json 1.0.87",
+              "id": "serde_json 1.0.88",
               "target": "serde_json"
             },
             {
@@ -7588,7 +7588,7 @@
               "target": "http"
             },
             {
-              "id": "indexmap 1.9.1",
+              "id": "indexmap 1.9.2",
               "target": "indexmap"
             },
             {
@@ -7596,7 +7596,7 @@
               "target": "slab"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -7966,7 +7966,7 @@
         "deps": {
           "common": [
             {
-              "id": "digest 0.10.5",
+              "id": "digest 0.10.6",
               "target": "digest"
             }
           ],
@@ -8294,7 +8294,7 @@
               "target": "socket2"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -8360,7 +8360,7 @@
               "target": "native_tls"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -8535,13 +8535,13 @@
       },
       "license": "Unlicense/MIT"
     },
-    "indexmap 1.9.1": {
+    "indexmap 1.9.2": {
       "name": "indexmap",
-      "version": "1.9.1",
+      "version": "1.9.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/indexmap/1.9.1/download",
-          "sha256": "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
+          "url": "https://crates.io/api/v1/crates/indexmap/1.9.2/download",
+          "sha256": "1885e79c1fc4b10f0e172c475f458b7f7b93061064d98c3293e98c5ba0c8b399"
         }
       },
       "targets": [
@@ -8585,14 +8585,14 @@
               "target": "hashbrown"
             },
             {
-              "id": "indexmap 1.9.1",
+              "id": "indexmap 1.9.2",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.9.1"
+        "version": "1.9.2"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -9447,7 +9447,7 @@
               "target": "rpassword"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -9584,7 +9584,7 @@
               "target": "regex"
             },
             {
-              "id": "reqwest 0.11.12",
+              "id": "reqwest 0.11.13",
               "target": "reqwest"
             },
             {
@@ -9608,7 +9608,7 @@
               "target": "tiny_http"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -10088,7 +10088,7 @@
               "target": "serde"
             },
             {
-              "id": "serde_json 1.0.87",
+              "id": "serde_json 1.0.88",
               "target": "serde_json"
             },
             {
@@ -10207,7 +10207,7 @@
               "target": "serde"
             },
             {
-              "id": "serde_json 1.0.87",
+              "id": "serde_json 1.0.88",
               "target": "serde_json"
             },
             {
@@ -10298,11 +10298,11 @@
               "target": "futures"
             },
             {
-              "id": "serde_json 1.0.87",
+              "id": "serde_json 1.0.88",
               "target": "serde_json"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             }
           ],
@@ -10479,7 +10479,7 @@
               "target": "serde"
             },
             {
-              "id": "serde_json 1.0.87",
+              "id": "serde_json 1.0.88",
               "target": "serde_json"
             },
             {
@@ -10646,7 +10646,7 @@
               "target": "regex"
             },
             {
-              "id": "reqwest 0.11.12",
+              "id": "reqwest 0.11.13",
               "target": "reqwest"
             },
             {
@@ -10654,7 +10654,7 @@
               "target": "serde"
             },
             {
-              "id": "serde_json 1.0.87",
+              "id": "serde_json 1.0.88",
               "target": "serde_json"
             },
             {
@@ -10682,7 +10682,7 @@
               "target": "tiny_http"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -12873,7 +12873,7 @@
         "deps": {
           "common": [
             {
-              "id": "digest 0.10.5",
+              "id": "digest 0.10.6",
               "target": "digest"
             }
           ],
@@ -14950,13 +14950,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "reqwest 0.11.12": {
+    "reqwest 0.11.13": {
       "name": "reqwest",
-      "version": "0.11.12",
+      "version": "0.11.13",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/reqwest/0.11.12/download",
-          "sha256": "431949c384f4e2ae07605ccaa56d1d9d2ecdb5cadd4f9577ccfab29f2e5149fc"
+          "url": "https://crates.io/api/v1/crates/reqwest/0.11.13/download",
+          "sha256": "68cc60575865c7831548863cc02356512e3f1dc2f3f82cb837d7fc4cc8f3c97c"
         }
       },
       "targets": [
@@ -15078,7 +15078,7 @@
                 "target": "pin_project_lite"
               },
               {
-                "id": "tokio 1.21.2",
+                "id": "tokio 1.22.0",
                 "target": "tokio"
               },
               {
@@ -15092,7 +15092,7 @@
                 "target": "js_sys"
               },
               {
-                "id": "serde_json 1.0.87",
+                "id": "serde_json 1.0.88",
                 "target": "serde_json"
               },
               {
@@ -15117,7 +15117,7 @@
           }
         },
         "edition": "2018",
-        "version": "0.11.12"
+        "version": "0.11.13"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -15156,7 +15156,7 @@
               "target": "serde"
             },
             {
-              "id": "serde_json 1.0.87",
+              "id": "serde_json 1.0.88",
               "target": "serde_json"
             }
           ],
@@ -16054,13 +16054,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "serde_json 1.0.87": {
+    "serde_json 1.0.88": {
       "name": "serde_json",
-      "version": "1.0.87",
+      "version": "1.0.88",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/serde_json/1.0.87/download",
-          "sha256": "6ce777b7b150d76b9cf60d28b55f5847135a003f7d7350c6be7a773508ce7d45"
+          "url": "https://crates.io/api/v1/crates/serde_json/1.0.88/download",
+          "sha256": "8e8b3801309262e8184d9687fb697586833e939767aea0dda89f5a8e650e8bd7"
         }
       },
       "targets": [
@@ -16113,14 +16113,14 @@
               "target": "serde"
             },
             {
-              "id": "serde_json 1.0.87",
+              "id": "serde_json 1.0.88",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "1.0.87"
+        "version": "1.0.88"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -16335,7 +16335,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "digest 0.10.5",
+              "id": "digest 0.10.6",
               "target": "digest"
             }
           ],
@@ -16452,7 +16452,7 @@
         "deps": {
           "common": [
             {
-              "id": "digest 0.10.5",
+              "id": "digest 0.10.6",
               "target": "digest"
             },
             {
@@ -18472,13 +18472,13 @@
       },
       "license": "MIT OR Apache-2.0 OR Zlib"
     },
-    "tokio 1.21.2": {
+    "tokio 1.22.0": {
       "name": "tokio",
-      "version": "1.21.2",
+      "version": "1.22.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tokio/1.21.2/download",
-          "sha256": "a9e03c497dc955702ba729190dc4aac6f2a0ce97f913e5b1b5912fc5039d9099"
+          "url": "https://crates.io/api/v1/crates/tokio/1.22.0/download",
+          "sha256": "d76ce4a75fb488c605c54bf610f221cea8b0dafb53333c1a67e8ee199dcd2ae3"
         }
       },
       "targets": [
@@ -18564,7 +18564,7 @@
               "target": "pin_project_lite"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "build_script_build"
             }
           ],
@@ -18603,7 +18603,7 @@
           ],
           "selects": {}
         },
-        "version": "1.21.2"
+        "version": "1.22.0"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -18706,7 +18706,7 @@
               "target": "native_tls"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             }
           ],
@@ -18769,7 +18769,7 @@
               "target": "pin_project_lite"
             },
             {
-              "id": "tokio 1.21.2",
+              "id": "tokio 1.22.0",
               "target": "tokio"
             },
             {
@@ -19578,13 +19578,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "uuid 1.2.1": {
+    "uuid 1.2.2": {
       "name": "uuid",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/uuid/1.2.1/download",
-          "sha256": "feb41e78f93363bb2df8b0e86a2ca30eed7806ea16ea0c790d757cf93f79be83"
+          "url": "https://crates.io/api/v1/crates/uuid/1.2.2/download",
+          "sha256": "422ee0de9031b5b948b97a8fc04e3aa35230001a722ddd27943e0be31564ce4c"
         }
       },
       "targets": [
@@ -19607,7 +19607,7 @@
           "**"
         ],
         "edition": "2018",
-        "version": "1.2.1"
+        "version": "1.2.2"
       },
       "license": "Apache-2.0 OR MIT"
     },
@@ -19797,8 +19797,8 @@
         },
         {
           "Binary": {
-            "crate_name": "reader",
-            "crate_root": "src/bin/reader.rs",
+            "crate_name": "exit",
+            "crate_root": "src/bin/exit.rs",
             "srcs": {
               "include": [
                 "**/*.rs"
@@ -19821,8 +19821,8 @@
         },
         {
           "Binary": {
-            "crate_name": "exit",
-            "crate_root": "src/bin/exit.rs",
+            "crate_name": "reader",
+            "crate_root": "src/bin/reader.rs",
             "srcs": {
               "include": [
                 "**/*.rs"

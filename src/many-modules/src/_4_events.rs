@@ -6,6 +6,7 @@ use many_macros::many_module;
 use many_protocol::ResponseMessage;
 use many_types::ledger;
 use many_types::ledger::{Symbol, TokenAmount};
+use many_types::legacy::{DataLegacy, MemoLegacy};
 use many_types::{AttributeRelatedIndex, CborRange, Memo, Timestamp, VecOrSingle};
 use minicbor::bytes::ByteVec;
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
@@ -392,6 +393,33 @@ macro_rules! define_event_info_symbol {
     };
 }
 
+macro_rules! define_event_info_memo {
+    (@pick_memo) => {};
+    (@pick_memo $name: ident memo $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        return $name .as_ref()
+    };
+    (@pick_memo $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
+        define_event_info_memo!(@pick_memo $( $name $( $tag )*, )* )
+    };
+
+    ( $( $name: ident { $( $fname: ident $( $tag: ident )* , )* } )* ) => {
+        #[inline]
+        pub fn memo(&self) -> Option<&Memo> {
+            match self {
+                $( EventInfo :: $name {
+                    $( $fname, )*
+                } => {
+                    // Remove warnings.
+                    $( let _ = $fname; )*
+                    define_event_info_memo!(@pick_memo $( $fname $( $tag )*, )* );
+                } )*
+            }
+
+            None
+        }
+    };
+}
+
 macro_rules! define_event_info_addresses {
     (@field $set: ident) => {};
     (@field $set: ident $name: ident id $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
@@ -459,6 +487,7 @@ macro_rules! define_event_info {
 
         impl EventInfo {
             define_event_info_symbol!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
+            define_event_info_memo!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
             define_event_info_addresses!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
 
             fn is_about(&self, id: &Address) -> bool {
@@ -669,12 +698,14 @@ define_event! {
     [9, 1, 0]   AccountMultisigSubmit (module::account::features::multisig::SubmitTransactionArgs) {
         1     | submitter:              Address                                [ id ],
         2     | account:                Address                                [ id ],
-        3     | memo:                   Option<Memo>,
+        3     | memo_:                  Option<MemoLegacy<String>>,
         4     | transaction:            Box<AccountMultisigTransaction>        [ inner ],
         5     | token:                  Option<ByteVec>,
         6     | threshold:              u64,
         7     | timeout:                Timestamp,
         8     | execute_automatically:  bool,
+        9     | data_:                  Option<DataLegacy>,
+        10    | memo:                   Option<Memo>                           [ memo ],
     },
     [9, 1, 1]   AccountMultisigApprove (module::account::features::multisig::ApproveArgs) {
         1     | account:                Address                                [ id ],
@@ -776,6 +807,7 @@ impl EventLog {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::ledger;
     use many_identity::testing::identity;
 
     #[test]
@@ -936,6 +968,68 @@ mod test {
         assert_eq!(event.symbol(), None);
     }
 
+    #[test]
+    fn memo_works() {
+        let i0 = identity(0);
+        let i1 = identity(1);
+        let i01 = i0.with_subresource_id(1).unwrap();
+
+        let event = EventInfo::Send {
+            from: i0,
+            to: i01,
+            symbol: i1,
+            amount: Default::default(),
+            memo: None,
+        };
+        assert_eq!(event.memo(), None);
+
+        let event = EventInfo::AccountMultisigSubmit {
+            submitter: i0,
+            account: i1,
+            memo_: Some(MemoLegacy::try_from("Hello".to_string()).unwrap()),
+            transaction: Box::new(AccountMultisigTransaction::Send(ledger::SendArgs {
+                from: None,
+                to: Default::default(),
+                amount: Default::default(),
+                symbol: Default::default(),
+                memo: None,
+            })),
+            token: None,
+            threshold: 0,
+            timeout: Timestamp::now(),
+            execute_automatically: false,
+            data_: Some(DataLegacy::try_from(b"World".to_vec()).unwrap()),
+            memo: Some(Memo::try_from("Foo").unwrap()),
+        };
+        assert_eq!(event.memo().unwrap(), "Foo");
+    }
+
+    #[test]
+    fn memo_does_not_return_legacy() {
+        let i0 = identity(0);
+        let i1 = identity(1);
+
+        let event = EventInfo::AccountMultisigSubmit {
+            submitter: i0,
+            account: i1,
+            memo_: Some(MemoLegacy::try_from("Hello".to_string()).unwrap()),
+            transaction: Box::new(AccountMultisigTransaction::Send(ledger::SendArgs {
+                from: None,
+                to: Default::default(),
+                amount: Default::default(),
+                symbol: Default::default(),
+                memo: None,
+            })),
+            token: None,
+            threshold: 0,
+            timeout: Timestamp::now(),
+            execute_automatically: false,
+            data_: Some(DataLegacy::try_from(b"World".to_vec()).unwrap()),
+            memo: None,
+        };
+        assert_eq!(event.memo(), None);
+    }
+
     mod event_info {
         use super::super::*;
         use many_identity::testing::identity;
@@ -953,6 +1047,8 @@ mod test {
                 threshold: 1,
                 timeout: Timestamp::now(),
                 execute_automatically: false,
+                memo_: None,
+                data_: None,
             }
         }
 
@@ -964,6 +1060,10 @@ mod test {
         }
 
         proptest! {
+            // These tests can run for a long time, so limit the number of tests ran to limit the
+            // time to run these tests.
+            #![proptest_config(ProptestConfig::with_cases(50))]
+
             #[test]
             fn huge_memo(memo in string_regex("[A-Za-z0-9\\., ]{4001,5000}").unwrap()) {
                 let memo: Option<Memo> = memo.try_into().ok();
@@ -1004,6 +1104,8 @@ mod test {
                                 threshold: None,
                                 timeout_in_secs: None,
                                 execute_automatically: None,
+                                data_: None,
+                                memo_: None,
                             }
                         )
                     )
@@ -1029,7 +1131,6 @@ mod test {
 #[cfg(test)]
 mod tests {
     use crate::testutils::{call_module, call_module_cbor};
-    use mockall::predicate;
     use std::sync::{Arc, Mutex};
 
     use super::*;
@@ -1038,7 +1139,7 @@ mod tests {
     fn info() {
         let mut mock = MockEventsModuleBackend::new();
         mock.expect_info()
-            .with(predicate::eq(InfoArgs {}))
+            .with(eq(InfoArgs {}))
             .times(1)
             .returning(|_args| {
                 Ok(InfoReturn {
@@ -1064,7 +1165,7 @@ mod tests {
         };
         let mut mock = MockEventsModuleBackend::new();
         mock.expect_list()
-            .with(predicate::eq(data.clone()))
+            .with(eq(data.clone()))
             .times(1)
             .returning(|_args| {
                 Ok(ListReturns {

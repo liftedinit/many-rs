@@ -20,6 +20,11 @@ use attributes::AttributeId;
 pub use either::Either;
 pub use memo::Memo;
 
+pub mod legacy {
+    pub use crate::memo::DataLegacy;
+    pub use crate::memo::MemoLegacy;
+}
+
 /// A simple macro to create CBOR types. This only covers a few cases but will
 /// save a lot of boilerplate for those cases. Any use case that isn't covered
 /// by this macro should simply be implemented on its own.

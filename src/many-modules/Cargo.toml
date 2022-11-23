@@ -22,13 +22,10 @@ strum = "0.24.1"
 strum_macros = "0.24.3"
 
 [dev-dependencies]
-cbor-diag = "0.1.10"
+cbor-diag = "0.1.11"
 many-identity = { path = "../many-identity", version = "0.1.0", features = ["raw", "testing"] }
 many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0", features = ["ed25519", "testing"] }
 mockall = "0.11.1"
 once_cell = "1.13.0"
 proptest = "1.0.0"
 smol = "1.2.5"
-
-[features]
-memo-backward-compatible = ["many-types/memo-backward-compatible"]
