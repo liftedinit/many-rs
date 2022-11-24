@@ -5,7 +5,7 @@ use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::{BigInt, BigUint};
 use num_traits::Num;
 use serde::de::Unexpected;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
@@ -293,7 +293,7 @@ impl<'de> Deserialize<'de> for TokenAmount {
     }
 }
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq, Deserialize, Serialize)]
 #[cbor(map)]
 pub struct TokenInfoSummary {
     #[n(0)]
