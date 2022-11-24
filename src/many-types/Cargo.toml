@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 many-error = { path = "../many-error", version = "0.1.0" }
-many-identity = { path = "../many-identity", version = "0.1.0", features = ["serde"] }
+many-identity = { path = "../many-identity", version = "0.1.0" }
 coset = "0.3.2"
 fixed = "1.16.0"
 hex = "0.4.3"

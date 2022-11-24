@@ -1,4 +1,4 @@
-use crate::Percent;
+use crate::{cbor_type_decl, Percent};
 use many_identity::Address;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
@@ -319,21 +319,14 @@ pub struct TokenInfoSupply {
     pub maximum: Option<TokenAmount>,
 }
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq, Deserialize)]
-#[cbor(map)]
-pub struct TokenInfo {
-    #[n(0)]
-    pub total: TokenAmount,
-
-    #[n(1)]
-    pub summary: TokenInfoSummary,
-
-    #[n(2)]
-    pub supply: TokenInfoSupply,
-
-    #[n(3)]
-    pub owner: Option<Address>,
-}
+cbor_type_decl!(
+    pub struct TokenInfo {
+        0 => symbol: Symbol,
+        1 => summary: TokenInfoSummary,
+        2 => supply: TokenInfoSupply,
+        3 => owner: Option<Address>,
+    }
+);
 
 #[cfg(test)]
 mod test {
