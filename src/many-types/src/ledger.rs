@@ -323,7 +323,7 @@ pub struct TokenInfoSupply {
 #[cbor(map)]
 pub struct TokenInfo {
     #[n(0)]
-    pub total: TokenAmount,
+    pub symbol: Symbol,
 
     #[n(1)]
     pub summary: TokenInfoSummary,
