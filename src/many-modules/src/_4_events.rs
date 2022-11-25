@@ -744,7 +744,7 @@ define_event! {
         1     | summary:                ledger::TokenInfoSummary,
         2     | symbol:                 Address                                [ id ],
         3     | owner:                  Option<Address>                        [ id_non_null ],
-        4     | initial_distribtion:    Option<ledger::LedgerTokensAddressMap>,
+        4     | initial_distribution:   Option<ledger::LedgerTokensAddressMap>,
         5     | maximum_supply:         Option<ledger::TokenAmount>,
         6     | extended_info:          Option<module::ledger::extended_info::TokenExtendedInfo>,
     },
