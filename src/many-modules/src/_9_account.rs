@@ -622,13 +622,9 @@ mod module_tests {
             BTreeSet::from_iter(vec![Role::Owner, Role::CanLedgerTransact].into_iter()),
         );
 
-        assert!(call_module(
-            2,
-            &module,
-            "account.disable",
-            format!(r#"{{ 0: "{id}" }}"#),
-        )
-        .is_err());
+        assert!(
+            call_module(2, &module, "account.disable", format!(r#"{{ 0: "{id}" }}"#),).is_err()
+        );
         assert!(call_module(
             1,
             &module,
@@ -637,13 +633,7 @@ mod module_tests {
         )
         .is_err());
 
-        assert!(call_module(
-            1,
-            &module,
-            "account.disable",
-            format!(r#"{{ 0: "{id}" }}"#),
-        )
-        .is_ok());
+        assert!(call_module(1, &module, "account.disable", format!(r#"{{ 0: "{id}" }}"#),).is_ok());
 
         let account_map = account_map.read().unwrap();
         assert!(account_map.inner.is_empty());
