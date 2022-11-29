@@ -29,17 +29,25 @@ type TokenMintReturns = EmptyReturn;
 #[many_module(name = LedgerMintBurnModule, id = 12, namespace = tokens, many_modules_crate = crate)]
 #[cfg_attr(test, mockall::automock)]
 pub trait LedgerMintBurnModuleBackend: Send {
-    fn mint(&mut self, sender: &Address, args: TokenMintArgs) -> Result<TokenMintReturns, ManyError>;
-    fn burn(&mut self, sender: &Address, args: TokenBurnArgs) -> Result<TokenBurnReturns, ManyError>;
+    fn mint(
+        &mut self,
+        sender: &Address,
+        args: TokenMintArgs,
+    ) -> Result<TokenMintReturns, ManyError>;
+    fn burn(
+        &mut self,
+        sender: &Address,
+        args: TokenBurnArgs,
+    ) -> Result<TokenBurnReturns, ManyError>;
 }
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
     use super::*;
-    use mockall::predicate::eq;
-    use many_identity::testing::identity;
     use crate::testutils::call_module_cbor;
+    use many_identity::testing::identity;
+    use mockall::predicate::eq;
+    use std::sync::{Arc, Mutex};
 
     #[test]
     fn mint() {
@@ -47,7 +55,7 @@ mod tests {
         let data = TokenMintArgs {
             symbol: Default::default(),
             initial_distribution: Default::default(),
-            memo: None
+            memo: None,
         };
         mock.expect_mint()
             .with(eq(identity(1)), eq(data.clone()))
@@ -55,12 +63,14 @@ mod tests {
             .returning(|_, _| Ok(TokenMintReturns {}));
         let module = super::LedgerMintBurnModule::new(Arc::new(Mutex::new(mock)));
 
-        let update_returns: TokenMintReturns =
-            minicbor::decode(&call_module_cbor(1, &module, "tokens.mint", minicbor::to_vec(data).unwrap()).unwrap()).unwrap();
+        let update_returns: TokenMintReturns = minicbor::decode(
+            &call_module_cbor(1, &module, "tokens.mint", minicbor::to_vec(data).unwrap()).unwrap(),
+        )
+        .unwrap();
 
         assert_eq!(update_returns, TokenMintReturns {});
     }
-    
+
     #[test]
     fn burn() {
         let mut mock = MockLedgerMintBurnModuleBackend::new();
@@ -68,17 +78,26 @@ mod tests {
             symbol: Default::default(),
             distribution: Default::default(),
             memo: None,
-            error_on_under_burn: None
+            error_on_under_burn: None,
         };
         mock.expect_burn()
             .with(eq(identity(1)), eq(data.clone()))
             .times(1)
-            .return_const(Ok(TokenBurnReturns { distribution: Default::default() }));
+            .return_const(Ok(TokenBurnReturns {
+                distribution: Default::default(),
+            }));
         let module = super::LedgerMintBurnModule::new(Arc::new(Mutex::new(mock)));
 
-        let update_returns: TokenBurnReturns =
-            minicbor::decode(&call_module_cbor(1, &module, "tokens.burn", minicbor::to_vec(data).unwrap()).unwrap()).unwrap();
+        let update_returns: TokenBurnReturns = minicbor::decode(
+            &call_module_cbor(1, &module, "tokens.burn", minicbor::to_vec(data).unwrap()).unwrap(),
+        )
+        .unwrap();
 
-        assert_eq!(update_returns, TokenBurnReturns { distribution: Default::default() });
+        assert_eq!(
+            update_returns,
+            TokenBurnReturns {
+                distribution: Default::default()
+            }
+        );
     }
 }

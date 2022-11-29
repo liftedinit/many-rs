@@ -3,7 +3,7 @@ use many_types::{AttributeRelatedIndex, Memo};
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use visual_logo::VisualTokenLogo;
 
@@ -11,7 +11,7 @@ pub mod visual_logo;
 
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u8)]
-enum ExtendedInfoKey {
+pub enum ExtendedInfoKey {
     Memo = 0,
     VisualLogo = 1,
 }
@@ -26,6 +26,14 @@ impl TryFrom<AttributeRelatedIndex> for ExtendedInfoKey {
     type Error = ();
 
     fn try_from(value: AttributeRelatedIndex) -> Result<Self, Self::Error> {
+        ExtendedInfoKey::try_from(&value)
+    }
+}
+
+impl TryFrom<&AttributeRelatedIndex> for ExtendedInfoKey {
+    type Error = ();
+
+    fn try_from(value: &AttributeRelatedIndex) -> Result<Self, Self::Error> {
         match value.attribute {
             0 => Ok(Self::Memo),
             1 => Ok(Self::VisualLogo),
@@ -44,8 +52,7 @@ impl<C> Encode<C> for ExtendedInfoKey {
 impl<'b, C> Decode<'b, C> for ExtendedInfoKey {
     fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
         let attr: AttributeRelatedIndex = d.decode_with(ctx)?;
-        attr
-            .try_into()
+        attr.try_into()
             .map_err(|_| decode::Error::message("Invalid attribute."))
     }
 }
@@ -106,17 +113,53 @@ pub struct TokenExtendedInfo {
 }
 
 impl TokenExtendedInfo {
-    pub fn new() -> Self { Self { inner: Default::default() } }
+    pub fn new() -> Self {
+        Self {
+            inner: Default::default(),
+        }
+    }
 
     fn insert(&mut self, value: ExtendedInfo) {
         self.inner.insert(value.as_key(), value);
     }
 
-    pub fn with_memo(
+    pub fn contains_index(&self, index: &AttributeRelatedIndex) -> Result<bool, ManyError> {
+        let key = ExtendedInfoKey::try_from(index).map_err(|_| {
+            ManyError::unknown("Unable to convert AttributeRelatedIndex to ExtendedInfoKey")
+        })?;
+        Ok(self.inner.contains_key(&key))
+    }
+
+    pub fn remove(&mut self, index: &AttributeRelatedIndex) -> Result<(), ManyError> {
+        let key = ExtendedInfoKey::try_from(index).map_err(|_| {
+            ManyError::unknown("Unable to convert AttributeRelatedIndex to ExtendedInfoKey")
+        })?;
+        self.inner.remove(&key);
+        Ok(())
+    }
+
+    pub fn retain(&mut self, indices: Vec<AttributeRelatedIndex>) -> Result<(), ManyError> {
+        let keys = indices
+            .into_iter()
+            .map(|i| {
+                ExtendedInfoKey::try_from(i)
+                    .map_err(|_| ManyError::unknown("Unable to convert {i} to ExtendedInfoKey"))
+            })
+            .collect::<Result<BTreeSet<ExtendedInfoKey>, _>>()?;
+        self.inner.retain(|&k, _| keys.contains(&k));
+        Ok(())
+    }
+
+    pub fn try_with_memo(
         mut self,
         memo: impl TryInto<Memo, Error = ManyError>,
     ) -> Result<Self, ManyError> {
         self.insert(ExtendedInfo::Memo(Arc::new(memo.try_into()?)));
+        Ok(self)
+    }
+
+    pub fn with_memo(mut self, memo: Memo) -> Result<Self, ManyError> {
+        self.insert(ExtendedInfo::Memo(Arc::new(memo)));
         Ok(self)
     }
 
@@ -160,12 +203,11 @@ impl TokenExtendedInfo {
     }
 }
 
- impl Default for TokenExtendedInfo {
+impl Default for TokenExtendedInfo {
     fn default() -> Self {
         Self::new()
     }
 }
-
 
 impl<C> Encode<C> for TokenExtendedInfo {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), Error<W::Error>> {
@@ -188,9 +230,9 @@ impl<C> Encode<C> for TokenExtendedInfo {
 
 impl<'b, C> Decode<'b, C> for TokenExtendedInfo {
     fn decode(d: &mut Decoder<'b>, ctx: &mut C) -> Result<Self, decode::Error> {
-        let l = d
-            .map()
-            .and_then(|l| l.ok_or_else(|| decode::Error::message("Indefinite length map unsupported.")))?;
+        let l = d.map().and_then(|l| {
+            l.ok_or_else(|| decode::Error::message("Indefinite length map unsupported."))
+        })?;
 
         let mut inner = BTreeMap::new();
         for _ in 0..l {
@@ -222,8 +264,10 @@ mod tests {
         logos.image_back("foo", vec![2u8; 10]);
 
         let ext_info = TokenExtendedInfo::default()
-            .with_memo("Foobar".to_string()).unwrap()
-            .with_visual_logo(logos).unwrap();
+            .try_with_memo("Foobar".to_string())
+            .unwrap()
+            .with_visual_logo(logos)
+            .unwrap();
 
         let enc = minicbor::to_vec(&ext_info).unwrap();
         let res: TokenExtendedInfo = minicbor::decode(&enc).unwrap();
@@ -238,21 +282,31 @@ mod tests {
         logos.image_back("foo", vec![2u8; 10]);
 
         let ext_info = TokenExtendedInfo::default()
-            .with_memo("Foobar".to_string()).unwrap()
-            .with_visual_logo(logos.clone()).unwrap();
+            .try_with_memo("Foobar".to_string())
+            .unwrap()
+            .with_visual_logo(logos.clone())
+            .unwrap();
         assert!(ext_info.memo().is_some());
-        assert_eq!(ext_info.memo().unwrap(), &Memo::try_from("Foobar".to_string()).unwrap());
+        assert_eq!(
+            ext_info.memo().unwrap(),
+            &Memo::try_from("Foobar".to_string()).unwrap()
+        );
         assert!(ext_info.visual_logo().is_some());
         assert_eq!(ext_info.visual_logo().unwrap(), &logos);
 
         let ext_info = TokenExtendedInfo::default()
-            .with_memo("Foobar".to_string()).unwrap();
+            .try_with_memo("Foobar".to_string())
+            .unwrap();
         assert!(ext_info.memo().is_some());
-        assert_eq!(ext_info.memo().unwrap(), &Memo::try_from("Foobar".to_string()).unwrap());
+        assert_eq!(
+            ext_info.memo().unwrap(),
+            &Memo::try_from("Foobar".to_string()).unwrap()
+        );
         assert!(ext_info.visual_logo().is_none());
 
         let ext_info = TokenExtendedInfo::default()
-            .with_visual_logo(logos.clone()).unwrap();
+            .with_visual_logo(logos.clone())
+            .unwrap();
         assert!(ext_info.memo().is_none());
         assert!(ext_info.visual_logo().is_some());
         assert_eq!(ext_info.visual_logo().unwrap(), &logos);
@@ -265,21 +319,31 @@ mod tests {
         logos.image_back("foo", vec![2u8; 10]);
 
         let mut ext_info = TokenExtendedInfo::default()
-            .with_memo("Foobar".to_string()).unwrap()
-            .with_visual_logo(logos.clone()).unwrap();
+            .try_with_memo("Foobar".to_string())
+            .unwrap()
+            .with_visual_logo(logos.clone())
+            .unwrap();
         assert!(ext_info.memo_mut().is_some());
-        assert_eq!(ext_info.memo_mut().unwrap(), &Memo::try_from("Foobar".to_string()).unwrap());
+        assert_eq!(
+            ext_info.memo_mut().unwrap(),
+            &Memo::try_from("Foobar".to_string()).unwrap()
+        );
         assert!(ext_info.visual_logo_mut().is_some());
         assert_eq!(ext_info.visual_logo_mut().unwrap(), &logos);
 
         let mut ext_info = TokenExtendedInfo::default()
-            .with_memo("Foobar".to_string()).unwrap();
+            .try_with_memo("Foobar".to_string())
+            .unwrap();
         assert!(ext_info.memo_mut().is_some());
-        assert_eq!(ext_info.memo_mut().unwrap(), &Memo::try_from("Foobar".to_string()).unwrap());
+        assert_eq!(
+            ext_info.memo_mut().unwrap(),
+            &Memo::try_from("Foobar".to_string()).unwrap()
+        );
         assert!(ext_info.visual_logo_mut().is_none());
 
         let mut ext_info = TokenExtendedInfo::default()
-            .with_visual_logo(logos.clone()).unwrap();
+            .with_visual_logo(logos.clone())
+            .unwrap();
         assert!(ext_info.memo_mut().is_none());
         assert!(ext_info.visual_logo_mut().is_some());
         assert_eq!(ext_info.visual_logo_mut().unwrap(), &logos);

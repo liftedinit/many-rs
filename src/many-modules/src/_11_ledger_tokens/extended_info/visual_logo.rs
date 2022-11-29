@@ -26,12 +26,11 @@ pub enum SingleVisualTokenLogoKey {
     Image = 1,
 }
 
-
 impl SingleVisualTokenLogo {
     pub fn as_key(&self) -> SingleVisualTokenLogoKey {
         match self {
             SingleVisualTokenLogo::UnicodeChar(_) => SingleVisualTokenLogoKey::UnicodeChar,
-            SingleVisualTokenLogo::Image {..} => SingleVisualTokenLogoKey::Image
+            SingleVisualTokenLogo::Image { .. } => SingleVisualTokenLogoKey::Image,
         }
     }
     pub fn char(c: char) -> Self {
@@ -53,7 +52,11 @@ impl<C> Encode<C> for SingleVisualTokenLogo {
     ) -> Result<(), encode::Error<W::Error>> {
         match self {
             SingleVisualTokenLogo::UnicodeChar(c) => {
-                e.map(2)?.u8(0)?.u8(SingleVisualTokenLogoKey::UnicodeChar as u8)?.u8(1)?.str(&String::from(*c))?;
+                e.map(2)?
+                    .u8(0)?
+                    .u8(SingleVisualTokenLogoKey::UnicodeChar as u8)?
+                    .u8(1)?
+                    .str(&String::from(*c))?;
             }
             SingleVisualTokenLogo::Image {
                 content_type,
@@ -74,9 +77,9 @@ impl<C> Encode<C> for SingleVisualTokenLogo {
 
 impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
     fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
-        let mut l = d.map()?.ok_or_else(|| decode::Error::message(
-            "Indefinite length map not supported",
-        ))?;
+        let mut l = d
+            .map()?
+            .ok_or_else(|| decode::Error::message("Indefinite length map not supported"))?;
         if l < 2 {
             return Err(decode::Error::end_of_input());
         }
@@ -91,9 +94,9 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
                     Err(decode::Error::message("Expected key 1"))
                 } else {
                     l -= 1;
-                    Ok(Self::char(d.str()?.chars().next().ok_or_else(||
-                        decode::Error::message("Unicode character empty"),
-                    )?))
+                    Ok(Self::char(d.str()?.chars().next().ok_or_else(|| {
+                        decode::Error::message("Unicode character empty")
+                    })?))
                 }
             }
             SingleVisualTokenLogoKey::Image => {
@@ -133,7 +136,9 @@ impl<'b, C> Decode<'b, C> for SingleVisualTokenLogo {
 pub struct VisualTokenLogo(#[n(0)] VecDeque<SingleVisualTokenLogo>);
 
 impl VisualTokenLogo {
-    pub fn new() -> Self { Self(Default::default()) }
+    pub fn new() -> Self {
+        Self(Default::default())
+    }
     pub fn unicode_front(&mut self, c: char) {
         self.0.push_front(SingleVisualTokenLogo::char(c))
     }
@@ -178,7 +183,7 @@ mod tests {
 
         match res {
             SingleVisualTokenLogo::UnicodeChar(c) => assert_eq!(c, '∑'),
-            _ => panic!("Invalid logo type")
+            _ => panic!("Invalid logo type"),
         }
     }
 
@@ -190,11 +195,14 @@ mod tests {
         let res: SingleVisualTokenLogo = minicbor::decode(&enc).unwrap();
 
         match res {
-            SingleVisualTokenLogo::Image {content_type, binary } => {
+            SingleVisualTokenLogo::Image {
+                content_type,
+                binary,
+            } => {
                 assert_eq!(content_type, "png");
                 assert_eq!(*binary, vec![1u8; 10]);
-            },
-            _ => panic!("Invalid logo type")
+            }
+            _ => panic!("Invalid logo type"),
         }
     }
 
@@ -223,17 +231,41 @@ mod tests {
         logos.unicode_back('π');
 
         let mut iter = logos.iter();
-        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::Image {..} ));
-        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::UnicodeChar(_)));
-        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::Image {..} ));
-        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::UnicodeChar(_)));
+        assert!(matches!(
+            iter.next().unwrap(),
+            SingleVisualTokenLogo::Image { .. }
+        ));
+        assert!(matches!(
+            iter.next().unwrap(),
+            SingleVisualTokenLogo::UnicodeChar(_)
+        ));
+        assert!(matches!(
+            iter.next().unwrap(),
+            SingleVisualTokenLogo::Image { .. }
+        ));
+        assert!(matches!(
+            iter.next().unwrap(),
+            SingleVisualTokenLogo::UnicodeChar(_)
+        ));
 
-        logos.sort(|a, b| { a.as_key().cmp(&b.as_key()) });
+        logos.sort(|a, b| a.as_key().cmp(&b.as_key()));
 
         let mut iter = logos.iter();
-        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::UnicodeChar(_)));
-        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::UnicodeChar(_)));
-        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::Image {..} ));
-        assert!(matches!(iter.next().unwrap(), SingleVisualTokenLogo::Image {..} ));
+        assert!(matches!(
+            iter.next().unwrap(),
+            SingleVisualTokenLogo::UnicodeChar(_)
+        ));
+        assert!(matches!(
+            iter.next().unwrap(),
+            SingleVisualTokenLogo::UnicodeChar(_)
+        ));
+        assert!(matches!(
+            iter.next().unwrap(),
+            SingleVisualTokenLogo::Image { .. }
+        ));
+        assert!(matches!(
+            iter.next().unwrap(),
+            SingleVisualTokenLogo::Image { .. }
+        ));
     }
 }
