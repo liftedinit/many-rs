@@ -32,6 +32,7 @@ pub enum Role {
     CanMultisigApprove,
     CanKvStorePut,
     CanKvStoreDisable,
+    CanTokensCreate,
     CanTokensMint,
     CanTokensBurn,
     CanTokensUpdate,
