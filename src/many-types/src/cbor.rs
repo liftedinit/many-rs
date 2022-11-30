@@ -1,4 +1,4 @@
-use minicbor::data::Type;
+use minicbor::data::{Tag, Type};
 use minicbor::encode::Write;
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeMap;
@@ -12,6 +12,7 @@ pub enum CborAny {
     Bytes(Vec<u8>),
     Array(Vec<CborAny>),
     Map(BTreeMap<CborAny, CborAny>),
+    Tagged(Tag, Box<CborAny>),
 }
 
 impl Debug for CborAny {
@@ -23,6 +24,7 @@ impl Debug for CborAny {
             CborAny::Bytes(b) => write!(f, r#"b"{}""#, hex::encode(b)),
             CborAny::Array(a) => write!(f, "{a:?}"),
             CborAny::Map(m) => write!(f, "{m:?}"),
+            CborAny::Tagged(t, v) => write!(f, "{t:?}({v:?})"),
         }
     }
 }
@@ -55,6 +57,9 @@ impl<C> Encode<C> for CborAny {
             CborAny::Map(m) => {
                 e.encode(m)?;
             }
+            CborAny::Tagged(t, v) => {
+                e.tag(*t)?.encode(v)?;
+            }
         }
 
         Ok(())
@@ -85,6 +90,7 @@ impl<'d, C> Decode<'d, C> for CborAny {
                     minicbor::decode::Error,
                 >>()?))
             }
+            Type::Tag => Ok(CborAny::Tagged(d.tag()?, Box::new(d.decode()?))),
             x => Err(minicbor::decode::Error::type_mismatch(x)),
         }
     }

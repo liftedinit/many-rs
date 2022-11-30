@@ -14,9 +14,16 @@ pub mod identity {
     pub use many_identity::*;
 }
 pub mod ledger;
+pub mod memo;
 
-use crate::attributes::AttributeId;
+use attributes::AttributeId;
 pub use either::Either;
+pub use memo::Memo;
+
+pub mod legacy {
+    pub use crate::memo::DataLegacy;
+    pub use crate::memo::MemoLegacy;
+}
 
 /// A deterministic (fixed point) percent value that can be multiplied with
 /// numbers and rounded down.

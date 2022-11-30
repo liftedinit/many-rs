@@ -9,7 +9,9 @@ rust_library(
     ),
     deps = all_crate_deps(
         normal = True,
-    ),
+    ) + [
+        "//src/many-error",
+    ],
 )
 rust_library(
     name = "many-migration-for-test",
@@ -23,7 +25,9 @@ rust_library(
     deps = all_crate_deps(
         normal = True,
         normal_dev = True,
-    ),
+    ) + [
+        "//src/many-error",
+    ],
 )
 
 rust_test_suite(

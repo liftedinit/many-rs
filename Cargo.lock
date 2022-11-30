@@ -430,15 +430,14 @@ checksum = "c1db59621ec70f09c5e9b597b220c7a2b43611f4710dc03ceb8748637775692c"
 
 [[package]]
 name = "cbor-diag"
-version = "0.1.9"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0271d47015ca577f57ffd36cfca4f5332751840009eb09aa3bdd8dfb20815ae1"
+checksum = "2644c5bb01d8328b218301180b84ccc6f7fce031d50e30917b07ae762a185b7b"
 dependencies = [
- "base64",
  "bs58",
  "chrono",
- "half 1.8.2",
- "hex",
+ "data-encoding",
+ "half 2.1.0",
  "nom 5.1.2",
  "num-bigint",
  "num-rational",
@@ -883,6 +882,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "data-encoding"
+version = "2.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ee2393c4a91429dffb4bedf19f4d6abf27d8a732c8ce4980305d782e5426d57"
 
 [[package]]
 name = "debug-helper"
@@ -1950,6 +1955,7 @@ name = "many-migration"
 version = "0.1.0"
 dependencies = [
  "linkme",
+ "many-error",
  "minicbor",
  "serde",
  "serde_json",
@@ -2091,6 +2097,7 @@ dependencies = [
 name = "many-types"
 version = "0.1.0"
 dependencies = [
+ "cbor-diag",
  "coset",
  "fixed",
  "hex",
