@@ -124,7 +124,7 @@ impl Ed25519IdentityInner {
     pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
         let public_key = public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
         let key_pair = key_pair(cose_key)?;
-        let address = cose::address_unchecked(&public_key)?;
+        let address = unsafe { cose::address_unchecked(&public_key) }?;
 
         Ok(Self {
             address,
@@ -252,7 +252,7 @@ impl Ed25519Verifier {
     pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
         let public_key =
             public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Key not ed25519."))?;
-        let address = cose::address_unchecked(&public_key)?;
+        let address = unsafe { cose::address_unchecked(&public_key) }?;
 
         check_key(
             &public_key,
@@ -348,7 +348,7 @@ pub mod tests {
             "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
         );
         assert_eq!(
-            cose::address_unchecked(&id.public_key()).unwrap(),
+            unsafe { cose::address_unchecked(&id.public_key()).unwrap() },
             "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
         );
     }
