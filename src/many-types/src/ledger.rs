@@ -1,4 +1,5 @@
 use crate::{cbor_type_decl, Either, Percent};
+use many_error::ManyError;
 use many_identity::Address;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
@@ -10,7 +11,6 @@ use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
 use std::str::FromStr;
-use many_error::ManyError;
 
 /// A Symbol is represented by a non-anonymous identity.
 pub type Symbol = Address;
@@ -26,9 +26,7 @@ impl FromStr for Either<Address, ()> {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "null" => Self::Right(()),
-            _ => {
-                Self::Left(Address::try_from(s.to_string())?)
-            }
+            _ => Self::Left(Address::try_from(s.to_string())?),
         })
     }
 }
