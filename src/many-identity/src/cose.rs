@@ -9,7 +9,7 @@ use sha3::{Digest, Sha3_224};
 /// # Safety
 /// This methods DOES NOT VERIFY that the cose key is of a public key. There are
 /// strict criteria (see spec) for how to define the public key of a COSE Key.
-pub fn address_unchecked(cose_key: &CoseKey) -> Result<Address, ManyError> {
+pub unsafe fn address_unchecked(cose_key: &CoseKey) -> Result<Address, ManyError> {
     let pk = Sha3_224::digest(
         cose_key
             .clone()
