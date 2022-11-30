@@ -4,9 +4,9 @@ use crate::account::Role;
 use many_error::ManyError;
 use std::collections::BTreeSet;
 
-pub struct AccountLedger;
+pub struct TokenAccountLedger;
 
-impl TryCreateFeature for AccountLedger {
+impl TryCreateFeature for TokenAccountLedger {
     const ID: FeatureId = 3;
 
     fn try_create(_: &Feature) -> Result<Self, ManyError> {
@@ -14,7 +14,7 @@ impl TryCreateFeature for AccountLedger {
     }
 }
 
-impl super::FeatureInfo for AccountLedger {
+impl super::FeatureInfo for TokenAccountLedger {
     fn as_feature(&self) -> Feature {
         Feature::with_id(Self::ID)
     }
