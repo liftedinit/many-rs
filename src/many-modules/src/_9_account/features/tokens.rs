@@ -20,6 +20,12 @@ impl super::FeatureInfo for AccountLedger {
     }
 
     fn roles() -> BTreeSet<Role> {
-        BTreeSet::from([Role::CanTokenBurn, Role::CanTokenMint, Role::CanTokenUpdate])
+        BTreeSet::from([
+            Role::CanTokensBurn,
+            Role::CanTokensMint,
+            Role::CanTokensUpdate,
+            Role::CanTokensAddExtendedInfo,
+            Role::CanTokensRemoveExtendedInfo,
+        ])
     }
 }
