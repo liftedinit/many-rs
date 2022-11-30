@@ -42,7 +42,8 @@ macro_rules! cbor_type_decl {
         )*
     ) => {
         $(
-            #[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
+            #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+            #[cfg_attr(feature = "cucumber", derive(Default))]
             #[cbor(map)]
             $vis struct $name {
                 $(

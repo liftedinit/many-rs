@@ -10,7 +10,7 @@ pub mod extended_info;
 cbor_type_decl!(
     pub struct TokenCreateArgs {
         0 => summary: ledger::TokenInfoSummary,
-        1 => owner: Option<Option<Address>>, // Some(None) can be used to remove the owner of a token
+        1 => owner: Option<ledger::TokenMaybeOwner>,
         2 => initial_distribution: Option<ledger::LedgerTokensAddressMap>,
         3 => maximum_supply: Option<ledger::TokenAmount>,
         4 => extended_info: Option<extended_info::TokenExtendedInfo>,
@@ -35,7 +35,7 @@ cbor_type_decl!(
         1 => name: Option<String>,
         2 => ticker: Option<String>,
         3 => decimals: Option<u64>,
-        4 => owner: Option<Option<Address>>,
+        4 => owner: Option<ledger::TokenMaybeOwner>,
         5 => memo: Option<Memo>,
     }
 

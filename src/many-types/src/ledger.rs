@@ -1,4 +1,4 @@
-use crate::{cbor_type_decl, Percent};
+use crate::{cbor_type_decl, Either, Percent};
 use many_identity::Address;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
@@ -9,12 +9,29 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
+use std::str::FromStr;
+use many_error::ManyError;
 
 /// A Symbol is represented by a non-anonymous identity.
 pub type Symbol = Address;
 
 /// A map of owners => tokens.
 pub type LedgerTokensAddressMap = BTreeMap<Address, TokenAmount>;
+
+pub type TokenMaybeOwner = Either<Address, ()>;
+
+impl FromStr for Either<Address, ()> {
+    type Err = ManyError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "null" => Self::Right(()),
+            _ => {
+                Self::Left(Address::try_from(s.to_string())?)
+            }
+        })
+    }
+}
 
 /// Transaction fees.
 #[derive(Default, Clone, Encode, Decode)]
@@ -293,7 +310,8 @@ impl<'de> Deserialize<'de> for TokenAmount {
     }
 }
 
-#[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq, Deserialize)]
+#[cfg_attr(feature = "cucumber", derive(Default))]
 #[cbor(map)]
 pub struct TokenInfoSummary {
     #[n(0)]
@@ -306,7 +324,8 @@ pub struct TokenInfoSummary {
     pub decimals: u64,
 }
 
-#[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[cfg_attr(feature = "cucumber", derive(Default))]
 #[cbor(map)]
 pub struct TokenInfoSupply {
     #[n(0)]

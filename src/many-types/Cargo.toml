@@ -22,3 +22,6 @@ serde = "1.0.139"
 cbor-diag = "0.1.11"
 many-types = { path = ".", features = ["proptest"] }
 serde_test = "1.0.139"
+
+[features]
+cucumber = []

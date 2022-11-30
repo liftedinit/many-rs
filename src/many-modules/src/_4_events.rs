@@ -7,7 +7,7 @@ use many_protocol::ResponseMessage;
 use many_types::ledger;
 use many_types::ledger::{Symbol, TokenAmount};
 use many_types::legacy::{DataLegacy, MemoLegacy};
-use many_types::{AttributeRelatedIndex, CborRange, Memo, Timestamp, VecOrSingle};
+use many_types::{AttributeRelatedIndex, CborRange, Either, Memo, Timestamp, VecOrSingle};
 use minicbor::bytes::ByteVec;
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::BigUint;
@@ -432,10 +432,12 @@ macro_rules! define_event_info_addresses {
         }
         define_event_info_addresses!(@field $set $( $name_ $( $tag_ )*, )* );
     };
-    // TODO: Make this recursive...
-    (@field $set: ident $name: ident double_id_non_null $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        if let Some(ref _r @ Some(ref n)) = $name.as_ref() {
-            $set.insert(n);
+    (@field $set: ident $name: ident maybe_owner $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if let Some(n) = $name.as_ref() {
+            match n {
+                Either::Left(addr) => { $set.insert(addr); },
+                Either::Right(_) => {}
+            }
         }
         define_event_info_addresses!(@field $set $( $name_ $( $tag_ )*, )* );
     };
@@ -743,7 +745,7 @@ define_event! {
     [11, 0]     TokenCreate (module::ledger::TokenCreateArgs) {
         1     | summary:                ledger::TokenInfoSummary,
         2     | symbol:                 Address                                [ id ],
-        3     | owner:                  Option<Address>                        [ id_non_null ],
+        3     | owner:                  Option<ledger::TokenMaybeOwner>        [ maybe_owner ],
         4     | initial_distribution:   Option<ledger::LedgerTokensAddressMap>,
         5     | maximum_supply:         Option<ledger::TokenAmount>,
         6     | extended_info:          Option<module::ledger::extended_info::TokenExtendedInfo>,
@@ -753,7 +755,7 @@ define_event! {
         2     | name:                   Option<String>,
         3     | ticker:                 Option<String>,
         4     | decimals:               Option<u64>,
-        5     | owner:                  Option<Option<Address>>                [ double_id_non_null ],
+        5     | owner:                  Option<ledger::TokenMaybeOwner>        [ maybe_owner ],
         6     | memo:                   Option<Memo>,
     },
     [11, 2]     TokenAddExtendedInfo (module::ledger::TokenAddExtendedInfoArgs) {
