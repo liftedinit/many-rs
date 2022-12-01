@@ -84,7 +84,7 @@ impl EcDsaIdentityInner {
         check_key(cose_key, true, false, KeyType::EC2, Algorithm::ES256, None)?;
 
         let public_key = public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
-        let address = cose::address_unchecked(&public_key)?;
+        let address = unsafe { cose::address_unchecked(&public_key) }?;
 
         let params = BTreeMap::from_iter(cose_key.params.iter().cloned());
         let d = params
@@ -207,7 +207,7 @@ impl EcDsaVerifier {
             public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Key not EcDsa."))?;
 
         check_key(cose_key, false, true, KeyType::EC2, Algorithm::ES256, None)?;
-        let address = cose::address_unchecked(&public_key)?;
+        let address = unsafe { cose::address_unchecked(&public_key) }?;
 
         let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
         let x = params
@@ -333,7 +333,7 @@ pub mod tests {
             "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf"
         );
         assert_eq!(
-            cose::address_unchecked(&id.public_key().unwrap()).unwrap(),
+            unsafe { cose::address_unchecked(&id.public_key().unwrap()).unwrap() },
             "magcncsncbfmfdvezjmfick47pwgefjnm6zcaghu7ffe3o3qtf"
         );
     }

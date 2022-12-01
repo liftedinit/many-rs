@@ -184,7 +184,7 @@ impl Address {
     /// many-identity-dsa) or in the testing utilities available here to create
     /// a bogus address.
     #[inline(always)]
-    pub fn public_key_unchecked(hash: PublicKeyHash) -> Self {
+    pub(crate) fn public_key_unchecked(hash: PublicKeyHash) -> Self {
         Self(InnerAddress::public_key(hash))
     }
 }

@@ -1,5 +1,5 @@
 {
-  "checksum": "48faa5791c9f209dd209d4ceb631a22e39aa36cd3adf561df0b3e5ef8a851841",
+  "checksum": "a17f395521e509d03c7ceb80a8332ec49fb3545b3016626df2bfc659d418bc0c",
   "crates": {
     "aes 0.7.5": {
       "name": "aes",
@@ -19797,8 +19797,8 @@
         },
         {
           "Binary": {
-            "crate_name": "reader",
-            "crate_root": "src/bin/reader.rs",
+            "crate_name": "exit",
+            "crate_root": "src/bin/exit.rs",
             "srcs": {
               "include": [
                 "**/*.rs"
@@ -19821,8 +19821,8 @@
         },
         {
           "Binary": {
-            "crate_name": "exit",
-            "crate_root": "src/bin/exit.rs",
+            "crate_name": "reader",
+            "crate_root": "src/bin/reader.rs",
             "srcs": {
               "include": [
                 "**/*.rs"

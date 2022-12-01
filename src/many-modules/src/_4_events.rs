@@ -809,7 +809,6 @@ impl EventLog {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ledger;
     use many_identity::testing::identity;
 
     #[test]
@@ -968,68 +967,6 @@ mod test {
 
         let event = EventInfo::AccountDisable { account: i0 };
         assert_eq!(event.symbol(), None);
-    }
-
-    #[test]
-    fn memo_works() {
-        let i0 = identity(0);
-        let i1 = identity(1);
-        let i01 = i0.with_subresource_id(1).unwrap();
-
-        let event = EventInfo::Send {
-            from: i0,
-            to: i01,
-            symbol: i1,
-            amount: Default::default(),
-            memo: None,
-        };
-        assert_eq!(event.memo(), None);
-
-        let event = EventInfo::AccountMultisigSubmit {
-            submitter: i0,
-            account: i1,
-            memo_: Some(MemoLegacy::try_from("Hello".to_string()).unwrap()),
-            transaction: Box::new(AccountMultisigTransaction::Send(ledger::SendArgs {
-                from: None,
-                to: Default::default(),
-                amount: Default::default(),
-                symbol: Default::default(),
-                memo: None,
-            })),
-            token: None,
-            threshold: 0,
-            timeout: Timestamp::now(),
-            execute_automatically: false,
-            data_: Some(DataLegacy::try_from(b"World".to_vec()).unwrap()),
-            memo: Some(Memo::try_from("Foo").unwrap()),
-        };
-        assert_eq!(event.memo().unwrap(), "Foo");
-    }
-
-    #[test]
-    fn memo_does_not_return_legacy() {
-        let i0 = identity(0);
-        let i1 = identity(1);
-
-        let event = EventInfo::AccountMultisigSubmit {
-            submitter: i0,
-            account: i1,
-            memo_: Some(MemoLegacy::try_from("Hello".to_string()).unwrap()),
-            transaction: Box::new(AccountMultisigTransaction::Send(ledger::SendArgs {
-                from: None,
-                to: Default::default(),
-                amount: Default::default(),
-                symbol: Default::default(),
-                memo: None,
-            })),
-            token: None,
-            threshold: 0,
-            timeout: Timestamp::now(),
-            execute_automatically: false,
-            data_: Some(DataLegacy::try_from(b"World".to_vec()).unwrap()),
-            memo: None,
-        };
-        assert_eq!(event.memo(), None);
     }
 
     mod event_info {
