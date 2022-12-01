@@ -57,6 +57,7 @@ pub type TokenRemoveExtendedInfoReturns = EmptyReturn;
 #[many_module(name = LedgerTokensModule, id = 11, namespace = tokens, many_modules_crate = crate)]
 #[cfg_attr(test, mockall::automock)]
 pub trait LedgerTokensModuleBackend: Send {
+    #[many(deny_anonymous)]
     fn create(
         &mut self,
         sender: &Address,
@@ -65,18 +66,21 @@ pub trait LedgerTokensModuleBackend: Send {
 
     fn info(&self, sender: &Address, args: TokenInfoArgs) -> Result<TokenInfoReturns, ManyError>;
 
+    #[many(deny_anonymous)]
     fn update(
         &mut self,
         sender: &Address,
         args: TokenUpdateArgs,
     ) -> Result<TokenUpdateReturns, ManyError>;
 
+    #[many(deny_anonymous)]
     fn add_extended_info(
         &mut self,
         sender: &Address,
         args: TokenAddExtendedInfoArgs,
     ) -> Result<TokenAddExtendedInfoReturns, ManyError>;
 
+    #[many(deny_anonymous)]
     fn remove_extended_info(
         &mut self,
         sender: &Address,
