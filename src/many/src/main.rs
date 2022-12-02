@@ -146,6 +146,13 @@ struct MessageOpt {
     #[clap(long, requires("webauthn"), conflicts_with("phrase"))]
     address: Option<Address>,
 
+    /// The Relaying party Identifier. A string which was used when creating
+    /// the credentials.
+    /// By default, this will be the hostname of the origin URL, whichever
+    /// it is.
+    #[clap(long, requires("webauthn"))]
+    rp_id: Option<String>,
+
     /// Timestamp (in seconds since epoch).
     #[clap(long)]
     timestamp: Option<u64>,
@@ -360,6 +367,7 @@ async fn create_webauthn_identity(
     origin: Option<ManyUrl>,
     phrase: Option<String>,
     address: Option<Address>,
+    rp_id: Option<String>,
 ) -> WebAuthnIdentity {
     let client = ManyClient::new(rp.clone(), Address::anonymous(), AnonymousIdentity)
         .expect("Could not create client");
@@ -389,8 +397,14 @@ async fn create_webauthn_identity(
     let get_returns =
         minicbor::decode::<idstore::GetReturns>(&get_returns).expect("Deserialization error");
 
-    WebAuthnIdentity::authenticate(origin.unwrap_or(rp), get_returns)
-        .expect("Could not create Identity object")
+    let origin = origin.unwrap_or(rp);
+
+    WebAuthnIdentity::authenticate(
+        origin.clone(),
+        rp_id.unwrap_or(origin.host_str().expect("Origin has no host").to_string()),
+        get_returns,
+    )
+    .expect("Could not create Identity object")
 }
 
 #[tokio::main]
@@ -477,7 +491,7 @@ async fn main() {
             println!("{id}");
         }
         SubCommand::WebauthnId(o) => {
-            let identity = create_webauthn_identity(o.rp, None, o.phrase, o.address).await;
+            let identity = create_webauthn_identity(o.rp, None, o.phrase, o.address, None).await;
             println!("{}", identity.address());
         }
         SubCommand::Message(o) => {
@@ -523,9 +537,14 @@ async fn main() {
                     o.rp.as_ref()
                         .or(o.server.as_ref())
                         .expect("Must pass a server or --rp");
-                let identity =
-                    create_webauthn_identity(rp.clone(), o.webauthn_origin, o.phrase, o.address)
-                        .await;
+                let identity = create_webauthn_identity(
+                    rp.clone(),
+                    o.webauthn_origin,
+                    o.phrase,
+                    o.address,
+                    o.rp_id,
+                )
+                .await;
                 Box::new(identity)
             } else {
                 Box::new(AnonymousIdentity)

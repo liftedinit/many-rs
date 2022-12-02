@@ -1,5 +1,7 @@
 #![cfg(feature = "identity")]
 
+mod u2fhid;
+
 use coset::cbor::value::Value;
 use coset::{iana, CborSerializable, CoseKey, CoseSign1, KeyOperation, Label};
 use many_error::ManyError;
@@ -7,10 +9,9 @@ use many_identity::{Address, Identity};
 use many_identity_dsa::ecdsa;
 use many_modules::idstore;
 use many_protocol::ManyUrl;
-use minicbor::bytes::ByteVec;
 use sha2::{Digest, Sha512};
-use std::collections::BTreeMap;
 use webauthn_authenticator_rs::AuthenticatorBackend;
+use webauthn_rs::prelude::Url;
 use webauthn_rs_proto::PublicKeyCredentialRequestOptions;
 use webauthn_rs_proto::{AllowCredentials, AuthenticatorTransport, UserVerificationPolicy};
 
@@ -19,11 +20,13 @@ pub struct WebAuthnIdentity {
     public_key: CoseKey,
     cred_id: idstore::CredentialId,
     origin_url: ManyUrl,
+    rp_id: String,
 }
 
 impl WebAuthnIdentity {
     pub fn authenticate(
         origin_url: ManyUrl,
+        rp_id: String,
         creds: idstore::GetReturns,
     ) -> Result<Self, ManyError> {
         let mut public_key = CoseKey::from_slice(creds.public_key.0.as_slice())
@@ -37,6 +40,7 @@ impl WebAuthnIdentity {
             public_key,
             cred_id: creds.cred_id,
             origin_url,
+            rp_id,
         })
     }
 }
@@ -80,11 +84,13 @@ impl Identity for WebAuthnIdentity {
         })();
         let challenge = challenge.unwrap();
 
-        let mut provider = webauthn_authenticator_rs::u2fhid::U2FHid::default();
-        let options = PublicKeyCredentialRequestOptions {
+        // let mut provider = u2fhid::U2FHid::new();
+        let mut provider = u2fhid::U2FHid::new();
+
+        let public_key = PublicKeyCredentialRequestOptions {
             challenge: challenge.into(),
             timeout: Some(60_000),
-            rp_id: "alberto.app".to_string(),
+            rp_id: self.rp_id.clone(),
             user_verification: UserVerificationPolicy::Preferred,
             allow_credentials: vec![AllowCredentials {
                 type_: "public-key".to_string(),
@@ -100,11 +106,11 @@ impl Identity for WebAuthnIdentity {
 
         let r = provider
             .perform_auth(
-                self.origin_url.as_str().try_into().unwrap(),
-                options,
+                Url::parse(self.origin_url.as_str()).unwrap(),
+                public_key,
                 60_000,
             )
-            .unwrap();
+            .map_err(|e| ManyError::unknown(format!("Webauthn error: {e:?}")))?;
         let response = r.response;
 
         envelope.unprotected.rest.push((
