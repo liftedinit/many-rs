@@ -74,7 +74,7 @@ pub fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
 
 /// Extract the address of a CoseKey, if it implements ECDSA.
 pub fn address(key: &CoseKey) -> Result<Address, ManyError> {
-    let public_key = public_key(&key)?.ok_or_else(|| ManyError::unknown("Could not load key."))?;
+    let public_key = public_key(key)?.ok_or_else(|| ManyError::unknown("Could not load key."))?;
     unsafe { cose::address_unchecked(&public_key) }
 }
 
