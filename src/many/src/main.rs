@@ -56,7 +56,7 @@ enum SubCommand {
     WebauthnId(WebauthnIdOpt),
 
     /// Creates a message and output it.
-    Message(MessageOpt),
+    Message(Box<MessageOpt>),
 
     /// Starts a base server that can also be used for reverse proxying
     /// to another MANY server.
@@ -376,7 +376,7 @@ async fn create_webauthn_identity(
         client
             .call(
                 "idstore.getFromRecallPhrase",
-                idstore::GetFromRecallPhraseArgs(phrase.split(" ").map(String::from).collect()),
+                idstore::GetFromRecallPhraseArgs(phrase.split(' ').map(String::from).collect()),
             )
             .await
             .unwrap()
