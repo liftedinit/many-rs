@@ -1618,6 +1618,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hidapi"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "798154e4b6570af74899d71155fb0072d5b17e6aa12f39c8ef22c60fb8ec99e7"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+ "winapi",
+]
+
+[[package]]
 name = "hmac"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2086,7 +2098,9 @@ dependencies = [
 name = "many-identity-webauthn"
 version = "0.1.0"
 dependencies = [
+ "authenticator-ctap2-2021",
  "base64",
+ "base64urlsafedata",
  "coset",
  "hex",
  "many-error",
@@ -2097,7 +2111,9 @@ dependencies = [
  "minicbor",
  "once_cell",
  "rand 0.8.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rpassword 5.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
+ "serde_cbor",
  "serde_json",
  "sha2 0.10.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing",
@@ -4099,6 +4115,7 @@ checksum = "603b8602cae2d6c3706b6195765ff582389494d10c442d84a1de2ed5a25679ef"
 dependencies = [
  "authenticator-ctap2-2021",
  "base64urlsafedata",
+ "hidapi",
  "nom 7.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
  "rpassword 5.0.1 (registry+https://github.com/rust-lang/crates.io-index)",

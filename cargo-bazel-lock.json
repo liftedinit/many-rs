@@ -1,5 +1,5 @@
 {
-  "checksum": "241242ead3b9a893c701711d270d7884148c8a7244b965f2c4e1097a8fcde1a6",
+  "checksum": "481f9c2600b104dc7ed048de9e3d7ed7490e26dbbcbba26ef817c4711bf8bbf7",
   "crates": {
     "aes 0.7.5": {
       "name": "aes",
@@ -8530,6 +8530,95 @@
       },
       "license": "MIT OR Apache-2.0"
     },
+    "hidapi 1.5.0": {
+      "name": "hidapi",
+      "version": "1.5.0",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/hidapi/1.5.0/download",
+          "sha256": "798154e4b6570af74899d71155fb0072d5b17e6aa12f39c8ef22c60fb8ec99e7"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "hidapi",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "hidapi",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": [
+          "default",
+          "illumos-static-libusb",
+          "linux-static-libusb"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "hidapi 1.5.0",
+              "target": "build_script_build"
+            },
+            {
+              "id": "libc 0.2.137",
+              "target": "libc"
+            }
+          ],
+          "selects": {
+            "cfg(windows)": [
+              {
+                "id": "winapi 0.3.9",
+                "target": "winapi"
+              }
+            ]
+          }
+        },
+        "edition": "2015",
+        "version": "1.5.0"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "cc 1.0.76",
+              "target": "cc"
+            },
+            {
+              "id": "pkg-config 0.3.26",
+              "target": "pkg_config"
+            }
+          ],
+          "selects": {}
+        },
+        "links": "hidapi"
+      },
+      "license": "MIT"
+    },
     "hmac 0.11.0": {
       "name": "hmac",
       "version": "0.11.0",
@@ -10826,10 +10915,14 @@
           "**"
         ],
         "crate_features": [
+          "authenticator-ctap2-2021",
+          "base64urlsafedata",
           "default",
           "identity",
           "many-modules",
           "rand",
+          "rpassword",
+          "serde_cbor",
           "webauthn-authenticator-rs",
           "webauthn-rs",
           "webauthn-rs-proto"
@@ -10837,8 +10930,16 @@
         "deps": {
           "common": [
             {
+              "id": "authenticator-ctap2-2021 0.3.2-dev.1",
+              "target": "authenticator_ctap2_2021"
+            },
+            {
               "id": "base64 0.13.1",
               "target": "base64"
+            },
+            {
+              "id": "base64urlsafedata 0.1.2",
+              "target": "base64urlsafedata"
             },
             {
               "id": "coset 0.3.3",
@@ -10857,8 +10958,16 @@
               "target": "rand"
             },
             {
+              "id": "rpassword 5.0.1",
+              "target": "rpassword"
+            },
+            {
               "id": "serde 1.0.147",
               "target": "serde"
+            },
+            {
+              "id": "serde_cbor 0.11.2",
+              "target": "serde_cbor"
             },
             {
               "id": "serde_json 1.0.88",
@@ -21599,7 +21708,9 @@
         "crate_features": [
           "authenticator",
           "default",
-          "u2fhid"
+          "hidapi",
+          "u2fhid",
+          "usb"
         ],
         "deps": {
           "common": [
@@ -21611,6 +21722,10 @@
             {
               "id": "base64urlsafedata 0.1.2",
               "target": "base64urlsafedata"
+            },
+            {
+              "id": "hidapi 1.5.0",
+              "target": "hidapi"
             },
             {
               "id": "nom 7.1.1",

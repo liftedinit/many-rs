@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-authenticator = { version = "0.3.2-dev.1", optional = true, default-features = false, features = ["crypto_openssl"], package = "authenticator-ctap2-2021" }
+authenticator-ctap2-2021 = { version = "0.3.2-dev.1", optional = true, default-features = false, features = ["crypto_openssl"] }
 base64 = "0.13.0"
 base64urlsafedata = { version = "0.1.2", optional = true }
 coset = "0.3.2"
@@ -34,7 +34,7 @@ hex = "0.4.3"
 [features]
 default = ["identity"]
 identity = [
-    "authenticator",
+    "authenticator-ctap2-2021",
     "base64urlsafedata",
     "many-modules",
     "rand",

@@ -23,7 +23,7 @@ use webauthn_rs_proto::{
     AuthenticationExtensionsClientOutputs, AuthenticatorAssertionResponseRaw, PublicKeyCredential,
 };
 
-use authenticator::{
+use authenticator_ctap2_2021::{
     authenticatorservice::{
         AuthenticatorService, CtapVersion, GetAssertionExtensions, GetAssertionOptions,
         MakeCredentialsExtensions, MakeCredentialsOptions, RegisterArgsCtap2, SignArgsCtap2,
