@@ -1,4 +1,4 @@
-use crate::{cbor_type_decl, Either, Percent};
+use crate::{cbor_type_decl, Either, Percent, cbor::CborNull};
 use many_error::ManyError;
 use many_identity::Address;
 use minicbor::data::{Tag, Type};
@@ -18,14 +18,14 @@ pub type Symbol = Address;
 /// A map of owners => tokens.
 pub type LedgerTokensAddressMap = BTreeMap<Address, TokenAmount>;
 
-pub type TokenMaybeOwner = Either<Address, ()>;
+pub type TokenMaybeOwner = Either<Address, CborNull>;
 
-impl FromStr for Either<Address, ()> {
+impl FromStr for Either<Address, CborNull> {
     type Err = ManyError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
-            "null" => Self::Right(()),
+            "null" => Self::Right(CborNull),
             _ => Self::Left(Address::try_from(s.to_string())?),
         })
     }
@@ -308,40 +308,24 @@ impl<'de> Deserialize<'de> for TokenAmount {
     }
 }
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq, Deserialize)]
-#[cfg_attr(feature = "cucumber", derive(Default))]
-#[cbor(map)]
-pub struct TokenInfoSummary {
-    #[n(0)]
-    pub name: String,
-
-    #[n(1)]
-    pub ticker: String,
-
-    #[n(2)]
-    pub decimals: u64,
-}
-
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-#[cfg_attr(feature = "cucumber", derive(Default))]
-#[cbor(map)]
-pub struct TokenInfoSupply {
-    #[n(0)]
-    pub total: TokenAmount,
-
-    #[n(1)]
-    pub circulating: TokenAmount,
-
-    #[n(2)]
-    pub maximum: Option<TokenAmount>,
-}
-
 cbor_type_decl!(
     pub struct TokenInfo {
         0 => symbol: Symbol,
         1 => summary: TokenInfoSummary,
         2 => supply: TokenInfoSupply,
         3 => owner: Option<Address>,
+    }
+
+    pub struct TokenInfoSummary {
+        0 => name: String,
+        1 => ticker: String,
+        2 => decimals: u64,
+    }
+
+    pub struct TokenInfoSupply {
+        0 => total: TokenAmount,
+        1 => circulating: TokenAmount,
+        2 => maximum: Option<TokenAmount>,
     }
 );
 
