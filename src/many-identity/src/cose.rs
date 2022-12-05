@@ -4,7 +4,6 @@ use coset::{AsCborValue, CborSerializable, CoseKey, CoseKeySet, CoseSign1, Label
 use many_error::ManyError;
 use sha3::{Digest, Sha3_224};
 
-#[allow(clippy::unnecessary_safety_doc)]
 /// Returns the address of a public COSE key.
 ///
 /// # Safety
