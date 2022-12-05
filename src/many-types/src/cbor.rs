@@ -1,5 +1,5 @@
 use minicbor::data::{Tag, Type};
-use minicbor::encode::{Write};
+use minicbor::encode::Write;
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
@@ -8,8 +8,11 @@ use std::fmt::{Debug, Formatter};
 pub struct CborNull;
 
 impl<C> Encode<C> for CborNull {
-    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), minicbor::encode::Error<W::Error>>
-    {
+    fn encode<W: Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), minicbor::encode::Error<W::Error>> {
         e.null()?;
         Ok(())
     }

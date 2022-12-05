@@ -1,4 +1,4 @@
-use crate::{cbor_type_decl, Either, Percent, cbor::CborNull};
+use crate::{cbor::CborNull, cbor_type_decl, Either, Percent};
 use many_error::ManyError;
 use many_identity::Address;
 use minicbor::data::{Tag, Type};
