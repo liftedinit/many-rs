@@ -57,8 +57,7 @@ fn check_key(
             != Integer::from(crv.to_i64())
         {
             return Err(ManyError::unknown(format!(
-                "Curve unsupported. Expected {}",
-                crv_name
+                "Curve unsupported. Expected {crv_name}"
             )));
         }
     }
