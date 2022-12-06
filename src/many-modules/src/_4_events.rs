@@ -756,7 +756,7 @@ define_event! {
         3     | ticker:                 Option<String>,
         4     | decimals:               Option<u64>,
         5     | owner:                  Option<ledger::TokenMaybeOwner>        [ maybe_owner ],
-        6     | memo:                   Option<Memo>,
+        6     | memo:                   Option<Memo>                           [ memo ],
     },
     [11, 2]     TokenAddExtendedInfo (module::ledger::TokenAddExtendedInfoArgs) {
         1     | symbol:                 Address                                [ id ],
@@ -769,12 +769,12 @@ define_event! {
     [12, 0]     TokenMint (module::ledger::TokenMintArgs) {
         1     | symbol:                 Address                                [ id ],
         2     | initial_distribtion:    Option<ledger::LedgerTokensAddressMap>,
-        3     | memo:                   Option<Memo>,
+        3     | memo:                   Option<Memo>                           [ memo ],
     },
     [12, 1]     TokenBurn (module::ledger::TokenBurnArgs) {
         1     | symbol:                 Address                                [ id ],
         2     | distribtion:            Option<ledger::LedgerTokensAddressMap>,
-        3     | memo:                   Option<Memo>,
+        3     | memo:                   Option<Memo>                           [ memo ],
     },
 }
 

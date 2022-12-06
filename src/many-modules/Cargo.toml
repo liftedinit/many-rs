@@ -31,4 +31,4 @@ proptest = "1.0.0"
 smol = "1.2.5"
 
 [features]
-cucumber = []
+cucumber = ["many-types/cucumber"]
