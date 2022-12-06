@@ -1,4 +1,4 @@
-use crate::{CborRange, Timestamp};
+use crate::{request::RequestMessage, response::ResponseMessage, CborRange, Timestamp};
 use minicbor::encode::{Error, Write};
 use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 
@@ -83,8 +83,11 @@ pub struct Transaction {
     #[n(0)]
     pub id: TransactionIdentifier,
 
-    #[cbor(n(1), with = "minicbor::bytes")]
-    pub content: Option<Vec<u8>>,
+    #[n(1)]
+    pub request: Option<RequestMessage>,
+
+    #[n(2)]
+    pub response: Option<ResponseMessage>,
 }
 
 #[derive(Debug, Clone, Decode, Encode, PartialEq, Eq)]

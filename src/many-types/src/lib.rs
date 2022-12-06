@@ -15,6 +15,8 @@ pub mod identity {
 }
 pub mod ledger;
 pub mod memo;
+pub mod request;
+pub mod response;
 
 use attributes::AttributeId;
 pub use either::Either;
