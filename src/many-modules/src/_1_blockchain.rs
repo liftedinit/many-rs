@@ -177,8 +177,8 @@ mod tests {
                         txs_count: 1,
                         txs: vec![Transaction {
                             id: TransactionIdentifier { hash: vec![] },
-                            request: Default::default(),
-                            response: Default::default(),
+                            request: None,
+                            response: None,
                         }],
                     },
                 }),
@@ -222,8 +222,8 @@ mod tests {
                         txs_count: 1,
                         txs: vec![Transaction {
                             id: TransactionIdentifier { hash: vec![] },
-                            request: Default::default(),
-                            response: Default::default(),
+                            request: None,
+                            response: None,
                         }],
                     },
                 }),
@@ -261,8 +261,8 @@ mod tests {
                 SingleTransactionQuery::Hash(v) => Ok(TransactionReturns {
                     txn: Transaction {
                         id: TransactionIdentifier { hash: v },
-                        request: Default::default(),
-                        response: Default::default(),
+                        request: None,
+                        response: None,
                     },
                 }),
             });
@@ -280,8 +280,8 @@ mod tests {
         .unwrap();
 
         assert_eq!(transaction_returns.txn.id.hash, vec![6u8; 8]);
-        assert_eq!(transaction_returns.txn.request, Default::default(),);
-        assert_eq!(transaction_returns.txn.response, Default::default(),);
+        assert_eq!(transaction_returns.txn.request, None);
+        assert_eq!(transaction_returns.txn.response, None);
     }
 
     #[test]
