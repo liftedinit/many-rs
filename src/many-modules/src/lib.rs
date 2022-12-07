@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use many_error::ManyError;
-use many_protocol::{RequestMessage, ResponseMessage};
-use many_types::attributes::Attribute;
+use many_types::{attributes::Attribute, RequestMessage, ResponseMessage};
 use minicbor::encode::{Error, Write};
 use minicbor::{Decoder, Encoder};
 use std::fmt::Debug;
@@ -114,7 +113,7 @@ pub(crate) mod testutils {
     use crate::ManyModule;
     use many_error::ManyError;
     use many_identity::testing::identity;
-    use many_protocol::RequestMessage;
+    use many_types::RequestMessage;
 
     pub fn call_module(
         key: u32,

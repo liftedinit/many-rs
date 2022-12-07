@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use coset::CoseSign1;
 use many_error::ManyError;
-use many_protocol::{RequestMessage, ResponseMessage};
+use many_types::{RequestMessage, ResponseMessage};
 use std::fmt::Debug;
 
 pub mod http;

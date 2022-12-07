@@ -199,8 +199,8 @@ impl Debug for CoseKeyVerifier {
 fn ecdsa_sign_and_verify_request() {
     let cose_key = ecdsa::generate_random_ecdsa_cose_key();
     let key = CoseKeyIdentity::from_key(&cose_key).unwrap();
-    let envelope = many_protocol::encode_cose_sign1_from_request(
-        many_protocol::RequestMessageBuilder::default()
+    let envelope = many_types::encode_cose_sign1_from_request(
+        many_types::RequestMessageBuilder::default()
             .from(key.address())
             .method("req".to_string())
             .build()
@@ -209,15 +209,15 @@ fn ecdsa_sign_and_verify_request() {
     )
     .unwrap();
 
-    many_protocol::decode_request_from_cose_sign1(&envelope, &CoseKeyVerifier).unwrap();
+    many_types::decode_request_from_cose_sign1(&envelope, &CoseKeyVerifier).unwrap();
 }
 
 #[test]
 fn sign_and_verify_response() {
     let cose_key = ed25519::generate_random_ed25519_cose_key();
     let key = CoseKeyIdentity::from_key(&cose_key).unwrap();
-    let envelope = many_protocol::encode_cose_sign1_from_response(
-        many_protocol::ResponseMessageBuilder::default()
+    let envelope = many_types::encode_cose_sign1_from_response(
+        many_types::ResponseMessageBuilder::default()
             .from(key.address())
             .data(Ok(b"".to_vec()))
             .build()
@@ -226,5 +226,5 @@ fn sign_and_verify_response() {
     )
     .unwrap();
 
-    many_protocol::decode_response_from_cose_sign1(&envelope, None, &CoseKeyVerifier).unwrap();
+    many_types::decode_response_from_cose_sign1(&envelope, None, &CoseKeyVerifier).unwrap();
 }

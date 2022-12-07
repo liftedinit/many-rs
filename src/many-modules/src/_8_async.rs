@@ -234,7 +234,7 @@ mod tests {
     use crate::r#async::attributes::ASYNC;
     use crate::testutils::call_module_cbor;
     use many_identity::AnonymousIdentity;
-    use many_protocol::encode_cose_sign1_from_response;
+    use many_types::encode_cose_sign1_from_response;
     use many_types::attributes::{Attribute, AttributeSet, TryFromAttributeSet};
     use many_types::cbor::CborAny;
     use mockall::predicate;

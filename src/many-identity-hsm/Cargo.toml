@@ -13,7 +13,6 @@ hex = "0.4.3"
 many-error = { path = "../many-error" }
 many-identity = { path = "../many-identity" }
 many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa"] }
-many-protocol = { path = "../many-protocol" }
 once_cell = "1.13.0"
 p256 = "0.9.0"
 sha2 = "0.10.2"

@@ -16,8 +16,8 @@ many-identity = { path = "../many-identity", version = "0.1.0" }
 many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0", features = ["ed25519"] }
 many-identity-webauthn = { path = "../many-identity-webauthn", version = "0.1.0" }
 many-modules = { path = "../many-modules", version = "0.1.0" }
-many-protocol = { path = "../many-protocol", version = "0.1.0" }
 many-server = { path = "../many-server", version = "0.1.0" }
+many-types = { path = "../many-types" }
 cbor-diag = "0.1"
 
 [dev-dependencies]

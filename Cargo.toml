@@ -14,7 +14,6 @@ members = [
     "src/many-migration",
     "src/many-mock",
     "src/many-modules",
-    "src/many-protocol",
     "src/many-server",
     "src/many-types",
 ]

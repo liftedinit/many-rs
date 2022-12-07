@@ -1,7 +1,7 @@
 use many_identity::{Address, Identity};
 use many_modules::base::Status;
-use many_protocol::{RequestMessage, ResponseMessage};
 use many_server::ManyError;
+use many_types::{RequestMessage, ResponseMessage};
 use minicbor::Encode;
 use reqwest::IntoUrl;
 

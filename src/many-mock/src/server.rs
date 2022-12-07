@@ -6,8 +6,8 @@ use many_identity::Identity;
 use many_identity_dsa::CoseKeyVerifier;
 use many_identity_webauthn::WebAuthnVerifier;
 use many_modules::base;
-use many_protocol::{ManyUrl, ResponseMessage};
 use many_server::transport::LowLevelManyRequestHandler;
+use many_types::{ManyUrl, ResponseMessage};
 use std::fmt::Debug;
 
 use crate::MockEntries;
@@ -42,7 +42,7 @@ impl<I: Identity> ManyMockServer<I> {
 #[async_trait]
 impl<I: Identity + Debug + Send + Sync> LowLevelManyRequestHandler for ManyMockServer<I> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
-        let request = many_protocol::decode_request_from_cose_sign1(&envelope, &self.verifier);
+        let request = many_types::decode_request_from_cose_sign1(&envelope, &self.verifier);
         let id = &self.identity;
 
         let message = request.map_err(|_| "Error processing the request".to_string())?;
@@ -55,7 +55,7 @@ impl<I: Identity + Debug + Send + Sync> LowLevelManyRequestHandler for ManyMockS
             data: Ok(response.clone()),
             ..Default::default()
         };
-        many_protocol::encode_cose_sign1_from_response(response, id).map_err(|e| e.to_string())
+        many_types::encode_cose_sign1_from_response(response, id).map_err(|e| e.to_string())
     }
 }
 

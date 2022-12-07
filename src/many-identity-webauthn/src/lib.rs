@@ -2,7 +2,7 @@ use coset::cbor::value::Value;
 use coset::{CborSerializable, CoseKey, CoseKeySet, CoseSign1, Label};
 use many_error::ManyError;
 use many_identity::{Address, Verifier};
-use many_protocol::ManyUrl;
+use many_types::ManyUrl;
 use minicbor::Decode;
 use serde::{Deserialize, Serialize};
 use sha2::digest::Digest;

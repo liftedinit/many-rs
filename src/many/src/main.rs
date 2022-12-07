@@ -12,12 +12,12 @@ use many_mock::{parse_mockfile, server::ManyMockServer, MockEntries};
 use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
-use many_protocol::{
-    encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
-};
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
 use many_types::Timestamp;
+use many_types::{
+    encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
+};
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -273,7 +273,7 @@ async fn message(
     let mut nonce = [0u8; 16];
     rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut nonce);
 
-    let mut builder = many_protocol::RequestMessageBuilder::default();
+    let mut builder = many_types::RequestMessageBuilder::default();
     builder
         .version(1)
         .from(address)

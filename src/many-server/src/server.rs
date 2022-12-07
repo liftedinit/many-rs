@@ -4,8 +4,7 @@ use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
 use many_identity::{Identity, Verifier};
 use many_modules::{base, ManyModule, ManyModuleInfo};
-use many_protocol::{RequestMessage, ResponseMessage};
-use many_types::attributes::Attribute;
+use many_types::{attributes::Attribute, RequestMessage, ResponseMessage};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
@@ -284,7 +283,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
         let request = {
             let this = self.lock().unwrap();
-            many_protocol::decode_request_from_cose_sign1(&envelope, &this.verifier)
+            many_types::decode_request_from_cose_sign1(&envelope, &this.verifier)
         };
         let mut id = None;
 
@@ -326,7 +325,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                     response.from = address;
 
                     let this = self.lock().unwrap();
-                    many_protocol::encode_cose_sign1_from_response(response, &this.identity)
+                    many_types::encode_cose_sign1_from_response(response, &this.identity)
                         .map_err(|e| e.to_string())
                 }
                 (None, Some(fb)) => {
@@ -339,13 +338,13 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 
                     let response =
                         ResponseMessage::error(address, id, ManyError::could_not_route_message());
-                    many_protocol::encode_cose_sign1_from_response(response, identity)
+                    many_types::encode_cose_sign1_from_response(response, identity)
                         .map_err(|e| e.to_string())
                 }
             },
             Err(response) => {
                 let this = self.lock().unwrap();
-                many_protocol::encode_cose_sign1_from_response(response, &this.identity)
+                many_types::encode_cose_sign1_from_response(response, &this.identity)
                     .map_err(|e| e.to_string())
             }
         }
@@ -362,10 +361,10 @@ mod tests {
     use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity};
     use many_identity_dsa::ed25519::generate_random_ed25519_identity;
     use many_modules::base::Status;
-    use many_protocol::{
+    use many_types::{
         decode_response_from_cose_sign1, encode_cose_sign1_from_request, RequestMessageBuilder,
+        Timestamp,
     };
-    use many_types::Timestamp;
     use proptest::prelude::*;
 
     const ALPHA_NUM_DASH_REGEX: &str = "[a-zA-Z0-9-]";

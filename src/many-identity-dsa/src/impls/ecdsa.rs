@@ -388,8 +388,8 @@ pub mod tests {
     fn sign_and_verify_request() {
         let key = generate_random_ecdsa_identity();
         let pubkey = key.public_key().unwrap();
-        let envelope = many_protocol::encode_cose_sign1_from_request(
-            many_protocol::RequestMessageBuilder::default()
+        let envelope = many_types::encode_cose_sign1_from_request(
+            many_types::RequestMessageBuilder::default()
                 .from(key.address())
                 .method("status".to_string())
                 .data(b"".to_vec())
@@ -399,7 +399,7 @@ pub mod tests {
         )
         .unwrap();
 
-        many_protocol::decode_request_from_cose_sign1(
+        many_types::decode_request_from_cose_sign1(
             &envelope,
             &EcDsaVerifier::from_key(&pubkey).unwrap(),
         )
@@ -410,8 +410,8 @@ pub mod tests {
     fn sign_and_verify_response() {
         let key = generate_random_ecdsa_identity();
         let pubkey = key.public_key().unwrap();
-        let envelope = many_protocol::encode_cose_sign1_from_response(
-            many_protocol::ResponseMessageBuilder::default()
+        let envelope = many_types::encode_cose_sign1_from_response(
+            many_types::ResponseMessageBuilder::default()
                 .from(key.address())
                 .data(Ok(b"".to_vec()))
                 .build()
@@ -420,7 +420,7 @@ pub mod tests {
         )
         .unwrap();
 
-        many_protocol::decode_response_from_cose_sign1(
+        many_types::decode_response_from_cose_sign1(
             &envelope,
             None,
             &EcDsaVerifier::from_key(&pubkey).unwrap(),

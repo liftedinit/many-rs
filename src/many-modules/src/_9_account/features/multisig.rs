@@ -6,7 +6,7 @@ use crate::EmptyReturn;
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
-use many_protocol::ResponseMessage;
+use many_types::ResponseMessage;
 use many_types::cbor::CborAny;
 use many_types::ledger::TokenAmount;
 use many_types::legacy::{DataLegacy, MemoLegacy};

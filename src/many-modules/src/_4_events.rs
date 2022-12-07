@@ -3,7 +3,7 @@ use crate::account::features::multisig::MultisigTransactionState;
 use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
-use many_protocol::ResponseMessage;
+use many_types::ResponseMessage;
 use many_types::ledger::{Symbol, TokenAmount};
 use many_types::legacy::{DataLegacy, MemoLegacy};
 use many_types::{AttributeRelatedIndex, CborRange, Memo, Timestamp, VecOrSingle};

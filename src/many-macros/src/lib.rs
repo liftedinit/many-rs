@@ -434,7 +434,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
     let validate = quote! {
         fn validate(
             &self,
-            message: & many_protocol::RequestMessage,
+            message: & many_types::RequestMessage,
             envelope: & coset::CoseSign1,
         ) -> Result<(), many_error::ManyError> {
             let method = message.method.as_str();
@@ -453,8 +453,8 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
     let execute = quote! {
         async fn execute(
             &self,
-            message: many_protocol::RequestMessage,
-        ) -> Result<many_protocol::ResponseMessage, many_error::ManyError> {
+            message: many_types::RequestMessage,
+        ) -> Result<many_types::ResponseMessage, many_error::ManyError> {
             use many_error::ManyError;
             fn decode<'a, T: minicbor::Decode<'a, ()>>(data: &'a [u8]) -> Result<T, ManyError> {
                 minicbor::decode(data).map_err(|e| ManyError::deserialization_error(e.to_string()))
@@ -470,7 +470,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
                 _ => Err(ManyError::internal_server_error()),
             }?;
 
-            Ok( many_protocol::ResponseMessage::from_request(
+            Ok( many_types::ResponseMessage::from_request(
                 &message,
                 &message.to,
                 Ok(result),

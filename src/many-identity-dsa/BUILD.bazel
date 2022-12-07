@@ -29,6 +29,7 @@ rust_library(
     ) + [
         "//src/many-error",
         "//src/many-identity",
+        "//src/many-types",
     ],
 )
 
@@ -55,7 +56,7 @@ rust_library(
     ) + [
         "//src/many-error",
         "//src/many-identity:many-identity-for-test",
-        "//src/many-protocol:many-protocol-for-test",
+        "//src/many-types:many-types-for-test",
     ],
 )
 
