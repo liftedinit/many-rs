@@ -3,7 +3,7 @@
 [![coverage](https://img.shields.io/codecov/c/gh/liftedinit/many-rs)](https://app.codecov.io/gh/liftedinit/many-rs)
 [![license](https://img.shields.io/github/license/liftedinit/many-rs)](https://github.com/liftedinit/many-rs/blob/main/LICENSE)
 
-Rust libraries for the [MANY protocol](https://github.com/many-protocol).
+Rust libraries for the [MANY protocol] can be found in (https://github.com/many-types).
 
 Features
 - MANY module interfaces
@@ -39,18 +39,18 @@ graph TD;
   many-identity --> many-client;
   many-identity-dsa --> many-client;
   many-modules --> many-client;
-  many-protocol --> many-client;
+  many-types --> many-client;
   many-server --> many-client;
   many-error --> many-identity-dsa;
   many-identity --> many-identity-dsa;
   many-error --> many-identity-hsm;
   many-identity --> many-identity-hsm;
   many-identity-dsa --> many-identity-hsm;
-  many-protocol --> many-identity-hsm;
+  many-types --> many-identity-hsm;
   many-error --> many-identity-webauthn;
   many-identity --> many-identity-webauthn;
   many-identity-dsa --> many-identity-webauthn;
-  many-protocol --> many-identity-webauthn;
+  many-types --> many-identity-webauthn;
   many-error --> many-identity;
   many-client --> many-mock;
   many-error --> many-mock;
@@ -58,23 +58,22 @@ graph TD;
   many-identity-dsa --> many-mock;
   many-identity-webauthn --> many-mock;
   many-modules --> many-mock;
-  many-protocol --> many-mock;
+  many-types --> many-mock;
   many-server --> many-mock;
   many-error --> many-modules;
   many-identity --> many-modules;
   many-identity-dsa --> many-modules;
   many-macros --> many-modules;
-  many-protocol --> many-modules;
   many-types --> many-modules;
-  many-error --> many-protocol;
-  many-identity --> many-protocol;
-  many-types --> many-protocol;
+  many-types --> many-modules;
+  many-error --> many-types;
+  many-identity --> many-types;
   many-error --> many-server;
   many-identity --> many-server;
   many-identity-dsa --> many-server;
   many-macros --> many-server;
   many-modules --> many-server;
-  many-protocol --> many-server;
+  many-types --> many-server;
   many-types --> many-server;
   many-error --> many-types;
   many-identity --> many-types;
@@ -85,7 +84,6 @@ graph TD;
   many-identity-hsm --> many;
   many-mock --> many;
   many-modules --> many;
-  many-protocol --> many;
   many-server --> many;
   many-types --> many;
 ```
