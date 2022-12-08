@@ -1,5 +1,5 @@
 {
-  "checksum": "60774d62e0312c0ee50ae31a9757c6157063716e7636176f5d641be90c485113",
+  "checksum": "cba49c048336494b9fe2cfb90586497a6b866375da7153f55834c70b0b753d8d",
   "crates": {
     "aes 0.7.5": {
       "name": "aes",
@@ -10417,113 +10417,6 @@
       },
       "license": null
     },
-    "many-protocol 0.1.0": {
-      "name": "many-protocol",
-      "version": "0.1.0",
-      "repository": null,
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "many_protocol",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "include": [
-                "**/*.rs"
-              ],
-              "exclude": []
-            }
-          }
-        }
-      ],
-      "library_target_name": "many_protocol",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "base64 0.13.1",
-              "target": "base64"
-            },
-            {
-              "id": "coset 0.3.3",
-              "target": "coset"
-            },
-            {
-              "id": "derive_builder 0.10.2",
-              "target": "derive_builder"
-            },
-            {
-              "id": "hex 0.4.3",
-              "target": "hex"
-            },
-            {
-              "id": "minicbor 0.18.0",
-              "target": "minicbor"
-            },
-            {
-              "id": "num-bigint 0.4.3",
-              "target": "num_bigint"
-            },
-            {
-              "id": "num-traits 0.2.15",
-              "target": "num_traits"
-            },
-            {
-              "id": "serde 1.0.147",
-              "target": "serde"
-            },
-            {
-              "id": "serde_json 1.0.88",
-              "target": "serde_json"
-            },
-            {
-              "id": "sha2 0.10.6",
-              "target": "sha2"
-            },
-            {
-              "id": "signature 1.3.2",
-              "target": "signature"
-            },
-            {
-              "id": "tracing 0.1.37",
-              "target": "tracing"
-            },
-            {
-              "id": "url 2.3.1",
-              "target": "url"
-            }
-          ],
-          "selects": {}
-        },
-        "deps_dev": {
-          "common": [
-            {
-              "id": "once_cell 1.16.0",
-              "target": "once_cell"
-            },
-            {
-              "id": "proptest 1.0.0",
-              "target": "proptest"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "proc_macro_deps": {
-          "common": [
-            {
-              "id": "num-derive 0.3.3",
-              "target": "num_derive"
-            }
-          ],
-          "selects": {}
-        },
-        "version": "0.1.0"
-      },
-      "license": null
-    },
     "many-server 0.1.0": {
       "name": "many-server",
       "version": "0.1.0",
@@ -10760,6 +10653,10 @@
               "target": "coset"
             },
             {
+              "id": "derive_builder 0.10.2",
+              "target": "derive_builder"
+            },
+            {
               "id": "fixed 1.20.0",
               "target": "fixed"
             },
@@ -10786,6 +10683,10 @@
             {
               "id": "serde 1.0.147",
               "target": "serde"
+            },
+            {
+              "id": "url 2.3.1",
+              "target": "url"
             }
           ],
           "selects": {}
@@ -19639,8 +19540,8 @@
         },
         {
           "Binary": {
-            "crate_name": "reader",
-            "crate_root": "src/bin/reader.rs",
+            "crate_name": "exit",
+            "crate_root": "src/bin/exit.rs",
             "srcs": {
               "include": [
                 "**/*.rs"
@@ -19663,8 +19564,8 @@
         },
         {
           "Binary": {
-            "crate_name": "exit",
-            "crate_root": "src/bin/exit.rs",
+            "crate_name": "reader",
+            "crate_root": "src/bin/reader.rs",
             "srcs": {
               "include": [
                 "**/*.rs"
@@ -21855,7 +21756,6 @@
     "many-migration 0.1.0": "src/many-migration",
     "many-mock 0.1.0": "src/many-mock",
     "many-modules 0.1.0": "src/many-modules",
-    "many-protocol 0.1.0": "src/many-protocol",
     "many-server 0.1.0": "src/many-server",
     "many-types 0.1.0": "src/many-types"
   },

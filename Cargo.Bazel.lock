@@ -1783,7 +1783,6 @@ dependencies = [
  "many-identity-hsm",
  "many-mock",
  "many-modules",
- "many-protocol",
  "many-server",
  "many-types",
  "minicbor",
@@ -1816,7 +1815,6 @@ dependencies = [
  "many-identity",
  "many-identity-dsa",
  "many-modules",
- "many-protocol",
  "many-server",
  "many-types",
  "minicbor",
@@ -1896,7 +1894,7 @@ dependencies = [
  "many-error",
  "many-identity",
  "many-identity-dsa",
- "many-protocol",
+ "many-types",
  "minicbor",
  "once_cell",
  "p256",
@@ -1923,7 +1921,6 @@ dependencies = [
  "many-error",
  "many-identity",
  "many-identity-dsa",
- "many-protocol",
  "once_cell",
  "p256",
  "sha2 0.10.6",
@@ -1941,7 +1938,7 @@ dependencies = [
  "many-error",
  "many-identity",
  "many-identity-dsa",
- "many-protocol",
+ "many-types",
  "minicbor",
  "once_cell",
  "serde",
@@ -1991,8 +1988,8 @@ dependencies = [
  "many-identity-dsa",
  "many-identity-webauthn",
  "many-modules",
- "many-protocol",
  "many-server",
+ "many-types",
  "regex",
  "serde",
  "serde_json",
@@ -2013,7 +2010,6 @@ dependencies = [
  "many-identity",
  "many-identity-dsa",
  "many-macros",
- "many-protocol",
  "many-types",
  "minicbor",
  "mockall",
@@ -2023,31 +2019,6 @@ dependencies = [
  "smol",
  "strum",
  "strum_macros",
-]
-
-[[package]]
-name = "many-protocol"
-version = "0.1.0"
-dependencies = [
- "base64",
- "coset",
- "derive_builder 0.10.2",
- "hex",
- "many-error",
- "many-identity",
- "many-types",
- "minicbor",
- "num-bigint",
- "num-derive",
- "num-traits",
- "once_cell",
- "proptest",
- "serde",
- "serde_json",
- "sha2 0.10.6",
- "signature",
- "tracing",
- "url",
 ]
 
 [[package]]
@@ -2075,7 +2046,6 @@ dependencies = [
  "many-identity-dsa",
  "many-macros",
  "many-modules",
- "many-protocol",
  "many-server",
  "many-types",
  "minicbor",
@@ -2111,6 +2081,7 @@ version = "0.1.0"
 dependencies = [
  "cbor-diag",
  "coset",
+ "derive_builder 0.10.2",
  "fixed",
  "hex",
  "many-error",
@@ -2123,6 +2094,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_test",
+ "url",
 ]
 
 [[package]]
