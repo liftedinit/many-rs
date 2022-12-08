@@ -65,7 +65,6 @@ graph TD;
   many-identity-dsa --> many-modules;
   many-macros --> many-modules;
   many-types --> many-modules;
-  many-types --> many-modules;
   many-error --> many-types;
   many-identity --> many-types;
   many-error --> many-server;
@@ -73,7 +72,6 @@ graph TD;
   many-identity-dsa --> many-server;
   many-macros --> many-server;
   many-modules --> many-server;
-  many-types --> many-server;
   many-types --> many-server;
   many-error --> many-types;
   many-identity --> many-types;
@@ -111,9 +109,6 @@ graph TD;
     – Utility types for creating mocked MANY servers.
 * `many-modules`([crates](https://crates.io/crate/many-modules), [docs](https://docs.rs/many-modules))
     – All modules declared in the specification.
-* `many-protocol`([crates](https://crates.io/crate/many-protocol), [docs](https://docs.rs/many-protocol))
-    – Types exclusively associated with the protocol.
-      This does not include types that are related to attributes or modules.
 * `many-server`([crates](https://crates.io/crate/many-server), [docs](https://docs.rs/many-server))
     – Types and methods to create a MANY network server and neighborhood.
 * `many-types`([crates](https://crates.io/crate/many-types), [docs](https://docs.rs/many-types))
