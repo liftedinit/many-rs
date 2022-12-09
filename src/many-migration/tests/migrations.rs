@@ -5,6 +5,7 @@ use many_migration::{
     load_enable_all_regular_migrations, load_migrations, InnerMigration, Metadata, MigrationConfig,
     MigrationSet,
 };
+use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
 
 type Storage = BTreeMap<StorageKey, u64>;
@@ -18,12 +19,12 @@ enum StorageKey {
 #[distributed_slice]
 static SOME_MANY_RS_MIGRATIONS: [InnerMigration<Storage, String>] = [..];
 
-fn _initialize(s: &mut Storage) -> Result<(), String> {
+fn _initialize(s: &mut Storage, _: &HashMap<String, Value>) -> Result<(), String> {
     s.insert(StorageKey::Init, 1);
     Ok(())
 }
 
-fn _update(s: &mut Storage) -> Result<(), String> {
+fn _update(s: &mut Storage, _: &HashMap<String, Value>) -> Result<(), String> {
     if let Some(counter) = s.get_mut(&StorageKey::Counter) {
         *counter += 1;
         return Ok(());

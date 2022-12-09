@@ -9,7 +9,7 @@ use std::ops::Index;
 use strum::Display;
 use tracing::trace;
 
-pub type FnPtr<T, E> = fn(&mut T) -> Result<(), E>;
+pub type FnPtr<T, E> = fn(&mut T, &HashMap<String, Value>) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -143,7 +143,7 @@ impl<T, E> InnerMigration<T, E> {
         Self {
             r#type: MigrationType::Regular(RegularMigration {
                 initialize_fn,
-                update_fn: |_| Ok(()),
+                update_fn: |_, _| Ok(()),
             }),
             name,
             description,
@@ -157,7 +157,7 @@ impl<T, E> InnerMigration<T, E> {
     ) -> Self {
         Self {
             r#type: MigrationType::Regular(RegularMigration {
-                initialize_fn: |_| Ok(()),
+                initialize_fn: |_, _| Ok(()),
                 update_fn,
             }),
             name,
@@ -181,9 +181,9 @@ impl<T, E> InnerMigration<T, E> {
     }
 
     /// This function gets executed when the storage block height == the migration block height
-    fn initialize(&self, storage: &mut T) -> Result<(), E> {
+    fn initialize(&self, storage: &mut T, extra: &HashMap<String, Value>) -> Result<(), E> {
         match &self.r#type {
-            MigrationType::Regular(migration) => (migration.initialize_fn)(storage),
+            MigrationType::Regular(migration) => (migration.initialize_fn)(storage, extra),
             MigrationType::Hotfix(_) => Ok(()),
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
@@ -193,9 +193,9 @@ impl<T, E> InnerMigration<T, E> {
     }
 
     /// This function gets executed when the storage block height > the migration block height
-    fn update(&self, storage: &mut T) -> Result<(), E> {
+    fn update(&self, storage: &mut T, extra: &HashMap<String, Value>) -> Result<(), E> {
         match &self.r#type {
-            MigrationType::Regular(migration) => (migration.update_fn)(storage),
+            MigrationType::Regular(migration) => (migration.update_fn)(storage, extra),
             MigrationType::Hotfix(_) => Ok(()),
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
@@ -274,9 +274,9 @@ impl<'a, T, E> Migration<'a, T, E> {
         if self.is_enabled() {
             if block_height == self.metadata.block_height && !self.active {
                 self.active = true;
-                self.migration.initialize(storage)?;
+                self.migration.initialize(storage, &self.metadata.extra)?;
             } else if block_height > self.metadata.block_height {
-                self.migration.update(storage)?;
+                self.migration.update(storage, &self.metadata.extra)?;
             }
         }
 
@@ -287,7 +287,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     #[inline]
     pub fn initialize(&self, storage: &mut T, block_height: u64) -> Result<(), E> {
         if self.is_enabled() && block_height == self.metadata.block_height {
-            self.migration.initialize(storage)?;
+            self.migration.initialize(storage, &self.metadata.extra)?;
         }
         Ok(())
     }
@@ -295,7 +295,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     #[inline]
     pub fn update(&self, storage: &mut T, block_height: u64) -> Result<(), E> {
         if self.is_enabled() && block_height > self.metadata.block_height {
-            self.migration.update(storage)?;
+            self.migration.update(storage, &self.metadata.extra)?;
         }
         Ok(())
     }
@@ -355,7 +355,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SingleMigrationConfig {
     name: String,
 
@@ -372,7 +372,7 @@ impl<T, E> From<(&InnerMigration<T, E>, Metadata)> for SingleMigrationConfig {
     }
 }
 
-#[derive(Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct MigrationConfig {
     #[serde(skip)]
     strict: Option<bool>,
