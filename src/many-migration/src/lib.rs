@@ -9,6 +9,8 @@ use std::ops::Index;
 use strum::Display;
 use tracing::trace;
 
+// Initialize and update functions receive the `metadata.extra` fields.
+// The `metadata.extra` field can be used to provide custom parameters to migrations.
 pub type FnPtr<T, E> = fn(&mut T, &HashMap<String, Value>) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
 
