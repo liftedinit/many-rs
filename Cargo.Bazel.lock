@@ -285,7 +285,7 @@ version = "0.3.2-dev.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d06c690e5e2800f70c0cf8773a9fe7680d66e719dae9b4cabedd13ef4885d056"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "bitflags",
  "cfg-if",
  "core-foundation",
@@ -347,6 +347,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "base64"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
+
+[[package]]
 name = "base64ct"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -358,7 +364,7 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dbc67436259cce95e00076dbcd3dd5e300c84d4c657d03e476b5c7619da7c2d6"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "serde",
  "serde_json",
 ]
@@ -664,7 +670,7 @@ version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51f9032b96a89dd79ffc5f62523d5351ebb40680cbdfc4029393b511b9e971aa"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "base64urlsafedata",
  "hex",
  "openssl",
@@ -1918,7 +1924,7 @@ dependencies = [
  "anyhow",
  "async-recursion",
  "atty",
- "base64",
+ "base64 0.13.1",
  "cbor-diag",
  "clap 3.2.23",
  "coset",
@@ -1950,7 +1956,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base32",
- "base64",
+ "base64 0.13.1",
  "coset",
  "crc-any",
  "derive_builder 0.10.2",
@@ -2084,7 +2090,7 @@ name = "many-identity-webauthn"
 version = "0.1.0"
 dependencies = [
  "authenticator-ctap2-2021",
- "base64",
+ "base64 0.13.1",
  "base64urlsafedata",
  "coset",
  "hex",
@@ -2093,6 +2099,7 @@ dependencies = [
  "many-identity-dsa",
  "many-modules",
  "many-protocol",
+ "many-types",
  "minicbor",
  "once_cell",
  "rand 0.8.5",
@@ -2186,7 +2193,7 @@ dependencies = [
 name = "many-protocol"
 version = "0.1.0"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "coset",
  "derive_builder 0.10.2",
  "hex",
@@ -2216,7 +2223,7 @@ dependencies = [
  "async-trait",
  "backtrace",
  "base32",
- "base64",
+ "base64 0.13.1",
  "coset",
  "crc-any",
  "cryptoki",
@@ -2266,6 +2273,7 @@ dependencies = [
 name = "many-types"
 version = "0.1.0"
 dependencies = [
+ "base64 0.20.0",
  "cbor-diag",
  "coset",
  "fixed",
@@ -2693,7 +2701,7 @@ version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03c64931a1a212348ec4f3b4362585eca7159d0d09cbdf4a7f74f02173596fd4"
 dependencies = [
- "base64",
+ "base64 0.13.1",
 ]
 
 [[package]]
@@ -3024,7 +3032,7 @@ version = "0.11.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68cc60575865c7831548863cc02356512e3f1dc2f3f82cb837d7fc4cc8f3c97c"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -4132,7 +4140,7 @@ version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "294c78c83f12153a51e1cf1e6970b5da1397645dada39033a9c3173a8fc4fc2b"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "base64urlsafedata",
  "compact_jwt",
  "der-parser",
@@ -4329,7 +4337,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fb9bace5b5589ffead1afb76e43e34cff39cd0f3ce7e170ae0c29e53b88eb1c"
 dependencies = [
  "asn1-rs",
- "base64",
+ "base64 0.13.1",
  "data-encoding",
  "der-parser",
  "lazy_static",
