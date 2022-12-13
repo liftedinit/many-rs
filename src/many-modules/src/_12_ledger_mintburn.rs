@@ -8,7 +8,7 @@ use minicbor::{Decode, Encode};
 cbor_type_decl!(
     pub struct TokenMintArgs {
         0 => symbol: ledger::Symbol,
-        1 => initial_distribution: ledger::LedgerTokensAddressMap,
+        1 => distribution: ledger::LedgerTokensAddressMap,
         2 => memo: Option<Memo>,
     }
 
@@ -54,7 +54,7 @@ mod tests {
         let mut mock = MockLedgerMintBurnModuleBackend::new();
         let data = TokenMintArgs {
             symbol: Default::default(),
-            initial_distribution: Default::default(),
+            distribution: Default::default(),
             memo: None,
         };
         mock.expect_mint()
