@@ -160,7 +160,7 @@ where
 {
     fn decode(d: &mut Decoder<'d>, ctx: &mut C) -> Result<Self, minicbor::decode::Error> {
         let bytes = d.bytes()?;
-        let t: T = minicbor::decode_with(&bytes, ctx)?;
+        let t: T = minicbor::decode_with(bytes, ctx)?;
         Ok(Self(t))
     }
 }
@@ -214,12 +214,12 @@ proptest::proptest! {
     fn wrapped_cbor_works(value in tests::arb_cbor()) {
         let wrapped = WrappedCbor::from(value);
 
-        let mut bytes = minicbor::to_vec(&wrapped).unwrap();
+        let bytes = minicbor::to_vec(&wrapped).unwrap();
         let wrapped2 = minicbor::decode::<WrappedCbor<CborAny>>(&bytes).unwrap();
 
         assert_eq!(wrapped, wrapped2);
         // Check that bytes are actually a bstr.
-        let d = minicbor::Decoder::new(&mut bytes);
+        let d = minicbor::Decoder::new(&bytes);
         assert_eq!(d.datatype().unwrap(), minicbor::data::Type::Bytes);
     }
 }
