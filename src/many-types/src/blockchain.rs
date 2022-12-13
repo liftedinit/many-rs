@@ -83,10 +83,10 @@ pub struct Transaction {
     #[n(0)]
     pub id: TransactionIdentifier,
 
-    #[n(1)]
+    #[n(2)]
     pub request: Option<RequestMessage>,
 
-    #[n(2)]
+    #[n(3)]
     pub response: Option<ResponseMessage>,
 }
 
