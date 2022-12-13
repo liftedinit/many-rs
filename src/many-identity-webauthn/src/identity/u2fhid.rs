@@ -13,7 +13,7 @@
 //!
 //! The changes to this file from the original are marked with `<<<<<`
 //! and `>>>>>`.
-use tracing::{error, trace};
+use tracing::{error, info, trace, warn};
 
 // >>>>>>
 use webauthn_authenticator_rs::error::WebauthnCError;
@@ -80,19 +80,39 @@ impl U2FHid {
         let _thread_handle = thread::spawn(move || loop {
             match status_rx.recv() {
                 Ok(StatusUpdate::DeviceAvailable { dev_info }) => {
-                    println!("STATUS: device available: {}", dev_info)
+                    // >>>>>>
+                    info!("STATUS: device available: {dev_info}");
+                    // ======
+                    // println!("STATUS: device available: {}", dev_info)
+                    // <<<<<<
                 }
                 Ok(StatusUpdate::DeviceUnavailable { dev_info }) => {
-                    println!("STATUS: device unavailable: {}", dev_info)
+                    // >>>>>>
+                    info!("STATUS: device unavailable: {dev_info}");
+                    // ======
+                    // println!("STATUS: device unavailable: {}", dev_info)
+                    // <<<<<<
                 }
                 Ok(StatusUpdate::Success { dev_info }) => {
-                    println!("STATUS: success using device: {}", dev_info);
+                    // >>>>>>
+                    info!("STATUS: success using device: {dev_info}");
+                    // ======
+                    // println!("STATUS: success using device: {}", dev_info);
+                    // <<<<<<
                 }
                 Ok(StatusUpdate::SelectDeviceNotice) => {
-                    println!("STATUS: Please select a device by touching one of them.");
+                    // >>>>>>
+                    info!("STATUS: Please select a device by touching one of them.");
+                    // ======
+                    // println!("STATUS: Please select a device by touching one of them.");
+                    // <<<<<<
                 }
                 Ok(StatusUpdate::DeviceSelected(dev_info)) => {
-                    println!("STATUS: Continuing with device: {}", dev_info);
+                    // >>>>>>
+                    info!("STATUS: Continuing with device: {}", dev_info);
+                    // ======
+                    // println!("STATUS: Continuing with device: {}", dev_info);
+                    // <<<<<<
                 }
                 Ok(StatusUpdate::PinError(error, sender)) => match error {
                     PinError::PinRequired => {
@@ -102,32 +122,57 @@ impl U2FHid {
                         continue;
                     }
                     PinError::InvalidPin(attempts) => {
-                        println!(
+                        // >>>>>>
+                        warn!(
                             "Wrong PIN! {}",
                             attempts.map_or("Try again.".to_string(), |a| format!(
-                                "You have {} attempts left.",
-                                a
+                                "You have {a} attempts left.",
                             ))
                         );
+                        // ======
+                        // println!(
+                        //     "Wrong PIN! {}",
+                        //     attempts.map_or("Try again.".to_string(), |a| format!(
+                        //         "You have {} attempts left.",
+                        //         a
+                        //     ))
+                        // );
+                        // <<<<<<
                         let raw_pin = rpassword::prompt_password_stderr("Enter PIN: ")
                             .expect("Failed to read PIN");
                         sender.send(Pin::new(&raw_pin)).expect("Failed to send PIN");
                         continue;
                     }
                     PinError::PinAuthBlocked => {
-                        eprintln!("Too many failed attempts in one row. Your device has been temporarily blocked. Please unplug it and plug in again.")
+                        // >>>>>>
+                        error!("Too many failed attempts in one row. Your device has been temporarily blocked. Please unplug it and plug in again.");
+                        // ======
+                        // eprintln!("Too many failed attempts in one row. Your device has been temporarily blocked. Please unplug it and plug in again.")
+                        // <<<<<<
                     }
                     PinError::PinBlocked => {
-                        eprintln!(
-                            "Too many failed attempts. Your device has been blocked. Reset it."
-                        )
+                        // >>>>>>
+                        error!("Too many failed attempts. Your device has been blocked. Reset it.");
+                        // ======
+                        // eprintln!(
+                        //     "Too many failed attempts. Your device has been blocked. Reset it."
+                        // )
+                        // <<<<<<
                     }
                     e => {
-                        eprintln!("Unexpected error: {:?}", e)
+                        // >>>>>>
+                        error!("Unexpected error: {e:?}");
+                        // ======
+                        // eprintln!("Unexpected error: {:?}", e)
+                        // <<<<<<
                     }
                 },
                 Err(RecvError) => {
-                    println!("STATUS: end");
+                    // >>>>>>
+                    info!("STATUS: end");
+                    // ======
+                    // println!("STATUS: end");
+                    // <<<<<<
                     return;
                 }
             }
