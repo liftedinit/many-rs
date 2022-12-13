@@ -15,6 +15,7 @@ many-identity = { path = "../many-identity" }
 many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa"] }
 many-modules = { path = "../many-modules", optional = true }
 many-protocol = { path = "../many-protocol" }
+many-types = { path = "../many-types" }
 minicbor = "0.18.0"
 once_cell = "1.13.0"
 rand = { version = "0.8.5", optional = true }
@@ -34,13 +35,13 @@ hex = "0.4.3"
 [features]
 default = ["identity"]
 identity = [
-    "authenticator-ctap2-2021",
-    "base64urlsafedata",
-    "many-modules",
-    "rand",
-    "rpassword",
-    "serde_cbor",
-    "webauthn-authenticator-rs",
-    "webauthn-rs",
-    "webauthn-rs-proto",
+    "dep:authenticator-ctap2-2021",
+    "dep:base64urlsafedata",
+    "dep:many-modules",
+    "dep:rand",
+    "dep:rpassword",
+    "dep:serde_cbor",
+    "dep:webauthn-authenticator-rs",
+    "dep:webauthn-rs",
+    "dep:webauthn-rs-proto",
 ]

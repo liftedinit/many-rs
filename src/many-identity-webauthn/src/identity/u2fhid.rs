@@ -5,11 +5,25 @@
 //! is missing).
 //! We only use Attestation to get the rawId, and we (MANY) don't use the
 //! rawId at all, so skipping it does nothing and fixes a support bug.
+//!
+//! Once there is a proper answer to either full support by Ledger for
+//! WebAuthn, or a fix in webauthn_authenticator_rs for
+//! https://github.com/kanidm/webauthn-rs/issues/231, update to the latest
+//! webauthn_authenticator_rs version and remove our custom hack.
+//!
+//! The changes to this file from the original are marked with `<<<<<`
+//! and `>>>>>`.
 use tracing::{error, trace};
 
+// >>>>>>
 use webauthn_authenticator_rs::error::WebauthnCError;
 use webauthn_authenticator_rs::prelude::Url;
 use webauthn_authenticator_rs::AuthenticatorBackend;
+// ======
+// use crate::error::WebauthnCError;
+// use crate::AuthenticatorBackend;
+// use crate::Url;
+// <<<<<<
 
 use base64urlsafedata::Base64UrlSafeData;
 use webauthn_rs_proto::PublicKeyCredentialCreationOptions;
@@ -23,7 +37,11 @@ use webauthn_rs_proto::{
     AuthenticationExtensionsClientOutputs, AuthenticatorAssertionResponseRaw, PublicKeyCredential,
 };
 
+// >>>>>>
 use authenticator_ctap2_2021::{
+    // ======
+    // use authenticator::{
+    // <<<<<<
     authenticatorservice::{
         AuthenticatorService, CtapVersion, GetAssertionExtensions, GetAssertionOptions,
         MakeCredentialsExtensions, MakeCredentialsOptions, RegisterArgsCtap2, SignArgsCtap2,
@@ -34,7 +52,11 @@ use authenticator_ctap2_2021::{
     ctap2::AssertionObject,
     errors::PinError,
     statecallback::StateCallback,
-    COSEAlgorithm, Pin, RegisterResult, SignResult, StatusUpdate,
+    COSEAlgorithm,
+    Pin,
+    RegisterResult,
+    SignResult,
+    StatusUpdate,
 };
 
 use std::sync::mpsc::{channel, RecvError, Sender};
@@ -316,8 +338,11 @@ impl AuthenticatorBackend for U2FHid {
         let raw_id = assertion
             .credentials
             .map(|pkdesc| Base64UrlSafeData(pkdesc.id))
-            // .ok_or(WebauthnCError::Internal)?;
+            // >>>>>>
             .unwrap_or(Base64UrlSafeData(vec![]));
+        // ======
+        // .ok_or(WebauthnCError::Internal)?;
+        // <<<<<<
 
         let id = raw_id.to_string();
 
@@ -352,6 +377,7 @@ impl AuthenticatorBackend for U2FHid {
     }
 }
 
+// Test disabled for lack of harness.
 // #[cfg(test)]
 // mod tests {
 //     use crate::u2fhid::U2FHid;

@@ -2,6 +2,7 @@
 
 mod u2fhid;
 
+use crate::challenge::Challenge;
 use coset::cbor::value::Value;
 use coset::{iana, CborSerializable, CoseKey, CoseSign1, KeyOperation, Label};
 use many_error::ManyError;
@@ -9,11 +10,12 @@ use many_identity::{Address, Identity};
 use many_identity_dsa::ecdsa;
 use many_modules::idstore;
 use many_protocol::ManyUrl;
-use sha2::{Digest, Sha512};
 use webauthn_authenticator_rs::AuthenticatorBackend;
 use webauthn_rs::prelude::Url;
 use webauthn_rs_proto::PublicKeyCredentialRequestOptions;
 use webauthn_rs_proto::{AllowCredentials, AuthenticatorTransport, UserVerificationPolicy};
+
+const ONE_MINUTE: u32 = 1_000 * 60;
 
 pub struct WebAuthnIdentity {
     address: Address,
@@ -64,32 +66,13 @@ impl Identity for WebAuthnIdentity {
             .push((Label::Text("webauthn".to_string()), Value::Bool(true)));
         envelope.protected.header.key_id = self.address.to_vec();
 
-        let mut hash = Sha512::new();
-        if let Some(payload) = &envelope.payload {
-            hash.update(payload);
-        }
-
-        let hash = hash.finalize().to_vec();
-
-        let protected_header = envelope.protected.clone();
-        let challenge: Result<Vec<u8>, minicbor::encode::Error<_>> = (|| {
-            let mut encoder = minicbor::Encoder::new(Vec::new());
-            encoder
-                .map(2)?
-                .u8(0)?
-                .bytes(&protected_header.to_vec().unwrap())?
-                .u8(1)?
-                .str(&base64::encode(hash))?;
-            Ok(encoder.into_writer())
-        })();
-        let challenge = challenge.unwrap();
-
-        // let mut provider = u2fhid::U2FHid::new();
+        let challenge: Challenge = (&envelope).try_into()?;
+        let challenge = minicbor::to_vec(challenge).map_err(ManyError::serialization_error)?;
         let mut provider = u2fhid::U2FHid::new();
 
         let public_key = PublicKeyCredentialRequestOptions {
             challenge: challenge.into(),
-            timeout: Some(60_000),
+            timeout: Some(ONE_MINUTE),
             rp_id: self.rp_id.clone(),
             user_verification: UserVerificationPolicy::Preferred,
             allow_credentials: vec![AllowCredentials {
@@ -108,7 +91,7 @@ impl Identity for WebAuthnIdentity {
             .perform_auth(
                 Url::parse(self.origin_url.as_str()).unwrap(),
                 public_key,
-                60_000,
+                ONE_MINUTE,
             )
             .map_err(|e| ManyError::unknown(format!("Webauthn error: {e:?}")))?;
         let response = r.response;

@@ -1,9 +1,9 @@
+use crate::challenge::Challenge;
 use coset::cbor::value::Value;
 use coset::{CborSerializable, CoseKey, CoseKeySet, CoseSign1, Label};
 use many_error::ManyError;
 use many_identity::{Address, Verifier};
 use many_protocol::ManyUrl;
-use minicbor::Decode;
 use serde::{Deserialize, Serialize};
 use sha2::digest::Digest;
 use std::collections::BTreeMap;
@@ -113,32 +113,20 @@ impl WebAuthnVerifier {
             .ok_or_else(|| ManyError::unknown("`payload` entry missing but required"))?;
 
         let payload_sha512 = sha2::Sha512::digest(payload);
-        let payload_sha512_base64url = base64::encode(payload_sha512);
 
-        #[derive(Clone, Decode)]
-        #[cbor(map)]
-        struct Challenge {
-            #[cbor(n(0), with = "minicbor::bytes")]
-            protected_header: Vec<u8>,
-
-            #[n(1)]
-            request_message_sha: String,
-        }
         tracing::trace!("Decoding `challenge`");
         let challenge = base64::decode_config(&client_data_json.challenge, base64::URL_SAFE_NO_PAD)
             .map_err(ManyError::unknown)?;
         let challenge: Challenge = minicbor::decode(&challenge).map_err(ManyError::unknown)?;
         tracing::trace!("Verifying `challenge` SHA against payload");
-        if payload_sha512_base64url != challenge.request_message_sha {
+        if payload_sha512.as_slice() != challenge.payload_sha() {
             return Err(ManyError::unknown("`challenge` SHA doesn't match"));
         }
 
         tracing::trace!("Decoding ProtectedHeader");
-        let protected_header =
-            coset::ProtectedHeader::from_cbor_bstr(Value::Bytes(challenge.protected_header))
-                .map_err(ManyError::unknown)?;
+        let protected_header = challenge.protected_header();
         tracing::trace!("Verifying protected header against `challenge`");
-        if envelope.protected != protected_header {
+        if &envelope.protected != protected_header {
             return Err(ManyError::unknown(
                 "Protected header doesn't match `challenge`",
             ));
