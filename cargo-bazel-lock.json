@@ -1,5 +1,5 @@
 {
-  "checksum": "ca8cf0ee85059b8e0c93125c021d7c3fa386ec8c5181e3e45c2ab3a4c754dc5f",
+  "checksum": "fa16b2ad984c9332776bc3ddb0ed43a6157e85c324494702525060647d330113",
   "crates": {
     "aes 0.7.5": {
       "name": "aes",
@@ -1731,6 +1731,43 @@
         "version": "0.13.1"
       },
       "license": "MIT/Apache-2.0"
+    },
+    "base64 0.20.0": {
+      "name": "base64",
+      "version": "0.20.0",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/base64/0.20.0/download",
+          "sha256": "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "base64",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "base64",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": [
+          "default",
+          "std"
+        ],
+        "edition": "2021",
+        "version": "0.20.0"
+      },
+      "license": "MIT OR Apache-2.0"
     },
     "base64ct 1.1.1": {
       "name": "base64ct",
@@ -10840,17 +10877,8 @@
           "**"
         ],
         "crate_features": [
-          "authenticator-ctap2-2021",
-          "base64urlsafedata",
           "default",
-          "identity",
-          "many-modules",
-          "rand",
-          "rpassword",
-          "serde_cbor",
-          "webauthn-authenticator-rs",
-          "webauthn-rs",
-          "webauthn-rs-proto"
+          "identity"
         ],
         "deps": {
           "common": [
@@ -11574,6 +11602,10 @@
         ],
         "deps": {
           "common": [
+            {
+              "id": "base64 0.20.0",
+              "target": "base64"
+            },
             {
               "id": "coset 0.3.3",
               "target": "coset"
@@ -20904,8 +20936,8 @@
         },
         {
           "Binary": {
-            "crate_name": "exit",
-            "crate_root": "src/bin/exit.rs",
+            "crate_name": "reader",
+            "crate_root": "src/bin/reader.rs",
             "srcs": {
               "include": [
                 "**/*.rs"
@@ -20928,8 +20960,8 @@
         },
         {
           "Binary": {
-            "crate_name": "reader",
-            "crate_root": "src/bin/reader.rs",
+            "crate_name": "exit",
+            "crate_root": "src/bin/exit.rs",
             "srcs": {
               "include": [
                 "**/*.rs"
