@@ -255,6 +255,14 @@ impl TryFrom<String> for Address {
     type Error = ManyError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
+        InnerAddress::try_from(value.as_str()).map(Self)
+    }
+}
+
+impl TryFrom<&str> for Address {
+    type Error = ManyError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         InnerAddress::try_from(value).map(Self)
     }
 }
@@ -500,11 +508,11 @@ impl std::fmt::Display for InnerAddress {
     }
 }
 
-impl TryFrom<String> for InnerAddress {
+impl TryFrom<&str> for InnerAddress {
     type Error = ManyError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        InnerAddress::from_str(value.as_str())
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        InnerAddress::from_str(value)
     }
 }
 
