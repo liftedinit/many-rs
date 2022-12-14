@@ -163,7 +163,7 @@ impl Address {
 
     #[inline]
     pub fn public_key(&self) -> Result<Self, ManyError> {
-        self.clone().into_public_key()
+        (*self).into_public_key()
     }
 
     #[inline]
