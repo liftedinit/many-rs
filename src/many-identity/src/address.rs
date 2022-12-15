@@ -483,11 +483,11 @@ impl InnerAddress {
         // This makes sure we actually have a Vec<u8> that's smaller than 32 bytes if
         // it can be.
         match self.bytes[0] {
-            DISCRIMINANT_ANONYMOUS => vec![0],
+            DISCRIMINANT_ANONYMOUS => vec![DISCRIMINANT_ANONYMOUS],
             DISCRIMINANT_PUBLIC_KEY => {
                 let pk = &self.bytes[1..=SHA_OUTPUT_SIZE];
                 vec![
-                    1,
+                    DISCRIMINANT_PUBLIC_KEY,
                     pk[ 0], pk[ 1], pk[ 2], pk[ 3], pk[ 4], pk[ 5], pk[ 6], pk[ 7],
                     pk[ 8], pk[ 9], pk[10], pk[11], pk[12], pk[13], pk[14], pk[15],
                     pk[16], pk[17], pk[18], pk[19], pk[20], pk[21], pk[22], pk[23],
@@ -503,13 +503,13 @@ impl InnerAddress {
     }
 
     pub const fn is_anonymous(&self) -> bool {
-        self.bytes[0] == 0
+        self.bytes[0] == DISCRIMINANT_ANONYMOUS
     }
     pub const fn is_invalid(&self) -> bool {
         self.bytes[0] == DISCRIMINANT_INVALID
     }
     pub const fn is_public_key(&self) -> bool {
-        self.bytes[0] == 1
+        self.bytes[0] == DISCRIMINANT_PUBLIC_KEY
     }
     pub const fn is_subresource(&self) -> bool {
         matches!(self.bytes[0], 0x80..=0xFF)
@@ -613,6 +613,7 @@ pub mod tests {
             Address::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys").unwrap(),
             "mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys"
         );
+        assert_eq!(Address::invalid(), "maiyg");
     }
 
     #[test]
@@ -640,6 +641,7 @@ pub mod tests {
         let b = a.into_public_key().unwrap();
         assert!(b.is_public_key());
         assert!(Address::anonymous().into_public_key().is_err());
+        assert!(Address::invalid().into_public_key().is_err());
     }
 
     #[test]
@@ -739,6 +741,7 @@ pub mod tests {
         assert_eq!(a.subresource_id(), Some(0x01234567));
         assert_eq!(a.public_key().unwrap().subresource_id(), None);
         assert_eq!(Address::anonymous().subresource_id(), None);
+        assert_eq!(Address::invalid().subresource_id(), None);
     }
 
     #[test]
@@ -775,7 +778,7 @@ pub mod tests {
     fn serde_anonymous() {
         let id = Address::anonymous();
         assert_tokens(&id.readable(), &[Token::String("maa")]);
-        assert_tokens(&id.compact(), &[Token::Bytes(&[0])]);
+        assert_tokens(&id.compact(), &[Token::Bytes(&[DISCRIMINANT_ANONYMOUS])]);
     }
 
     #[test]
