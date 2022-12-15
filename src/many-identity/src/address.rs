@@ -97,6 +97,9 @@ impl From<SubresourceId> for u32 {
 pub struct Address(InnerAddress);
 
 impl Address {
+    pub const ANONYMOUS: Self = Self::anonymous();
+    pub const ILLEGAL: Self = Self::illegal();
+
     #[inline]
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, ManyError> {
         InnerAddress::try_from(bytes).map(Self)
