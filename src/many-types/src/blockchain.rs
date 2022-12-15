@@ -84,7 +84,7 @@ pub struct Transaction {
     pub id: TransactionIdentifier,
 
     #[cbor(n(1), with = "minicbor::bytes")]
-    pub content: Option<Vec<u8>>,
+    pub content_: Option<Vec<u8>>,
 
     #[n(2)]
     pub request: Option<RequestMessage>,
