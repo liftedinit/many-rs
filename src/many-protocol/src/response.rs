@@ -91,7 +91,7 @@ impl ResponseMessage {
         let address = verifier.verify_1(envelope)?;
 
         // Shortcut everything if the address is illegal.
-        if address.is_invalid() {
+        if address.is_illegal() {
             return Err(ManyError::invalid_from_identity());
         }
 

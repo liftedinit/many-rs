@@ -108,8 +108,8 @@ impl Address {
     }
 
     #[inline]
-    pub const fn invalid() -> Self {
-        Self(InnerAddress::invalid())
+    pub const fn illegal() -> Self {
+        Self(InnerAddress::illegal())
     }
 
     #[inline]
@@ -118,8 +118,8 @@ impl Address {
     }
 
     #[inline]
-    pub const fn is_invalid(&self) -> bool {
-        self.0.is_invalid()
+    pub const fn is_illegal(&self) -> bool {
+        self.0.is_illegal()
     }
 
     #[inline]
@@ -178,7 +178,7 @@ impl Address {
 
     #[inline]
     pub const fn can_be_dest(&self) -> bool {
-        self.is_public_key() || self.is_subresource() || self.is_invalid()
+        self.is_public_key() || self.is_subresource() || self.is_illegal()
     }
 
     #[inline]
@@ -196,8 +196,8 @@ impl Address {
     pub fn matches(&self, other: &Address) -> bool {
         if self.is_anonymous() {
             other.is_anonymous()
-        } else if self.is_invalid() {
-            other.is_invalid()
+        } else if self.is_illegal() {
+            other.is_illegal()
         } else {
             // Extract public key hash of both.
             self.0.hash() == other.0.hash()
@@ -249,8 +249,8 @@ impl Debug for Address {
         f.debug_tuple("Identity")
             .field(&if self.is_anonymous() {
                 "anonymous".to_string()
-            } else if self.is_invalid() {
-                "invalid".to_string()
+            } else if self.is_illegal() {
+                "illegal".to_string()
             } else if self.is_public_key() {
                 "public-key".to_string()
             } else if self.is_subresource() {
@@ -323,13 +323,13 @@ struct InnerAddress {
 
 const DISCRIMINANT_ANONYMOUS: u8 = 0;
 const DISCRIMINANT_PUBLIC_KEY: u8 = 1;
-const DISCRIMINANT_INVALID: u8 = 2;
+const DISCRIMINANT_ILLEGAL: u8 = 2;
 // DISCRIMINANT_SUBRESOURCE_ID is useless here as it cannot be used in pattern matching.
 
 // Identity needs to be bound to 32 bytes maximum.
 static_assertions::assert_eq_size!([u8; MAX_IDENTITY_BYTE_LEN], InnerAddress);
 const _1: () = assert!(InnerAddress::anonymous().to_byte_array()[0] == DISCRIMINANT_ANONYMOUS);
-const _2: () = assert!(InnerAddress::invalid().to_byte_array()[0] == DISCRIMINANT_INVALID);
+const _2: () = assert!(InnerAddress::illegal().to_byte_array()[0] == DISCRIMINANT_ILLEGAL);
 
 impl PartialEq for InnerAddress {
     fn eq(&self, other: &Self) -> bool {
@@ -342,8 +342,8 @@ impl PartialEq for InnerAddress {
                 self.bytes[1..=SHA_OUTPUT_SIZE] == other.bytes[1..=SHA_OUTPUT_SIZE]
             }
 
-            // Invalid
-            (DISCRIMINANT_INVALID, DISCRIMINANT_INVALID) => true,
+            // Illegal
+            (DISCRIMINANT_ILLEGAL, DISCRIMINANT_ILLEGAL) => true,
 
             // Subresource.
             (x @ 0x80..=0xFF, y @ 0x80..=0xFF) if x == y => self.bytes[1..] == other.bytes[1..],
@@ -367,9 +367,9 @@ impl InnerAddress {
         }
     }
 
-    pub const fn invalid() -> Self {
+    pub const fn illegal() -> Self {
         Self {
-            bytes: [DISCRIMINANT_INVALID; MAX_IDENTITY_BYTE_LEN],
+            bytes: [DISCRIMINANT_ILLEGAL; MAX_IDENTITY_BYTE_LEN],
         }
     }
 
@@ -422,11 +422,11 @@ impl InnerAddress {
                     Ok(Self::public_key(slice))
                 }
             }
-            DISCRIMINANT_INVALID => {
+            DISCRIMINANT_ILLEGAL => {
                 if bytes.len() > 1 {
                     Err(ManyError::invalid_identity())
                 } else {
-                    Ok(Self::invalid())
+                    Ok(Self::illegal())
                 }
             }
             hi @ 0x80..=0xff => {
@@ -494,7 +494,7 @@ impl InnerAddress {
                     pk[24], pk[25], pk[26], pk[27],
                 ]
             }
-            DISCRIMINANT_INVALID => vec![DISCRIMINANT_INVALID],
+            DISCRIMINANT_ILLEGAL => vec![DISCRIMINANT_ILLEGAL],
             0x80..=0xFF => {
                 self.bytes.to_vec()
             }
@@ -505,8 +505,8 @@ impl InnerAddress {
     pub const fn is_anonymous(&self) -> bool {
         self.bytes[0] == DISCRIMINANT_ANONYMOUS
     }
-    pub const fn is_invalid(&self) -> bool {
-        self.bytes[0] == DISCRIMINANT_INVALID
+    pub const fn is_illegal(&self) -> bool {
+        self.bytes[0] == DISCRIMINANT_ILLEGAL
     }
     pub const fn is_public_key(&self) -> bool {
         self.bytes[0] == DISCRIMINANT_PUBLIC_KEY
@@ -587,6 +587,7 @@ impl TryFrom<&[u8]> for InnerAddress {
 
 #[cfg(test)]
 pub mod tests {
+    use super::DISCRIMINANT_ANONYMOUS;
     use crate::testing::identity;
     use crate::Address;
     use serde_test::{assert_tokens, Configure, Token};
@@ -613,7 +614,7 @@ pub mod tests {
             Address::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys").unwrap(),
             "mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys"
         );
-        assert_eq!(Address::invalid(), "maiyg");
+        assert_eq!(Address::illegal(), "maiyg");
     }
 
     #[test]
@@ -641,7 +642,7 @@ pub mod tests {
         let b = a.into_public_key().unwrap();
         assert!(b.is_public_key());
         assert!(Address::anonymous().into_public_key().is_err());
-        assert!(Address::invalid().into_public_key().is_err());
+        assert!(Address::illegal().into_public_key().is_err());
     }
 
     #[test]
@@ -694,9 +695,9 @@ pub mod tests {
     }
 
     #[test]
-    fn textual_format_invalid() {
+    fn textual_format_illegal() {
         let a = Address::from_str("maiyg").unwrap();
-        assert!(a.is_invalid());
+        assert!(a.is_illegal());
         let b = Address::from_bytes(&hex::decode("02").unwrap()).unwrap();
         assert_eq!(a, b);
     }
@@ -741,7 +742,7 @@ pub mod tests {
         assert_eq!(a.subresource_id(), Some(0x01234567));
         assert_eq!(a.public_key().unwrap().subresource_id(), None);
         assert_eq!(Address::anonymous().subresource_id(), None);
-        assert_eq!(Address::invalid().subresource_id(), None);
+        assert_eq!(Address::illegal().subresource_id(), None);
     }
 
     #[test]
@@ -755,7 +756,7 @@ pub mod tests {
         assert!(b.matches(&a));
 
         assert!(!Address::anonymous().matches(&a));
-        assert!(!Address::invalid().matches(&a));
+        assert!(!Address::illegal().matches(&a));
     }
 
     proptest::proptest! {

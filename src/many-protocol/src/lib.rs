@@ -17,7 +17,7 @@ pub fn decode_request_from_cose_sign1(
 ) -> Result<RequestMessage, ManyError> {
     let from_id = verifier.verify_1(envelope)?;
 
-    if from_id.is_invalid() {
+    if from_id.is_illegal() {
         return Err(ManyError::invalid_from_identity());
     }
 
@@ -31,7 +31,7 @@ pub fn decode_request_from_cose_sign1(
     let message_from = message.from.unwrap_or_default();
     if !from_id.matches(&message_from) {
         Err(ManyError::invalid_from_identity())
-    } else if message_from.is_invalid() {
+    } else if message_from.is_illegal() {
         Err(ManyError::invalid_from_identity())
     } else {
         Ok(message)
