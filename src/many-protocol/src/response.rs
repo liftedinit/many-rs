@@ -90,6 +90,11 @@ impl ResponseMessage {
     ) -> Result<Self, ManyError> {
         let address = verifier.verify_1(envelope)?;
 
+        // Shortcut everything if the address is illegal.
+        if address.is_invalid() {
+            return Err(ManyError::invalid_from_identity());
+        }
+
         let payload = envelope
             .payload
             .as_ref()

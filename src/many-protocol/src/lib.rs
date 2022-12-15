@@ -17,6 +17,10 @@ pub fn decode_request_from_cose_sign1(
 ) -> Result<RequestMessage, ManyError> {
     let from_id = verifier.verify_1(envelope)?;
 
+    if from_id.is_invalid() {
+        return Err(ManyError::invalid_from_identity());
+    }
+
     let payload = envelope
         .payload
         .as_ref()
@@ -24,11 +28,14 @@ pub fn decode_request_from_cose_sign1(
     let message = RequestMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
 
     // Check the `from` field.
-    if !from_id.matches(&message.from.unwrap_or_default()) {
-        return Err(ManyError::invalid_from_identity());
+    let message_from = message.from.unwrap_or_default();
+    if !from_id.matches(&message_from) {
+        Err(ManyError::invalid_from_identity())
+    } else if message_from.is_invalid() {
+        Err(ManyError::invalid_from_identity())
+    } else {
+        Ok(message)
     }
-
-    Ok(message)
 }
 
 pub fn decode_response_from_cose_sign1(
