@@ -55,6 +55,7 @@ impl<I: Identity + Debug + Send + Sync> LowLevelManyRequestHandler for ManyMockS
             .get(&message.method)
             .ok_or_else(|| "No mock entry for that".to_string())?;
         let response = ResponseMessage {
+            from: id.address(),
             data: Ok(response.clone()),
             ..Default::default()
         };
@@ -64,9 +65,7 @@ impl<I: Identity + Debug + Send + Sync> LowLevelManyRequestHandler for ManyMockS
 
 impl<I: Identity> base::BaseModuleBackend for ManyMockServer<I> {
     fn endpoints(&self) -> Result<base::Endpoints, ManyError> {
-        Ok(base::Endpoints(
-            self.mock_entries.iter().map(|(k, _)| k.clone()).collect(),
-        ))
+        Ok(base::Endpoints(self.mock_entries.keys().cloned().collect()))
     }
 
     fn status(&self) -> Result<base::Status, ManyError> {

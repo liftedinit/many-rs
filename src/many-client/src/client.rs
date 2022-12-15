@@ -73,7 +73,7 @@ impl<I: Identity> ManyClient<I> {
         Ok(Self {
             identity,
             to: Some(to),
-            url: url.into_url().map_err(|e| format!("{}", e))?,
+            url: url.into_url().map_err(|e| e.to_string())?,
             verifier,
             resolver,
         })

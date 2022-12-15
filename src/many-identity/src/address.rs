@@ -63,7 +63,7 @@ impl TryInto<SubresourceId> for u32 {
         if self > MAX_SUBRESOURCE_ID {
             Err(ManyError::invalid_identity_subid())
         } else {
-            Ok(SubresourceId(self as u32))
+            Ok(SubresourceId(self))
         }
     }
 }
@@ -184,7 +184,7 @@ impl Address {
     /// many-identity-dsa) or in the testing utilities available here to create
     /// a bogus address.
     #[inline(always)]
-    pub fn public_key_unchecked(hash: PublicKeyHash) -> Self {
+    pub(crate) fn public_key_unchecked(hash: PublicKeyHash) -> Self {
         Self(InnerAddress::public_key(hash))
     }
 }
@@ -255,6 +255,14 @@ impl TryFrom<String> for Address {
     type Error = ManyError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
+        InnerAddress::try_from(value.as_str()).map(Self)
+    }
+}
+
+impl TryFrom<&str> for Address {
+    type Error = ManyError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         InnerAddress::try_from(value).map(Self)
     }
 }
@@ -500,11 +508,11 @@ impl std::fmt::Display for InnerAddress {
     }
 }
 
-impl TryFrom<String> for InnerAddress {
+impl TryFrom<&str> for InnerAddress {
     type Error = ManyError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        InnerAddress::from_str(value.as_str())
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        InnerAddress::from_str(value)
     }
 }
 

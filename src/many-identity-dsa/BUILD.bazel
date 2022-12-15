@@ -9,6 +9,7 @@ package(default_visibility = [
     "//src/many-mock:__pkg__",
     "//src/many-modules:__pkg__",
     "//src/many-server:__pkg__",
+    "//src/many-types:__pkg__",
 ])
 
 rust_library(
@@ -20,6 +21,7 @@ rust_library(
         "minicbor",
         "ecdsa",
         "ed25519",
+        "testing",
     ],
     proc_macro_deps = all_crate_deps(
         proc_macro = True,

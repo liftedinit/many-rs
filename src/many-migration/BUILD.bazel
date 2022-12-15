@@ -1,0 +1,47 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test_suite")
+
+rust_library(
+    name = "many-migration",
+    srcs = glob(include = ["src/**/*.rs"]),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        "//src/many-error",
+    ],
+)
+rust_library(
+    name = "many-migration-for-test",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_migration",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        "//src/many-error",
+    ],
+)
+
+rust_test_suite(
+    name = "many-migration-test-suite",
+    srcs = glob(include = ["tests/*.rs"]),
+    aliases = aliases(),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        ":many-migration-for-test",
+    ],
+)

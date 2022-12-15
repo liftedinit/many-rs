@@ -568,7 +568,7 @@ mod module_tests {
             1,
             &module,
             "account.setDescription",
-            format!(r#"{{ 0: "{}", 1: "new-name" }}"#, id),
+            format!(r#"{{ 0: "{id}", 1: "new-name" }}"#),
         )
         .unwrap();
 
@@ -576,13 +576,13 @@ mod module_tests {
             1,
             &module,
             "account.setDescription",
-            format!(r#"{{ 0: "{}", 1: "new-name-2" }}"#, wrong_id),
+            format!(r#"{{ 0: "{wrong_id}", 1: "new-name-2" }}"#),
         )
         .is_err());
 
         {
             let account: InfoReturn = minicbor::decode(
-                &call_module(0, &module, "account.info", format!(r#"{{ 0: "{}" }}"#, id)).unwrap(),
+                &call_module(0, &module, "account.info", format!(r#"{{ 0: "{id}" }}"#)).unwrap(),
             )
             .unwrap();
             assert_eq!(account.description, Some("new-name".to_string()));
@@ -600,7 +600,7 @@ mod module_tests {
             1,
             &module,
             "account.listRoles",
-            format!(r#"{{ 0: "{}", 1: "new-name" }}"#, wrong_id),
+            format!(r#"{{ 0: "{wrong_id}", 1: "new-name" }}"#),
         )
         .is_err());
 
@@ -610,7 +610,7 @@ mod module_tests {
                     1,
                     &module,
                     "account.listRoles",
-                    format!(r#"{{ 0: "{}", 1: "new-name" }}"#, id)
+                    format!(r#"{{ 0: "{id}", 1: "new-name" }}"#)
                 )
                 .unwrap()
             )
@@ -623,7 +623,7 @@ mod module_tests {
             2,
             &module,
             "account.disable",
-            format!(r#"{{ 0: "{}" }}"#, id),
+            format!(r#"{{ 0: "{id}" }}"#),
         )
         .is_err());
         assert!(call_module(
@@ -638,7 +638,7 @@ mod module_tests {
             1,
             &module,
             "account.disable",
-            format!(r#"{{ 0: "{}" }}"#, id),
+            format!(r#"{{ 0: "{id}" }}"#),
         )
         .is_ok());
 

@@ -10,15 +10,16 @@ use many_identity::verifiers::AnonymousVerifier;
 use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
 use many_identity_hsm::{Hsm, HsmIdentity, HsmMechanismType, HsmSessionType, HsmUserType};
+use many_identity_webauthn::WebAuthnIdentity;
 use many_mock::{parse_mockfile, server::ManyMockServer, MockEntries};
 use many_modules::delegation::attributes::DelegationAttribute;
 use many_modules::delegation::DelegationModuleBackend;
-use many_modules::ledger;
 use many_modules::r#async::attributes::AsyncAttribute;
 use many_modules::r#async::{StatusArgs, StatusReturn};
+use many_modules::{idstore, ledger};
 use many_protocol::{
-    encode_cose_sign1_from_request, BaseIdentityResolver, RequestMessage, RequestMessageBuilder,
-    ResponseMessage,
+    encode_cose_sign1_from_request, BaseIdentityResolver, ManyUrl, RequestMessage,
+    RequestMessageBuilder, ResponseMessage,
 };
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
@@ -55,6 +56,9 @@ enum SubCommand {
 
     /// Display the textual ID of a public key located on an HSM.
     HsmId(HsmIdOpt),
+
+    /// Display the textual ID of a webauthn key.
+    WebauthnId(WebauthnIdOpt),
 
     /// Creates a message and output it.
     Message(Box<MessageOpt>),
@@ -96,6 +100,21 @@ struct HsmIdOpt {
 }
 
 #[derive(Parser)]
+struct WebauthnIdOpt {
+    /// URL to the relying party (the MANY server implementing idstore).
+    rp: ManyUrl,
+
+    /// The recall phrase.
+    #[clap(long, conflicts_with("address"))]
+    phrase: Option<String>,
+
+    /// The address of the webauthn key. This may seem redundant but in this
+    /// case the webauthn flow will still be checked to get the ID.
+    #[clap(long, conflicts_with("phrase"))]
+    address: Option<Address>,
+}
+
+#[derive(Parser)]
 #[clap(
     group(
         ArgGroup::new("hsm")
@@ -117,6 +136,34 @@ struct MessageOpt {
     /// An optional delegation certificate list to use for the message.
     #[clap(long)]
     delegation: Option<Vec<PathBuf>>,
+
+    /// Use Webauthn as the authentication scheme.
+    #[clap(long, conflicts_with("pem"))]
+    webauthn: bool,
+
+    /// The origin to use in the webauthn flow. By default will use the
+    /// relying party's protocol, hostname and port.
+    #[clap(long, requires("webauthn"))]
+    webauthn_origin: Option<ManyUrl>,
+
+    /// The Webauthn provider. By default will use the same server.
+    #[clap(long, requires("webauthn"))]
+    rp: Option<ManyUrl>,
+
+    /// The recall phrase for webauthn.
+    #[clap(long, requires("webauthn"), conflicts_with("address"))]
+    phrase: Option<String>,
+
+    /// The address for webauthn.
+    #[clap(long, requires("webauthn"), conflicts_with("phrase"))]
+    address: Option<Address>,
+
+    /// The Relaying party Identifier. A string which was used when creating
+    /// the credentials.
+    /// By default, this will be the hostname of the origin URL, whichever
+    /// it is.
+    #[clap(long, requires("webauthn"))]
+    rp_id: Option<String>,
 
     /// Timestamp (in seconds since epoch).
     #[clap(long)]
@@ -221,9 +268,9 @@ async fn show_response<'a>(
         fn progress(str: &str, done: bool) {
             if atty::is(atty::Stream::Stderr) {
                 if done {
-                    eprintln!("{}", str);
+                    eprintln!("{str}");
                 } else {
-                    eprint!("{}", str);
+                    eprint!("{str}");
                 }
             }
         }
@@ -246,7 +293,11 @@ async fn show_response<'a>(
                 match status {
                     StatusReturn::Done { response } => {
                         progress(".", true);
-                        return show_response(&*response, client, r#async).await;
+                        let response: ResponseMessage =
+                            minicbor::decode(&response.payload.ok_or_else(|| {
+                                anyhow!("Envelope with empty payload. Expected ResponseMessage")
+                            })?)?;
+                        return show_response(&response, client, r#async).await;
                     }
                     StatusReturn::Expired => {
                         progress(".", true);
@@ -339,6 +390,51 @@ async fn message_from_hex(
     show_response(&response, client, r#async).await
 }
 
+async fn create_webauthn_identity(
+    rp: ManyUrl,
+    origin: Option<ManyUrl>,
+    phrase: Option<String>,
+    address: Option<Address>,
+    rp_id: Option<String>,
+) -> WebAuthnIdentity {
+    let client = ManyClient::new(rp.clone(), Address::anonymous(), AnonymousIdentity)
+        .expect("Could not create client");
+
+    let response = if let Some(phrase) = phrase {
+        client
+            .call(
+                "idstore.getFromRecallPhrase",
+                idstore::GetFromRecallPhraseArgs(phrase.split(' ').map(String::from).collect()),
+            )
+            .await
+            .unwrap()
+    } else if let Some(address) = address {
+        client
+            .call(
+                "idstore.getFromAddress",
+                idstore::GetFromAddressArgs(address),
+            )
+            .await
+            .unwrap()
+    } else {
+        error!("Must specify a phrase or address.");
+        process::exit(3);
+    };
+
+    let get_returns = response.data.expect("Error from the server");
+    let get_returns =
+        minicbor::decode::<idstore::GetReturns>(&get_returns).expect("Deserialization error");
+
+    let origin = origin.unwrap_or(rp);
+
+    WebAuthnIdentity::authenticate(
+        origin.clone(),
+        rp_id.unwrap_or(origin.host_str().expect("Origin has no host").to_string()),
+        get_returns,
+    )
+    .expect("Could not create Identity object")
+}
+
 #[tokio::main]
 async fn main() {
     let Opts {
@@ -368,7 +464,7 @@ async fn main() {
                                 .with_subresource_id(subid)
                                 .expect("Invalid subresource id");
                         }
-                        println!("{}", i)
+                        println!("{i}")
                     }
                     Err(e) => {
                         error!("Identity did not parse: {:?}", e.to_string());
@@ -381,17 +477,17 @@ async fn main() {
                         .with_subresource_id(subid)
                         .expect("Invalid subresource id");
                 }
-                println!("{}", hex::encode(&i.to_vec()));
+                println!("{}", hex::encode(i.to_vec()));
             } else if let Ok(pem_content) = std::fs::read_to_string(&o.arg) {
                 // Create the identity from the public key hash.
-                let mut i = CoseKeyIdentity::from_pem(&pem_content).unwrap().address();
+                let mut i = CoseKeyIdentity::from_pem(pem_content).unwrap().address();
                 if let Some(subid) = o.subid {
                     i = i
                         .with_subresource_id(subid)
                         .expect("Invalid subresource id");
                 }
 
-                println!("{}", i);
+                println!("{i}");
             } else {
                 error!("Could not understand the argument.");
                 process::exit(2);
@@ -420,7 +516,11 @@ async fn main() {
                     .expect("Invalid subresource id");
             }
 
-            println!("{}", id);
+            println!("{id}");
+        }
+        SubCommand::WebauthnId(o) => {
+            let identity = create_webauthn_identity(o.rp, None, o.phrase, o.address, None).await;
+            println!("{}", identity.address());
         }
         SubCommand::Message(o) => {
             let to_identity = o.to.unwrap_or_default();
@@ -434,7 +534,7 @@ async fn main() {
             });
             let data = o
                 .data
-                .map_or(vec![], |d| cbor_diag::parse_diag(&d).unwrap().to_bytes());
+                .map_or(vec![], |d| cbor_diag::parse_diag(d).unwrap().to_bytes());
 
             let from_identity: Box<dyn Identity> = if let (Some(module), Some(slot), Some(keyid)) =
                 (o.module, o.slot, o.keyid)
@@ -462,7 +562,21 @@ async fn main() {
                 )
             } else if let Some(p) = o.pem {
                 // If `pem` is not provided, use anonymous and don't sign.
-                Box::new(CoseKeyIdentity::from_pem(&std::fs::read_to_string(&p).unwrap()).unwrap())
+                Box::new(CoseKeyIdentity::from_pem(std::fs::read_to_string(p).unwrap()).unwrap())
+            } else if o.webauthn {
+                let rp =
+                    o.rp.as_ref()
+                        .or(o.server.as_ref())
+                        .expect("Must pass a server or --rp");
+                let identity = create_webauthn_identity(
+                    rp.clone(),
+                    o.webauthn_origin,
+                    o.phrase,
+                    o.address,
+                    o.rp_id,
+                )
+                .await;
+                Box::new(identity)
             } else {
                 Box::new(AnonymousIdentity)
             };
@@ -605,7 +719,7 @@ async fn main() {
                 .ok_or_else(|| format!("Could not resolve symbol '{}'", &symbol))
                 .unwrap();
 
-            println!("{}", id);
+            println!("{id}");
         }
         SubCommand::Delegation(o) => {
             delegation::delegation(&o).unwrap();

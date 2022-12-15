@@ -16,7 +16,7 @@ impl<T: Encode<()>> crate::Reason<T> {
     #[inline]
     pub fn to_bytes(&self) -> Result<Vec<u8>, String> {
         let mut bytes = Vec::new();
-        minicbor::encode(self, &mut bytes).map_err(|e| format!("{}", e))?;
+        minicbor::encode(self, &mut bytes).map_err(|e| format!("{e}"))?;
         Ok(bytes)
     }
 }
@@ -24,19 +24,16 @@ impl<T: Encode<()>> crate::Reason<T> {
 impl<'b, T: Decode<'b, ()> + Default> crate::Reason<T> {
     #[inline]
     pub fn from_bytes(bytes: &'b [u8]) -> Result<Self, String> {
-        minicbor::decode(bytes).map_err(|e| format!("{}", e))
+        minicbor::decode(bytes).map_err(|e| format!("{e}"))
     }
 }
 
 impl<T: Encode<C>, C> Encode<C> for crate::Reason<T> {
     #[inline]
     fn encode<W: Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), Error<W::Error>> {
-        e.map(
-            1 + if self.message.is_none() { 0 } else { 1 }
-                + if self.arguments.is_empty() { 0 } else { 1 },
-        )?
-        .u32(ReasonCborKey::Code as u32)?
-        .encode_with(&self.code, ctx)?;
+        e.map(1 + u64::from(self.message.is_some()) + u64::from(!self.arguments.is_empty()))?
+            .u32(ReasonCborKey::Code as u32)?
+            .encode_with(&self.code, ctx)?;
 
         if let Some(msg) = &self.message {
             e.u32(ReasonCborKey::Message as u32)?.str(msg.as_str())?;

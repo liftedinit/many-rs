@@ -239,6 +239,11 @@ impl ManyError {
     }
 
     #[inline]
+    pub fn set_message(&mut self, message: Option<String>) {
+        self.0.set_message(message)
+    }
+
+    #[inline]
     pub fn argument<S: AsRef<str>>(&self, field: S) -> Option<&str> {
         self.0.argument(field)
     }
@@ -246,6 +251,11 @@ impl ManyError {
     #[inline]
     pub fn arguments(&self) -> &BTreeMap<String, String> {
         self.0.arguments()
+    }
+
+    #[inline]
+    pub fn add_argument(&mut self, key: String, value: String) {
+        self.0.add_argument(key, value);
     }
 
     #[inline]
@@ -334,7 +344,7 @@ mod tests {
             arguments,
         );
 
-        assert_eq!(format!("{}", e), "Hello ZERO and TWO.");
+        assert_eq!(e.to_string(), "Hello ZERO and TWO.");
     }
 
     #[test]
@@ -346,7 +356,7 @@ mod tests {
 
         let e = ManyError::new(ErrorCode::Unknown, Some("{2}".to_string()), arguments);
 
-        assert_eq!(format!("{}", e), "TWO");
+        assert_eq!(e.to_string(), "TWO");
     }
 
     #[test]
@@ -362,7 +372,7 @@ mod tests {
             arguments,
         );
 
-        assert_eq!(format!("{}", e), "@.");
+        assert_eq!(e.to_string(), "@.");
     }
 
     #[test]
@@ -378,6 +388,6 @@ mod tests {
             arguments,
         );
 
-        assert_eq!(format!("{}", e), "/{}{ZERO}{}}{TWO.");
+        assert_eq!(e.to_string(), "/{}{ZERO}{}}{TWO.");
     }
 }

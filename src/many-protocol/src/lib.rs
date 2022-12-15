@@ -9,7 +9,7 @@ pub mod response;
 pub use request::{RequestMessage, RequestMessageBuilder};
 pub use response::{ResponseMessage, ResponseMessageBuilder};
 
-pub type ManyUrl = reqwest::Url;
+pub type ManyUrl = url::Url;
 
 /// A resolver for identities that take a request or response and validates and returns a resolved
 /// identity.

@@ -117,11 +117,11 @@ impl ResponseMessage {
     }
 
     pub fn to_bytes(&self) -> Result<Vec<u8>, String> {
-        minicbor::to_vec(self).map_err(|e| format!("{}", e))
+        minicbor::to_vec(self).map_err(|e| format!("{e}"))
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
-        minicbor::decode(bytes).map_err(|e| format!("{}", e))
+        minicbor::decode(bytes).map_err(|e| format!("{e}"))
     }
 }
 
@@ -129,14 +129,10 @@ impl<C> Encode<C> for ResponseMessage {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         e.tag(Tag::Unassigned(10002))?;
         let l = 2
-            + if self.from.is_anonymous() { 0 } else { 1 }
-            + if self.to.is_none() || self.to == Some(Address::anonymous()) {
-                0
-            } else {
-                1
-            }
-            + if self.id.is_none() { 0 } else { 1 }
-            + if self.attributes.is_empty() { 0 } else { 1 };
+            + u64::from(!self.from.is_anonymous())
+            + u64::from(!(self.to.is_none() || self.to == Some(Address::anonymous())))
+            + u64::from(self.id.is_some())
+            + u64::from(!self.attributes.is_empty());
         e.map(l)?;
 
         // Skip version for this version of the protocol. This message implementation
@@ -146,7 +142,7 @@ impl<C> Encode<C> for ResponseMessage {
         // No need to send the anonymous identity.
         if !self.from.is_anonymous() {
             e.i8(ResponseMessageCborKey::From as i8)?
-                .encode(&self.from)?;
+                .encode(self.from)?;
         }
 
         if let Some(ref i) = self.to {
@@ -157,7 +153,7 @@ impl<C> Encode<C> for ResponseMessage {
 
         match &self.data {
             Ok(result) => e.i8(ResponseMessageCborKey::Result as i8)?.bytes(result)?,
-            Err(error) => e.i8(ResponseMessageCborKey::Result as i8)?.encode(&error)?,
+            Err(error) => e.i8(ResponseMessageCborKey::Result as i8)?.encode(error)?,
         };
 
         e.i8(ResponseMessageCborKey::Timestamp as i8)?;
