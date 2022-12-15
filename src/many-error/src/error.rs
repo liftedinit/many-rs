@@ -83,6 +83,12 @@ macro_rules! many_error {
                 }
             )?)*
         }
+
+        //impl From<merk::Error> for ManyError {
+        //    fn from(error: merk::Error) -> Self {
+        //        ManyError::unknown(error)
+        //    }
+        //}
     }
 }
 

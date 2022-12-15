@@ -177,6 +177,7 @@ mod tests {
                         txs_count: 1,
                         txs: vec![Transaction {
                             id: TransactionIdentifier { hash: vec![] },
+                            content: None,
                             request: None,
                             response: None,
                         }],
@@ -222,6 +223,7 @@ mod tests {
                         txs_count: 1,
                         txs: vec![Transaction {
                             id: TransactionIdentifier { hash: vec![] },
+                            content: None,
                             request: None,
                             response: None,
                         }],
@@ -261,6 +263,7 @@ mod tests {
                 SingleTransactionQuery::Hash(v) => Ok(TransactionReturns {
                     txn: Transaction {
                         id: TransactionIdentifier { hash: v },
+                        content: None,
                         request: None,
                         response: None,
                     },
