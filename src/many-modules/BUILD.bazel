@@ -4,6 +4,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 package(default_visibility = [
     "//src/many:__pkg__",
     "//src/many-client:__pkg__",
+    "//src/many-identity-webauthn:__pkg__",
     "//src/many-mock:__pkg__",
     "//src/many-server:__pkg__",
 ])

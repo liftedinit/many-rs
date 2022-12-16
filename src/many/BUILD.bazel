@@ -16,6 +16,7 @@ rust_binary(
         "//src/many-identity",
         "//src/many-identity-dsa",
         "//src/many-identity-hsm",
+        "//src/many-identity-webauthn",
         "//src/many-mock",
         "//src/many-modules",
         "//src/many-server",

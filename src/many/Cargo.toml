@@ -18,6 +18,7 @@ many-error = { path = "../many-error", version = "0.1.0" }
 many-identity = { path = "../many-identity", version = "0.1.0", features = ["coset"] }
 many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0", features = ["ecdsa", "ed25519"] }
 many-identity-hsm = { path = "../many-identity-hsm", version = "0.1.0" }
+many-identity-webauthn = { path = "../many-identity-webauthn", version = "0.1.0", features = ["identity"] }
 many-mock = { path = "../many-mock", version = "0.1.0" }
 many-modules = { path = "../many-modules", version = "0.1.0" }
 many-types = { path = "../many-types", version = "0.1.0" }
