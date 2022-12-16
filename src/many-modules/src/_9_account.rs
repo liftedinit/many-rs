@@ -76,13 +76,9 @@ impl<'it> Iterator for AccountMapIterator<'it> {
     type Item = (Address, &'it Account);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.1.next().map(|(k, v)| {
-            (
-                self.0
-                    .with_subresource_id_unchecked((*k).try_into().unwrap()),
-                v,
-            )
-        })
+        self.1
+            .next()
+            .map(|(k, v)| (self.0.with_subresource_id(*k).unwrap(), v))
     }
 }
 
@@ -619,13 +615,9 @@ mod module_tests {
             BTreeSet::from_iter(vec![Role::Owner, Role::CanLedgerTransact].into_iter()),
         );
 
-        assert!(call_module(
-            2,
-            &module,
-            "account.disable",
-            format!(r#"{{ 0: "{id}" }}"#),
-        )
-        .is_err());
+        assert!(
+            call_module(2, &module, "account.disable", format!(r#"{{ 0: "{id}" }}"#),).is_err()
+        );
         assert!(call_module(
             1,
             &module,
@@ -634,13 +626,7 @@ mod module_tests {
         )
         .is_err());
 
-        assert!(call_module(
-            1,
-            &module,
-            "account.disable",
-            format!(r#"{{ 0: "{id}" }}"#),
-        )
-        .is_ok());
+        assert!(call_module(1, &module, "account.disable", format!(r#"{{ 0: "{id}" }}"#),).is_ok());
 
         let account_map = account_map.read().unwrap();
         assert!(account_map.inner.is_empty());

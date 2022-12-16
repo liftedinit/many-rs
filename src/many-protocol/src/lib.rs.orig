@@ -135,25 +135,6 @@ declare_tuple_resolvers!(A: 0, B: 1, C: 2, D: 3, E: 4, F: 5);
 declare_tuple_resolvers!(A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6);
 declare_tuple_resolvers!(A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7);
 
-#[cfg(feature = "testing")]
-impl IdentityResolver for () {
-    fn resolve_request(
-        &self,
-        request: &RequestMessage,
-        from: Address,
-    ) -> Result<Address, ManyError> {
-        Ok(request.from.unwrap_or_default())
-    }
-
-    fn resolve_response(
-        &self,
-        response: &ResponseMessage,
-        from: Address,
-    ) -> Result<Address, ManyError> {
-        Ok(response.from)
-    }
-}
-
 #[derive(Clone)]
 pub struct BaseIdentityResolver;
 
@@ -199,17 +180,22 @@ pub fn decode_request_from_cose_sign1(
     let mut message =
         RequestMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
 
+<<<<<<< HEAD
     // Resolve and update the `from` identity. The resolution might not return the same identity
     // at all.
     let from_id = resolver.resolve_request(&message, from_id)?;
     message.from = Some(from_id);
 
+    Ok(message)
+=======
+    // Check the `from` field.
     let message_from = message.from.unwrap_or_default();
     if !from_id.matches(&message_from) || message_from.is_illegal() {
         Err(ManyError::invalid_from_identity())
     } else {
         Ok(message)
     }
+>>>>>>> upstream/main
 }
 
 pub fn decode_response_from_cose_sign1(
@@ -296,10 +282,5 @@ fn decode_illegal() {
     };
     let envelope =
         encode_cose_sign1_from_request(message, &many_identity::AnonymousIdentity).unwrap();
-    assert!(decode_request_from_cose_sign1(
-        &envelope,
-        &IllegalVerifier,
-        &crate::BaseIdentityResolver
-    )
-    .is_err());
+    assert!(decode_request_from_cose_sign1(&envelope, &IllegalVerifier).is_err());
 }
