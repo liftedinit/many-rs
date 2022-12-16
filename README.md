@@ -3,7 +3,7 @@
 [![coverage](https://img.shields.io/codecov/c/gh/liftedinit/many-rs)](https://app.codecov.io/gh/liftedinit/many-rs)
 [![license](https://img.shields.io/github/license/liftedinit/many-rs)](https://github.com/liftedinit/many-rs/blob/main/LICENSE)
 
-Rust libraries for the [MANY protocol] can be found in (https://github.com/many-types).
+Rust libraries for the [MANY protocol](https://github.com/many-protocol).
 
 Features
 - MANY module interfaces
