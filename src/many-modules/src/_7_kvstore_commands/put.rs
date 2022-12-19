@@ -32,7 +32,7 @@ fn decode_key<C>(d: &mut minicbor::Decoder, _: &mut C) -> Result<ByteVec, minicb
             }
             Ok(data.to_vec().into())
         }
-        _ => unimplemented!(),
+        _ => Err(minicbor::decode::Error::message("Wrong key type. Expected bytes")),
     }
 }
 
@@ -49,7 +49,7 @@ fn decode_value<C>(
             }
             Ok(data.to_vec().into())
         }
-        _ => unimplemented!(),
+        _ => Err(minicbor::decode::Error::message("Wrong key type. Expected bytes")),
     }
 }
 
