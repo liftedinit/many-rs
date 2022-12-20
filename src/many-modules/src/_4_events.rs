@@ -659,6 +659,11 @@ define_event! {
         2     | owner:                  Option<Address>                        [ id_non_null ],
         3     | reason:                 Option<Reason<u64>> ,
     },
+    [7, 2]      KvStoreTransfer (module::kvstore::TransferArgs) {
+        1     | key:                    ByteVec,
+        2     | owner:                  Option<Address>                        [ id_non_null ],
+        3     | new_owner:              Address                                [ id ],
+    },
     [9, 0]      AccountCreate (module::account::CreateArgs) {
         1     | account:                Address                                [ id ],
         2     | description:            Option<String>,
