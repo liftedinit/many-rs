@@ -82,13 +82,9 @@ impl<'it> Iterator for AccountMapIterator<'it> {
     type Item = (Address, &'it Account);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.1.next().map(|(k, v)| {
-            (
-                self.0
-                    .with_subresource_id_unchecked((*k).try_into().unwrap()),
-                v,
-            )
-        })
+        self.1
+            .next()
+            .map(|(k, v)| (self.0.with_subresource_id(*k).unwrap(), v))
     }
 }
 
