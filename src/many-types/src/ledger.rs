@@ -1,5 +1,4 @@
 use crate::{cbor::CborNull, cbor_type_decl, Either, Percent};
-use many_error::ManyError;
 use many_identity::Address;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
@@ -10,7 +9,6 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
-use std::str::FromStr;
 
 /// A Symbol is represented by a non-anonymous identity.
 pub type Symbol = Address;
@@ -19,17 +17,6 @@ pub type Symbol = Address;
 pub type LedgerTokensAddressMap = BTreeMap<Address, TokenAmount>;
 
 pub type TokenMaybeOwner = Either<Address, CborNull>;
-
-impl FromStr for Either<Address, CborNull> {
-    type Err = ManyError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "null" => Self::Right(CborNull),
-            _ => Self::Left(Address::try_from(s.to_string())?),
-        })
-    }
-}
 
 /// Transaction fees.
 #[derive(Default, Clone, Encode, Decode)]
