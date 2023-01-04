@@ -467,7 +467,6 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
         if is_strict {
             let maybe_missing = registry
                 .keys()
-                .into_iter()
                 .filter(|name| !inner.contains_key(&name.to_string()))
                 .cloned()
                 .collect::<Vec<_>>();
