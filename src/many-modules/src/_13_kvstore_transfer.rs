@@ -9,9 +9,9 @@ mod transfer;
 
 pub use transfer::*;
 
-#[many_module(name = KvStoreTransferModule, id = 7, namespace = kvstore, many_modules_crate = crate)]
+#[many_module(name = KvStoreTransferModule, id = 13, namespace = kvstore, many_modules_crate = crate)]
 #[cfg_attr(test, automock)]
-pub trait KvStoreCommandsModuleBackend: Send {
+pub trait KvStoreTransferModuleBackend: Send {
     #[many(deny_anonymous)]
     fn transfer(
         &mut self,
@@ -36,7 +36,7 @@ mod tests {
             new_owner: Default::default(),
         };
 
-        let mut mock = MockKvStoreCommandsModuleBackend::new();
+        let mut mock = MockKvStoreTransferModuleBackend::new();
         mock.expect_transfer()
             .with(eq(identity(1)), eq(data.clone()))
             .times(1)
