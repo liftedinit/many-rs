@@ -660,11 +660,6 @@ define_event! {
         1     | key:                    ByteVec,
         2     | reason:                 Option<Reason<u64>> ,
     },
-    [7, 2]      KvStoreTransfer (module::kvstore::TransferArgs) {
-        1     | key:                    ByteVec,
-        2     | owner:                  Address                                [ id ],
-        3     | new_owner:              Address                                [ id ],
-    },
     [9, 0]      AccountCreate (module::account::CreateArgs) {
         1     | account:                Address                                [ id ],
         2     | description:            Option<String>,
@@ -735,6 +730,11 @@ define_event! {
         1     | account:                Address                                [ id ],
         2     | token:                  ByteVec,
         3     | time:                   Timestamp,
+    },
+    [13, 0]     KvStoreTransfer (module::kvstore::TransferArgs) {
+        1     | key:                    ByteVec,
+        2     | owner:                  Address                                [ id ],
+        3     | new_owner:              Address                                [ id ],
     },
 }
 
