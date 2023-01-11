@@ -768,12 +768,12 @@ define_event! {
     },
     [12, 0]     TokenMint (module::ledger::TokenMintArgs) {
         1     | symbol:                 Address                                [ id ],
-        2     | initial_distribtion:    Option<ledger::LedgerTokensAddressMap>,
+        2     | distribution:           ledger::LedgerTokensAddressMap,
         3     | memo:                   Option<Memo>                           [ memo ],
     },
     [12, 1]     TokenBurn (module::ledger::TokenBurnArgs) {
         1     | symbol:                 Address                                [ id ],
-        2     | distribtion:            Option<ledger::LedgerTokensAddressMap>,
+        2     | distribution:           ledger::LedgerTokensAddressMap,
         3     | memo:                   Option<Memo>                           [ memo ],
     },
 }
