@@ -468,7 +468,6 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
             let maybe_missing = registry
                 .keys()
                 .filter(|name| !inner.contains_key(&name.to_string()))
-                .cloned()
                 .collect::<Vec<_>>();
 
             match maybe_missing.as_slice() {

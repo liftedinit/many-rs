@@ -32,6 +32,7 @@ pub enum Role {
     CanMultisigApprove,
     CanKvStorePut,
     CanKvStoreDisable,
+    CanKvStoreTransfer,
     CanTokensCreate,
     CanTokensMint,
     CanTokensBurn,
@@ -281,7 +282,6 @@ impl Account {
 }
 
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
-#[cfg_attr(feature = "cucumber", derive(Default))]
 #[cbor(map)]
 pub struct CreateArgs {
     #[n(0)]

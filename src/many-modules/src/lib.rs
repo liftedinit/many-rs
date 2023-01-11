@@ -26,7 +26,7 @@ reexport_module!(
     ledger: _2_ledger + _6_ledger_commands + _11_ledger_tokens + _12_ledger_mintburn;
     events: _4_events;
     data: _5_data;
-    kvstore: _3_kvstore + _7_kvstore_commands;
+    kvstore: _3_kvstore + _7_kvstore_commands + _13_kvstore_transfer;
     r#async: _8_async;
     account: _9_account;
     abci_backend: _1000_abci_backend;
