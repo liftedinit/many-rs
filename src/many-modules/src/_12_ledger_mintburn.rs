@@ -24,7 +24,7 @@ cbor_type_decl!(
     }
 );
 
-type TokenMintReturns = EmptyReturn;
+pub type TokenMintReturns = EmptyReturn;
 
 #[many_module(name = LedgerMintBurnModule, id = 12, namespace = tokens, many_modules_crate = crate)]
 #[cfg_attr(test, mockall::automock)]
