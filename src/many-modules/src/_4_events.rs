@@ -477,6 +477,8 @@ macro_rules! define_event_info_addresses_trait {
                         // Remove warnings.
                         $( let _ = $fname; )*
 
+                        // Allow unused mut as there might not be fields to set here.
+                        #[allow(unused_mut)]
                         let mut set = BTreeSet::<Address>::new();
 
                         define_event_info_addresses_trait!(@field set $( $fname $( $tag )*, )* );
@@ -696,12 +698,11 @@ define_event! {
     [7, 0]      KvStorePut (crate::kvstore::PutArgs) {
         1     | key:                    ByteVec,
         2     | value:                  ByteVec,
-        3     | owner:                  Option<Address>                        [ id ],
+        3     | owner:                  Address                                [ id ],
     },
     [7, 1]      KvStoreDisable (crate::kvstore::DisableArgs) {
         1     | key:                    ByteVec,
-        2     | owner:                  Option<Address>                        [ id ],
-        3     | reason:                 Option<Reason<u64>> ,
+        2     | reason:                 Option<Reason<u64>>,
     },
     [9, 0]      AccountCreate (crate::account::CreateArgs [ addresses ]) {
         1     | account:                Address                                [ id ],
@@ -773,6 +774,11 @@ define_event! {
         1     | account:                Address                                [ id ],
         2     | token:                  ByteVec,
         3     | time:                   Timestamp,
+    },
+    [13, 0]     KvStoreTransfer (crate::kvstore::TransferArgs [ addresses ]) {
+        1     | key:                    ByteVec,
+        2     | owner:                  Address                                [ id ],
+        3     | new_owner:              Address                                [ id ],
     },
 }
 

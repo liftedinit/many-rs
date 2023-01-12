@@ -32,7 +32,7 @@ fn decode_key<C>(d: &mut minicbor::Decoder, _: &mut C) -> Result<ByteVec, minicb
             }
             Ok(data.to_vec().into())
         }
-        _ => unimplemented!(),
+        _ => Err(minicbor::decode::Error::message("Wrong key type. Expected bytes")),
     }
 }
 
@@ -49,7 +49,7 @@ fn decode_value<C>(
             }
             Ok(data.to_vec().into())
         }
-        _ => unimplemented!(),
+        _ => Err(minicbor::decode::Error::message("Wrong key type. Expected bytes")),
     }
 }
 
@@ -90,6 +90,16 @@ mod tests {
             dec.unwrap_err().to_string(),
             "decode error: Value size over limit"
         );
+    }
+
+    // Test covering issue https://github.com/liftedinit/operations/issues/21
+    #[test]
+    fn key_not_byte() {
+        let payload = "{0: \"foo\", 1: \"bar\"}";
+        let payload_cbor = cbor_diag::parse_diag(payload).unwrap().to_bytes();
+        let res = minicbor::decode::<PutArgs>(&payload_cbor);
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().to_string(), "decode error: Wrong key type. Expected bytes");
     }
 }
 
