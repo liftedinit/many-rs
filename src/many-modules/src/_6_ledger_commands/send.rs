@@ -1,7 +1,9 @@
+use crate::events::AddressContainer;
 use crate::EmptyReturn;
 use many_identity::Address;
 use many_types::ledger;
 use minicbor::{Decode, Encode};
+use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
@@ -20,3 +22,12 @@ pub struct SendArgs {
 }
 
 pub type SendReturns = EmptyReturn;
+
+impl AddressContainer for SendArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        match self.from {
+            Some(from) => BTreeSet::from([from, self.to]),
+            None => BTreeSet::from([self.to]),
+        }
+    }
+}

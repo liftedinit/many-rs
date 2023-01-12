@@ -1,3 +1,4 @@
+use crate::events::AddressContainer;
 use crate::EmptyReturn;
 use many_error::{ManyError, Reason};
 use many_identity::Address;
@@ -81,6 +82,8 @@ impl<'it> Iterator for AccountMapIterator<'it> {
             .map(|(k, v)| (self.0.with_subresource_id(*k).unwrap(), v))
     }
 }
+
+pub type AddressRoleMap = BTreeMap<Address, BTreeSet<Role>>;
 
 /// A map of Subresource IDs to account. It should have a non-anonymous identity as the identity,
 /// and the inner map will contains subresource identities as keys.
@@ -168,7 +171,7 @@ pub struct Account {
     pub description: Option<String>,
 
     #[n(1)]
-    pub roles: BTreeMap<Address, BTreeSet<Role>>,
+    pub roles: AddressRoleMap,
 
     #[n(2)]
     pub features: features::FeatureSet,
@@ -212,7 +215,7 @@ impl Account {
     pub fn features(&self) -> &features::FeatureSet {
         &self.features
     }
-    pub fn roles(&self) -> &BTreeMap<Address, BTreeSet<Role>> {
+    pub fn roles(&self) -> &AddressRoleMap {
         &self.roles
     }
 
@@ -281,10 +284,16 @@ pub struct CreateArgs {
     pub description: Option<String>,
 
     #[n(1)]
-    pub roles: Option<BTreeMap<Address, BTreeSet<Role>>>,
+    pub roles: Option<AddressRoleMap>,
 
     #[n(2)]
     pub features: features::FeatureSet,
+}
+
+impl AddressContainer for CreateArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        self.roles.addresses()
+    }
 }
 
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
@@ -302,6 +311,12 @@ pub struct SetDescriptionArgs {
 
     #[n(1)]
     pub description: String,
+}
+
+impl AddressContainer for SetDescriptionArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        BTreeSet::from([self.account])
+    }
 }
 
 pub type SetDescriptionReturn = EmptyReturn;
@@ -334,7 +349,7 @@ pub struct GetRolesArgs {
 #[cbor(map)]
 pub struct GetRolesReturn {
     #[n(0)]
-    pub roles: BTreeMap<Address, BTreeSet<Role>>,
+    pub roles: AddressRoleMap,
 }
 
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
@@ -344,7 +359,15 @@ pub struct AddRolesArgs {
     pub account: Address,
 
     #[n(1)]
-    pub roles: BTreeMap<Address, BTreeSet<Role>>,
+    pub roles: AddressRoleMap,
+}
+
+impl AddressContainer for AddRolesArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        let mut set = BTreeSet::from([self.account]);
+        set.extend(self.roles.addresses());
+        set
+    }
 }
 
 pub type AddRolesReturn = EmptyReturn;
@@ -356,7 +379,15 @@ pub struct RemoveRolesArgs {
     pub account: Address,
 
     #[n(1)]
-    pub roles: BTreeMap<Address, BTreeSet<Role>>,
+    pub roles: AddressRoleMap,
+}
+
+impl AddressContainer for RemoveRolesArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        let mut set = BTreeSet::from([self.account]);
+        set.extend(self.roles.addresses());
+        set
+    }
 }
 
 pub type RemoveRolesReturn = EmptyReturn;
@@ -375,7 +406,7 @@ pub struct InfoReturn {
     pub description: Option<String>,
 
     #[n(1)]
-    pub roles: BTreeMap<Address, BTreeSet<Role>>,
+    pub roles: AddressRoleMap,
 
     #[n(2)]
     pub features: features::FeatureSet,
@@ -391,6 +422,12 @@ pub struct DisableArgs {
     pub account: Address,
 }
 
+impl AddressContainer for DisableArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        BTreeSet::from([self.account])
+    }
+}
+
 pub type DisableReturn = EmptyReturn;
 
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
@@ -400,10 +437,18 @@ pub struct AddFeaturesArgs {
     pub account: Address,
 
     #[n(1)]
-    pub roles: Option<BTreeMap<Address, BTreeSet<Role>>>,
+    pub roles: Option<AddressRoleMap>,
 
     #[n(2)]
     pub features: features::FeatureSet,
+}
+
+impl AddressContainer for AddFeaturesArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        let mut set = BTreeSet::from([self.account]);
+        set.extend(self.roles.addresses());
+        set
+    }
 }
 
 pub type AddFeaturesReturn = EmptyReturn;

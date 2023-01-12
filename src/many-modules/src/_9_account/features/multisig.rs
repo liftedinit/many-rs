@@ -1,6 +1,6 @@
 use crate::account::features::{Feature, FeatureId, TryCreateFeature};
 use crate::account::Role;
-use crate::events::AccountMultisigTransaction;
+use crate::events::{AccountMultisigTransaction, AddressContainer};
 use crate::ledger::SendArgs;
 use crate::EmptyReturn;
 use many_error::ManyError;
@@ -170,6 +170,14 @@ impl SubmitTransactionArgs {
     }
 }
 
+impl AddressContainer for SubmitTransactionArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        let mut set = BTreeSet::from([self.account]);
+        set.extend(self.transaction.addresses());
+        set
+    }
+}
+
 #[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct SubmitTransactionReturn {
@@ -279,6 +287,12 @@ pub struct SetDefaultsArgs {
 
     #[n(3)]
     pub execute_automatically: Option<bool>,
+}
+
+impl AddressContainer for SetDefaultsArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        BTreeSet::from([self.account])
+    }
 }
 
 pub type SetDefaultsReturn = EmptyReturn;
