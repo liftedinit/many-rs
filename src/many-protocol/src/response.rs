@@ -25,7 +25,7 @@ pub enum ResponseMessageCborKey {
 }
 
 /// A MANY message response.
-#[derive(Clone, Debug, Builder)]
+#[derive(Clone, Debug, Builder, Eq, PartialEq)]
 #[builder(setter(strip_option), default)]
 pub struct ResponseMessage {
     pub version: Option<u8>,
