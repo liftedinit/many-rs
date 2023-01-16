@@ -1082,6 +1082,7 @@ mod test {
                     to: Default::default(),
                     amount: Default::default(),
                     symbol: Default::default(),
+                    memo: None,
                 }),
             );
             let bytes = minicbor::to_vec(&event).expect("Could not serialize");
@@ -1093,6 +1094,7 @@ mod test {
                 to: Default::default(),
                 amount: Default::default(),
                 symbol: Default::default(),
+                memo: None,
             }));
             let bytes = minicbor::to_vec(&event).expect("Could not serialize");
             let map: BTreeMap<CborAny, CborAny> = minicbor::decode(&bytes).unwrap();
