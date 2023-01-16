@@ -481,7 +481,7 @@ macro_rules! define_event_info_addresses {
 
 macro_rules! define_event_info {
     ( $( $name: ident { $( $idx: literal | $fname: ident : $type: ty $([ $( $tag: ident )* ])?, )* }, )* ) => {
-        #[derive(Clone, Debug)]
+        #[derive(Clone, Debug, PartialEq, Eq)]
         #[non_exhaustive]
         pub enum EventInfo {
             $( $name {
@@ -499,19 +499,69 @@ macro_rules! define_event_info {
             }
         }
 
-        encode_event_info!( $( $name { $( $idx => $fname : $type, )* }, )* );
+        encode_event_info!( $( $name { $( $idx => $fname : $type $([ $( $tag )* ])?, )* }, )* );
     };
 }
 
-// This is necessary because variables must be used in repeating patterns.
-macro_rules! replace_expr {
-    ($_t:tt $sub:expr) => {
-        $sub
+macro_rules! event_info_count_field {
+    (@single $name: ident []) => {
+        1u64
+    };
+    (@single $name: ident [ memo $( $tag: ident )* ]) => {
+        match $name {
+            Some(_) => 1u64,
+            None => 0u64,
+        }
+    };
+    (@single $name: ident [ $head: ident $( $tail: ident )* ]) => {
+        event_info_count_field!(@single $name [ $( $tail )* ] )
+    };
+
+    ( $( $name: ident $([ $( $tag: ident )* ])?, )* ) => {
+        1u64 $(+ event_info_count_field!(@single $name [ $( $( $tag )* )?]) )*
+    };
+}
+
+macro_rules! encode_event_info_field {
+    // By default, just encode the field.
+    (@inner $e: ident $idx: literal $name: ident []) => {
+        $e.u8($idx)?.encode($name)?;
+    };
+    (@inner $e: ident $idx: literal $name: ident [ memo $( $tail: ident )* ]) => {
+        if let Some(field) = $name {
+            $e.u8($idx)?.encode(field)?;
+        }
+    };
+    (@inner $e: ident $idx: literal $name: ident [ $head: ident $( $tail: ident )* ]) => {
+        encode_event_info_field!($e $idx $name [ $( $tail )* ])
+    };
+
+    ($e: ident $idx: literal $name: ident $([ $( $tag: ident )* ])?) => {
+        encode_event_info_field!(@inner $e $idx $name [ $( $( $tag )* )? ])
+    };
+}
+
+macro_rules! encode_event_info_unpack_decode {
+    (@inner $name: ident $idx: literal []) => {
+        $name.ok_or(minicbor::decode::Error::missing_value($idx))
+    };
+    (@inner $name: ident $idx: literal [memo $( $tail: ident )*]) => {
+        match $name {
+            Some(x) => Ok(x),
+            None => Ok(None),
+        }
+    };
+    (@inner $name: ident $idx: literal [$head: ident $( $tail: ident )*]) => {
+        encode_event_info_unpack_decode!( $name $idx [$( $tail )*] )
+    };
+
+    ($name: ident $idx: literal $([ $( $tag: ident )* ])?) => {
+        encode_event_info_unpack_decode!(@inner $name $idx [ $( $( $tag )* )? ] )
     };
 }
 
 macro_rules! encode_event_info {
-    ( $( $sname: ident { $( $idx: literal => $name: ident : $type: ty, )* }, )* ) => {
+    ( $( $sname: ident { $( $idx: literal => $name: ident : $type: ty $([ $( $tag: ident )* ])?, )*  }, )* ) => {
         impl<C> Encode<C> for EventInfo {
             fn encode<W: encode::Write>(
                 &self,
@@ -520,10 +570,10 @@ macro_rules! encode_event_info {
             ) -> Result<(), encode::Error<W::Error>> {
                 match self {
                     $(  EventInfo :: $sname { $( $name, )* } => {
-                            e.map( 1u64 $(+ replace_expr!($idx 1u64))* )?
-                                .u8(0)?.encode(EventKind :: $sname)?
-                                $( .u8($idx)?.encode($name)? )*
-                            ;
+                            e.map( event_info_count_field!( $( $name $([ $( $tag )* ])?, )* ) )?
+                                .u8(0)?.encode(EventKind :: $sname)?;
+
+                            $( encode_event_info_field!( e $idx $name $([ $( $tag )* ])? ); )*
                             Ok(())
                         }, )*
                 }
@@ -555,7 +605,9 @@ macro_rules! encode_event_info {
                             len -= 1;
                         }
 
-                        $( let $name: $type = $name.ok_or(minicbor::decode::Error::missing_value($idx))?; )*
+                        $(
+                            let $name: $type = encode_event_info_unpack_decode!( $name $idx $( [ $( $tag )* ] )? ) ?;
+                        )*
 
                         Ok(EventInfo :: $sname {
                             $( $name, )*
@@ -977,7 +1029,9 @@ mod test {
 
     mod event_info {
         use super::super::*;
+        use crate::ledger::SendArgs;
         use many_identity::testing::identity;
+        use many_types::cbor::CborAny;
         use many_types::Memo;
         use proptest::prelude::*;
         use proptest::string::string_regex;
@@ -997,11 +1051,55 @@ mod test {
             }
         }
 
+        fn _create_event_info_no_memo(transaction: AccountMultisigTransaction) -> EventInfo {
+            EventInfo::AccountMultisigSubmit {
+                submitter: identity(0),
+                account: identity(1),
+                memo: None,
+                transaction: Box::new(transaction),
+                token: None,
+                threshold: 1,
+                timeout: Timestamp::now(),
+                execute_automatically: false,
+                memo_: None,
+                data_: None,
+            }
+        }
+
         fn _assert_serde(info: EventInfo) {
             let bytes = minicbor::to_vec(info.clone()).expect("Could not serialize");
             let decoded: EventInfo = minicbor::decode(&bytes).expect("Could not decode");
 
             assert_eq!(format!("{decoded:?}"), format!("{info:?}"));
+        }
+
+        #[test]
+        fn memo_does_not_encode_new_field() {
+            let event = _create_event_info(
+                Memo::try_from("Foo").unwrap(),
+                AccountMultisigTransaction::Send(SendArgs {
+                    from: None,
+                    to: Default::default(),
+                    amount: Default::default(),
+                    symbol: Default::default(),
+                }),
+            );
+            let bytes = minicbor::to_vec(&event).expect("Could not serialize");
+            let map: BTreeMap<CborAny, CborAny> = minicbor::decode(&bytes).unwrap();
+            assert!(map.contains_key(&CborAny::Int(10))); // 10 is memo.
+
+            let event = _create_event_info_no_memo(AccountMultisigTransaction::Send(SendArgs {
+                from: None,
+                to: Default::default(),
+                amount: Default::default(),
+                symbol: Default::default(),
+            }));
+            let bytes = minicbor::to_vec(&event).expect("Could not serialize");
+            let map: BTreeMap<CborAny, CborAny> = minicbor::decode(&bytes).unwrap();
+            assert!(!map.contains_key(&CborAny::Int(10))); // 10 is memo.
+
+            let decoded: EventInfo = minicbor::decode(&bytes).unwrap();
+            assert_eq!(event, decoded);
         }
 
         proptest! {

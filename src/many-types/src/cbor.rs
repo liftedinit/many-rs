@@ -34,6 +34,7 @@ pub enum CborAny {
     Array(Vec<CborAny>),
     Map(BTreeMap<CborAny, CborAny>),
     Tagged(Tag, Box<CborAny>),
+    Null,
 }
 
 impl Debug for CborAny {
@@ -46,6 +47,7 @@ impl Debug for CborAny {
             CborAny::Array(a) => write!(f, "{a:?}"),
             CborAny::Map(m) => write!(f, "{m:?}"),
             CborAny::Tagged(t, v) => write!(f, "{t:?}({v:?})"),
+            CborAny::Null => write!(f, "Null"),
         }
     }
 }
@@ -76,6 +78,9 @@ impl<C> Encode<C> for CborAny {
             }
             CborAny::Tagged(t, v) => {
                 e.tag(*t)?.encode(v)?;
+            }
+            CborAny::Null => {
+                e.null()?;
             }
         }
 
@@ -108,6 +113,10 @@ impl<'d, C> Decode<'d, C> for CborAny {
                 >>()?))
             }
             Type::Tag => Ok(CborAny::Tagged(d.tag()?, Box::new(d.decode()?))),
+            Type::Null => {
+                d.skip()?;
+                Ok(CborAny::Null)
+            }
             x => Err(minicbor::decode::Error::type_mismatch(x)),
         }
     }
