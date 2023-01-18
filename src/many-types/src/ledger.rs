@@ -115,6 +115,32 @@ macro_rules! op_impl {
     }
 }
 
+impl std::ops::Add<&TokenAmount> for &TokenAmount {
+    type Output = TokenAmount;
+    fn add(self, rhs: &TokenAmount) -> Self::Output { TokenAmount(&self.0 + &rhs.0) }
+}
+
+impl std::ops::AddAssign<&TokenAmount> for &mut TokenAmount {
+    fn add_assign(&mut self, rhs: &TokenAmount) { self.0 += &rhs.0; }
+}
+
+impl std::ops::AddAssign<&TokenAmount> for TokenAmount {
+    fn add_assign(&mut self, rhs: &TokenAmount) { self.0 += &rhs.0; }
+}
+
+impl std::ops::Sub<&TokenAmount> for &TokenAmount {
+    type Output = TokenAmount;
+    fn sub(self, rhs: &TokenAmount) -> Self::Output { TokenAmount(&self.0 - &rhs.0) }
+}
+
+impl std::ops::SubAssign<&TokenAmount> for &mut TokenAmount {
+    fn sub_assign(&mut self, rhs: &TokenAmount) { self.0 -= &rhs.0; }
+}
+
+impl std::ops::SubAssign<&TokenAmount> for TokenAmount {
+    fn sub_assign(&mut self, rhs: &TokenAmount) { self.0 -= &rhs.0; }
+}
+
 macro_rules! from_impl {
     ( $( $t: ty )* ) => {
         $(
