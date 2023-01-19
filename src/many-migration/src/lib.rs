@@ -554,7 +554,6 @@ impl<'a, T, E, IDX: AsRef<str>> Index<IDX> for MigrationSet<'a, T, E> {
 }
 
 /// Kept for backward compatibility.
-#[deprecated = "Should use MigrationSet::load() instead."]
 pub fn load_migrations<'a, T, E>(
     registry: &'a [InnerMigration<T, E>],
     config: &str,
@@ -565,7 +564,6 @@ pub fn load_migrations<'a, T, E>(
 
 /// Enable all migrations from the registry EXCEPT the hotfix.
 /// Should not be used outside of tests.
-#[deprecated = "Should use MigrationSet::load() instead."]
 pub fn load_enable_all_regular_migrations<T, E>(
     registry: &[InnerMigration<T, E>],
 ) -> MigrationSet<T, E> {
