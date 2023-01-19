@@ -309,6 +309,8 @@ impl Display for ManyError {
     }
 }
 
+// TODO: The fact that ManyErrorCode is constructed as a macro makes this annoying, instead of just deriving Default.
+#[allow(clippy::derivable_impls)]
 impl Default for ManyErrorCode {
     #[inline]
     fn default() -> Self {
