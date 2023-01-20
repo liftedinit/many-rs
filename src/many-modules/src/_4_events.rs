@@ -4,9 +4,10 @@ use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
 use many_protocol::ResponseMessage;
+use many_types::ledger;
 use many_types::ledger::{Symbol, TokenAmount};
 use many_types::legacy::{DataLegacy, MemoLegacy};
-use many_types::{AttributeRelatedIndex, CborRange, Memo, Timestamp, VecOrSingle};
+use many_types::{AttributeRelatedIndex, CborRange, Either, Memo, Timestamp, VecOrSingle};
 use minicbor::bytes::ByteVec;
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::BigUint;
@@ -135,6 +136,7 @@ pub struct EventFilter {
 
     pub kind: Option<VecOrSingle<EventKind>>,
 
+    // TODO: remove this. Kept for backward compatibility.
     pub symbol: Option<VecOrSingle<Address>>,
 
     pub id_range: Option<CborRange<EventId>>,
@@ -430,6 +432,15 @@ macro_rules! define_event_info_addresses {
         }
         define_event_info_addresses!(@field $set $( $name_ $( $tag_ )*, )* );
     };
+    (@field $set: ident $name: ident maybe_owner $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if let Some(n) = $name.as_ref() {
+            match n {
+                Either::Left(addr) => { $set.insert(addr); },
+                Either::Right(_) => {}
+            }
+        }
+        define_event_info_addresses!(@field $set $( $name_ $( $tag_ )*, )* );
+    };
     (@field $set: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
         define_event_info_addresses!(@field $set $( $name $( $tag )*, )* );
     };
@@ -702,6 +713,7 @@ define_event! {
         2     | to:                     Address                                [ id ],
         3     | symbol:                 Symbol                                 [ symbol ],
         4     | amount:                 TokenAmount,
+        5     | memo:                   Option<Memo>,
     },
     [7, 0]      KvStorePut (module::kvstore::PutArgs) {
         1     | key:                    ByteVec,
@@ -783,6 +795,43 @@ define_event! {
         2     | token:                  ByteVec,
         3     | time:                   Timestamp,
     },
+    [11, 0]     TokenCreate (module::ledger::TokenCreateArgs) {
+        1     | summary:                ledger::TokenInfoSummary,
+        2     | symbol:                 Address                                [ id ],
+        3     | owner:                  Option<ledger::TokenMaybeOwner>        [ maybe_owner ],
+        4     | initial_distribution:   Option<ledger::LedgerTokensAddressMap>,
+        5     | maximum_supply:         Option<ledger::TokenAmount>,
+        6     | extended_info:          Option<module::ledger::extended_info::TokenExtendedInfo>,
+        7     | memo:                   Option<Memo>                           [memo],
+    },
+    [11, 1]     TokenUpdate (module::ledger::TokenUpdateArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | name:                   Option<String>,
+        3     | ticker:                 Option<String>,
+        4     | decimals:               Option<u64>,
+        5     | owner:                  Option<ledger::TokenMaybeOwner>        [ maybe_owner ],
+        6     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [11, 2]     TokenAddExtendedInfo (module::ledger::TokenAddExtendedInfoArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | extended_info:          Vec<AttributeRelatedIndex>,
+        3     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [11, 3]     TokenRemoveExtendedInfo (module::ledger::TokenRemoveExtendedInfoArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | extended_info:          Vec<AttributeRelatedIndex>,
+        3     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [12, 0]     TokenMint (module::ledger::TokenMintArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | distribution:           ledger::LedgerTokensAddressMap,
+        3     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [12, 1]     TokenBurn (module::ledger::TokenBurnArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | distribution:           ledger::LedgerTokensAddressMap,
+        3     | memo:                   Option<Memo>                           [ memo ],
+    },
     [13, 0]     KvStoreTransfer (module::kvstore::TransferArgs) {
         1     | key:                    ByteVec,
         2     | owner:                  Address                                [ id ],
@@ -821,7 +870,6 @@ impl EventLog {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ledger;
     use many_identity::testing::identity;
 
     #[test]
@@ -895,6 +943,7 @@ mod test {
             to: i01,
             symbol: Default::default(),
             amount: Default::default(),
+            memo: None,
         };
         assert_eq!(s0.addresses(), BTreeSet::from_iter(&[i0, i01]));
     }
@@ -938,6 +987,7 @@ mod test {
             to: i01,
             symbol: Default::default(),
             amount: Default::default(),
+            memo: None,
         };
         assert!(s0.is_about(&i0));
         assert!(s0.is_about(&i01));
@@ -972,70 +1022,12 @@ mod test {
             to: i01,
             symbol: i1,
             amount: Default::default(),
+            memo: None,
         };
         assert_eq!(event.symbol(), Some(&i1));
 
         let event = EventInfo::AccountDisable { account: i0 };
         assert_eq!(event.symbol(), None);
-    }
-
-    #[test]
-    fn memo_works() {
-        let i0 = identity(0);
-        let i1 = identity(1);
-        let i01 = i0.with_subresource_id(1).unwrap();
-
-        let event = EventInfo::Send {
-            from: i0,
-            to: i01,
-            symbol: i1,
-            amount: Default::default(),
-        };
-        assert_eq!(event.memo(), None);
-
-        let event = EventInfo::AccountMultisigSubmit {
-            submitter: i0,
-            account: i1,
-            memo_: Some(MemoLegacy::try_from("Hello".to_string()).unwrap()),
-            transaction: Box::new(AccountMultisigTransaction::Send(ledger::SendArgs {
-                from: None,
-                to: Default::default(),
-                amount: Default::default(),
-                symbol: Default::default(),
-            })),
-            token: None,
-            threshold: 0,
-            timeout: Timestamp::now(),
-            execute_automatically: false,
-            data_: Some(DataLegacy::try_from(b"World".to_vec()).unwrap()),
-            memo: Some(Memo::try_from("Foo").unwrap()),
-        };
-        assert_eq!(event.memo().unwrap(), "Foo");
-    }
-
-    #[test]
-    fn memo_does_not_return_legacy() {
-        let i0 = identity(0);
-        let i1 = identity(1);
-
-        let event = EventInfo::AccountMultisigSubmit {
-            submitter: i0,
-            account: i1,
-            memo_: Some(MemoLegacy::try_from("Hello".to_string()).unwrap()),
-            transaction: Box::new(AccountMultisigTransaction::Send(ledger::SendArgs {
-                from: None,
-                to: Default::default(),
-                amount: Default::default(),
-                symbol: Default::default(),
-            })),
-            token: None,
-            threshold: 0,
-            timeout: Timestamp::now(),
-            execute_automatically: false,
-            data_: Some(DataLegacy::try_from(b"World".to_vec()).unwrap()),
-            memo: None,
-        };
-        assert_eq!(event.memo(), None);
     }
 
     mod event_info {
@@ -1093,6 +1085,7 @@ mod test {
                     to: Default::default(),
                     amount: Default::default(),
                     symbol: Default::default(),
+                    memo: None,
                 }),
             );
             let bytes = minicbor::to_vec(&event).expect("Could not serialize");
@@ -1104,6 +1097,7 @@ mod test {
                 to: Default::default(),
                 amount: Default::default(),
                 symbol: Default::default(),
+                memo: None,
             }));
             let bytes = minicbor::to_vec(&event).expect("Could not serialize");
             let map: BTreeMap<CborAny, CborAny> = minicbor::decode(&bytes).unwrap();
@@ -1133,6 +1127,7 @@ mod test {
                         to: identity(3),
                         symbol: identity(4),
                         amount: amount.into(),
+                        memo: None,
                     })),
                 );
             }
@@ -1152,6 +1147,7 @@ mod test {
                                     to: identity(3),
                                     symbol: identity(4),
                                     amount: amount.into(),
+                                    memo: None,
                                 })),
                                 threshold: None,
                                 timeout_in_secs: None,
@@ -1230,6 +1226,7 @@ mod tests {
                             to: Address::anonymous(),
                             symbol: Default::default(),
                             amount: TokenAmount::from(1000u64),
+                            memo: None,
                         },
                     }],
                 })

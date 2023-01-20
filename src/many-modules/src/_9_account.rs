@@ -33,6 +33,12 @@ pub enum Role {
     CanKvStorePut,
     CanKvStoreDisable,
     CanKvStoreTransfer,
+    CanTokensCreate,
+    CanTokensMint,
+    CanTokensBurn,
+    CanTokensUpdate,
+    CanTokensAddExtendedInfo,
+    CanTokensRemoveExtendedInfo,
 }
 
 impl PartialEq<&str> for Role {

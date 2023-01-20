@@ -25,6 +25,35 @@ pub mod legacy {
     pub use crate::memo::MemoLegacy;
 }
 
+/// A simple macro to create CBOR types. This only covers a few cases but will
+/// save a lot of boilerplate for those cases. Any use case that isn't covered
+/// by this macro should simply be implemented on its own.
+/// TODO: the next step to improve this is to have a proc_macro that reads the
+///       CDDL directly.
+#[macro_export]
+macro_rules! cbor_type_decl {
+    (
+        $(
+            $vis: vis struct $name: ident {
+                $(
+                    $($tag: ident)* $fidx: literal => $fname: ident: $ftype: ty
+                ),+ $(,)?
+            }
+        )*
+    ) => {
+        $(
+            #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+            #[cfg_attr(feature = "cucumber", derive(Default))]
+            #[cbor(map)]
+            $vis struct $name {
+                $(
+                    #[n( $fidx )] pub $fname: $ftype,
+                )+
+            }
+        )*
+    };
+}
+
 /// A deterministic (fixed point) percent value that can be multiplied with
 /// numbers and rounded down.
 #[repr(transparent)]
@@ -398,6 +427,7 @@ pub struct AttributeRelatedIndex {
 }
 
 impl AttributeRelatedIndex {
+    #[inline]
     pub const fn new(attribute: AttributeId) -> Self {
         Self {
             attribute,
@@ -405,6 +435,7 @@ impl AttributeRelatedIndex {
         }
     }
 
+    #[inline]
     pub const fn with_index(self, index: u32) -> Self {
         let indices = match self.indices {
             AttributeRelatedIndexInner::None => AttributeRelatedIndexInner::One([index]),

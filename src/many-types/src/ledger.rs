@@ -1,4 +1,4 @@
-use crate::Percent;
+use crate::{cbor::CborNull, cbor_type_decl, Either, Percent};
 use many_identity::Address;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
@@ -6,11 +6,17 @@ use num_bigint::{BigInt, BigUint};
 use num_traits::Num;
 use serde::de::Unexpected;
 use serde::Deserialize;
+use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
 
 /// A Symbol is represented by a non-anonymous identity.
 pub type Symbol = Address;
+
+/// A map of owners => tokens.
+pub type LedgerTokensAddressMap = BTreeMap<Address, TokenAmount>;
+
+pub type TokenMaybeOwner = Either<Address, CborNull>;
 
 /// Transaction fees.
 #[derive(Default, Clone, Encode, Decode)]
@@ -288,6 +294,27 @@ impl<'de> Deserialize<'de> for TokenAmount {
         deserializer.deserialize_any(Visitor)
     }
 }
+
+cbor_type_decl!(
+    pub struct TokenInfo {
+        0 => symbol: Symbol,
+        1 => summary: TokenInfoSummary,
+        2 => supply: TokenInfoSupply,
+        3 => owner: Option<Address>,
+    }
+
+    pub struct TokenInfoSummary {
+        0 => name: String,
+        1 => ticker: String,
+        2 => decimals: u64,
+    }
+
+    pub struct TokenInfoSupply {
+        0 => total: TokenAmount,
+        1 => circulating: TokenAmount,
+        2 => maximum: Option<TokenAmount>,
+    }
+);
 
 #[cfg(test)]
 mod test {
