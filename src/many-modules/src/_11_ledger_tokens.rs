@@ -14,6 +14,7 @@ cbor_type_decl!(
         2 => initial_distribution: Option<ledger::LedgerTokensAddressMap>,
         3 => maximum_supply: Option<ledger::TokenAmount>,
         4 => extended_info: Option<extended_info::TokenExtendedInfo>,
+        5 => memo: Option<Memo>,
     }
 
     pub struct TokenCreateReturns {
@@ -42,11 +43,13 @@ cbor_type_decl!(
     pub struct TokenAddExtendedInfoArgs {
         0 => symbol: ledger::Symbol,
         1 => extended_info: extended_info::TokenExtendedInfo,
+        2 => memo: Option<Memo>,
     }
 
     pub struct TokenRemoveExtendedInfoArgs {
         0 => symbol: ledger::Symbol,
         1 => extended_info: Vec<AttributeRelatedIndex>, // TODO: This thing should be of at least length 1
+        2 => memo: Option<Memo>,
     }
 );
 
@@ -112,6 +115,7 @@ mod tests {
             initial_distribution: None,
             maximum_supply: None,
             extended_info: None,
+            memo: None,
         };
         let info = TokenInfo {
             symbol: Default::default(),
@@ -173,6 +177,7 @@ mod tests {
         let data = TokenAddExtendedInfoArgs {
             symbol: Default::default(),
             extended_info,
+            memo: None,
         };
         mock.expect_add_extended_info()
             .with(eq(identity(1)), eq(data.clone()))
@@ -200,6 +205,7 @@ mod tests {
         let data = TokenRemoveExtendedInfoArgs {
             symbol: Default::default(),
             extended_info: vec![AttributeRelatedIndex::new(11)],
+            memo: None,
         };
         mock.expect_remove_extended_info()
             .with(eq(identity(1)), eq(data.clone()))

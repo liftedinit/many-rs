@@ -802,6 +802,7 @@ define_event! {
         4     | initial_distribution:   Option<ledger::LedgerTokensAddressMap>,
         5     | maximum_supply:         Option<ledger::TokenAmount>,
         6     | extended_info:          Option<module::ledger::extended_info::TokenExtendedInfo>,
+        7     | memo:                   Option<Memo>                           [memo],
     },
     [11, 1]     TokenUpdate (module::ledger::TokenUpdateArgs) {
         1     | symbol:                 Address                                [ id ],
@@ -814,10 +815,12 @@ define_event! {
     [11, 2]     TokenAddExtendedInfo (module::ledger::TokenAddExtendedInfoArgs) {
         1     | symbol:                 Address                                [ id ],
         2     | extended_info:          Vec<AttributeRelatedIndex>,
+        3     | memo:                   Option<Memo>                           [ memo ],
     },
     [11, 3]     TokenRemoveExtendedInfo (module::ledger::TokenRemoveExtendedInfoArgs) {
         1     | symbol:                 Address                                [ id ],
         2     | extended_info:          Vec<AttributeRelatedIndex>,
+        3     | memo:                   Option<Memo>                           [ memo ],
     },
     [12, 0]     TokenMint (module::ledger::TokenMintArgs) {
         1     | symbol:                 Address                                [ id ],
