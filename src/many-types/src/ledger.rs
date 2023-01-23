@@ -82,81 +82,93 @@ impl std::ops::Mul<Percent> for TokenAmount {
     }
 }
 
-macro_rules! op_impl {
-    ( $( $t: ty )* ) => {
-        $(
-            impl std::ops::Add<$t> for TokenAmount {
-                type Output = TokenAmount;
-                fn add(self, rhs: $t) -> Self::Output { Self(self.0 + Into::<BigUint>::into(rhs)) }
-            }
+impl<T: Into<BigUint>> std::ops::Add<T> for TokenAmount {
+    type Output = TokenAmount;
 
-            impl std::ops::Sub<$t> for TokenAmount {
-                type Output = TokenAmount;
-                fn sub(self, rhs: $t) -> Self::Output { Self(self.0 - Into::<BigUint>::into(rhs)) }
-            }
-
-            impl std::ops::Mul<$t> for TokenAmount {
-                type Output = TokenAmount;
-                fn mul(self, rhs: $t) -> Self::Output { Self(self.0 * Into::<BigUint>::into(rhs)) }
-            }
-
-            impl std::ops::AddAssign<$t> for TokenAmount {
-                fn add_assign(&mut self, rhs: $t) { self.0 += Into::<BigUint>::into(rhs); }
-            }
-
-            impl std::ops::SubAssign<$t> for TokenAmount {
-                fn sub_assign(&mut self, rhs: $t) { self.0 -= Into::<BigUint>::into(rhs); }
-            }
-
-            impl std::ops::MulAssign<$t> for TokenAmount {
-                fn mul_assign(&mut self, rhs: $t) { self.0 *= Into::<BigUint>::into(rhs); }
-            }
-        )*
+    fn add(self, rhs: T) -> Self::Output {
+        Self(self.0 + rhs.into())
     }
 }
 
-macro_rules! op_ref_impl {
-    ( $( $t: ty )* ) => {
-        $(
-            impl std::ops::Add<&$t> for &TokenAmount {
-                type Output = TokenAmount;
-                fn add(self, rhs: &$t) -> Self::Output { TokenAmount(&self.0 + &rhs.0) }
-            }
+impl<T: Into<BigUint>> std::ops::Sub<T> for TokenAmount {
+    type Output = TokenAmount;
 
-            impl std::ops::Sub<&$t> for &TokenAmount {
-                type Output = TokenAmount;
-                fn sub(self, rhs: &$t) -> Self::Output { TokenAmount(&self.0 - &rhs.0) }
-            }
+    fn sub(self, rhs: T) -> Self::Output {
+        Self(self.0 - rhs.into())
+    }
+}
 
-            impl std::ops::Mul<&$t> for &TokenAmount {
-                type Output = TokenAmount;
-                fn mul(self, rhs: &$t) -> Self::Output { TokenAmount(&self.0 * &rhs.0) }
-            }
+impl<T: Into<BigUint>> std::ops::Mul<T> for TokenAmount {
+    type Output = TokenAmount;
 
-            impl std::ops::AddAssign<&$t> for &mut TokenAmount {
-                fn add_assign(&mut self, rhs: &$t) { self.0 += &rhs.0; }
-            }
+    fn mul(self, rhs: T) -> Self::Output {
+        Self(self.0 * rhs.into())
+    }
+}
 
-            impl std::ops::SubAssign<&$t> for &mut TokenAmount {
-                fn sub_assign(&mut self, rhs: &$t) { self.0 -= &rhs.0; }
-            }
+impl AsRef<BigUint> for TokenAmount {
+    fn as_ref(&self) -> &BigUint {
+        &self.0
+    }
+}
 
-            impl std::ops::MulAssign<&$t> for &mut TokenAmount {
-                fn mul_assign(&mut self, rhs: &$t) { self.0 *= &rhs.0; }
-            }
+impl<T: AsRef<BigUint>> std::ops::Add<T> for &TokenAmount {
+    type Output = TokenAmount;
 
-            impl std::ops::AddAssign<&$t> for TokenAmount {
-                fn add_assign(&mut self, rhs: &$t) { self.0 += &rhs.0; }
-            }
+    fn add(self, rhs: T) -> Self::Output {
+        TokenAmount(&self.0 + rhs.as_ref())
+    }
+}
 
-            impl std::ops::SubAssign<&$t> for TokenAmount {
-                fn sub_assign(&mut self, rhs: &$t) { self.0 -= &rhs.0; }
-            }
+impl<T: AsRef<BigUint>> std::ops::Sub<T> for &TokenAmount {
+    type Output = TokenAmount;
 
-            impl std::ops::MulAssign<&$t> for TokenAmount {
-                fn mul_assign(&mut self, rhs: &$t) { self.0 *= &rhs.0; }
-            }
-        )*
+    fn sub(self, rhs: T) -> Self::Output {
+        TokenAmount(&self.0 - rhs.as_ref())
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::Mul<T> for &TokenAmount {
+    type Output = TokenAmount;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        TokenAmount(&self.0 * rhs.as_ref())
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::AddAssign<T> for &mut TokenAmount {
+    fn add_assign(&mut self, rhs: T) {
+        self.0 += rhs.as_ref();
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::SubAssign<T> for &mut TokenAmount {
+    fn sub_assign(&mut self, rhs: T) {
+        self.0 -= rhs.as_ref();
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::MulAssign<T> for &mut TokenAmount {
+    fn mul_assign(&mut self, rhs: T) {
+        self.0 *= rhs.as_ref();
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::AddAssign<T> for TokenAmount {
+    fn add_assign(&mut self, rhs: T) {
+        self.0 += rhs.as_ref();
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::SubAssign<T> for TokenAmount {
+    fn sub_assign(&mut self, rhs: T) {
+        self.0 -= rhs.as_ref();
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::MulAssign<T> for TokenAmount {
+    fn mul_assign(&mut self, rhs: T) {
+        self.0 *= rhs.as_ref();
     }
 }
 
@@ -182,8 +194,6 @@ macro_rules! eq_impl {
     };
 }
 
-op_impl!(u8 u16 u32 u64 u128 TokenAmount BigUint);
-op_ref_impl!(TokenAmount);
 from_impl!(u8 u16 u32 u64 u128 BigUint);
 eq_impl!(u8 u16 u32 u64 u128);
 
