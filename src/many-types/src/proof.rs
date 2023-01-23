@@ -14,7 +14,7 @@ pub struct Key(Vec<u8>);
 pub struct Value(Vec<u8>);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Proof {
+pub enum ProofOperation {
     Child,
     KeyValueHash(Vec<u8>),
     KeyValuePair(Key, Value),
@@ -22,9 +22,9 @@ pub enum Proof {
     Parent,
 }
 
-impl<C> Encode<C> for Proof {
+impl<C> Encode<C> for ProofOperation {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
-        use Proof::{Child, KeyValueHash, KeyValuePair, NodeHash, Parent};
+        use ProofOperation::{Child, KeyValueHash, KeyValuePair, NodeHash, Parent};
         match &self {
             Child => e.u8(0x11),
             KeyValueHash(hash) => e.array(2).and_then(|e| e.u8(1)).and_then(|e| e.bytes(hash)),
@@ -40,7 +40,7 @@ impl<C> Encode<C> for Proof {
     }
 }
 
-impl<'d, C> Decode<'d, C> for Proof {
+impl<'d, C> Decode<'d, C> for ProofOperation {
     fn decode(d: &mut Decoder<'d>, _: &mut C) -> Result<Self, decode::Error> {
         use {
             minicbor::data::Type::{
@@ -48,7 +48,7 @@ impl<'d, C> Decode<'d, C> for Proof {
                 Simple, String, StringIndef, Tag, Undefined, Unknown, F16, F32, F64, I16, I32, I64,
                 I8, U16, U32, U64, U8,
             },
-            Proof::{Child, KeyValueHash, KeyValuePair, NodeHash, Parent},
+            ProofOperation::{Child, KeyValueHash, KeyValuePair, NodeHash, Parent},
         };
         d.datatype().and_then(|datatype| match datatype {
             Array | ArrayIndef => match d.array() {
@@ -86,13 +86,13 @@ impl<'d, C> Decode<'d, C> for Proof {
 
 #[cfg(test)]
 mod tests {
-    use super::Proof;
+    use super::ProofOperation;
     #[test]
     fn round_trip_parent() -> Result<(), ()> {
         assert_eq!(
-            minicbor::decode::<Proof>(minicbor::to_vec(Proof::Parent).map_err(|_| ())?.as_slice())
+            minicbor::decode::<ProofOperation>(minicbor::to_vec(ProofOperation::Parent).map_err(|_| ())?.as_slice())
                 .map_err(|_| ())?,
-            Proof::Parent
+            ProofOperation::Parent
         );
         Ok(())
     }
@@ -100,18 +100,18 @@ mod tests {
     #[test]
     fn round_trip_child() -> Result<(), ()> {
         assert_eq!(
-            minicbor::decode::<Proof>(minicbor::to_vec(Proof::Child).map_err(|_| ())?.as_slice())
+            minicbor::decode::<ProofOperation>(minicbor::to_vec(ProofOperation::Child).map_err(|_| ())?.as_slice())
                 .map_err(|_| ())?,
-            Proof::Child
+            ProofOperation::Child
         );
         Ok(())
     }
 
     #[test]
     fn round_trip_key_value_hash() -> Result<(), ()> {
-        let key_value_hash = Proof::KeyValueHash(vec![1, 2, 3]);
+        let key_value_hash = ProofOperation::KeyValueHash(vec![1, 2, 3]);
         assert_eq!(
-            minicbor::decode::<Proof>(
+            minicbor::decode::<ProofOperation>(
                 minicbor::to_vec(key_value_hash.clone())
                     .map_err(|_| ())?
                     .as_slice()
@@ -124,9 +124,9 @@ mod tests {
 
     #[test]
     fn round_trip_node_hash() -> Result<(), ()> {
-        let node_hash = Proof::KeyValueHash(vec![1, 2, 3]);
+        let node_hash = ProofOperation::KeyValueHash(vec![1, 2, 3]);
         assert_eq!(
-            minicbor::decode::<Proof>(
+            minicbor::decode::<ProofOperation>(
                 minicbor::to_vec(node_hash.clone())
                     .map_err(|_| ())?
                     .as_slice()
@@ -139,9 +139,9 @@ mod tests {
 
     #[test]
     fn round_trip_key_value_pair() -> Result<(), ()> {
-        let key_value_pair = Proof::KeyValuePair(vec![1, 2, 3].into(), vec![4, 5, 6].into());
+        let key_value_pair = ProofOperation::KeyValuePair(vec![1, 2, 3].into(), vec![4, 5, 6].into());
         assert_eq!(
-            minicbor::decode::<Proof>(
+            minicbor::decode::<ProofOperation>(
                 minicbor::to_vec(key_value_pair.clone())
                     .map_err(|_| ())?
                     .as_slice()
