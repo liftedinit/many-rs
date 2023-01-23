@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use many_types::VecOrSingle;
-use minicbor::{Encode, Decode};
+use minicbor::{Decode, Encode};
 
 use crate::data::{DataIndex, DataValue};
 

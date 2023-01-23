@@ -1,12 +1,14 @@
+use crate as module;
 use crate::account::features::multisig::MultisigTransactionState;
 use crate::account::AddressRoleMap;
 use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
 use many_protocol::ResponseMessage;
+use many_types::ledger;
 use many_types::ledger::{Symbol, TokenAmount};
 use many_types::legacy::{DataLegacy, MemoLegacy};
-use many_types::{AttributeRelatedIndex, CborRange, Memo, Timestamp, VecOrSingle};
+use many_types::{AttributeRelatedIndex, CborRange, Either, Memo, Timestamp, VecOrSingle};
 use minicbor::bytes::ByteVec;
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::BigUint;
@@ -136,6 +138,7 @@ pub struct EventFilter {
 
     pub kind: Option<VecOrSingle<EventKind>>,
 
+    // TODO: remove this. Kept for backward compatibility.
     pub symbol: Option<VecOrSingle<Address>>,
 
     pub id_range: Option<CborRange<EventId>>,
@@ -463,6 +466,15 @@ macro_rules! define_event_info_addresses_trait {
         $set.extend(AddressContainer::addresses($name).into_iter());
         define_event_info_addresses_trait!(@field $set $( $name_ $( $tag_ )*, )* );
     };
+    (@field $set: ident $name: ident maybe_owner $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
+        if let Some(n) = $name {
+            match n {
+                Either::Left(addr) => { $set.insert(*addr); },
+                Either::Right(_) => {}
+            }
+        }
+        define_event_info_addresses_trait!(@field $set $( $name_ $( $tag_ )*, )* );
+    };
     (@field $set: ident $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
         define_event_info_addresses_trait!(@field $set $( $name $( $tag )*, )* );
     };
@@ -493,7 +505,7 @@ macro_rules! define_event_info_addresses_trait {
 
 macro_rules! define_event_info {
     ( $( $name: ident { $( $idx: literal | $fname: ident : $type: ty $([ $( $tag: ident )* ])?, )* }, )* ) => {
-        #[derive(Clone, Debug)]
+        #[derive(Clone, Debug, PartialEq, Eq)]
         #[non_exhaustive]
         pub enum EventInfo {
             $( $name {
@@ -511,19 +523,69 @@ macro_rules! define_event_info {
         }
 
         define_event_info_addresses_trait!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
-        encode_event_info!( $( $name { $( $idx => $fname : $type, )* }, )* );
+        encode_event_info!( $( $name { $( $idx => $fname : $type $([ $( $tag )* ])?, )* }, )* );
     };
 }
 
-// This is necessary because variables must be used in repeating patterns.
-macro_rules! replace_expr {
-    ($_t:tt $sub:expr) => {
-        $sub
+macro_rules! event_info_count_field {
+    (@single $name: ident []) => {
+        1u64
+    };
+    (@single $name: ident [ memo $( $tag: ident )* ]) => {
+        match $name {
+            Some(_) => 1u64,
+            None => 0u64,
+        }
+    };
+    (@single $name: ident [ $head: ident $( $tail: ident )* ]) => {
+        event_info_count_field!(@single $name [ $( $tail )* ] )
+    };
+
+    ( $( $name: ident $([ $( $tag: ident )* ])?, )* ) => {
+        1u64 $(+ event_info_count_field!(@single $name [ $( $( $tag )* )?]) )*
+    };
+}
+
+macro_rules! encode_event_info_field {
+    // By default, just encode the field.
+    (@inner $e: ident $idx: literal $name: ident []) => {
+        $e.u8($idx)?.encode($name)?;
+    };
+    (@inner $e: ident $idx: literal $name: ident [ memo $( $tail: ident )* ]) => {
+        if let Some(field) = $name {
+            $e.u8($idx)?.encode(field)?;
+        }
+    };
+    (@inner $e: ident $idx: literal $name: ident [ $head: ident $( $tail: ident )* ]) => {
+        encode_event_info_field!($e $idx $name [ $( $tail )* ])
+    };
+
+    ($e: ident $idx: literal $name: ident $([ $( $tag: ident )* ])?) => {
+        encode_event_info_field!(@inner $e $idx $name [ $( $( $tag )* )? ])
+    };
+}
+
+macro_rules! encode_event_info_unpack_decode {
+    (@inner $name: ident $idx: literal []) => {
+        $name.ok_or(minicbor::decode::Error::missing_value($idx))
+    };
+    (@inner $name: ident $idx: literal [memo $( $tail: ident )*]) => {
+        match $name {
+            Some(x) => Ok(x),
+            None => Ok(None),
+        }
+    };
+    (@inner $name: ident $idx: literal [$head: ident $( $tail: ident )*]) => {
+        encode_event_info_unpack_decode!( $name $idx [$( $tail )*] )
+    };
+
+    ($name: ident $idx: literal $([ $( $tag: ident )* ])?) => {
+        encode_event_info_unpack_decode!(@inner $name $idx [ $( $( $tag )* )? ] )
     };
 }
 
 macro_rules! encode_event_info {
-    ( $( $sname: ident { $( $idx: literal => $name: ident : $type: ty, )* }, )* ) => {
+    ( $( $sname: ident { $( $idx: literal => $name: ident : $type: ty $([ $( $tag: ident )* ])?, )*  }, )* ) => {
         impl<C> Encode<C> for EventInfo {
             fn encode<W: encode::Write>(
                 &self,
@@ -532,10 +594,10 @@ macro_rules! encode_event_info {
             ) -> Result<(), encode::Error<W::Error>> {
                 match self {
                     $(  EventInfo :: $sname { $( $name, )* } => {
-                            e.map( 1u64 $(+ replace_expr!($idx 1u64))* )?
-                                .u8(0)?.encode(EventKind :: $sname)?
-                                $( .u8($idx)?.encode($name)? )*
-                            ;
+                            e.map( event_info_count_field!( $( $name $([ $( $tag )* ])?, )* ) )?
+                                .u8(0)?.encode(EventKind :: $sname)?;
+
+                            $( encode_event_info_field!( e $idx $name $([ $( $tag )* ])? ); )*
                             Ok(())
                         }, )*
                 }
@@ -567,7 +629,9 @@ macro_rules! encode_event_info {
                             len -= 1;
                         }
 
-                        $( let $name: $type = $name.ok_or(minicbor::decode::Error::missing_value($idx))?; )*
+                        $(
+                            let $name: $type = encode_event_info_unpack_decode!( $name $idx $( [ $( $tag )* ] )? ) ?;
+                        )*
 
                         Ok(EventInfo :: $sname {
                             $( $name, )*
@@ -694,6 +758,7 @@ define_event! {
         2     | to:                     Address                                [ id ],
         3     | symbol:                 Symbol                                 [ symbol ],
         4     | amount:                 TokenAmount,
+        5     | memo:                   Option<Memo>,
     },
     [7, 0]      KvStorePut (crate::kvstore::PutArgs) {
         1     | key:                    ByteVec,
@@ -775,7 +840,44 @@ define_event! {
         2     | token:                  ByteVec,
         3     | time:                   Timestamp,
     },
-    [13, 0]     KvStoreTransfer (crate::kvstore::TransferArgs [ addresses ]) {
+    [11, 0]     TokenCreate (module::ledger::TokenCreateArgs) {
+        1     | summary:                ledger::TokenInfoSummary,
+        2     | symbol:                 Address                                [ id ],
+        3     | owner:                  Option<ledger::TokenMaybeOwner>        [ maybe_owner ],
+        4     | initial_distribution:   Option<ledger::LedgerTokensAddressMap>,
+        5     | maximum_supply:         Option<ledger::TokenAmount>,
+        6     | extended_info:          Option<module::ledger::extended_info::TokenExtendedInfo>,
+        7     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [11, 1]     TokenUpdate (module::ledger::TokenUpdateArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | name:                   Option<String>,
+        3     | ticker:                 Option<String>,
+        4     | decimals:               Option<u64>,
+        5     | owner:                  Option<ledger::TokenMaybeOwner>        [ maybe_owner ],
+        6     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [11, 2]     TokenAddExtendedInfo (module::ledger::TokenAddExtendedInfoArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | extended_info:          Vec<AttributeRelatedIndex>,
+        3     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [11, 3]     TokenRemoveExtendedInfo (module::ledger::TokenRemoveExtendedInfoArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | extended_info:          Vec<AttributeRelatedIndex>,
+        3     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [12, 0]     TokenMint (module::ledger::TokenMintArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | distribution:           ledger::LedgerTokensAddressMap,
+        3     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [12, 1]     TokenBurn (module::ledger::TokenBurnArgs) {
+        1     | symbol:                 Address                                [ id ],
+        2     | distribution:           ledger::LedgerTokensAddressMap,
+        3     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [13, 0]     KvStoreTransfer (module::kvstore::TransferArgs [ addresses ]) {
         1     | key:                    ByteVec,
         2     | owner:                  Address                                [ id ],
         3     | new_owner:              Address                                [ id ],
@@ -888,6 +990,7 @@ mod test {
             to: i01,
             symbol: Default::default(),
             amount: Default::default(),
+            memo: None,
         };
         assert_eq!(s0.addresses(), BTreeSet::from_iter([i0, i01]));
     }
@@ -908,6 +1011,7 @@ mod test {
                 to: i11,
                 amount: Default::default(),
                 symbol: Default::default(),
+                memo: None,
             })),
             token: None,
             threshold: 0,
@@ -935,6 +1039,7 @@ mod test {
                 to: i11,
                 amount: Default::default(),
                 symbol: Default::default(),
+                memo: None,
             })),
             threshold: None,
             timeout_in_secs: None,
@@ -969,6 +1074,7 @@ mod test {
             to: i01,
             symbol: Default::default(),
             amount: Default::default(),
+            memo: None,
         };
         assert!(s0.is_about(i0));
         assert!(s0.is_about(i01));
@@ -1003,6 +1109,7 @@ mod test {
             to: i01,
             symbol: i1,
             amount: Default::default(),
+            memo: None,
         };
         assert_eq!(event.symbol(), Some(i1));
 
@@ -1021,6 +1128,7 @@ mod test {
             to: i01,
             symbol: i1,
             amount: Default::default(),
+            memo: None,
         };
         assert_eq!(event.memo(), None);
 
@@ -1033,6 +1141,7 @@ mod test {
                 to: Default::default(),
                 amount: Default::default(),
                 symbol: Default::default(),
+                memo: None,
             })),
             token: None,
             threshold: 0,
@@ -1058,6 +1167,7 @@ mod test {
                 to: Default::default(),
                 amount: Default::default(),
                 symbol: Default::default(),
+                memo: None,
             })),
             token: None,
             threshold: 0,
@@ -1073,6 +1183,7 @@ mod test {
         use super::super::*;
         use crate::ledger::SendArgs;
         use many_identity::testing::identity;
+        use many_types::cbor::CborAny;
         use many_types::Memo;
         use proptest::prelude::*;
         use proptest::string::string_regex;
@@ -1092,11 +1203,57 @@ mod test {
             }
         }
 
+        fn _create_event_info_no_memo(transaction: AccountMultisigTransaction) -> EventInfo {
+            EventInfo::AccountMultisigSubmit {
+                submitter: identity(0),
+                account: identity(1),
+                memo: None,
+                transaction: Box::new(transaction),
+                token: None,
+                threshold: 1,
+                timeout: Timestamp::now(),
+                execute_automatically: false,
+                memo_: None,
+                data_: None,
+            }
+        }
+
         fn _assert_serde(info: EventInfo) {
             let bytes = minicbor::to_vec(info.clone()).expect("Could not serialize");
             let decoded: EventInfo = minicbor::decode(&bytes).expect("Could not decode");
 
             assert_eq!(format!("{decoded:?}"), format!("{info:?}"));
+        }
+
+        #[test]
+        fn memo_does_not_encode_new_field() {
+            let event = _create_event_info(
+                Memo::try_from("Foo").unwrap(),
+                AccountMultisigTransaction::Send(SendArgs {
+                    from: None,
+                    to: Default::default(),
+                    amount: Default::default(),
+                    symbol: Default::default(),
+                    memo: None,
+                }),
+            );
+            let bytes = minicbor::to_vec(&event).expect("Could not serialize");
+            let map: BTreeMap<CborAny, CborAny> = minicbor::decode(&bytes).unwrap();
+            assert!(map.contains_key(&CborAny::Int(10))); // 10 is memo.
+
+            let event = _create_event_info_no_memo(AccountMultisigTransaction::Send(SendArgs {
+                from: None,
+                to: Default::default(),
+                amount: Default::default(),
+                symbol: Default::default(),
+                memo: None,
+            }));
+            let bytes = minicbor::to_vec(&event).expect("Could not serialize");
+            let map: BTreeMap<CborAny, CborAny> = minicbor::decode(&bytes).unwrap();
+            assert!(!map.contains_key(&CborAny::Int(10))); // 10 is memo.
+
+            let decoded: EventInfo = minicbor::decode(&bytes).unwrap();
+            assert_eq!(event, decoded);
         }
 
         proptest! {
@@ -1119,6 +1276,7 @@ mod test {
                         to: identity(3),
                         symbol: identity(4),
                         amount: amount.into(),
+                        memo: None,
                     })),
                 );
             }
@@ -1138,6 +1296,7 @@ mod test {
                                     to: identity(3),
                                     symbol: identity(4),
                                     amount: amount.into(),
+                                    memo: None,
                                 })),
                                 threshold: None,
                                 timeout_in_secs: None,
@@ -1216,6 +1375,7 @@ mod tests {
                             to: Address::anonymous(),
                             symbol: Default::default(),
                             amount: TokenAmount::from(1000u64),
+                            memo: None,
                         },
                     }],
                 })

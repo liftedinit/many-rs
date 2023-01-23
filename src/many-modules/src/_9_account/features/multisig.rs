@@ -151,7 +151,13 @@ pub struct SubmitTransactionArgs {
 }
 
 impl SubmitTransactionArgs {
-    pub fn send(from: Address, to: Address, symbol: Address, amount: TokenAmount) -> Self {
+    pub fn send(
+        from: Address,
+        to: Address,
+        symbol: Address,
+        amount: TokenAmount,
+        memo: Option<Memo>,
+    ) -> Self {
         Self {
             account: from,
             transaction: Box::new(AccountMultisigTransaction::Send(SendArgs {
@@ -159,6 +165,7 @@ impl SubmitTransactionArgs {
                 to,
                 symbol,
                 amount,
+                memo,
             })),
             threshold: None,
             timeout_in_secs: None,

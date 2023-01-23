@@ -61,6 +61,7 @@ mod tests {
                 symbols: vec![*SYMBOL],
                 hash: ByteVec::from(vec![10u8; 8]),
                 local_names: BTreeMap::from([(*SYMBOL, SYMBOL_NAME.to_string())]),
+                tokens: Default::default(),
             }));
         let module = super::LedgerModule::new(Arc::new(Mutex::new(mock)));
 
@@ -83,7 +84,7 @@ mod tests {
         };
         let mut mock = MockLedgerModuleBackend::new();
         mock.expect_balance()
-            .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
+            .with(eq(identity(1)), predicate::eq(data.clone()))
             .times(1)
             .returning(|_id, args| {
                 Ok(BalanceReturns {

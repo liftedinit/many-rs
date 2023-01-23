@@ -4,6 +4,27 @@ use minicbor::{Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CborNull;
+
+impl<C> Encode<C> for CborNull {
+    fn encode<W: Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), minicbor::encode::Error<W::Error>> {
+        e.null()?;
+        Ok(())
+    }
+}
+
+impl<'b, C> Decode<'b, C> for CborNull {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
+        d.null()?;
+        Ok(CborNull)
+    }
+}
+
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum CborAny {
     Bool(bool),
@@ -13,6 +34,7 @@ pub enum CborAny {
     Array(Vec<CborAny>),
     Map(BTreeMap<CborAny, CborAny>),
     Tagged(Tag, Box<CborAny>),
+    Null,
 }
 
 impl Debug for CborAny {
@@ -25,6 +47,7 @@ impl Debug for CborAny {
             CborAny::Array(a) => write!(f, "{a:?}"),
             CborAny::Map(m) => write!(f, "{m:?}"),
             CborAny::Tagged(t, v) => write!(f, "{t:?}({v:?})"),
+            CborAny::Null => write!(f, "Null"),
         }
     }
 }
@@ -55,6 +78,9 @@ impl<C> Encode<C> for CborAny {
             }
             CborAny::Tagged(t, v) => {
                 e.tag(*t)?.encode(v)?;
+            }
+            CborAny::Null => {
+                e.null()?;
             }
         }
 
@@ -87,6 +113,10 @@ impl<'d, C> Decode<'d, C> for CborAny {
                 >>()?))
             }
             Type::Tag => Ok(CborAny::Tagged(d.tag()?, Box::new(d.decode()?))),
+            Type::Null => {
+                d.skip()?;
+                Ok(CborAny::Null)
+            }
             x => Err(minicbor::decode::Error::type_mismatch(x)),
         }
     }
@@ -165,14 +195,24 @@ where
     }
 }
 
-#[cfg(feature = "proptest")]
+#[cfg(test)]
 pub mod tests {
-    use super::CborAny;
+    use super::*;
     use proptest::prelude::*;
+
+    #[test]
+    fn cbor_null() {
+        let null = CborNull;
+        let enc = minicbor::to_vec(null).unwrap();
+        // f6 (22) == null
+        // See https://www.rfc-editor.org/rfc/rfc8949.html#fpnoconttbl2
+        assert_eq!(hex::encode(enc), "f6");
+    }
 
     /// Generate arbitraty CborAny value.
     ///
     /// Recursive structures depth, size and branch size are limited
+    #[cfg(feature = "proptest")]
     pub fn arb_cbor() -> impl Strategy<Value = CborAny> {
         let leaf = prop_oneof![
             any::<bool>().prop_map(CborAny::Bool),
