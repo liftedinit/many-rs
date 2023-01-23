@@ -115,30 +115,49 @@ macro_rules! op_impl {
     }
 }
 
-impl std::ops::Add<&TokenAmount> for &TokenAmount {
-    type Output = TokenAmount;
-    fn add(self, rhs: &TokenAmount) -> Self::Output { TokenAmount(&self.0 + &rhs.0) }
-}
+macro_rules! op_ref_impl {
+    ( $( $t: ty )* ) => {
+        $(
+            impl std::ops::Add<&$t> for &TokenAmount {
+                type Output = TokenAmount;
+                fn add(self, rhs: &$t) -> Self::Output { TokenAmount(&self.0 + &rhs.0) }
+            }
 
-impl std::ops::AddAssign<&TokenAmount> for &mut TokenAmount {
-    fn add_assign(&mut self, rhs: &TokenAmount) { self.0 += &rhs.0; }
-}
+            impl std::ops::Sub<&$t> for &TokenAmount {
+                type Output = TokenAmount;
+                fn sub(self, rhs: &$t) -> Self::Output { TokenAmount(&self.0 - &rhs.0) }
+            }
 
-impl std::ops::AddAssign<&TokenAmount> for TokenAmount {
-    fn add_assign(&mut self, rhs: &TokenAmount) { self.0 += &rhs.0; }
-}
+            impl std::ops::Mul<&$t> for &TokenAmount {
+                type Output = TokenAmount;
+                fn mul(self, rhs: &$t) -> Self::Output { TokenAmount(&self.0 * &rhs.0) }
+            }
 
-impl std::ops::Sub<&TokenAmount> for &TokenAmount {
-    type Output = TokenAmount;
-    fn sub(self, rhs: &TokenAmount) -> Self::Output { TokenAmount(&self.0 - &rhs.0) }
-}
+            impl std::ops::AddAssign<&$t> for &mut TokenAmount {
+                fn add_assign(&mut self, rhs: &$t) { self.0 += &rhs.0; }
+            }
 
-impl std::ops::SubAssign<&TokenAmount> for &mut TokenAmount {
-    fn sub_assign(&mut self, rhs: &TokenAmount) { self.0 -= &rhs.0; }
-}
+            impl std::ops::SubAssign<&$t> for &mut TokenAmount {
+                fn sub_assign(&mut self, rhs: &$t) { self.0 -= &rhs.0; }
+            }
 
-impl std::ops::SubAssign<&TokenAmount> for TokenAmount {
-    fn sub_assign(&mut self, rhs: &TokenAmount) { self.0 -= &rhs.0; }
+            impl std::ops::MulAssign<&$t> for &mut TokenAmount {
+                fn mul_assign(&mut self, rhs: &$t) { self.0 *= &rhs.0; }
+            }
+
+            impl std::ops::AddAssign<&$t> for TokenAmount {
+                fn add_assign(&mut self, rhs: &$t) { self.0 += &rhs.0; }
+            }
+
+            impl std::ops::SubAssign<&$t> for TokenAmount {
+                fn sub_assign(&mut self, rhs: &$t) { self.0 -= &rhs.0; }
+            }
+
+            impl std::ops::MulAssign<&$t> for TokenAmount {
+                fn mul_assign(&mut self, rhs: &$t) { self.0 *= &rhs.0; }
+            }
+        )*
+    }
 }
 
 macro_rules! from_impl {
@@ -164,6 +183,7 @@ macro_rules! eq_impl {
 }
 
 op_impl!(u8 u16 u32 u64 u128 TokenAmount BigUint);
+op_ref_impl!(TokenAmount);
 from_impl!(u8 u16 u32 u64 u128 BigUint);
 eq_impl!(u8 u16 u32 u64 u128);
 
@@ -376,5 +396,31 @@ mod test {
             &token,
             &[Token::String("1_208_925_819_614_629_174_706_175")],
         );
+    }
+
+    #[test]
+    fn token_amount_ref() {
+        let a = TokenAmount::from(12345u64);
+        let b = TokenAmount::from(56789u64);
+
+        assert_eq!(&a + &b, TokenAmount::from(69134u64));
+        assert_eq!(&b - &a, TokenAmount::from(44444u64));
+        assert_eq!(&a * &b, TokenAmount::from(701060205u64));
+
+        let mut c = &mut TokenAmount::zero();
+        c += &b;
+        assert_eq!(c, &b);
+        c -= &a;
+        assert_eq!(c, &TokenAmount::from(44444u64));
+        c *= &b;
+        assert_eq!(c, &TokenAmount::from(2523930316u64));
+
+        let mut d = TokenAmount::zero();
+        d += &b;
+        assert_eq!(d, b);
+        d -= &a;
+        assert_eq!(d, TokenAmount::from(44444u64));
+        d *= &b;
+        assert_eq!(d, TokenAmount::from(2523930316u64));
     }
 }
