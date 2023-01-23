@@ -758,7 +758,7 @@ define_event! {
         2     | to:                     Address                                [ id ],
         3     | symbol:                 Symbol                                 [ symbol ],
         4     | amount:                 TokenAmount,
-        5     | memo:                   Option<Memo>,
+        5     | memo:                   Option<Memo>                           [ memo ],
     },
     [7, 0]      KvStorePut (crate::kvstore::PutArgs) {
         1     | key:                    ByteVec,
