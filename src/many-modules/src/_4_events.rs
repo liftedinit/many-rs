@@ -844,7 +844,7 @@ define_event! {
         1     | summary:                ledger::TokenInfoSummary,
         2     | symbol:                 Address                                [ id ],
         3     | owner:                  Option<ledger::TokenMaybeOwner>        [ maybe_owner ],
-        4     | initial_distribution:   Option<ledger::LedgerTokensAddressMap>,
+        4     | initial_distribution:   Option<ledger::LedgerTokensAddressMap> [ id ],
         5     | maximum_supply:         Option<ledger::TokenAmount>,
         6     | extended_info:          Option<module::ledger::extended_info::TokenExtendedInfo>,
         7     | memo:                   Option<Memo>                           [ memo ],
@@ -869,12 +869,12 @@ define_event! {
     },
     [12, 0]     TokenMint (module::ledger::TokenMintArgs) {
         1     | symbol:                 Address                                [ id ],
-        2     | distribution:           ledger::LedgerTokensAddressMap,
+        2     | distribution:           ledger::LedgerTokensAddressMap         [ id ],
         3     | memo:                   Option<Memo>                           [ memo ],
     },
     [12, 1]     TokenBurn (module::ledger::TokenBurnArgs) {
         1     | symbol:                 Address                                [ id ],
-        2     | distribution:           ledger::LedgerTokensAddressMap,
+        2     | distribution:           ledger::LedgerTokensAddressMap         [ id ],
         3     | memo:                   Option<Memo>                           [ memo ],
     },
     [13, 0]     KvStoreTransfer (module::kvstore::TransferArgs [ addresses ]) {
@@ -1060,6 +1060,88 @@ mod test {
             memo_: None,
         };
         assert_eq!(s1.addresses(), BTreeSet::from_iter([i0, i01, i1, i11, i2]));
+    }
+
+    #[test]
+    fn addresses_1() {
+        fn check(t: impl AddressContainer, expects: impl IntoIterator<Item = Address>) {
+            assert_eq!(t.addresses(), BTreeSet::from_iter(expects.into_iter()));
+        }
+
+        let i0 = identity(0);
+        let i01 = i0.with_subresource_id(1).unwrap();
+        let i1 = identity(1);
+        let i2 = identity(2);
+
+        check(
+            EventInfo::Send {
+                from: i0,
+                to: i01,
+                symbol: Default::default(),
+                amount: Default::default(),
+                memo: None,
+            },
+            [i0, i01],
+        );
+        check(
+            EventInfo::KvStorePut {
+                key: vec![].into(),
+                value: vec![].into(),
+                owner: i0,
+            },
+            [i0],
+        );
+        check(
+            EventInfo::KvStoreDisable {
+                key: vec![].into(),
+                reason: None,
+            },
+            [],
+        );
+        check(
+            EventInfo::AccountCreate {
+                account: i0,
+                description: None,
+                roles: Default::default(),
+                features: Default::default(),
+            },
+            [i0],
+        );
+        check(
+            EventInfo::TokenCreate {
+                summary: ledger::TokenInfoSummary {
+                    name: "".to_string(),
+                    ticker: "".to_string(),
+                    decimals: 0,
+                },
+                symbol: i0,
+                owner: None,
+                initial_distribution: Some(BTreeMap::from([(i1, 0u32.into()), (i2, 0u32.into())])),
+                maximum_supply: None,
+                extended_info: None,
+                memo: None,
+            },
+            [i0, i1, i2],
+        );
+        check(
+            EventInfo::TokenUpdate {
+                symbol: i0,
+                name: None,
+                ticker: None,
+                decimals: None,
+                owner: Some(Either::Left(i1)),
+                memo: None,
+            },
+            [i0, i1],
+        );
+        check(
+            EventInfo::TokenMint {
+                symbol: i0,
+                distribution: BTreeMap::from([(i1, 0u32.into()), (i2, 0u32.into())]),
+                memo: None,
+            },
+            [i0, i1, i2],
+        )
     }
 
     #[test]
