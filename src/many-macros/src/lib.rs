@@ -522,6 +522,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
                 async_channel::unbounded,
                 many_error::ManyError,
                 many_protocol::context::{Context, ProofResult},
+                many_types::PROOF
             };
             fn decode<'a, T: minicbor::Decode<'a, ()>>(data: &'a [u8]) -> Result<T, ManyError> {
                 minicbor::decode(data).map_err(|e| ManyError::deserialization_error(e.to_string()))
@@ -539,11 +540,19 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
                 _ => Err(ManyError::internal_server_error()),
             }?;
 
-            Ok(many_protocol::ResponseMessage::from_request(
-                &message,
-                &message.to,
-                Ok(result),
-            ).with_attributes(receiver.recv().await.map_err(|e| ManyError::unknown(e.to_string()))?))
+            Ok(if message.attributes.contains(&PROOF) {
+                many_protocol::ResponseMessage::from_request(
+                    &message,
+                    &message.to,
+                    Ok(result),
+                ).with_attributes(receiver.recv().await.map_err(|e| ManyError::unknown(e.to_string()))?)
+            } else {
+                many_protocol::ResponseMessage::from_request(
+                    &message,
+                    &message.to,
+                    Ok(result),
+                )
+            })
         }
     };
 
