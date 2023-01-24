@@ -2,7 +2,13 @@
 resolver = "2"
 
 members = [
+    "src/http_proxy",
+    "src/idstore-export",
+    "src/kvstore",
+    "src/ledger",
+    "src/ledger-db",
     "src/many",
+    "src/many-abci",
     "src/many-client",
     "src/many-client-macros",
     "src/many-error",
@@ -10,6 +16,10 @@ members = [
     "src/many-identity-dsa",
     "src/many-identity-hsm",
     "src/many-identity-webauthn",
+    "src/many-kvstore",
+    "src/many-ledger",
+    "src/many-ledger/test-macros",
+    "src/many-ledger/test-utils",
     "src/many-macros",
     "src/many-migration",
     "src/many-mock",

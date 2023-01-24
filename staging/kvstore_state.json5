@@ -1,0 +1,12 @@
+{
+  // The identity that is used to create new accounts. The server does not need to
+  // know the private key for this, just that it's not reused.
+  identity: "mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow",
+
+  // The initial database ACL
+  acl: {
+    "010203": {
+      owner: "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp",
+    }
+  }
+}

@@ -1,0 +1,123 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test", "rust_test_suite")
+load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
+
+package(default_visibility = [
+    "//src/many-ledger/test-utils:__pkg__",
+])
+
+cargo_build_script(
+    name = "build_script",
+    srcs = ["build.rs"],
+    data = ["//:.git"],
+    deps = all_crate_deps(build = True),
+)
+
+rust_binary(
+    name = "many-ledger",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":build_script",
+        "//src/many-abci:many-abci-lib",
+    ],
+)
+
+rust_library(
+    name = "many-ledger-lib",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_ledger",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ),
+)
+
+rust_library(
+    name = "many-ledger-lib-for-test",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_features = [
+        "balance_testing",
+        "migration_testing",
+        "disable_token_sender_check",
+    ],
+    crate_name = "many_ledger",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ),
+)
+
+rust_test(
+    name = "many-ledger-test",
+    crate = ":many-ledger-lib-for-test",
+    data = ["//:staging/ledger_state.json5"],
+)
+
+rust_test_suite(
+    name = "many-ledger-test-suite",
+    srcs = glob(
+        include = ["tests/*.rs"],
+        exclude = [
+            "tests/ledger_tokens/*.rs",
+        ],
+    ),
+    compile_data = [
+        "tests/migration_/mod.rs",
+        "tests/migration_/memo.rs",
+    ],
+    crate_features = ["balance_testing"],
+    data = ["//:staging/ledger_state.json5"],
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        ":many-ledger-lib-for-test",
+        "//src/many-ledger/test-utils:many-ledger-test-utils-lib",
+    ],
+)
+
+rust_test_suite(
+    name = "many-ledger-test-cucumber-suite",
+    srcs = glob(
+        include = [
+            "tests/ledger_tokens/*.rs",
+            "tests/ledger_mintburn/*.rs",
+        ],
+    ),
+    crate_features = ["balance_testing"],
+    data = [
+        "//:staging/ledger_state.json5",
+    ] + glob(include = ["tests/features/**/*.feature"]),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ) + [
+        "//src/many-ledger/test-macros:many-ledger-test-macros-lib",
+    ],
+    use_libtest_harness = False,
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        ":many-ledger-lib-for-test",
+        "//src/many-ledger/test-utils:many-ledger-test-utils-lib",
+    ],
+)

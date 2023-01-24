@@ -1,0 +1,69 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test_suite")
+load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
+
+cargo_build_script(
+    name = "build_script",
+    srcs = ["build.rs"],
+    data = ["//:.git"],
+    deps = all_crate_deps(build = True),
+)
+
+rust_binary(
+    name = "many-kvstore",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":build_script",
+    ],
+)
+
+rust_library(
+    name = "many-kvstore-lib",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_kvstore",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ),
+)
+
+rust_library(
+    name = "many-kvstore-lib-for-test",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_kvstore",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ),
+)
+
+rust_test_suite(
+    name = "many-kvstore-test-suite",
+    srcs = glob(include = ["tests/*.rs"]),
+    compile_data = ["tests/common/mod.rs"],
+    data = ["//:staging/kvstore_state.json5"],
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        ":many-kvstore-lib-for-test",
+    ],
+)

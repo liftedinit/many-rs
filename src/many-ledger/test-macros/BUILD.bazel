@@ -1,0 +1,19 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_proc_macro")
+
+package(default_visibility = [
+    "//src/many-ledger:__pkg__",
+])
+
+rust_proc_macro(
+    name = "many-ledger-test-macros-lib",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_ledger_test_macros",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ),
+)

@@ -1,0 +1,104 @@
+{
+  // This file should be json5, and as such supports things like simpler identifiers
+  // and comments.
+
+  // The identity that is used to create new accounts. The server does not need to
+  // know the private key for this, just that it's not reused.
+  identity: "mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow",
+
+  // Optional.
+  // Default will use the server identity.
+  // Identity from which new token symbols will be derived.
+  // This identity will be the only identity able to create new tokens
+  token_identity: "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp",
+
+  // Optional.
+  // Default will start from 0.
+  // Generate new token symbols starting at the given subresource.
+  // E.g., the MFX symbol in this file has subresource 1.
+  token_next_subresource: 2,
+
+  // Optional.
+  // Default will use the server identity.
+  // Identity from which new account identities will be derived.
+  account_identity: "mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow",
+
+  // Initial balances for this ledger. The symbols can be either the identity or
+  // the name of the symbol. The symbol is validated during initialization so it
+  // must match an existing symbol.
+  initial: {
+    "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp": {
+      "MFX": 1000000000
+    },
+    "mqdukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iaaaaq25": {
+      "MFX": 1000000000
+    }
+  },
+
+  // List of symbols that this ledger supports.
+  symbols: {
+    "mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz": "MFX"
+  },
+
+  // List of symbols metadata
+  // Ignored by default.
+  // Triggered by the "Token Migration"
+  // TODO: Unify initial, symbols and symbols_meta
+  symbols_meta: {
+   "mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz": {
+     name: "Manifest Network Token",
+     decimals: 9,
+   }
+  },
+
+  // List of accounts to create at start time.
+  accounts: [
+    {
+      // This is optional but ensure the account is created in the expected order.
+      subresource_id: 0,
+
+      // This is also optional but can serve as an assertion that this file is valid.
+      id: "mqdukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iaaaaac6",
+
+      // The description text of the account.
+      description: "Generic account for testing",
+
+      // Roles for this account. At least one `owner` MUST be specified here.
+      roles: {
+        "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp": ["owner", "canMultisigSubmit"],
+        "mafbp553oq57taqhnz3muqombqtw4eiqsqoaux4hmwtv2xuyf3": ["canMultisigApprove"],
+        "mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow": ["canMultisigApprove"]
+      },
+
+      // List of features for the account. The `arg` key is any valid JSON and will be
+      // parsed and interpreted by the many-ledger CLI before creating the account.
+      // Validation still happens for the features and their arg.
+      // Features don't have name, only their Feature ID.
+      features: [
+        {
+          id: 1,
+          arg: {
+            threshold: 2,
+            timeout_in_secs: 86400
+          }
+        }
+      ]
+    },
+    {
+      subresource_id: 1,
+      description: "Generic account for testing (2)",
+      roles: {
+        "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp": ["owner"],
+        "mafbp553oq57taqhnz3muqombqtw4eiqsqoaux4hmwtv2xuyf3": ["canLedgerTransact"],
+        "mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow": ["canLedgerTransact"]
+      },
+      features: [
+        { id: 0 }
+      ]
+    }
+  ],
+
+  // Hash calculated after the initial state is created.
+  // Note: This will change depending on the migration activated at load
+  hash: "fc0041ca4f7d959fe9e5a337e175bd8a68942cad76745711a3daf820a159f7eb"
+}

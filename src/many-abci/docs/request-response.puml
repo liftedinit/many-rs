@@ -1,0 +1,72 @@
+@startuml
+title Request - Response Sequence for the MANY - ABCI bridge.
+
+actor user as "User"
+participant many as "MANY Frontend\n(ABCI Bridge)"
+participant tendermint
+participant abci_app as "ABCI App"
+participant many_app as "MANY App"
+
+== Initialization ==
+many -> many_app : \
+    abci.info
+many_app -> many : \
+    many_abci::Info
+
+== Commands ==
+
+user -> many : \
+    many::RequestMessage\nmethod: "account.mint"
+many -> tendermint : \
+    broadcast_tx\n(signed envelope)
+
+tendermint -> abci_app : \
+    check_tx
+
+abci_app -> many_app : \
+    abci.checkTransaction
+
+many_app -> abci_app : \
+    Ok
+
+abci_app -> tendermint : \
+    Ok
+
+tendermint -> abci_app : \
+    deliver_tx
+
+abci_app -> many_app : \
+    many::RequestMessage
+
+activate many_app
+many_app -> abci_app : many::ResponseMessage
+note left of abci_app
+  Message dropped
+end note
+deactivate
+
+' ---
+
+== Queries ==
+
+user -> many : \
+    many::RequestMessage\nmethod: "account.balance"
+many -> tendermint : \
+    query\n(signed envelope)
+
+tendermint -> abci_app : \
+    query
+
+abci_app -> many_app : \
+    many::RequestMessage
+
+activate many_app
+many_app -> abci_app : many::ResponseMessage
+deactivate
+
+abci_app -> tendermint
+tendermint -> many
+many -> user : \
+    many::ResponseMessage
+
+@enduml
