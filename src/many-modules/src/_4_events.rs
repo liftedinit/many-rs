@@ -394,45 +394,6 @@ macro_rules! define_event_kind {
     }
 }
 
-macro_rules! define_event_info_symbol {
-    (@pick_symbol) => {};
-    (@pick_symbol $name: ident symbol $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        return Some(*$name)
-    };
-    (@pick_symbol $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_event_info_symbol!(@pick_symbol $( $name $( $tag )*, )* )
-    };
-
-    (@inner) => {};
-    (@inner $name: ident inner $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
-        if let Some(s) = $name .symbol() {
-            return Some(s);
-        }
-    };
-    (@inner $name_: ident $( $tag_: ident )*, $( $name: ident $( $tag: ident )*, )* ) => {
-        define_event_info_symbol!(@inner $( $name $( $tag )*, )* )
-    };
-
-    ( $( $name: ident { $( $fname: ident $( $tag: ident )* , )* } )* ) => {
-        pub fn symbol(&self) -> Option<Symbol> {
-            match self {
-                $( EventInfo :: $name {
-                    $( $fname, )*
-                } => {
-                    // Remove warnings.
-                    $( let _ = $fname; )*
-                    define_event_info_symbol!(@pick_symbol $( $fname $( $tag )*, )* );
-
-                    // If we're here, we need to go deeper. Check if there's an inner.
-                    define_event_info_symbol!(@inner $( $fname $( $tag )*, )*);
-                } )*
-            }
-
-            None
-        }
-    };
-}
-
 macro_rules! define_event_info_memo {
     (@pick_memo) => {};
     (@pick_memo $name: ident memo $(,)? $( $name_: ident $( $tag_: ident )*, )* ) => {
@@ -514,7 +475,6 @@ macro_rules! define_event_info {
         }
 
         impl EventInfo {
-            define_event_info_symbol!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
             define_event_info_memo!( $( $name { $( $fname $( $( $tag )* )?, )* } )* );
 
             fn is_about(&self, id: Address) -> bool {
@@ -663,12 +623,6 @@ macro_rules! define_multisig_event {
         }
 
         impl AccountMultisigTransaction {
-            pub fn symbol(&self) -> Option<Address> {
-                // TODO: implement this for recursively checking if inner infos
-                // has a symbol defined.
-                None
-            }
-
             pub fn is_about(&self, id: Address) -> bool {
                 self.addresses().contains(&id)
             }
@@ -756,7 +710,7 @@ define_event! {
     [6, 0]      Send (crate::ledger::SendArgs [ addresses ]) {
         1     | from:                   Address                                [ id ],
         2     | to:                     Address                                [ id ],
-        3     | symbol:                 Symbol                                 [ symbol ],
+        3     | symbol:                 Symbol                                 [ id ],
         4     | amount:                 TokenAmount,
         5     | memo:                   Option<Memo>                           [ memo ],
     },
@@ -903,10 +857,6 @@ impl EventLog {
         EventKind::from(&self.content)
     }
 
-    pub fn symbol(&self) -> Option<Address> {
-        self.content.symbol()
-    }
-
     pub fn is_about(&self, id: Address) -> bool {
         self.content.is_about(id)
     }
@@ -988,11 +938,14 @@ mod test {
         let s0 = EventInfo::Send {
             from: i0,
             to: i01,
-            symbol: Default::default(),
+            symbol: Address::anonymous(),
             amount: Default::default(),
             memo: None,
         };
-        assert_eq!(s0.addresses(), BTreeSet::from_iter([i0, i01]));
+        assert_eq!(
+            s0.addresses(),
+            BTreeSet::from_iter([Address::anonymous(), i0, i01])
+        );
     }
 
     #[test]
@@ -1077,11 +1030,11 @@ mod test {
             EventInfo::Send {
                 from: i0,
                 to: i01,
-                symbol: Default::default(),
+                symbol: i1,
                 amount: Default::default(),
                 memo: None,
             },
-            [i0, i01],
+            [i0, i01, i1],
         );
         check(
             EventInfo::KvStorePut {
@@ -1178,25 +1131,6 @@ mod test {
         };
         assert!(s0.is_about(i01));
         assert!(!s0.is_about(Address::anonymous()));
-    }
-
-    #[test]
-    fn event_info_symbol() {
-        let i0 = identity(0);
-        let i1 = identity(1);
-        let i01 = i0.with_subresource_id(1).unwrap();
-
-        let event = EventInfo::Send {
-            from: i0,
-            to: i01,
-            symbol: i1,
-            amount: Default::default(),
-            memo: None,
-        };
-        assert_eq!(event.symbol(), Some(i1));
-
-        let event = EventInfo::AccountDisable { account: i0 };
-        assert_eq!(event.symbol(), None);
     }
 
     #[test]
