@@ -5,9 +5,10 @@ use {
     many_types::{attributes::Attribute, PROOF},
 };
 
-pub struct Context<'a> {
-    request: &'a RequestMessage,
-    transmitter: &'a Sender<ProofResult>,
+#[derive(Debug)]
+pub struct Context {
+    request: RequestMessage,
+    transmitter: Sender<ProofResult>,
 }
 
 pub enum ProofResult {
@@ -27,8 +28,11 @@ impl IntoIterator for ProofResult {
     }
 }
 
-impl<'a> Context<'a> {
-    pub fn prove(&'a self, prover: impl FnOnce() -> Result<Vec<u8>, ManyError>) -> Option<TrySendError<ProofResult>> {
+impl Context {
+    pub fn prove(
+        &self,
+        prover: impl FnOnce() -> Result<Vec<u8>, ManyError>,
+    ) -> Option<TrySendError<ProofResult>> {
         use ProofResult::{Error, Proof, ProofNotRequested};
         let result = if self.request.attributes.contains(&PROOF) {
             prover().map(Proof).unwrap_or_else(Error)
@@ -36,12 +40,14 @@ impl<'a> Context<'a> {
             ProofNotRequested
         };
         self.transmitter
-            .try_send(result).map(|_| None).unwrap_or_else(Some)
+            .try_send(result)
+            .map(|_| None)
+            .unwrap_or_else(Some)
     }
 }
 
-impl<'a> From<(&'a RequestMessage, &'a Sender<ProofResult>)> for Context<'a> {
-    fn from((request, transmitter): (&'a RequestMessage, &'a Sender<ProofResult>)) -> Self {
+impl From<(RequestMessage, Sender<ProofResult>)> for Context {
+    fn from((request, transmitter): (RequestMessage, Sender<ProofResult>)) -> Self {
         Self {
             request,
             transmitter,

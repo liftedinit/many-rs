@@ -81,8 +81,8 @@ struct Endpoint {
     pub is_async: bool,
     pub is_mut: bool,
     pub sender: Option<(Box<Pat>, Box<Type>)>,
-    pub context: Option<Box<Pat>>,
     pub arg: Option<(Box<Pat>, Box<Type>)>,
+    pub context: Option<(Box<Pat>, Box<Type>)>,
     pub ret_type: Box<Type>,
     pub block: Option<syn::Block>,
 }
@@ -96,7 +96,7 @@ impl Endpoint {
         let is_async = signature.asyncness.is_some();
 
         let sender: Option<(Box<Pat>, Box<Type>)>;
-        let context: Option<Box<Pat>>;
+        let context: Option<(Box<Pat>, Box<Type>)>;
         let arg: Option<(Box<Pat>, Box<Type>)>;
         let mut ret_type: Option<Box<Type>> = None;
 
@@ -128,11 +128,15 @@ impl Endpoint {
                     ..
                 })),
                 Some(FnArg::Typed(PatType { ty, pat, .. })),
-                Some(FnArg::Typed(PatType { pat: ctx_pat, .. })),
+                Some(FnArg::Typed(PatType {
+                    ty: ctx_ty,
+                    pat: ctx_pat,
+                    ..
+                })),
             ) => {
                 sender = Some((id_pat.clone(), id_ty.clone()));
                 arg = Some((pat.clone(), ty.clone()));
-                context = Some(ctx_pat.clone());
+                context = Some((ctx_pat.clone(), ctx_ty.clone()));
             }
             (
                 Some(FnArg::Typed(PatType {
@@ -234,6 +238,7 @@ impl Endpoint {
             is_mut,
             sender,
             arg,
+            context,
             ret_type,
             block,
             ..
@@ -267,9 +272,15 @@ impl Endpoint {
             quote! {}
         };
 
+        let context = if let Some((name, ty)) = context {
+            quote! {, #name: #ty}
+        } else {
+            quote! {}
+        };
+
         quote! {
             #(#attributes)*
-            #a fn #func(#s #sender #arg) -> #ret_type #block
+            #a fn #func(#s #sender #arg #context) -> #ret_type #block
         }
     }
 
@@ -521,7 +532,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
 
             let data = message.data.as_slice();
             let (transmitter, receiver) = unbounded();
-            let ctx: Context = (&message, &transmitter).into();
+            let ctx: Context = (message.clone(), transmitter).into();
             let result = match message.method.as_str() {
                 #( #execute_endpoint_pat )*
 

@@ -27,7 +27,7 @@ define_attribute_many_error!(
 #[cfg_attr(test, automock)]
 pub trait LedgerModuleBackend: Send {
     fn info(&self, sender: &Address, args: InfoArgs) -> Result<InfoReturns, ManyError>;
-    fn balance(&self, sender: &Address, args: BalanceArgs, ctx: many_protocol::context::Context) -> Result<BalanceReturns, ManyError>;
+    fn balance(&self, sender: &Address, args: BalanceArgs, context: Context) -> Result<BalanceReturns, ManyError>;
 }
 
 #[cfg(test)]
@@ -84,9 +84,9 @@ mod tests {
         };
         let mut mock = MockLedgerModuleBackend::new();
         mock.expect_balance()
-            .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
+            .with(predicate::eq(identity(1)), predicate::eq(data.clone()), predicate::always())
             .times(1)
-            .returning(|_id, args| {
+            .returning(|_, args, _| {
                 Ok(BalanceReturns {
                     balances: BTreeMap::from([(
                         args.symbols.unwrap().0[0],
