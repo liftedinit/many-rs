@@ -1,6 +1,6 @@
 use {
     crate::RequestMessage,
-    async_channel::Sender,
+    async_channel::{Sender, TrySendError},
     many_error::ManyError,
     many_types::{attributes::Attribute, PROOF},
 };
@@ -10,7 +10,6 @@ pub struct Context<'a> {
     transmitter: &'a Sender<ProofResult>,
 }
 
-#[derive(Clone)]
 pub enum ProofResult {
     Error(ManyError),
     Proof(Vec<u8>),
@@ -29,7 +28,7 @@ impl IntoIterator for ProofResult {
 }
 
 impl<'a> Context<'a> {
-    pub fn prove(&self, prover: impl FnOnce() -> Result<Vec<u8>, ManyError>) -> ProofResult {
+    pub fn prove(&'a self, prover: impl FnOnce() -> Result<Vec<u8>, ManyError>) -> Option<TrySendError<ProofResult>> {
         use ProofResult::{Error, Proof, ProofNotRequested};
         let result = if self.request.attributes.contains(&PROOF) {
             prover().map(Proof).unwrap_or_else(Error)
@@ -37,9 +36,7 @@ impl<'a> Context<'a> {
             ProofNotRequested
         };
         self.transmitter
-            .try_send(result.clone())
-            .map(|_| result)
-            .unwrap_or_else(|e| Error(ManyError::unknown(e.to_string())))
+            .try_send(result).map(|_| None).unwrap_or_else(Some)
     }
 }
 

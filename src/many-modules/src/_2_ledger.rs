@@ -1,4 +1,5 @@
 use many_error::{define_attribute_many_error, ManyError};
+use many_protocol::context::Context;
 use many_macros::many_module;
 
 #[cfg(test)]
@@ -26,7 +27,7 @@ define_attribute_many_error!(
 #[cfg_attr(test, automock)]
 pub trait LedgerModuleBackend: Send {
     fn info(&self, sender: &Address, args: InfoArgs) -> Result<InfoReturns, ManyError>;
-    fn balance(&self, sender: &Address, args: BalanceArgs) -> Result<BalanceReturns, ManyError>;
+    fn balance(&self, sender: &Address, args: BalanceArgs, ctx: many_protocol::context::Context) -> Result<BalanceReturns, ManyError>;
 }
 
 #[cfg(test)]

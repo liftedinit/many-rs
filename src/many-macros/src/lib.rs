@@ -160,7 +160,7 @@ impl Endpoint {
             (_, _, _) => {
                 return Err(syn::Error::new(
                     signature.span(),
-                    "Must have 2 or 3 arguments".to_string(),
+                    "Must have 2, 3, or 4 arguments".to_string(),
                 ));
             }
         }
@@ -521,7 +521,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
 
             let data = message.data.as_slice();
             let (transmitter, receiver) = unbounded();
-            let context: Context = (&message, &transmitter).into();
+            let ctx: Context = (&message, &transmitter).into();
             let result = match message.method.as_str() {
                 #( #execute_endpoint_pat )*
 
