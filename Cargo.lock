@@ -2201,6 +2201,7 @@ dependencies = [
 name = "many-protocol"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "base64 0.13.1",
  "coset",
  "derive_builder 0.10.2",

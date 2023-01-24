@@ -1,4 +1,5 @@
 use {
+    crate::attributes::Attribute,
     derive_more::{From, Into},
     minicbor::{
         decode,
@@ -6,6 +7,8 @@ use {
         Decode, Decoder, Encode, Encoder,
     },
 };
+
+pub const PROOF: Attribute = Attribute::id(3);
 
 #[derive(Clone, Debug, Eq, From, Into, PartialEq)]
 pub struct Key(Vec<u8>);
@@ -90,8 +93,12 @@ mod tests {
     #[test]
     fn round_trip_parent() -> Result<(), ()> {
         assert_eq!(
-            minicbor::decode::<ProofOperation>(minicbor::to_vec(ProofOperation::Parent).map_err(|_| ())?.as_slice())
-                .map_err(|_| ())?,
+            minicbor::decode::<ProofOperation>(
+                minicbor::to_vec(ProofOperation::Parent)
+                    .map_err(|_| ())?
+                    .as_slice()
+            )
+            .map_err(|_| ())?,
             ProofOperation::Parent
         );
         Ok(())
@@ -100,8 +107,12 @@ mod tests {
     #[test]
     fn round_trip_child() -> Result<(), ()> {
         assert_eq!(
-            minicbor::decode::<ProofOperation>(minicbor::to_vec(ProofOperation::Child).map_err(|_| ())?.as_slice())
-                .map_err(|_| ())?,
+            minicbor::decode::<ProofOperation>(
+                minicbor::to_vec(ProofOperation::Child)
+                    .map_err(|_| ())?
+                    .as_slice()
+            )
+            .map_err(|_| ())?,
             ProofOperation::Child
         );
         Ok(())
@@ -139,7 +150,8 @@ mod tests {
 
     #[test]
     fn round_trip_key_value_pair() -> Result<(), ()> {
-        let key_value_pair = ProofOperation::KeyValuePair(vec![1, 2, 3].into(), vec![4, 5, 6].into());
+        let key_value_pair =
+            ProofOperation::KeyValuePair(vec![1, 2, 3].into(), vec![4, 5, 6].into());
         assert_eq!(
             minicbor::decode::<ProofOperation>(
                 minicbor::to_vec(key_value_pair.clone())

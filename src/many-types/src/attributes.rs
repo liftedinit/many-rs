@@ -67,6 +67,12 @@ impl FromIterator<Attribute> for AttributeSet {
     }
 }
 
+impl Extend<Attribute> for AttributeSet {
+    fn extend<T: IntoIterator<Item = Attribute>>(&mut self, iter: T) {
+        self.0.extend(iter)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Attribute {
     pub id: AttributeId,

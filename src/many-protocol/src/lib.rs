@@ -3,6 +3,7 @@ use coset::CoseSign1Builder;
 use many_error::ManyError;
 use many_identity::{Address, Identity, Verifier};
 
+pub mod context;
 pub mod request;
 pub mod response;
 

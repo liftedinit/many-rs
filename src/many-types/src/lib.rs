@@ -20,6 +20,7 @@ pub mod proof;
 use attributes::AttributeId;
 pub use either::Either;
 pub use memo::Memo;
+pub use proof::{ProofOperation, PROOF};
 
 pub mod legacy {
     pub use crate::memo::DataLegacy;
