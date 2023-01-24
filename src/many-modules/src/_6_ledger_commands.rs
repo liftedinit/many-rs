@@ -36,6 +36,7 @@ mod tests {
             amount: TokenAmount::from(512u16),
             symbol: Address::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz")
                 .unwrap(),
+            memo: None,
         };
         let mut mock = MockLedgerCommandsModuleBackend::new();
         mock.expect_send()

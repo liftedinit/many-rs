@@ -62,6 +62,7 @@ mod tests {
                 symbols: vec![*SYMBOL],
                 hash: ByteVec::from(vec![10u8; 8]),
                 local_names: BTreeMap::from([(*SYMBOL, SYMBOL_NAME.to_string())]),
+                tokens: Default::default(),
             }));
         let module = super::LedgerModule::new(Arc::new(Mutex::new(mock)));
 
