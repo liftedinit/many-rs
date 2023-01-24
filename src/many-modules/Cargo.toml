@@ -11,6 +11,7 @@ many-identity = { path = "../many-identity", version = "0.1.0" }
 many-macros = { path = "../many-macros", version = "0.1.0" }
 many-protocol = { path = "../many-protocol", version = "0.1.0" }
 many-types = { path = "../many-types", version = "0.1.0" }
+async-channel = "1.8"
 async-trait = "0.1.56"
 coset = "0.3.2"
 derive_builder = "0.11.2"

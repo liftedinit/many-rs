@@ -12,6 +12,7 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 proc-macro = true
 
 [dependencies]
+async-channel = "1.8"
 inflections = "1.1.1"
 proc-macro2 = "1.0.36"
 quote = "1.0.14"
