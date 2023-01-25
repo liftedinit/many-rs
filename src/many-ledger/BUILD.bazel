@@ -24,21 +24,16 @@ rust_binary(
         normal = True,
     ) + [
         ":build_script",
-        "//src/many-abci:many-abci-lib",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-migration",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
     ],
-)
-
-rust_library(
-    name = "many-ledger-lib",
-    srcs = glob(include = ["src/**/*.rs"]),
-    aliases = aliases(),
-    crate_name = "many_ledger",
-    proc_macro_deps = all_crate_deps(
-        proc_macro = True,
-    ),
-    deps = all_crate_deps(
-        normal = True,
-    ),
 )
 
 rust_library(
@@ -58,7 +53,13 @@ rust_library(
     deps = all_crate_deps(
         normal = True,
         normal_dev = True,
-    ),
+    ) + [
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-modules",
+        "//src/many-types",
+    ],
 )
 
 rust_test(

@@ -1,6 +1,8 @@
 load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 
+package(default_visibility = [])
+
 rust_binary(
     name = "ledger",
     srcs = glob(include = ["src/**/*.rs"]),
@@ -10,5 +12,14 @@ rust_binary(
     ),
     deps = all_crate_deps(
         normal = True,
-    ),
+    ) + [
+        "//src/many-client",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-hsm",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-types",
+    ],
 )

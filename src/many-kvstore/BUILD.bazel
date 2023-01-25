@@ -2,6 +2,8 @@ load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test_suite")
 load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
 
+package(default_visibility = [])
+
 cargo_build_script(
     name = "build_script",
     srcs = ["build.rs"],
@@ -20,20 +22,14 @@ rust_binary(
         normal = True,
     ) + [
         ":build_script",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
     ],
-)
-
-rust_library(
-    name = "many-kvstore-lib",
-    srcs = glob(include = ["src/**/*.rs"]),
-    aliases = aliases(),
-    crate_name = "many_kvstore",
-    proc_macro_deps = all_crate_deps(
-        proc_macro = True,
-    ),
-    deps = all_crate_deps(
-        normal = True,
-    ),
 )
 
 rust_library(
@@ -48,7 +44,15 @@ rust_library(
     deps = all_crate_deps(
         normal = True,
         normal_dev = True,
-    ),
+    ) + [
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
+    ],
 )
 
 rust_test_suite(
@@ -65,5 +69,12 @@ rust_test_suite(
         normal_dev = True,
     ) + [
         ":many-kvstore-lib-for-test",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
     ],
 )

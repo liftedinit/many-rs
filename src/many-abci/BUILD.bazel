@@ -2,7 +2,7 @@ load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test", "rust_test_suite")
 load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
 
-package(default_visibility = ["//src/many-ledger:__pkg__"])
+package(default_visibility = [])
 
 cargo_build_script(
     name = "build_script",
@@ -22,7 +22,16 @@ rust_binary(
         normal = True,
     ) + [
         ":build_script",
-    ]
+        "//src/many-client",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
+    ],
 )
 
 rust_library(
@@ -35,5 +44,15 @@ rust_library(
     ),
     deps = all_crate_deps(
         normal = True,
-    ),
+    ) + [
+        "//src/many-client",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
+    ],
 )

@@ -178,7 +178,7 @@ mod tests {
                         txs: vec![Transaction {
                             id: TransactionIdentifier { hash: vec![] },
                             request: None,
-                            response: None
+                            response: None,
                         }],
                     },
                 }),
@@ -223,7 +223,7 @@ mod tests {
                         txs: vec![Transaction {
                             id: TransactionIdentifier { hash: vec![] },
                             request: None,
-                            response: None
+                            response: None,
                         }],
                     },
                 }),
@@ -262,7 +262,7 @@ mod tests {
                     txn: Transaction {
                         id: TransactionIdentifier { hash: v },
                         request: None,
-                        response: None
+                        response: None,
                     },
                 }),
             });
