@@ -2,6 +2,7 @@ use crate::EmptyReturn;
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
+use many_protocol::context::Context;
 use many_types::{cbor_type_decl, ledger, Memo};
 use minicbor::{Decode, Encode};
 
@@ -33,11 +34,13 @@ pub trait LedgerMintBurnModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: TokenMintArgs,
+        context: Context
     ) -> Result<TokenMintReturns, ManyError>;
     fn burn(
         &mut self,
         sender: &Address,
         args: TokenBurnArgs,
+        context: Context
     ) -> Result<TokenBurnReturns, ManyError>;
 }
 
@@ -46,7 +49,7 @@ mod tests {
     use super::*;
     use crate::testutils::call_module_cbor;
     use many_identity::testing::identity;
-    use mockall::predicate::eq;
+    use mockall::predicate::{always, eq};
     use std::sync::{Arc, Mutex};
 
     #[test]
@@ -58,9 +61,9 @@ mod tests {
             memo: None,
         };
         mock.expect_mint()
-            .with(eq(identity(1)), eq(data.clone()))
+            .with(eq(identity(1)), eq(data.clone()), always())
             .times(1)
-            .returning(|_, _| Ok(TokenMintReturns {}));
+            .returning(|_, _, _| Ok(TokenMintReturns {}));
         let module = super::LedgerMintBurnModule::new(Arc::new(Mutex::new(mock)));
 
         let update_returns: TokenMintReturns = minicbor::decode(
@@ -81,7 +84,7 @@ mod tests {
             error_on_under_burn: None,
         };
         mock.expect_burn()
-            .with(eq(identity(1)), eq(data.clone()))
+            .with(eq(identity(1)), eq(data.clone()), always())
             .times(1)
             .return_const(Ok(TokenBurnReturns {
                 distribution: Default::default(),
