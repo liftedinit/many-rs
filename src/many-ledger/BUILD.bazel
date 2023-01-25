@@ -55,10 +55,14 @@ rust_library(
         normal_dev = True,
     ) + [
         "//src/many-error",
-        "//src/many-identity",
-        "//src/many-identity-dsa",
-        "//src/many-modules",
-        "//src/many-types",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-identity-dsa:many-identity-dsa-for-test",
+        "//src/many-identity-webauthn:many-identity-webauthn-for-test",
+        "//src/many-migration:many-migration-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-protocol:many-protocol-for-test",
+        "//src/many-server:many-server-for-test",
+        "//src/many-types:many-types-for-test",
     ],
 )
 
@@ -91,7 +95,12 @@ rust_test_suite(
         normal_dev = True,
     ) + [
         ":many-ledger-lib-for-test",
+        "//src/many-error",
         "//src/many-ledger/test-utils:many-ledger-test-utils-lib",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-migration:many-migration-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-types:many-types-for-test",
     ],
 )
 
@@ -119,6 +128,10 @@ rust_test_suite(
         normal_dev = True,
     ) + [
         ":many-ledger-lib-for-test",
+        "//src/many-error",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-types:many-types-for-test",
         "//src/many-ledger/test-utils:many-ledger-test-utils-lib",
     ],
 )

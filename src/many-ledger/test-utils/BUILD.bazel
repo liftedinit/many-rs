@@ -16,7 +16,7 @@ rust_library(
     deps = all_crate_deps(
         normal = True,
     ) + [
-        "//src/many-error:many-error",
+        "//src/many-error",
         "//src/many-identity:many-identity-for-test",
         "//src/many-identity-dsa:many-identity-dsa-for-test",
         "//src/many-ledger:many-ledger-lib-for-test",
