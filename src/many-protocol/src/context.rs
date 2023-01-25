@@ -3,9 +3,10 @@ use {
     async_channel::{Sender, TrySendError},
     many_error::ManyError,
     many_types::{attributes::Attribute, PROOF},
+    std::borrow::Cow,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Context {
     request: RequestMessage,
     transmitter: Sender<ProofResult>,
@@ -34,7 +35,7 @@ impl Context {
         prover: impl FnOnce() -> Result<Vec<u8>, ManyError>,
     ) -> Option<TrySendError<ProofResult>> {
         use ProofResult::{Error, Proof, ProofNotRequested};
-        let result = if self.request.attributes.contains(&PROOF) {
+        let result = if self.proof_requested() {
             prover().map(Proof).unwrap_or_else(Error)
         } else {
             ProofNotRequested
@@ -44,6 +45,10 @@ impl Context {
             .map(|_| None)
             .unwrap_or_else(Some)
     }
+
+    pub fn proof_requested(&self) -> bool {
+        self.request.attributes.contains(&PROOF)
+    }
 }
 
 impl From<(RequestMessage, Sender<ProofResult>)> for Context {
@@ -52,5 +57,23 @@ impl From<(RequestMessage, Sender<ProofResult>)> for Context {
             request,
             transmitter,
         }
+    }
+}
+
+impl AsRef<Context> for Context {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
+impl From<Context> for Cow<'_, Context> {
+    fn from(context: Context) -> Self {
+        Self::Owned(context)
+    }
+}
+
+impl<'a> From<&'a Context> for Cow<'a, Context> {
+    fn from(context: &'a Context) -> Self {
+        Self::Borrowed(context)
     }
 }
