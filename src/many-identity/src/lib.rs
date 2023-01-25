@@ -1,5 +1,5 @@
 mod address;
-pub use address::Address;
+pub use address::{Address, MAX_SUBRESOURCE_ID};
 
 mod identity;
 pub use identity::*;
