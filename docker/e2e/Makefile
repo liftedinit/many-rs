@@ -1,5 +1,5 @@
 CPUCORES ?= $$(docker run --rm nixos/nix nproc)
-VOLUME = $(abspath $(dir $(abspath $(dir $(abspath $(dir $(abspath $(dir $$PWD))))))))
+VOLUME = $(abspath $(dir $(abspath $(dir $(abspath $(dir $$PWD))))))
 UINFO = $$(id -u):$$(id -g)
 SHELL = bash
 
@@ -10,7 +10,11 @@ lockfile:
 ../../Cargo.lock: lockfile
 
 Cargo.nix: lockfile
-	docker run --rm -e CPUCORES=$(CPUCORES) -e UINFO=$(UINFO) -v nix-store:/nix -v $(VOLUME):/volume -w /volume/many-framework nixos/nix bash docker/e2e/generate-cargo-nix.sh
+	docker run --rm -e CPUCORES=$(CPUCORES) -e UINFO=$(UINFO) \
+	           -v nix-store:/nix \
+	           -v $(VOLUME):/volume/many-rs \
+	           -w /volume/many-rs \
+	           nixos/nix bash docker/e2e/generate-cargo-nix.sh
 	touch ../../src/ledger/src/main.rs
 
 .PHONY: many/many-abci

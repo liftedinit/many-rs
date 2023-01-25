@@ -8,7 +8,7 @@ ABCI_TAG ?= "latest"
 # Constants
 VOLUME = $(abspath $(dir $(abspath $(dir $(abspath $(dir $(abspath $(dir $$PWD))))))))
 UINFO = $$(id -u):$$(id -g)
-BUILDER_COMMAND = docker run --rm -e CPUCORES=$(CPUCORES) -e UINFO=$(UINFO) -v $(VOLUME):/volume -v nix-store:/nix -w /volume/many-framework/docker/e2e/ nixos/nix bash build-image.sh $@
+BUILDER_COMMAND = docker run --rm -e CPUCORES=$(CPUCORES) -e UINFO=$(UINFO) -v $(VOLUME):/volume -v nix-store:/nix -w /volume/many-rs/docker/e2e/ nixos/nix bash build-image.sh $@
 SHELL = bash
 
 genfiles-common/many-abci.tar.gz: $(shell find ../../src -type f) flake.nix flake.lock
