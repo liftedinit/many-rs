@@ -147,7 +147,16 @@ pub struct InitialStateJson {
 impl InitialStateJson {
     pub fn read<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let content = std::fs::read_to_string(path.as_ref()).map_err(Box::new)?;
-        let s = json5::from_str(&content).map_err(Box::new)?;
+        let s: InitialStateJson = json5::from_str(&content).map_err(Box::new)?;
+        if let (Some(token_identity), Some(account_identity)) =
+            (s.token_identity, s.account_identity)
+        {
+            if token_identity == account_identity {
+                return Err(Box::new(ManyError::unknown(
+                    "Token and account identities must be different.",
+                )));
+            }
+        }
         Ok(s)
     }
 

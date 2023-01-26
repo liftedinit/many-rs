@@ -54,6 +54,9 @@ function setup() {
     # The symbol metadata will be stored in the DB
     cp "$GIT_ROOT/staging/ledger_state.json5" "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
+    # The MFX address in the staging file is now `identity 1`
+    sed -i.bak 's/'${MFX_ADDRESS}'/'$(subresource 1 1)'/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
+
     # Make `identity 1` the token identity
     sed -i.bak 's/token_identity: ".*"/token_identity: "'"$(identity 1)"'"/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
@@ -65,7 +68,7 @@ function setup() {
 
     start_ledger --state="$BATS_TEST_ROOTDIR/ledger_state.json5" \
         --pem "$(pem 0)" \
-        --balance-only-for-testing="$(identity 8):$START_BALANCE:$MFX_ADDRESS" \
+        --balance-only-for-testing="$(identity 8):$START_BALANCE:$(subresource 1 1)" \
         --migrations-config "$BATS_TEST_ROOTDIR/migrations.json"
 }
 
@@ -75,17 +78,30 @@ function teardown() {
 
 @test "$SUITE: ledger can return balance with token info summary" {
     call_ledger --port=8000 balance "$(identity 8)"
-    assert_output --partial "${START_BALANCE} MFX (${MFX_ADDRESS})"
+    assert_output --partial "${START_BALANCE} MFX ($(subresource 1 1))"
 }
 
 @test "$SUITE: can create new token" {
     create_token --pem=1 --port=8000 --initial-distribution ''\''{"'$(identity 1)'": 1000, "'$(identity 2)'": 1000}'\'''
+    assert_output --partial "$(subresource 1 0)"
     assert_output --regexp "total:.*(.*2000,.*)"
     assert_output --regexp "circulating:.*(.*2000,.*)"
     call_ledger --port=8000 balance "$(identity 1)"
     assert_output --partial "1000 FBR"
     call_ledger --port=8000 balance "$(identity 2)"
     assert_output --partial "1000 FBR"
+}
+
+@test "$SUITE: token create doesn't overwrite existing subresource" {
+    # Create FBR
+    create_token --pem=1 --port=8000
+    assert_output --partial "$(subresource 1 0)"
+
+    # MFX is subresource 1
+
+    # Next token should be subresource 2
+    call_ledger --pem=1 --port=8000 token create "Test" "TT" 9
+    assert_output --partial "$(subresource 1 2)"
 }
 
 @test "$SUITE: can create new token with memo" {
@@ -375,7 +391,7 @@ function teardown() {
 }
 
 @test "$SUITE: MFX metadata" {
-    call_ledger --port=8000 token info "${MFX_ADDRESS}"
+    call_ledger --port=8000 token info $(subresource 1 1)
     assert_output --partial "name: \"Manifest Network Token\""
     assert_output --partial "ticker: \"MFX\""
     assert_output --partial "decimals: 9"

@@ -54,13 +54,13 @@ function setup() {
     cp "$GIT_ROOT/staging/ledger_state.json5" "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
     # Make `identity 1` the token identity
-    sed -i 's/token_identity: ".*"/token_identity: "'"$(identity 1)"'"/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
+    sed -i.bak 's/token_identity: ".*"/token_identity: "'"$(identity 1)"'"/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
     # Use token identity subresource 0 as the first token symbol
-    sed -i 's/token_next_subresource: 2/token_next_subresource: 0/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
+    sed -i.bak 's/token_next_subresource: 2/token_next_subresource: 0/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
     # Skip hash check
-    sed -i 's/hash/\/\/hash/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
+    sed -i.bak 's/hash/\/\/hash/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
     start_ledger --state="$BATS_TEST_ROOTDIR/ledger_state.json5" \
         --pem "$(pem 0)" \
