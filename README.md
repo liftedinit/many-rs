@@ -21,94 +21,55 @@ Features
 
 # Installation
 
-0. (macOS) Install `brew`
-```shell
-# Follow the instructions on screen
-$ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
+1. (macOS) Install `brew`
+    ```shell
+    # Follow the instructions on screen
+    $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    ```
 1. Update your package database
-```shell
-# Ubuntu
-$ sudo apt update
-
-# CentOS
-$ sudo yum update
-
-# Archlinux
-$ sudo pacman -Syu
-
-# macOS
-$ brew update
-```
+    ```shell
+    # Ubuntu
+    $ sudo apt update
+    
+    # CentOS
+    $ sudo yum update
+    
+    # Archlinux
+    $ sudo pacman -Syu
+    
+    # macOS
+    $ brew update
+    ```
 1. Install Rust using [rustup](https://rustup.rs/)
-```shell
-$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-$ source $HOME/.cargo/env
-```
+    ```shell
+    $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    $ source $HOME/.cargo/env
+    ```
 2. Install build dependencies
-```shell
-# Ubuntu
-$ sudo apt install build-essential pkg-config clang libssl-dev libsofthsm2 tmux
-
-# CentOS
-$ sudo yum install clang gcc softhsm git pkgconf tmux
-
-# Archlinux
-$ sudo pacman -S clang gcc softhsm git pkgconf tmux
-
-# macOS
-$ brew install tmux
-```
-3. Build `many-framework`
-```shell
-$ git clone https://github.com/liftedinit/many-framework.git
-$ cd many-framework
-$ cargo build
-```
+    ```shell
+    # Ubuntu
+    $ sudo apt install build-essential pkg-config clang libssl-dev libsofthsm2 tmux
+    
+    # CentOS
+    $ sudo yum install clang gcc softhsm git pkgconf tmux
+    
+    # Archlinux
+    $ sudo pacman -S clang gcc softhsm git pkgconf tmux
+    
+    # macOS
+    $ git # and follow the instructions
+    $ brew install tmux
+    ```
+3. Build
+    ```shell
+    $ git clone https://github.com/liftedinit/many-framework.git
+    $ cd many-framework
+    $ cargo build
+    ```
 4. Run tests
-```shell
-$ cargo test
-```
-1. Update your package database
-```shell
-# Ubuntu
-$ sudo apt update
-
-# CentOS
-$ sudo yum update
-
-# Archlinux
-$ sudo pacman -Syu
-```
-2. Install Rust using [rustup](https://rustup.rs/)
-```shell
-$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-$ source $HOME/.cargo/env
-```
-3. Install build dependencies
-```shell
-# Ubuntu
-$ sudo apt install build-essential pkg-config clang libssl-dev libsofthsm2
-
-# CentOS
-$ sudo yum install clang gcc softhsm git pkgconf
-
-# Archlinux
-$ sudo pacman -S clang gcc softhsm git pkgconf
-
-# macOS
-$ git # and follow the instructions
-```
-4. Build `many-rs`
-```shell
-$ git clone https://github.com/liftedinit/many-rs.git
-$ cd many-rs
-$ cargo build
-```
-5. Run tests
-```shell
-$ cargo test
-```
+    ```shell
+    $ cargo test
+    ```
 
 # Usage example
 Below are some examples of how to use the different CLI.
