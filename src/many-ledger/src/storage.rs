@@ -1,9 +1,10 @@
 use crate::error;
 use crate::migration::tokens::TOKEN_MIGRATION;
 use crate::migration::{LedgerMigrations, MIGRATIONS};
+use crate::storage::account::ACCOUNT_SUBRESOURCE_ID_ROOT;
 use crate::storage::event::HEIGHT_EVENTID_SHIFT;
 use many_error::ManyError;
-use many_identity::Address;
+use many_identity::{Address, MAX_SUBRESOURCE_ID};
 use many_migration::{MigrationConfig, MigrationSet};
 use many_modules::events::EventId;
 use many_types::ledger::Symbol;
@@ -31,6 +32,15 @@ pub const HEIGHT_ROOT: &str = "/height";
 
 pub(super) fn key_for_account_balance(id: &Address, symbol: &Symbol) -> Vec<u8> {
     format!("/balances/{id}/{symbol}").into_bytes()
+}
+
+pub(super) fn key_for_subresource_counter(id: &Address, token_migration_active: bool) -> Vec<u8> {
+    if token_migration_active {
+        format!("/config/subresource_counter/{id}").into_bytes()
+    } else {
+        // The only subresource counter prior to the token migration is the account subresource
+        ACCOUNT_SUBRESOURCE_ID_ROOT.into()
+    }
 }
 
 pub type InnerStorage = merk::Merk;
@@ -272,14 +282,39 @@ impl LedgerStorage {
     pub(crate) fn get_next_subresource(
         &mut self,
         identity_root: &str,
-        counter_root: &str,
     ) -> Result<Address, ManyError> {
-        let current_id = self.get_subresource_counter(counter_root)?;
-        let new_id = current_id + 1;
+        let subresource_identity = self
+            .persistent_store
+            .get(identity_root.as_bytes())
+            .map_err(error::storage_get_failed)?
+            .map_or(self.get_identity(IDENTITY_ROOT), |bytes| {
+                Address::from_bytes(&bytes)
+            })?;
+        let mut current_id = self.get_subresource_counter(&subresource_identity)?;
+        // The last subresource ID we can use is == MAX_SUBRESOURCE_ID
+        // Check if the next counter is over the maximum
+        if current_id > MAX_SUBRESOURCE_ID {
+            return Err(error::subresource_exhausted(subresource_identity));
+        }
+        let symbols = self.get_symbols()?;
+        let mut next_subresource = subresource_identity.with_subresource_id(current_id)?;
+
+        while symbols.contains(&next_subresource) {
+            current_id += 1;
+            // Check if the next counter is over the maximum
+            if current_id > MAX_SUBRESOURCE_ID {
+                return Err(error::subresource_exhausted(subresource_identity));
+            }
+            next_subresource = subresource_identity.with_subresource_id(current_id)?;
+        }
+
         self.persistent_store
             .apply(&[(
-                counter_root.as_bytes().to_vec(),
-                Op::Put(new_id.to_be_bytes().to_vec()),
+                key_for_subresource_counter(
+                    &subresource_identity,
+                    self.migrations.is_active(&TOKEN_MIGRATION),
+                ),
+                Op::Put((current_id + 1).to_be_bytes().to_vec()),
             )])
             .map_err(error::storage_apply_failed)?;
 
@@ -294,9 +329,12 @@ impl LedgerStorage {
 
     /// Get the subresource counter from the given DB key.
     /// Returns 0 if the key is not found in the DB
-    fn get_subresource_counter(&self, key: &str) -> Result<u32, ManyError> {
+    fn get_subresource_counter(&self, id: &Address) -> Result<u32, ManyError> {
         self.persistent_store
-            .get(key.as_bytes())
+            .get(&key_for_subresource_counter(
+                id,
+                self.migrations.is_active(&TOKEN_MIGRATION),
+            ))
             .map_err(error::storage_get_failed)?
             .map_or(Ok(0), |x| {
                 let mut bytes = [0u8; 4];

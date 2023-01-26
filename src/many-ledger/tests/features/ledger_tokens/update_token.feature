@@ -8,6 +8,13 @@ Scenario: Updating a token's ticker as myself
 	Then the token new ticker is ABC
 
 @tokens
+Scenario: Updating a token's ticker as myself, ticker exists
+	Given a default token owned by myself
+	And a new ticker TT
+	Then updating the token as myself fails with ticker exists
+	And the error ticker is TT
+
+@tokens
 Scenario: Updating a token's ticker as myself, with memo
 	Given a default token owned by myself
 	And a new ticker ABC

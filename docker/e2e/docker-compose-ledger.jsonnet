@@ -8,7 +8,8 @@ local generate_balance_flags(id_with_balances="", token="mqbfbahksdwaqeenayy2gxk
              local g = std.split(x, ":");
              local id = g[0];
              local amount = if std.length(g) > 1 then g[1] else "10000000000";
-             "--balance-only-for-testing=" + std.join(":", [id, amount, token])
+             local symbol = if std.length(g) > 2 then g[2] else token;
+             "--balance-only-for-testing=" + std.join(":", [id, amount, symbol])
         ),
         std.split(id_with_balances, " ")
     );
