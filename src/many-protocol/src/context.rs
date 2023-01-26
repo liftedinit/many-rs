@@ -30,7 +30,7 @@ impl IntoIterator for ProofResult {
 }
 
 impl Context {
-    pub fn prove<P: Iterator<Item = ProofOperation>, Prover: FnOnce() -> Result<P, ManyError>>(
+    pub fn prove<P: IntoIterator<Item = ProofOperation>, Prover: FnOnce() -> Result<P, ManyError>>(
         &self,
         prover: Prover,
     ) -> Option<TrySendError<ProofResult>> {
