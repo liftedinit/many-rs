@@ -1,0 +1,6 @@
+exports_files(["staging/kvstore_state.json5"])
+
+exports_files(["staging/ledger_state.json5"])
+
+# Required for Vergen
+exports_files([".git"])

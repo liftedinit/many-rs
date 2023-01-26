@@ -1,0 +1,20 @@
+{
+  "identity": "mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow",
+  "token_identity": "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp",
+  "account_identity": "mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow",
+  "initial": {
+    "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp": {
+      "mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz": 1000000
+    }
+  },
+  "symbols": {
+    "mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz": "MFX"
+  },
+  "symbols_meta": {
+    "mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz": {
+      "name": "Manifest Network Token",
+      "decimals": 9
+    }
+  },
+  "hash": "2f136dfbb7bf5c2178297c8b6486162aeaf9555046a56b5f45995fec83639618"
+}

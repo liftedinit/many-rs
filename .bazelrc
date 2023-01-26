@@ -11,6 +11,7 @@ build:clippy --output_groups=+clippy_checks
 
 # Enable rust-analyzer project json for all targets in the workspace
 build:rust-analyzer @rules_rust//tools/rust_analyzer:gen_rust_project
+run:rust-analyzer @rules_rust//tools/rust_analyzer:gen_rust_project
 
 # This import should always be last to allow users to override
 # settings for local development.
