@@ -2,7 +2,7 @@ use {
     crate::RequestMessage,
     async_channel::{Sender, TrySendError},
     many_error::ManyError,
-    many_types::{attributes::Attribute, PROOF},
+    many_types::{attributes::Attribute, ProofOperation, PROOF},
     std::borrow::Cow,
 };
 
@@ -14,7 +14,7 @@ pub struct Context {
 
 pub enum ProofResult {
     Error(ManyError),
-    Proof(Vec<u8>),
+    Proof(Vec<ProofOperation>),
     ProofNotRequested,
 }
 
@@ -30,13 +30,16 @@ impl IntoIterator for ProofResult {
 }
 
 impl Context {
-    pub fn prove(
+    pub fn prove<P: Iterator<Item = ProofOperation>, Prover: FnOnce() -> Result<P, ManyError>>(
         &self,
-        prover: impl FnOnce() -> Result<Vec<u8>, ManyError>,
+        prover: Prover,
     ) -> Option<TrySendError<ProofResult>> {
         use ProofResult::{Error, Proof, ProofNotRequested};
         let result = if self.proof_requested() {
-            prover().map(Proof).unwrap_or_else(Error)
+            prover()
+                .map(Iterator::collect)
+                .map(Proof)
+                .unwrap_or_else(Error)
         } else {
             ProofNotRequested
         };

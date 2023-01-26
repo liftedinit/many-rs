@@ -34,13 +34,13 @@ pub trait LedgerMintBurnModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: TokenMintArgs,
-        context: Context
+        ctx: Context
     ) -> Result<TokenMintReturns, ManyError>;
     fn burn(
         &mut self,
         sender: &Address,
         args: TokenBurnArgs,
-        context: Context
+        ctx: Context
     ) -> Result<TokenBurnReturns, ManyError>;
 }
 
