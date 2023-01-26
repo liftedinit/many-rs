@@ -24,7 +24,7 @@ clap = { version = "3.0.0", features = ["derive"] }
 coset = "0.3"
 const_format = "0.2.30"
 fixed = "1.11.0"
-merk = { git = "https://github.com/liftedinit/merk.git", rev = "3d509c8efd3a68d85a5769f7fff300e10290d137" }
+merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
 hex = "0.4.3"
 itertools = "0.10.3"
 json5 = "0.4.1"
