@@ -16,6 +16,13 @@ pub struct Key(Vec<u8>);
 #[derive(Clone, Debug, Eq, From, Into, PartialEq)]
 pub struct Value(Vec<u8>);
 
+#[derive(Clone, Decode, Debug, Encode, Eq, From, Into, PartialEq)]
+#[cbor(map)]
+pub struct Proof {
+    #[n(0)]
+    pub operations: Vec<ProofOperation>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ProofOperation {
     Child,

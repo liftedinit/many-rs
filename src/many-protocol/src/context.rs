@@ -2,7 +2,7 @@ use {
     crate::RequestMessage,
     async_channel::{Sender, TrySendError},
     many_error::ManyError,
-    many_types::{attributes::Attribute, ProofOperation, PROOF},
+    many_types::{attributes::Attribute, cbor::CborAny, proof::Proof, ProofOperation, PROOF},
     std::borrow::Cow,
 };
 
@@ -19,12 +19,19 @@ pub enum ProofResult {
 }
 
 impl IntoIterator for ProofResult {
-    type Item = Attribute;
-    type IntoIter = std::vec::IntoIter<Attribute>;
+    type Item = Result<Attribute, ManyError>;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
     fn into_iter(self) -> Self::IntoIter {
         match self {
             Self::Error(_) | Self::ProofNotRequested => vec![].into_iter(),
-            Self::Proof(_) => vec![PROOF].into_iter(),
+            Self::Proof(proof) => vec![minicbor::to_vec(Proof::from(proof))
+                .map_err(|error| ManyError::unknown(error.to_string()))
+                .and_then(|bytes| {
+                    minicbor::decode::<CborAny>(bytes.as_slice())
+                        .map_err(|error| ManyError::unknown(error.to_string()))
+                })
+                .map(|any| PROOF.with_argument(any))]
+            .into_iter(),
         }
     }
 }

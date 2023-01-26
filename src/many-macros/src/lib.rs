@@ -545,7 +545,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
                     &message,
                     &message.to,
                     Ok(result),
-                ).with_attributes(receiver.recv().await.map_err(|e| ManyError::unknown(e.to_string()))?)
+                ).with_attributes(receiver.recv().await.map_err(|e| ManyError::unknown(e.to_string()))?.into_iter().collect::<Result<Vec<_>, _>>()?)
             } else {
                 many_protocol::ResponseMessage::from_request(
                     &message,
