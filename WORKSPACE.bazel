@@ -30,6 +30,13 @@ load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
 
 crates_repository(
     name = "crate_index",
+    # The following annotations are needed to prevent Bazel passing incompatible C/CXX flags when coverage is enabled
+    # https://github.com/bazelbuild/rules_rust/issues/1550
+    annotations = {"librocksdb-sys": [crate.annotation(
+        build_script_env = {
+            "CXXFLAGS": "-Wno-error=coverage-invalid-line-number",
+        },
+    )]},
     cargo_lockfile = "//:Cargo.Bazel.lock",
     lockfile = "//:cargo-bazel-lock.json",
     manifests = [

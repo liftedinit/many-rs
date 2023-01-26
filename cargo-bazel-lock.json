@@ -1,5 +1,5 @@
 {
-  "checksum": "f3ce30e3b05f1b9c2b6267052b067a69c5e73fa73eea7a58976e288a832fb28b",
+  "checksum": "7938cd232f0de6fb8ad3adf5d7c2f00e235dfd3a4da65eb6adbf6f022bf0989d",
   "crates": {
     "aes 0.7.5": {
       "name": "aes",
@@ -13293,6 +13293,12 @@
               "target": "glob"
             }
           ],
+          "selects": {}
+        },
+        "build_script_env": {
+          "common": {
+            "CXXFLAGS": "-Wno-error=coverage-invalid-line-number"
+          },
           "selects": {}
         },
         "links": "rocksdb"
@@ -28587,8 +28593,8 @@
         },
         {
           "Binary": {
-            "crate_name": "exit",
-            "crate_root": "src/bin/exit.rs",
+            "crate_name": "reader",
+            "crate_root": "src/bin/reader.rs",
             "srcs": {
               "include": [
                 "**/*.rs"
@@ -28611,8 +28617,8 @@
         },
         {
           "Binary": {
-            "crate_name": "reader",
-            "crate_root": "src/bin/reader.rs",
+            "crate_name": "exit",
+            "crate_root": "src/bin/exit.rs",
             "srcs": {
               "include": [
                 "**/*.rs"
