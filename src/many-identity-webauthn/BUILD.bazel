@@ -3,6 +3,8 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = [
     "//src/many:__pkg__",
+    "//src/many-abci:__pkg__",
+    "//src/many-ledger:__pkg__",
     "//src/many-mock:__pkg__",
 ])
 
@@ -24,7 +26,7 @@ rust_library(
         "//src/many-identity-dsa",
         "//src/many-modules",
         "//src/many-protocol",
-        "//src/many-types"
+        "//src/many-types",
     ],
 )
 

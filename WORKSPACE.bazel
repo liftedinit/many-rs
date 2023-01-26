@@ -30,18 +30,34 @@ load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
 
 crates_repository(
     name = "crate_index",
+    # The following annotations are needed to prevent Bazel passing incompatible C/CXX flags when coverage is enabled
+    # https://github.com/bazelbuild/rules_rust/issues/1550
+    annotations = {"librocksdb-sys": [crate.annotation(
+        build_script_env = {
+            "CXXFLAGS": "-Wno-error=coverage-invalid-line-number",
+        },
+    )]},
     cargo_lockfile = "//:Cargo.Bazel.lock",
     lockfile = "//:cargo-bazel-lock.json",
     manifests = [
         "//:Cargo.toml",
-        "//src/many:Cargo.toml",
-        "//src/many-client:Cargo.toml",
+        "//src/http_proxy:Cargo.toml",
+        "//src/idstore-export:Cargo.toml",
+        "//src/kvstore:Cargo.toml",
+        "//src/ledger-db:Cargo.toml",
+        "//src/ledger:Cargo.toml",
+        "//src/many-abci:Cargo.toml",
         "//src/many-client-macros:Cargo.toml",
+        "//src/many-client:Cargo.toml",
         "//src/many-error:Cargo.toml",
-        "//src/many-identity:Cargo.toml",
         "//src/many-identity-dsa:Cargo.toml",
         "//src/many-identity-hsm:Cargo.toml",
         "//src/many-identity-webauthn:Cargo.toml",
+        "//src/many-identity:Cargo.toml",
+        "//src/many-kvstore:Cargo.toml",
+        "//src/many-ledger/test-macros:Cargo.toml",
+        "//src/many-ledger/test-utils:Cargo.toml",
+        "//src/many-ledger:Cargo.toml",
         "//src/many-macros:Cargo.toml",
         "//src/many-migration:Cargo.toml",
         "//src/many-mock:Cargo.toml",
@@ -49,6 +65,7 @@ crates_repository(
         "//src/many-protocol:Cargo.toml",
         "//src/many-server:Cargo.toml",
         "//src/many-types:Cargo.toml",
+        "//src/many:Cargo.toml",
     ],
     rust_version = RUST_VERSION,
 )

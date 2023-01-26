@@ -1,0 +1,17 @@
+[package]
+name = "many-ledger-test-macros"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Lifted Initiative"]
+license = "Apache-2.0"
+description = ""
+homepage = "https://liftedinit.org"
+repository = "https://github.com/liftedinit/many-framework"
+publish = false
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1.0"
+syn = "1.0"
