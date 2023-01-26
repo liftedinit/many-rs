@@ -1,5 +1,5 @@
 {
-  "checksum": "7938cd232f0de6fb8ad3adf5d7c2f00e235dfd3a4da65eb6adbf6f022bf0989d",
+  "checksum": "3978d44c2ca843e2ccd933a225aa9a043cf6d6b447e4afde34078034032da15d",
   "crates": {
     "aes 0.7.5": {
       "name": "aes",
@@ -4787,13 +4787,13 @@
       },
       "license": "MIT / Apache-2.0"
     },
-    "coset 0.3.3": {
+    "coset 0.3.4": {
       "name": "coset",
-      "version": "0.3.3",
+      "version": "0.3.4",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/coset/0.3.3/download",
-          "sha256": "604cb30f7b6f4fee05b9ddf88cf6d3c0af0f98d9099e6f6a050e81e7a7cb938b"
+          "url": "https://crates.io/api/v1/crates/coset/0.3.4/download",
+          "sha256": "c765a4e852cef25c69a48e9fcd60995a7fecabf0134a0021e7181452c4a60f95"
         }
       },
       "targets": [
@@ -4815,6 +4815,9 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": [
+          "default"
+        ],
         "deps": {
           "common": [
             {
@@ -4829,7 +4832,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.3.3"
+        "version": "0.3.4"
       },
       "license": "Apache-2.0"
     },
@@ -8560,13 +8563,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "fixed 1.22.0": {
+    "fixed 1.22.1": {
       "name": "fixed",
-      "version": "1.22.0",
+      "version": "1.22.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/fixed/1.22.0/download",
-          "sha256": "ad45f1b686656281ac6a3b7eaf487be0e9e69fe4678f8497c84beb5f0fab7dae"
+          "url": "https://crates.io/api/v1/crates/fixed/1.22.1/download",
+          "sha256": "b2e55932f129b8e8582d2099dd43f67c9e641a9369280fac04ac97c47ba1564e"
         }
       },
       "targets": [
@@ -8612,7 +8615,7 @@
               "target": "bytemuck"
             },
             {
-              "id": "fixed 1.22.0",
+              "id": "fixed 1.22.1",
               "target": "build_script_build"
             },
             {
@@ -8627,7 +8630,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.22.0"
+        "version": "1.22.1"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -13866,7 +13869,7 @@
               "target": "clap"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -13976,7 +13979,7 @@
               "target": "clap"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -14127,7 +14130,7 @@
               "target": "base64"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -14151,7 +14154,7 @@
               "target": "ed25519_dalek"
             },
             {
-              "id": "fixed 1.22.0",
+              "id": "fixed 1.22.1",
               "target": "fixed"
             },
             {
@@ -14384,7 +14387,7 @@
               "target": "base32"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -14491,7 +14494,7 @@
               "target": "base32"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -14610,7 +14613,7 @@
               "target": "asn1"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -14691,7 +14694,7 @@
               "target": "base64urlsafedata"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -14813,7 +14816,7 @@
               "target": "clap"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -15003,11 +15006,11 @@
               "target": "const_format"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
-              "id": "fixed 1.22.0",
+              "id": "fixed 1.22.1",
               "target": "fixed"
             },
             {
@@ -15217,7 +15220,7 @@
         "deps": {
           "common": [
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -15413,7 +15416,7 @@
               "target": "cbor_diag"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -15499,7 +15502,7 @@
         "deps": {
           "common": [
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -15602,7 +15605,7 @@
               "target": "base64"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -15725,7 +15728,7 @@
               "target": "base64"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
@@ -15753,7 +15756,7 @@
               "target": "ed25519_dalek"
             },
             {
-              "id": "fixed 1.22.0",
+              "id": "fixed 1.22.1",
               "target": "fixed"
             },
             {
@@ -15916,11 +15919,11 @@
               "target": "base64"
             },
             {
-              "id": "coset 0.3.3",
+              "id": "coset 0.3.4",
               "target": "coset"
             },
             {
-              "id": "fixed 1.22.0",
+              "id": "fixed 1.22.1",
               "target": "fixed"
             },
             {
@@ -16119,7 +16122,7 @@
         "Git": {
           "remote": "https://github.com/liftedinit/merk.git",
           "commitish": {
-            "Rev": "3d509c8efd3a68d85a5769f7fff300e10290d137"
+            "Rev": "857bf81963d9282ab03438da5013e1f816bd9da1"
           }
         }
       },
@@ -16168,6 +16171,10 @@
             {
               "id": "colored 2.0.0",
               "target": "colored"
+            },
+            {
+              "id": "digest 0.9.0",
+              "target": "digest"
             },
             {
               "id": "ed 0.3.0",
@@ -28593,8 +28600,8 @@
         },
         {
           "Binary": {
-            "crate_name": "reader",
-            "crate_root": "src/bin/reader.rs",
+            "crate_name": "exit",
+            "crate_root": "src/bin/exit.rs",
             "srcs": {
               "include": [
                 "**/*.rs"
@@ -28617,8 +28624,8 @@
         },
         {
           "Binary": {
-            "crate_name": "exit",
-            "crate_root": "src/bin/exit.rs",
+            "crate_name": "reader",
+            "crate_root": "src/bin/reader.rs",
             "srcs": {
               "include": [
                 "**/*.rs"

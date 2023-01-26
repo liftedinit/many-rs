@@ -901,9 +901,9 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
 name = "coset"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "604cb30f7b6f4fee05b9ddf88cf6d3c0af0f98d9099e6f6a050e81e7a7cb938b"
+checksum = "c765a4e852cef25c69a48e9fcd60995a7fecabf0134a0021e7181452c4a60f95"
 dependencies = [
  "ciborium",
  "ciborium-io",
@@ -1623,9 +1623,9 @@ dependencies = [
 
 [[package]]
 name = "fixed"
-version = "1.22.0"
+version = "1.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad45f1b686656281ac6a3b7eaf487be0e9e69fe4678f8497c84beb5f0fab7dae"
+checksum = "b2e55932f129b8e8582d2099dd43f67c9e641a9369280fac04ac97c47ba1564e"
 dependencies = [
  "az",
  "bytemuck",
@@ -3159,11 +3159,12 @@ dependencies = [
 [[package]]
 name = "merk"
 version = "2.0.0"
-source = "git+https://github.com/liftedinit/merk.git?rev=3d509c8efd3a68d85a5769f7fff300e10290d137#3d509c8efd3a68d85a5769f7fff300e10290d137"
+source = "git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1#857bf81963d9282ab03438da5013e1f816bd9da1"
 dependencies = [
  "blake3",
  "byteorder",
  "colored",
+ "digest 0.9.0",
  "ed",
  "hex",
  "num_cpus",
