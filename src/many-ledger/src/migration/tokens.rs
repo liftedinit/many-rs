@@ -1,10 +1,8 @@
 use crate::error;
 use crate::migration::MIGRATIONS;
-use crate::storage::account::ACCOUNT_IDENTITY_ROOT;
-use crate::storage::ledger_tokens::{
-    key_for_ext_info, key_for_symbol, TOKEN_IDENTITY_ROOT, TOKEN_SUBRESOURCE_COUNTER_ROOT,
-};
-use crate::storage::{InnerStorage, IDENTITY_ROOT, SYMBOLS_ROOT};
+use crate::storage::account::{ACCOUNT_IDENTITY_ROOT, ACCOUNT_SUBRESOURCE_ID_ROOT};
+use crate::storage::ledger_tokens::{key_for_ext_info, key_for_symbol, TOKEN_IDENTITY_ROOT};
+use crate::storage::{key_for_subresource_counter, InnerStorage, IDENTITY_ROOT, SYMBOLS_ROOT};
 use linkme::distributed_slice;
 use many_error::ManyError;
 use many_identity::Address;
@@ -21,15 +19,31 @@ fn migrate_account_identity(storage: &mut merk::Merk) -> Result<(), ManyError> {
     let root_identity = storage
         .get(IDENTITY_ROOT.as_bytes())
         .map_err(error::storage_get_failed)?
-        .ok_or_else(|| error::storage_key_not_found(SYMBOLS_ROOT))?;
+        .ok_or_else(|| error::storage_key_not_found(IDENTITY_ROOT))?;
+    let subresource_counter = storage
+        .get(ACCOUNT_SUBRESOURCE_ID_ROOT.as_bytes())
+        .map_err(error::storage_get_failed)?
+        .map_or(0u32, |x| {
+            let mut bytes = [0u8; 4];
+            bytes.copy_from_slice(x.as_slice());
+            u32::from_be_bytes(bytes)
+        });
+    let root_address = Address::from_bytes(&root_identity)?;
 
-    // And use it as the account identity
-    storage
-        .apply(&[(
+    let batch: Vec<BatchEntry> = vec![
+        (ACCOUNT_SUBRESOURCE_ID_ROOT.as_bytes().to_vec(), Op::Delete),
+        (
             ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
             Op::Put(root_identity),
-        )])
-        .map_err(error::storage_apply_failed)?;
+        ),
+        (
+            key_for_subresource_counter(&root_address, true),
+            Op::Put(subresource_counter.to_be_bytes().to_vec()),
+        ),
+    ];
+
+    // And use it as the account identity
+    storage.apply(&batch).map_err(error::storage_apply_failed)?;
 
     Ok(())
 }
@@ -112,16 +126,16 @@ fn migrate_token(
             ),
         ),
         (
+            key_for_subresource_counter(&token_identity, true),
+            Op::Put(token_next_subresource.to_be_bytes().to_vec()),
+        ),
+        (
             key_for_symbol(&symbol).into_bytes(),
             Op::Put(minicbor::to_vec(info).map_err(ManyError::serialization_error)?),
         ),
         (
             TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
             Op::Put(token_identity.to_vec()),
-        ),
-        (
-            TOKEN_SUBRESOURCE_COUNTER_ROOT.as_bytes().to_vec(),
-            Op::Put(token_next_subresource.to_be_bytes().to_vec()),
         ),
     ];
 

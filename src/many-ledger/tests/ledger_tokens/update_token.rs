@@ -1,7 +1,7 @@
 use many_ledger_test_macros::*;
 use many_ledger_test_utils::cucumber::{
-    verify_error_code, verify_error_role, AccountWorld, LedgerWorld, SomeError, SomeId,
-    SomePermission, TokenWorld,
+    verify_error_code, verify_error_role, verify_error_ticker, AccountWorld, LedgerWorld,
+    SomeError, SomeId, SomePermission, TokenWorld,
 };
 use many_ledger_test_utils::Setup;
 
@@ -172,6 +172,11 @@ fn then_update_token_fail_acl(w: &mut UpdateWorld, id: SomeId, error: SomeError)
 #[then(expr = "the error role is {word}")]
 fn then_error_role(w: &mut UpdateWorld, role: String) {
     verify_error_role(w, role.as_str());
+}
+
+#[then(expr = "the error ticker is {word}")]
+fn error_ticker_is(w: &mut UpdateWorld, ticker: String) {
+    verify_error_ticker(w, ticker);
 }
 
 #[tokio::main]
