@@ -257,4 +257,3 @@ You can visit their crates entries (linked below) for more information.
 3. Create a feature branch (`git checkout -b feature/fooBar`)
 4. Commit your changes (`git commit -am 'Add some fooBar'`)
 5. Push to the branch (`git push origin feature/fooBar`)
-6. Create a new Pull Request (https://github.com/liftedinit/many-rs/pull/new)
