@@ -166,14 +166,29 @@ $ ./target/debug/ledger --pem tmp.pem balance
 ## `many` CLI
 Below are some examples of how to use the `many` CLI.
 
-# Developer tools
+## Retrieve the MANY ID of a key
+```shell
+# Generate a new Ed25519 key
+$ openssl genpkey -algorithm Ed25519 -out id1.pem
 
-- CBOR playground: [CBOR.me](https://cbor.me)
-- CBOR diagnostic utilities: [cbor-diag](https://github.com/cabo/cbor-diag)
-- Software Hardware Security Module (HSM): [SoftHSM2](https://github.com/opendnssec/SoftHSMv2)
-- Bash automated testing system: [bats-core](https://github.com/bats-core/bats-core)
-- Container engine: [Docker](https://www.docker.com/)
-- The MANY libraries: [many-rs](https://github.com/liftedinit/many-rs)
+# Print the MANY ID of the key
+$ ./target/debug/many id id1.pem
+mafdzlw6ktmpncikho6wwswzej7rpja7fgtbn33xzwkfngdygc
+```
+
+## Retrieve the status of a running MANY server
+```shell
+$ ./target/debug/many message --server https://alberto.app/api 'status' '{}'
+{_
+    0: 1,
+    1: "AbciModule(many-ledger)",
+    2: h'a5010103270481022006215820e5cd546d5292af5d9f0ffd54b57ff555c51b91a249b9cf544010a3c01cfa75a2',
+    3: 10000_1(h'01378dd9916915fb276116ff4bc13c04a4e413f663e04b710199c46021'),
+    4: [0, 1, 2, 4, 6, 8, 9, 1002_1],
+    5: "0.1.0",
+    7: 300_1,
+}
+```
 
 # Crates
 
