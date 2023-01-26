@@ -30,13 +30,17 @@ impl IntoIterator for ProofResult {
 }
 
 impl Context {
-    pub fn prove<P: IntoIterator<Item = ProofOperation>, Prover: FnOnce() -> Result<P, ManyError>>(
+    pub fn prove<
+        P: IntoIterator<Item = ProofOperation>,
+        Prover: FnOnce() -> Result<P, ManyError>,
+    >(
         &self,
         prover: Prover,
     ) -> Option<TrySendError<ProofResult>> {
         use ProofResult::{Error, Proof, ProofNotRequested};
         let result = if self.proof_requested() {
             prover()
+                .map(IntoIterator::into_iter)
                 .map(Iterator::collect)
                 .map(Proof)
                 .unwrap_or_else(Error)
