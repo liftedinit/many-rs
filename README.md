@@ -26,7 +26,7 @@ Features
     # Follow the instructions on screen
     $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     ```
-2. Update your package database
+1. Update your package database
     ```shell
     # Ubuntu
     $ sudo apt update
@@ -40,12 +40,12 @@ Features
     # macOS
     $ brew update
     ```
-3. Install Rust using [rustup](https://rustup.rs/)
+1. Install Rust using [rustup](https://rustup.rs/)
     ```shell
     $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     $ source $HOME/.cargo/env
     ```
-4. Install build dependencies
+2. Install build dependencies
     ```shell
     # Ubuntu
     $ sudo apt install build-essential pkg-config clang libssl-dev libsofthsm2 tmux
@@ -60,13 +60,13 @@ Features
     $ git # and follow the instructions
     $ brew install tmux
     ```
-5. Build
+3. Build
     ```shell
     $ git clone https://github.com/liftedinit/many-framework.git
     $ cd many-framework
     $ cargo build
     ```
-6. Run tests
+4. Run tests
     ```shell
     $ cargo test
     ```
