@@ -114,15 +114,6 @@ impl ResponseMessage {
         self
     }
 
-    pub fn with_fallible_attributes<E, T: IntoIterator<Item = Result<Attribute, E>>>(
-        mut self,
-        set: T,
-    ) -> Result<Self, E> {
-        self.attributes
-            .extend(set.into_iter().collect::<Result<Vec<_>, _>>()?);
-        Ok(self)
-    }
-
     pub fn with_attribute(mut self, attr: Attribute) -> Self {
         self.attributes.insert(attr);
         self
