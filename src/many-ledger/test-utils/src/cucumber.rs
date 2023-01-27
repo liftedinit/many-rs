@@ -96,7 +96,7 @@ impl SomeId {
 #[derive(Debug, Default, Eq, Parameter, PartialEq)]
 #[param(
     name = "error",
-    regex = "(unauthorized)|(missing permission)|(immutable)|(invalid sender)|(unable to distribute zero)|(partial burn disabled)|(missing funds)|(over maximum)|(ticker exists)"
+    regex = "(unauthorized)|(missing permission)|(immutable)|(invalid sender)|(unable to distribute zero)|(partial burn disabled)|(missing funds)|(over maximum)|(ticker exists)|(invalid ticker length)"
 )]
 pub enum SomeError {
     #[default]
@@ -109,6 +109,7 @@ pub enum SomeError {
     MissingFunds,
     OverMaximum,
     TickerExists,
+    InvalidTickerLength,
 }
 
 impl FromStr for SomeError {
@@ -125,6 +126,7 @@ impl FromStr for SomeError {
             "missing funds" => Self::MissingFunds,
             "over maximum" => Self::OverMaximum,
             "ticker exists" => Self::TickerExists,
+            "invalid ticker length" => Self::InvalidTickerLength,
             _ => unimplemented!(),
         })
     }
@@ -174,6 +176,7 @@ impl SomeError {
             SomeError::MissingFunds => error::missing_funds(Address::anonymous(), "", "").code(),
             SomeError::OverMaximum => error::over_maximum_supply("", "", "").code(),
             SomeError::TickerExists => error::ticker_exists("").code(),
+            SomeError::InvalidTickerLength => error::invalid_ticker_length("").code(),
         }
     }
 }

@@ -27,6 +27,7 @@ define_attribute_many_error!(
         3: pub fn invalid_sender() => "Unauthorised Token endpoints sender.",
         4: pub fn ticker_exists(ticker) => "Token ticker already exists on this network: {ticker}.",
         5: pub fn subresource_exhausted(key) => "Subresources are exhausted for: {key}.",
+        6: pub fn invalid_ticker_length(ticker) => "Token ticker length is invalid (<3 or >5): {ticker}.",
     }
 );
 

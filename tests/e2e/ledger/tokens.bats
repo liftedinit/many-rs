@@ -100,7 +100,7 @@ function teardown() {
     # MFX is subresource 1
 
     # Next token should be subresource 2
-    call_ledger --pem=1 --port=8000 token create "Test" "TT" 9
+    call_ledger --pem=1 --port=8000 token create "Test" "TTT" 9
     assert_output --partial "$(subresource 1 2)"
 }
 
