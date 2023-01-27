@@ -1,3 +1,4 @@
+use crate::error;
 use crate::migration::tokens::TOKEN_MIGRATION;
 use crate::module::LedgerModuleImpl;
 use crate::storage::account::verify_acl;
@@ -13,6 +14,13 @@ use many_modules::ledger::{
     TokenUpdateReturns,
 };
 use many_types::Either;
+
+fn check_ticker_length(ticker: &String) -> Result<(), ManyError> {
+    if !(3..=5).contains(&ticker.len()) {
+        return Err(error::invalid_ticker_length(ticker));
+    }
+    Ok(())
+}
 
 impl LedgerTokensModuleBackend for LedgerModuleImpl {
     fn create(
@@ -43,6 +51,8 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         }
 
         let ticker = &args.summary.ticker;
+        check_ticker_length(ticker)?;
+
         if self
             .storage
             .get_symbols_and_tickers()?
@@ -105,6 +115,10 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             return Err(ManyError::unknown(format!(
                 "The symbol {symbol} was not found"
             )));
+        }
+
+        if let Some(ticker) = &args.ticker {
+            check_ticker_length(ticker)?;
         }
 
         self.storage.update_token(sender, args)
