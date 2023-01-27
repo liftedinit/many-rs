@@ -10,9 +10,9 @@ Scenario: Updating a token's ticker as myself
 @tokens
 Scenario: Updating a token's ticker as myself, ticker exists
 	Given a default token owned by myself
-	And a new ticker TT
+	And a new ticker TTT
 	Then updating the token as myself fails with ticker exists
-	And the error ticker is TT
+	And the error ticker is TTT
 
 @tokens
 Scenario: Updating a token's ticker as myself, with memo
