@@ -2,8 +2,7 @@
 
 use linkme::distributed_slice;
 use many_migration::{
-    load_enable_all_regular_migrations, load_migrations, InnerMigration, Metadata, MigrationConfig,
-    MigrationSet,
+    InnerMigration, Metadata, Migration, MigrationConfig, MigrationSet, MigrationType,
 };
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
@@ -76,6 +75,32 @@ static E: InnerMigration<Storage, String> =
 static F: InnerMigration<Storage, String> =
     InnerMigration::new_update(_update_extra, "F", "F desc");
 
+/// Enable all migrations from the registry EXCEPT the hotfix.
+/// Should not be used outside of tests.
+pub fn load_enable_all_regular_migrations<T, E>(
+    registry: &[InnerMigration<T, E>],
+) -> MigrationSet<T, E> {
+    // Keep a default of block height 1 for backward compatibility.
+    let metadata = Metadata {
+        block_height: 1,
+        ..Metadata::default()
+    };
+
+    let mut set = MigrationSet::empty().unwrap();
+    for m in registry.into_iter() {
+        let mut migration = Migration::new(m, metadata.clone());
+        match m.r#type() {
+            MigrationType::Regular(_) => migration.enable(),
+            MigrationType::Hotfix(_) => migration.disable(),
+            _ => migration.disable(),
+        }
+
+        set.insert(migration);
+    }
+
+    set
+}
+
 #[test]
 fn initialize() {
     let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
@@ -110,7 +135,9 @@ fn initialize_extra() {
             }
         ]
     }"#;
-    let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
+
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
     assert!(migrations.contains_key("E"));
     let mut storage = Storage::new();
 
@@ -152,7 +179,8 @@ fn update_extra() {
             }
         ]
     }"#;
-    let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
     assert!(migrations.contains_key("F"));
     let mut storage = Storage::from_iter([(StorageKey::Counter, 0)]);
 
@@ -223,7 +251,8 @@ fn hotfix() {
             }
         ]
     }"#;
-    let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
     assert!(migrations.contains_key("D"));
 
     let data = [1u8; 8];
@@ -289,7 +318,8 @@ fn metadata() {
         }
     ]}
     "#;
-    let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
     let metadata = migrations["D"].metadata();
     assert_eq!(metadata.block_height, 200);
     assert_eq!(metadata.issue, Some("foobar".to_string()));
