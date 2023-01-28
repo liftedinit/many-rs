@@ -87,7 +87,7 @@ pub fn load_enable_all_regular_migrations<T, E>(
     };
 
     let mut set = MigrationSet::empty().unwrap();
-    for m in registry.into_iter() {
+    for m in registry.iter() {
         let mut migration = Migration::new(m, metadata.clone());
         match m.r#type() {
             MigrationType::Regular(_) => migration.enable(),
