@@ -37,6 +37,10 @@ function identity() {
     command many id "$(pem "$1")"
 }
 
+function subresource() {
+    command many id "$(pem "$1")" "$2"
+}
+
 function identity_hex() {
     command many id $(many id "$(pem "$1")")
 }

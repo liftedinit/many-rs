@@ -84,10 +84,9 @@ jobs:
             - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
           version: nightly
-      # TODO: Make a release with `many` CLI and install the release instead
       - run:
           name: install `many` CLI
-          command: cargo install --force --git https://github.com/liftedinit/many-rs many
+          command: cargo install --force --path src/many many
       - run:
           name: install `ledger` CLI
           command: cargo install --force --path src/ledger ledger
@@ -282,12 +281,11 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      # TODO: Make a release with `many` CLI and install the release instead
       - rust/install:
           version: nightly
       - run:
           name: install `many` CLI
-          command: cargo install --git https://github.com/liftedinit/many-rs many
+          command: cargo install --path src/many many
       - run:
           name: install `ledger` CLI
           command: cargo install --path src/ledger ledger
@@ -363,7 +361,7 @@ workflows:
             - CACHE
           matrix:
             parameters:
-              os: [linux2204, macos]
+              os: [linux2204]
       - bats:
           pre-steps:
             - install-deps:

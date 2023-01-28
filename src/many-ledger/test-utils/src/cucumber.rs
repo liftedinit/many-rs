@@ -96,7 +96,7 @@ impl SomeId {
 #[derive(Debug, Default, Eq, Parameter, PartialEq)]
 #[param(
     name = "error",
-    regex = "(unauthorized)|(missing permission)|(immutable)|(invalid sender)|(unable to distribute zero)|(partial burn disabled)|(missing funds)|(over maximum)"
+    regex = "(unauthorized)|(missing permission)|(immutable)|(invalid sender)|(unable to distribute zero)|(partial burn disabled)|(missing funds)|(over maximum)|(ticker exists)|(invalid ticker length)"
 )]
 pub enum SomeError {
     #[default]
@@ -108,6 +108,8 @@ pub enum SomeError {
     PartialBurnDisabled,
     MissingFunds,
     OverMaximum,
+    TickerExists,
+    InvalidTickerLength,
 }
 
 impl FromStr for SomeError {
@@ -123,6 +125,8 @@ impl FromStr for SomeError {
             "partial burn disabled" => Self::PartialBurnDisabled,
             "missing funds" => Self::MissingFunds,
             "over maximum" => Self::OverMaximum,
+            "ticker exists" => Self::TickerExists,
+            "invalid ticker length" => Self::InvalidTickerLength,
             _ => unimplemented!(),
         })
     }
@@ -171,6 +175,8 @@ impl SomeError {
             SomeError::PartialBurnDisabled => error::partial_burn_disabled().code(),
             SomeError::MissingFunds => error::missing_funds(Address::anonymous(), "", "").code(),
             SomeError::OverMaximum => error::over_maximum_supply("", "", "").code(),
+            SomeError::TickerExists => error::ticker_exists("").code(),
+            SomeError::InvalidTickerLength => error::invalid_ticker_length("").code(),
         }
     }
 }
@@ -301,6 +307,13 @@ where
 
 pub fn verify_error_code<T: LedgerWorld>(w: &mut T, code: ManyErrorCode) {
     assert_eq!(w.error().as_ref().expect("Expecting an error").code(), code);
+}
+
+pub fn verify_error_ticker<T: LedgerWorld>(w: &mut T, ticker: String) {
+    assert_eq!(
+        ticker,
+        w.error().as_ref().unwrap().argument("ticker").unwrap()
+    );
 }
 
 pub fn refresh_token_info<T: LedgerWorld + TokenWorld>(w: &mut T) {

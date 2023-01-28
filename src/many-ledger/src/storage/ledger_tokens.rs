@@ -1,7 +1,11 @@
 use crate::error;
 use crate::migration::tokens::TOKEN_MIGRATION;
 use crate::storage::iterator::LedgerIterator;
-use crate::storage::{key_for_account_balance, LedgerStorage, IDENTITY_ROOT, SYMBOLS_ROOT};
+use crate::storage::{
+    key_for_account_balance, key_for_subresource_counter, LedgerStorage, IDENTITY_ROOT,
+    SYMBOLS_ROOT,
+};
+use itertools::Itertools;
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::events::EventInfo;
@@ -19,7 +23,6 @@ use std::str::FromStr;
 
 pub const SYMBOLS_ROOT_DASH: &str = const_format::concatcp!(SYMBOLS_ROOT, "/");
 pub const TOKEN_IDENTITY_ROOT: &str = "/config/token_identity";
-pub const TOKEN_SUBRESOURCE_COUNTER_ROOT: &str = "/config/token_subresource_id";
 
 pub fn key_for_symbol(symbol: &Symbol) -> String {
     format!("/config/symbols/{symbol}")
@@ -110,7 +113,6 @@ impl LedgerStorage {
             }
 
             let mut batch: Vec<BatchEntry> = Vec::new();
-
             for (k, meta) in symbols_meta.into_iter() {
                 let total_supply = total_supply[&k].clone(); // Safe
                 let ticker = symbols[&k].clone(); // Safe
@@ -128,20 +130,24 @@ impl LedgerStorage {
                     Op::Put(minicbor::to_vec(info).map_err(ManyError::serialization_error)?),
                 ));
             }
+            self.persistent_store
+                .apply(batch.as_slice())
+                .map_err(error::storage_apply_failed)?;
 
-            batch.push((
-                TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
-                Op::Put(
-                    token_identity
-                        .unwrap_or(self.get_identity(IDENTITY_ROOT)?)
-                        .to_vec(),
+            let token_identity = token_identity.unwrap_or(self.get_identity(IDENTITY_ROOT)?);
+            let batch: Vec<BatchEntry> = vec![
+                (
+                    key_for_subresource_counter(
+                        &token_identity,
+                        self.migrations.is_active(&TOKEN_MIGRATION),
+                    ),
+                    Op::Put(token_next_subresource.unwrap_or(0).to_be_bytes().to_vec()),
                 ),
-            ));
-            batch.push((
-                TOKEN_SUBRESOURCE_COUNTER_ROOT.as_bytes().to_vec(),
-                Op::Put(token_next_subresource.unwrap_or(0).to_be_bytes().to_vec()),
-            ));
-
+                (
+                    TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
+                    Op::Put(token_identity.to_vec()),
+                ),
+            ];
             self.persistent_store
                 .apply(batch.as_slice())
                 .map_err(error::storage_apply_failed)?;
@@ -231,8 +237,7 @@ impl LedgerStorage {
         } = args;
 
         // Create a new token symbol and store in memory and in the persistent store
-        let symbol =
-            self.get_next_subresource(TOKEN_IDENTITY_ROOT, TOKEN_SUBRESOURCE_COUNTER_ROOT)?;
+        let symbol = self.get_next_subresource(TOKEN_IDENTITY_ROOT)?;
         self.update_symbols(symbol, summary.ticker.clone())?;
 
         // Initialize the total supply following the initial token distribution, if any
@@ -360,6 +365,9 @@ impl LedgerStorage {
                 info.summary.name = name.clone();
             }
             if let Some(ticker) = ticker.as_ref() {
+                if self.get_symbols_and_tickers()?.values().contains(ticker) {
+                    return Err(error::ticker_exists(ticker));
+                };
                 self.update_symbols(symbol, ticker.clone())?;
                 info.summary.ticker = ticker.clone();
             }

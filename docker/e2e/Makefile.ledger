@@ -1,6 +1,7 @@
 LEDGER_TAG ?= "latest"
 MIGRATIONS ?=
 ALLOW_ADDRS ?= false
+STATE ?= "ledger_state.json"
 
 ENABLE_MIGRATIONS := false
 ifdef MIGRATIONS
@@ -65,7 +66,7 @@ endif
 	docker run --user $$(id -u) -it --rm -v ${PWD}/$@/:/export alpine/openssl genpkey -algorithm Ed25519 -out /export/ledger.pem
 	docker run --user $$(id -u) -it --rm -v ${PWD}/$@/:/export alpine/openssl genpkey -algorithm Ed25519 -out /export/abci.pem
 	mkdir -p "$@/persistent-ledger"
-	cp ledger_state.json $@/ledger_state.json5
+	cp "$(STATE)" $@/ledger_state.json5
 
 .PHONY: start-nodes
 start-nodes: many/many-ledger many/many-abci genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json
