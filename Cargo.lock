@@ -2106,6 +2106,7 @@ version = "0.1.0"
 dependencies = [
  "clap 3.2.23",
  "hex",
+ "log-panics",
  "many-client",
  "many-identity",
  "many-identity-dsa",
@@ -2408,6 +2409,7 @@ dependencies = [
  "clap 3.2.23",
  "hex",
  "indicatif",
+ "log-panics",
  "many-client",
  "many-error",
  "many-identity",
@@ -2445,6 +2447,7 @@ dependencies = [
  "indicatif",
  "itertools",
  "lazy_static",
+ "log-panics",
  "many-client",
  "many-error",
  "many-identity",
@@ -2604,6 +2607,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "log-panics"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68f9dd8546191c1850ecf67d22f5ff00a935b890d0e84713159a55495cc2ac5f"
+dependencies = [
+ "backtrace",
+ "log",
+]
+
+[[package]]
 name = "many"
 version = "0.1.0"
 dependencies = [
@@ -2647,6 +2660,7 @@ dependencies = [
  "itertools",
  "json5",
  "lazy_static",
+ "log-panics",
  "many-client",
  "many-error",
  "many-identity",
@@ -2849,6 +2863,7 @@ dependencies = [
  "itertools",
  "json5",
  "lazy_static",
+ "log-panics",
  "many-error",
  "many-identity",
  "many-identity-dsa",
@@ -2890,6 +2905,7 @@ dependencies = [
  "itertools",
  "json5",
  "linkme",
+ "log-panics",
  "many-client",
  "many-error",
  "many-identity",
