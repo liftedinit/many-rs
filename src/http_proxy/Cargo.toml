@@ -18,6 +18,7 @@ doc = false
 [dependencies]
 clap = { version = "3.0.0", features = ["derive"] }
 hex = "0.4.3"
+log-panics = { version = "2", features = ["with-backtrace"]}
 minicbor = { version = "0.18.0", features = ["derive", "std"] }
 many-client = { path = "../many-client", version = "0.1.0" }
 many-identity = { path = "../many-identity", version = "0.1.0" }

@@ -349,6 +349,7 @@ fn main() {
 
             let subscriber = subscriber.with_writer(syslog);
             subscriber.init();
+            log_panics::init();
         }
     };
 
