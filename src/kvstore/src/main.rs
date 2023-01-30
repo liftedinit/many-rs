@@ -347,7 +347,7 @@ fn main() {
             let (options, facility) = Default::default();
             let syslog = syslog_tracing::Syslog::new(identity, options, facility).unwrap();
 
-            let subscriber = subscriber.with_writer(syslog);
+            let subscriber = subscriber.with_ansi(false).with_writer(syslog);
             subscriber.init();
         }
     };
