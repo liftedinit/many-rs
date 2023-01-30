@@ -9,6 +9,9 @@ orbs:
   bats: circleci/bats@1.0.0
   docker: circleci/docker@2.1.3
 
+common_vars: &common_vars
+    RUST_VERSION: nightly-2023-01-03
+
 executors:
   linux2204:
     machine:
@@ -26,15 +29,16 @@ jobs:
         type: string
     executor: << parameters.os >>
     environment:
-      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
-      SOFTHSM2_CONF: /tmp/softhsm2.conf
+      - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      - SOFTHSM2_CONF: /tmp/softhsm2.conf
+      - *common_vars
     steps:
       - checkout
       - restore_cache:
           keys:
             - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: nightly
+          version: ${RUST_VERSION}
       - rust/format:
           with_cache: false
       - rust/clippy:
@@ -77,13 +81,14 @@ jobs:
       os:
         type: string
     executor: << parameters.os >>
+    environment: *common_vars
     steps:
       - checkout
       - restore_cache:
           keys:
             - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: nightly
+          version: ${RUST_VERSION}
       - run:
           name: install `many` CLI
           command: cargo install --force --path src/many many
@@ -106,11 +111,12 @@ jobs:
       os:
         type: string
     executor: << parameters.os >>
+    environment: *common_vars
     steps:
       - checkout
       - detect/init
       - rust/install:
-          version: nightly
+          version: ${RUST_VERSION}
       - rust/build:
           release: true
           with_cache: false
@@ -130,15 +136,16 @@ jobs:
     executor: << parameters.os >>
     working_directory: ~/project/repo
     environment:
-      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
-      SOFTHSM2_CONF: /tmp/softhsm2.conf
+      - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      - SOFTHSM2_CONF: /tmp/softhsm2.conf
+      - *common_vars
     steps:
       - checkout
       - restore_cache:
           keys:
             - cargo-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: nightly
+          version: ${RUST_VERSION}
       - run:
           name: install llvm-tools-preview
           command: rustup component add llvm-tools-preview
@@ -166,11 +173,12 @@ jobs:
       os:
         type: string
     executor: << parameters.os >>
+    environment: *common_vars
     steps:
       - checkout
       - detect/init
       - rust/install:
-          version: nightly
+          version: ${RUST_VERSION}
       - rust/build:
           release: true
           with_cache: false
@@ -225,6 +233,7 @@ jobs:
   publish_nightly_docker:
     executor: linux2204
     resource_class: large
+    environment: *common_vars
     steps:
       - docker/check
       - checkout:
@@ -241,7 +250,7 @@ jobs:
               echo "nix-store backup unavailable; skipping."
             fi
       - rust/install:
-          version: nightly
+          version: ${RUST_VERSION}
       - run:
           name: build docker images
           command: |
@@ -279,10 +288,11 @@ jobs:
   resiliency_tests:
     executor: linux2204
     resource_class: large
+    environment: *common_vars
     steps:
       - checkout
       - rust/install:
-          version: nightly
+          version: ${RUST_VERSION}
       - run:
           name: install `many` CLI
           command: cargo install --path src/many many
