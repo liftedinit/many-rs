@@ -23,6 +23,7 @@ humantime = "2.1.0"
 indicatif = "0.16.2"
 itertools = "0.10.5"
 lazy_static = "1.4.0"
+log-panics = { version = "2", features = ["with-backtrace"]}
 mime_guess = "2.0.4"
 minicbor = { version = "0.18.0", features = ["derive", "std"] }
 num-bigint = "0.4.3"
