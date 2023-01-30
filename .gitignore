@@ -110,3 +110,5 @@ result*
 bazel-*
 rust-project.json
 genhtml/
+.ijwb
+user.bazelrc
