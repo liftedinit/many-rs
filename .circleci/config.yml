@@ -10,7 +10,7 @@ orbs:
   docker: circleci/docker@2.1.3
 
 common_vars: &common_vars
-    RUST_VERSION: nightly-2023-01-03
+    MANY_RUST_VERSION: nightly-2023-01-03
 
 executors:
   linux2204:
@@ -38,7 +38,7 @@ jobs:
           keys:
             - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: ${RUST_VERSION}
+          version: ${MANY_RUST_VERSION}
       - rust/format:
           with_cache: false
       - rust/clippy:
@@ -88,7 +88,7 @@ jobs:
           keys:
             - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: ${RUST_VERSION}
+          version: ${MANY_RUST_VERSION}
       - run:
           name: install `many` CLI
           command: cargo install --force --path src/many many
@@ -116,7 +116,7 @@ jobs:
       - checkout
       - detect/init
       - rust/install:
-          version: ${RUST_VERSION}
+          version: ${MANY_RUST_VERSION}
       - rust/build:
           release: true
           with_cache: false
@@ -145,7 +145,7 @@ jobs:
           keys:
             - cargo-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: ${RUST_VERSION}
+          version: ${MANY_RUST_VERSION}
       - run:
           name: install llvm-tools-preview
           command: rustup component add llvm-tools-preview
@@ -178,7 +178,7 @@ jobs:
       - checkout
       - detect/init
       - rust/install:
-          version: ${RUST_VERSION}
+          version: ${MANY_RUST_VERSION}
       - rust/build:
           release: true
           with_cache: false
@@ -250,7 +250,7 @@ jobs:
               echo "nix-store backup unavailable; skipping."
             fi
       - rust/install:
-          version: ${RUST_VERSION}
+          version: ${MANY_RUST_VERSION}
       - run:
           name: build docker images
           command: |
@@ -292,7 +292,7 @@ jobs:
     steps:
       - checkout
       - rust/install:
-          version: ${RUST_VERSION}
+          version: ${MANY_RUST_VERSION}
       - run:
           name: install `many` CLI
           command: cargo install --path src/many many
