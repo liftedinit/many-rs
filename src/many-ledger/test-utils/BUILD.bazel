@@ -1,0 +1,28 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+package(default_visibility = [
+    "//src/many-ledger:__subpackages__",
+])
+
+rust_library(
+    name = "many-ledger-test-utils-lib",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_ledger_test_utils",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ) + ["//src/many-ledger/test-macros:many-ledger-test-macros-lib"],
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        "//src/many-error",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-identity-dsa:many-identity-dsa-for-test",
+        "//src/many-ledger:many-ledger-lib-for-test",
+        "//src/many-migration:many-migration-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-protocol:many-protocol-for-test",
+        "//src/many-types:many-types-for-test",
+    ],
+)

@@ -1,0 +1,32 @@
+[package]
+name = "http_proxy"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Lifted Initiative"]
+license = "Apache-2.0"
+description = ""
+readme = "README.md"
+homepage = "https://liftedinit.org"
+repository = "https://github.com/liftedinit/many-framework"
+keywords = ["cli", "web3", "blockchain", "tendermint", "proto", "crypto", "liftedinit"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "http_proxy"
+doc = false
+
+[dependencies]
+clap = { version = "3.0.0", features = ["derive"] }
+hex = "0.4.3"
+log-panics = { version = "2", features = ["with-backtrace"]}
+minicbor = { version = "0.18.0", features = ["derive", "std"] }
+many-client = { path = "../many-client", version = "0.1.0" }
+many-identity = { path = "../many-identity", version = "0.1.0" }
+many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0" }
+many-modules = { path = "../many-modules", version = "0.1.0" }
+new_mime_guess = "4.0.0"
+syslog-tracing = "0.1"
+tiny_http = "0.11.0"
+tracing = "0.1.29"
+tracing-subscriber = "0.3"
+tokio = { version = "1.24.1", features = [ "full" ] }

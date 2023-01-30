@@ -2,6 +2,7 @@ load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = [
+    "//src/ledger:__pkg__",
     "//src/many:__pkg__",
 ])
 
