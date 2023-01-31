@@ -1,4 +1,5 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
+MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -19,152 +20,42 @@ function teardown() {
 }
 
 @test "$SUITE: Load migrations" {
-    echo '
-    { "migrations": [
-      {
-        "name": "Account Count Data Attribute",
-        "block_height": 20,
-        "issue": "https://github.com/liftedinit/many-framework/issues/190"
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Token Migration",
-        "block_height": 0,
-        "disabled": true
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
+    jq '(.migrations[] | select(.name == "Account Count Data Attribute")).block_height |= 20 |
+        (.migrations[] | select(.name == "Account Count Data Attribute")).disabled |= empty' \
+        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
     start_ledger --pem "$(pem 0)" \
         "--migrations-config=$BATS_TEST_ROOTDIR/migrations.json"
 }
 
 @test "$SUITE: Missing migration (bad length)" {
-    echo '
-    { "migrations": [
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
-
+    jq '(.migrations[] | select(.name == "Dummy Hotfix")) |= empty' \
+       "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
     start_ledger --background_output="Migration Config is missing migration"\
         --pem "$(pem 0)" \
         "--migrations-config=$BATS_TEST_ROOTDIR/migrations.json"
 }
 
 @test "$SUITE: Missing migration (right length, duplicate)" {
-    echo '
-    { "migrations": [
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 20
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
-
+    jq '.migrations |= . + [.[-1]] | .migrations |= . - [.[0]]' \
+       "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
     start_ledger --background_output="Migration Config is missing migration" \
         --pem "$(pem 0)" \
         "--migrations-config=$BATS_TEST_ROOTDIR/migrations.json"
 }
 
 @test "$SUITE: Unsupported migration type" {
-    echo '
-    { "migrations": [
-      {
-        "name": "Foobar",
-        "block_height": 20
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
-
+    jq '(.migrations[] | select(.name == "Dummy Hotfix")).name |= "Foobar"' \
+       "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
     start_ledger --background_output="Unsupported migration 'Foobar'" \
         --pem "$(pem 0)" \
         "--migrations-config=$BATS_TEST_ROOTDIR/migrations.json"
 }
 
 @test "$SUITE: Can disable" {
-    echo '
-    { "migrations": [
-      {
-        "name": "Account Count Data Attribute",
-        "block_height": 20,
-        "issue": "https://github.com/liftedinit/many-framework/issues/190"
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 40,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Token Migration",
-        "block_height": 0,
-        "disabled": true
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
-
+    jq '(.migrations[] | select(.name == "Block 9400")).block_height |= 40 |
+        (.migrations[] | select(.name == "Block 9400")).disabled |= true' \
+        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
     start_ledger --background_output="block_height: 40, disabled: true" \
         --pem "$(pem 0)" \
         "--migrations-config=$BATS_TEST_ROOTDIR/migrations.json"

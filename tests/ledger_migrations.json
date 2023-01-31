@@ -1,0 +1,28 @@
+{ "migrations": [
+  {
+    "name": "Account Count Data Attribute",
+    "block_height": 0,
+    "issue": "https://github.com/liftedinit/many-framework/issues/190",
+    "disabled": true
+  },
+  {
+    "name": "Dummy Hotfix",
+    "block_height": 0,
+    "disabled": true
+  },
+  {
+    "name": "Block 9400",
+    "block_height": 0,
+    "disabled": true
+  },
+  {
+    "name": "Memo Migration",
+    "block_height": 0,
+    "disabled": true
+  },
+  {
+    "name": "Token Migration",
+    "block_height": 0,
+    "disabled": true
+  }
+] }
