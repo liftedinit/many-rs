@@ -14,7 +14,7 @@ function setup() {
 
     (
       cd "$GIT_ROOT"
-      cargo build --features migration_testing --features balance_testing
+      cargo build --all-features
     )
 
     echo '

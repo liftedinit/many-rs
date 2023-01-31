@@ -8,12 +8,10 @@ function setup() {
 
     skip_if_missing_background_utilities
 
-    if ! [ $CI ]; then
-        (
-          cd "$GIT_ROOT"
-          cargo build
-        )
-    fi
+    (
+      cd "$GIT_ROOT"
+      cargo build --all-features
+    )
 
     start_kvstore --pem "$(pem 0)"
 }

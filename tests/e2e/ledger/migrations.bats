@@ -10,7 +10,7 @@ function setup() {
 
     (
       cd "$GIT_ROOT"
-      cargo build --features migration_testing
+      cargo build --all-features
     )
 }
 

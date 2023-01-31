@@ -48,15 +48,10 @@ function call_ledger() {
       esac
     done
 
-    local ledgercmd
-    [[ "$CI" == "true" ]]\
-      && ledgercmd="ledger" \
-      || ledgercmd="$GIT_ROOT/target/debug/ledger"
-
-    echo "${ledgercmd} $pem_arg http://localhost:${port}/ $*" >&2
+    echo "$GIT_ROOT/target/debug/ledger $pem_arg http://localhost:${port}/ $*" >&2
     # `run` doesn't handle empty parameters well, i.e., $pem_arg is empty
     # We need to use `bash -c` to fix the issue
-    run bash -c "${ledgercmd} $pem_arg http://localhost:${port}/ $*"
+    run bash -c "$GIT_ROOT/target/debug/ledger $pem_arg http://localhost:${port}/ $*"
 }
 
 function check_consistency() {
