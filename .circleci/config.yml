@@ -9,8 +9,7 @@ orbs:
   bats: circleci/bats@1.0.0
   docker: circleci/docker@2.1.3
 
-common_vars: &common_vars
-    MANY_RUST_VERSION: nightly-2023-01-03
+MANY_RUST_VERSION: &many_rust_version nightly-2023-01-03
 
 executors:
   linux2204:
@@ -27,18 +26,19 @@ jobs:
     parameters:
       os:
         type: string
+      many_rust_version:
+        type: string
     executor: << parameters.os >>
     environment:
       - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
       - SOFTHSM2_CONF: /tmp/softhsm2.conf
-      - *common_vars
     steps:
       - checkout
       - restore_cache:
           keys:
             - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: ${MANY_RUST_VERSION}
+          version: << parameters.many_rust_version >>
       - rust/format:
           with_cache: false
       - rust/clippy:
@@ -80,15 +80,16 @@ jobs:
     parameters:
       os:
         type: string
+      many_rust_version:
+        type: string
     executor: << parameters.os >>
-    environment: *common_vars
     steps:
       - checkout
       - restore_cache:
           keys:
             - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: ${MANY_RUST_VERSION}
+          version: << parameters.many_rust_version >>
       - run:
           name: install `many` CLI
           command: cargo install --force --path src/many many
@@ -110,13 +111,14 @@ jobs:
     parameters:
       os:
         type: string
+      many_rust_version:
+        type: string
     executor: << parameters.os >>
-    environment: *common_vars
     steps:
       - checkout
       - detect/init
       - rust/install:
-          version: ${MANY_RUST_VERSION}
+          version: << parameters.many_rust_version >>
       - rust/build:
           release: true
           with_cache: false
@@ -133,19 +135,20 @@ jobs:
     parameters:
       os:
         type: string
+      many_rust_version:
+        type: string
     executor: << parameters.os >>
     working_directory: ~/project/repo
     environment:
       - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
       - SOFTHSM2_CONF: /tmp/softhsm2.conf
-      - *common_vars
     steps:
       - checkout
       - restore_cache:
           keys:
             - cargo-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: ${MANY_RUST_VERSION}
+          version: << parameters.many_rust_version >>
       - run:
           name: install llvm-tools-preview
           command: rustup component add llvm-tools-preview
@@ -172,13 +175,14 @@ jobs:
     parameters:
       os:
         type: string
+      many_rust_version:
+        type: string
     executor: << parameters.os >>
-    environment: *common_vars
     steps:
       - checkout
       - detect/init
       - rust/install:
-          version: ${MANY_RUST_VERSION}
+          version: << parameters.many_rust_version >>
       - rust/build:
           release: true
           with_cache: false
@@ -232,8 +236,10 @@ jobs:
           command: cargo audit
   publish_nightly_docker:
     executor: linux2204
+    parameters:
+      many_rust_version:
+        type: string
     resource_class: large
-    environment: *common_vars
     steps:
       - docker/check
       - checkout:
@@ -250,7 +256,7 @@ jobs:
               echo "nix-store backup unavailable; skipping."
             fi
       - rust/install:
-          version: ${MANY_RUST_VERSION}
+          version: << parameters.many_rust_version >>
       - run:
           name: build docker images
           command: |
@@ -287,12 +293,14 @@ jobs:
             - backup.tar
   resiliency_tests:
     executor: linux2204
+    parameters:
+      many_rust_version:
+        type: string
     resource_class: large
-    environment: *common_vars
     steps:
       - checkout
       - rust/install:
-          version: ${MANY_RUST_VERSION}
+          version: << parameters.many_rust_version >>
       - run:
           name: install `many` CLI
           command: cargo install --path src/many many
@@ -372,6 +380,7 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
+              many_rust_version: [*many_rust_version]
       - bats:
           pre-steps:
             - install-deps:
@@ -382,6 +391,7 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
+              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
       - coverage:
@@ -394,6 +404,7 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
+              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
       - dev_release_artifact:
@@ -404,6 +415,7 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
+              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
             - bats-v<< matrix.os >>
@@ -424,6 +436,7 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
+              many_rust_version: [*many_rust_version]
           filters:
             branches:
               ignore: /.*/
@@ -485,6 +498,7 @@ workflows:
             branches:
               only:
                 - main
+          many_rust_version: *many_rust_version
       - resiliency_tests:
           pre-steps:
             - install-deps:
@@ -493,6 +507,7 @@ workflows:
             branches:
               only:
                 - main
+          many_rust_version: *many_rust_version
           requires:
             - publish_nightly_docker
   nightly_macos:
@@ -508,6 +523,7 @@ workflows:
           matrix:
             parameters:
               os: [macos]
+              many_rust_version: [*many_rust_version]
       - bats:
           name: bats-v<< matrix.os >>
           context:
@@ -515,6 +531,7 @@ workflows:
           matrix:
             parameters:
               os: [macos]
+              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
       - tag:
