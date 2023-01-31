@@ -3,6 +3,7 @@
 
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
+MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -16,35 +17,9 @@ function setup() {
       cd "$GIT_ROOT"
       cargo build --features migration_testing --features balance_testing
     )
-
-    echo '
-    { "migrations": [
-      {
-        "name": "Account Count Data Attribute",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Token Migration",
-        "block_height": 0
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
-
+    jq '(.migrations[] | select(.name == "Token Migration")).block_height |= 0 |
+        (.migrations[] | select(.name == "Token Migration")).disabled |= empty' \
+        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
     # Dummy image
      echo -n -e '\x68\x65\x6c\x6c\x6f' > "$BATS_TEST_ROOTDIR/image.png"
