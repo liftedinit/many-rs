@@ -42,7 +42,7 @@ function subresource() {
 }
 
 function identity_hex() {
-    command "$GIT_ROOT/target/debug/many" id $(many id "$(pem "$1")")
+    command "$GIT_ROOT/target/debug/many" id $("$GIT_ROOT/target/debug/many" id "$(pem "$1")")
 }
 
 function account() {
