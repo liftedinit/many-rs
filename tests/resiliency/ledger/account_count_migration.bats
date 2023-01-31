@@ -1,4 +1,5 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
+MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
 MAKEFILE="Makefile.ledger"
 
 load '../../test_helper/load'
@@ -7,34 +8,9 @@ load '../../test_helper/ledger'
 function setup() {
     mkdir "$BATS_TEST_ROOTDIR"
 
-    echo '
-    { "migrations": [
-      {
-        "name": "Account Count Data Attribute",
-        "block_height": 20,
-        "issue": "https://github.com/liftedinit/many-framework/issues/190"
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Token Migration",
-        "block_height": 0,
-        "disabled": true
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
+    jq '(.migrations[] | select(.name == "Account Count Data Attribute")).block_height |= 20 |
+        (.migrations[] | select(.name == "Account Count Data Attribute")).disabled |= empty' \
+        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
     (
       cd "$GIT_ROOT/docker/e2e/" || exit
