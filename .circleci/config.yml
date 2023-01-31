@@ -65,9 +65,6 @@ jobs:
       - rust/build:
           crate: --all-features
           with_cache: false
-      - run:
-          name: cargo install
-          command: cargo install --force --root target/ --path src/many/ many
       - save_cache:
           key: cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
           paths:
@@ -90,15 +87,6 @@ jobs:
             - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
           version: << parameters.many_rust_version >>
-      - run:
-          name: install `many` CLI
-          command: cargo install --force --path src/many many
-      - run:
-          name: install `ledger` CLI
-          command: cargo install --force --path src/ledger ledger
-      - run:
-          name: install `kvstore` CLI
-          command: cargo install --force --path src/kvstore kvstore
       - run:
           name: install cbor-diag
           command: cargo install --force cbor-diag-cli
@@ -301,15 +289,9 @@ jobs:
       - checkout
       - rust/install:
           version: << parameters.many_rust_version >>
-      - run:
-          name: install `many` CLI
-          command: cargo install --path src/many many
-      - run:
-          name: install `ledger` CLI
-          command: cargo install --path src/ledger ledger
-      - run:
-          name: install `kvstore` CLI
-          command: cargo install --path src/kvstore kvstore
+      - rust/build:
+          crate: --all-features
+          with_cache: false
       - bats/install
       - docker/pull:
           images: "lifted/many-ledger:nightly,lifted/many-kvstore:nightly,lifted/many-abci:nightly"

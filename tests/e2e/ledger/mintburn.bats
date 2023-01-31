@@ -15,7 +15,7 @@ function setup() {
 
     (
       cd "$GIT_ROOT"
-      cargo build --features migration_testing --features balance_testing
+      cargo build --all-features
     )
     jq '(.migrations[] | select(.name == "Token Migration")).block_height |= 0 |
         (.migrations[] | select(.name == "Token Migration")).disabled |= empty' \
@@ -49,6 +49,7 @@ function teardown() {
 
 @test "$SUITE: can mint token" {
     call_ledger --pem=1 --port=8000 token mint MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
+    sleep 2
     check_consistency --pem=2 --balance=123 8000
     check_consistency --pem=3 --balance=456 8000
 
@@ -61,6 +62,7 @@ function teardown() {
     call_ledger --pem=1 --port=8000 send $(identity 2) 123 MFX
     call_ledger --pem=1 --port=8000 send $(identity 3) 456 MFX
     call_ledger --pem=1 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\''' --error-on-under-burn
+    sleep 2
     check_consistency --pem=2 --balance=0 8000
     check_consistency --pem=3 --balance=0 8000
 
