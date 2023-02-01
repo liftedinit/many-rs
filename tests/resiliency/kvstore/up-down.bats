@@ -19,7 +19,7 @@ function setup() {
     # Give time to the servers to start.
     sleep 30
     timeout 30s bash <<EOT
-    while ! many message --server http://localhost:8000 status; do
+    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
       sleep 1
     done >/dev/null
 EOT
@@ -88,7 +88,7 @@ function teardown() {
 
     # Give time to the servers to start.
     timeout 60s bash <<EOT
-    while ! many message --server http://localhost:8003 status; do
+    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8003 status; do
       sleep 1
     done >/dev/null
 EOT
