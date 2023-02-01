@@ -67,6 +67,15 @@ function teardown() {
     assert_output --partial "1000 FBR"
 }
 
+# Relates to https://github.com/liftedinit/many-rs/issues/291
+@test "$SUITE: create initial distribution ordering" {
+    create_token --pem=1 --port=8000 --initial-distribution ''\''{"mahtbpgjmrhjrqn6smpd6rr5tkgnkd3w2qjioe3dzfhnl2tqxj": 123, "mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz": 456}'\'''
+    call_ledger --port=8000 balance mahtbpgjmrhjrqn6smpd6rr5tkgnkd3w2qjioe3dzfhnl2tqxj
+    assert_output --partial "123 FBR"
+    call_ledger --port=8000 balance mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz
+    assert_output --partial "456 FBR"
+}
+
 @test "$SUITE: token create doesn't overwrite existing subresource" {
     # Create FBR
     create_token --pem=1 --port=8000

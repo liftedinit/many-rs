@@ -49,13 +49,25 @@ function teardown() {
 
 @test "$SUITE: can mint token" {
     call_ledger --pem=1 --port=8000 token mint MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
-    sleep 2
     check_consistency --pem=2 --balance=123 8000
     check_consistency --pem=3 --balance=456 8000
 
     call_ledger --port=8000 token info ${MFX_ADDRESS}
     assert_output --regexp "total:.*(.*2000000579,.*)"
     assert_output --regexp "circulating:.*(.*2000000579,.*)"
+}
+
+# Test for https://github.com/liftedinit/many-rs/issues/291
+@test "$SUITE: mint and burn distribution ordering" {
+    call_ledger --pem=1 --port=8000 token mint MFX ''\''{"mahtbpgjmrhjrqn6smpd6rr5tkgnkd3w2qjioe3dzfhnl2tqxj": 123, "mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz": 456}'\'''
+    refute_output --partial "Unable to apply change to persistent storage: Batch Key Error: Keys in batch must be sorted"
+    check_consistency --balance=123 --id=mahtbpgjmrhjrqn6smpd6rr5tkgnkd3w2qjioe3dzfhnl2tqxj 8000
+    check_consistency --balance=456 --id=mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz 8000
+
+    call_ledger --pem=1 --port=8000 token burn MFX ''\''{"mahtbpgjmrhjrqn6smpd6rr5tkgnkd3w2qjioe3dzfhnl2tqxj": 123, "mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz": 456}'\''' --error-on-under-burn
+    refute_output --partial "Unable to apply change to persistent storage: Batch Key Error: Keys in batch must be sorted"
+    check_consistency --balance=0 --id=mahtbpgjmrhjrqn6smpd6rr5tkgnkd3w2qjioe3dzfhnl2tqxj 8000
+    check_consistency --balance=0 --id=mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz 8000
 }
 
 @test "$SUITE: can burn token" {
