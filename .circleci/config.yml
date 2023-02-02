@@ -23,8 +23,6 @@ jobs:
     parameters:
       os:
         type: string
-      many_rust_version:
-        type: string
     executor: << parameters.os >>
     environment:
       - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
