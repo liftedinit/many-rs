@@ -32,11 +32,17 @@ crates_repository(
     name = "crate_index",
     # The following annotations are needed to prevent Bazel passing incompatible C/CXX flags when coverage is enabled
     # https://github.com/bazelbuild/rules_rust/issues/1550
-    annotations = {"librocksdb-sys": [crate.annotation(
-        build_script_env = {
-            "CXXFLAGS": "-Wno-error=coverage-invalid-line-number",
-        },
-    )]},
+    annotations = {
+        "librocksdb-sys": [crate.annotation(
+            build_script_env = {
+                "CXXFLAGS": "-Wno-error=coverage-invalid-line-number",
+            },
+        )],
+        "libudev-sys": [crate.annotation(
+            patch_args = ["-p1"],
+            patches = ["@//third_party/cargo/patches:libudev-sys-0.1.4.patch"],
+        )],
+    },
     cargo_lockfile = "//:Cargo.Bazel.lock",
     lockfile = "//:cargo-bazel-lock.json",
     manifests = [
