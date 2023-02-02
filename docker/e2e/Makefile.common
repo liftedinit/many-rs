@@ -2,7 +2,7 @@
 NB_NODES ?= 4
 ID_WITH_BALANCES ?=
 CPUCORES ?= $$(docker run --rm nixos/nix nproc)
-TENDERMINT_VERSION ?= 0.35.4
+TENDERMINT_VERSION ?= 0.34.24
 ABCI_TAG ?= "latest"
 
 # Constants

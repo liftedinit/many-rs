@@ -9,7 +9,7 @@
 # $ cd /path/to/many-ledger
 # $ ./script/run.sh
 set -pube # .. snicker ..
-TM_MIN_VERSION=0.35.0 # The minimum tendermint version supported
+TM_MIN_VERSION=0.34.0 # The minimum tendermint version supported
 
 toml_set() {
     local tmp=$(mktemp)
@@ -97,17 +97,17 @@ main() {
         TMHOME="$root_dir/ledger" tendermint init validator
         TMHOME="$root_dir/kvstore" tendermint init validator
 
-        toml_set "$root_dir/ledger/config/config.toml" consensus.create-empty-blocks "false"
-        toml_set "$root_dir/ledger/config/config.toml" consensus.create-empty-blocks-interval "20s"
-        toml_set "$root_dir/ledger/config/config.toml" consensus.timeout-commit "10s"
-        toml_set "$root_dir/ledger/config/config.toml" consensus.timeout-precommit "10s"
+        toml_set "$root_dir/ledger/config/config.toml" consensus.create_empty_blocks "false"
+        toml_set "$root_dir/ledger/config/config.toml" consensus.create_empty_blocks_interval "20s"
+        toml_set "$root_dir/ledger/config/config.toml" consensus.timeout_commit "10s"
+        toml_set "$root_dir/ledger/config/config.toml" consensus.timeout_precommit "10s"
 
         toml_set "$root_dir/ledger/config/config.toml" p2p.laddr "tcp://127.0.0.1:26656"
         toml_set "$root_dir/ledger/config/config.toml" rpc.laddr "tcp://127.0.0.1:26657"
-        toml_set "$root_dir/ledger/config/config.toml" proxy-app "tcp://127.0.0.1:26658"
+        toml_set "$root_dir/ledger/config/config.toml" proxy_app "tcp://127.0.0.1:26658"
         toml_set "$root_dir/kvstore/config/config.toml" p2p.laddr "tcp://127.0.0.1:16656"
         toml_set "$root_dir/kvstore/config/config.toml" rpc.laddr "tcp://127.0.0.1:16657"
-        toml_set "$root_dir/kvstore/config/config.toml" proxy-app "tcp://127.0.0.1:16658"
+        toml_set "$root_dir/kvstore/config/config.toml" proxy_app "tcp://127.0.0.1:16658"
     }
 
     tmux new-session -s "$tmux_name" -n tendermint-ledger -d "TMHOME=\"$root_dir/ledger\" tendermint start 2>&1 | tee \"$root_dir/tendermint-ledger.log\""
