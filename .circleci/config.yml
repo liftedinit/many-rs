@@ -33,11 +33,11 @@ jobs:
           keys:
             - bazel-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - run:
-          name: rustfmt
-          command: bazel build --config=rustfmt //...
-      - run:
-          name: clippy
-          command: bazel build --config=clippy //...
+          name: build - rustfmt & clippy aspect enabled
+          command: |
+            bazel build --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=+rustfmt_checks \\
+                        --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=+clippy_checks \\
+                        //...
       - when:
           condition:
             equal: [ "linux2204", << parameters.os >> ]
@@ -53,9 +53,6 @@ jobs:
                 name: tests and doc tests (macos)
                 # Exclude HSM tests as we are not configured in MacOS for them.
                 command: bazel test -- //... -//src/many-identity-hsm:many-identity-hsm-test
-      - run:
-          name: build
-          command: bazel build //...
       - save_cache:
           key: bazel-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
           paths:
