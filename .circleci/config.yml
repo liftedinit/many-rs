@@ -60,6 +60,7 @@ jobs:
           key: bazel-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
           paths:
             - ~/.cache/bazel
+            - ~/.cache/bazelisk
             - target/
 #  bats:
 #    parameters:
