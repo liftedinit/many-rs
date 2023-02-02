@@ -35,8 +35,8 @@ jobs:
       - run:
           name: build - rustfmt & clippy aspect enabled
           command: |
-            bazel build --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=+rustfmt_checks \\
-                        --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=+clippy_checks \\
+            bazel build --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=+rustfmt_checks \
+                        --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=+clippy_checks \
                         //...
       - when:
           condition:
