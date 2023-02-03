@@ -35,7 +35,7 @@ crates_repository(
     annotations = {
         "librocksdb-sys": [crate.annotation(
             build_script_env = {
-                "CXXFLAGS": "-Wno-coverage-invalid-line-number -Wno-error=coverage-invalid-line-number",
+                "CXXFLAGS": "-Wno-error=unknown-warning -Wno-error=coverage-invalid-line-number",
             },
         )],
         "libudev-sys": [crate.annotation(
