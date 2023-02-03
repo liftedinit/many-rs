@@ -332,6 +332,18 @@ commands:
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
             - run:
+                name: installing Bazel build dependencies
+                command: |
+                  # Required to build `libgit2-sys` (Bazel)
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install zlib1g-dev
+                  
+                  # GCC 12 is needed to build `librocksdb-sys` with the `-Wno-error=coverage-invalid-line-number` CXXFLAGS (Bazel)
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install gcc-12 g++-12
+                  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 11
+                  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 11
+                  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
+                  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
+            - run:
                 name: installing bazelisk
                 command: |
                   wget https://github.com/bazelbuild/bazelisk/releases/download/v1.15.0/bazelisk-linux-amd64  
