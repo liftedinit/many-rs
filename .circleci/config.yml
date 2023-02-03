@@ -33,11 +33,14 @@ jobs:
           keys:
             - bazel-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - run:
-          name: build - rustfmt & clippy aspect enabled
-          command: |
-            bazel build --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=+rustfmt_checks \
-                        --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=+clippy_checks \
-                        //...
+          name: rustfmt
+          command: bazel build --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=rustfmt_checks //...
+      - run:
+          name: clippy
+          command: bazel build --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=clippy_checks //...
+      - run:
+          name: build
+          command: bazel build //...
       - when:
           condition:
             equal: [ "linux2204", << parameters.os >> ]

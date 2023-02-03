@@ -1,5 +1,5 @@
 {
-  "checksum": "71b99a9cc1054500753b4555feec812f28dfccaf70da02ec640eed1e26719532",
+  "checksum": "caa8b43163a815d3a891bd9ba07870e50853135f360b71b33c3a0a28e221c9b2",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -12570,7 +12570,7 @@
         },
         "build_script_env": {
           "common": {
-            "CXXFLAGS": "-Wno-error=coverage-invalid-line-number"
+            "CXXFLAGS": "-Wno-coverage-invalid-line-number -Wno-error=coverage-invalid-line-number"
           },
           "selects": {}
         },
