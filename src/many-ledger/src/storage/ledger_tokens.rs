@@ -491,6 +491,7 @@ impl LedgerStorage {
             memo,
         })?;
 
-        self.maybe_commit().map(|_| TokenRemoveExtendedInfoReturns {})
+        self.maybe_commit()
+            .map(|_| TokenRemoveExtendedInfoReturns {})
     }
 }

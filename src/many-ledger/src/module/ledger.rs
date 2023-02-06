@@ -38,7 +38,6 @@ impl ledger::LedgerModuleBackend for LedgerModuleImpl {
         ledger::BalanceArgs { account, symbols }: ledger::BalanceArgs,
         context: Context,
     ) -> Result<ledger::BalanceReturns, ManyError> {
-        use crate::storage::ProvingStore;
         let identity = account.as_ref().unwrap_or(sender);
 
         let storage = &self.storage;
