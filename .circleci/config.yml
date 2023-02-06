@@ -31,7 +31,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - bazel-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - bazel-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
       - run:
           name: rustfmt
           command: bazel build --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=rustfmt_checks //...
@@ -57,11 +57,10 @@ jobs:
                 # Exclude HSM tests as we are not configured in MacOS for them.
                 command: bazel test -- //... -//src/many-identity-hsm:many-identity-hsm-test
       - save_cache:
-          key: bazel-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+          key: bazel-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
           paths:
             - ~/.cache/bazel
             - ~/.cache/bazelisk
-            - target/
 #  bats:
 #    parameters:
 #      os:
@@ -73,7 +72,7 @@ jobs:
 #      - checkout
 #      - restore_cache:
 #          keys:
-#            - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
+#            - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
 #      - rust/install:
 #          version: << parameters.many_rust_version >>
 #      - run:
@@ -108,46 +107,30 @@ jobs:
 #          command: shasum artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
 #      - store_artifacts:
 #          path: artifacts
-#  coverage:
-#    parameters:
-#      os:
-#        type: string
-#      many_rust_version:
-#        type: string
-#    executor: << parameters.os >>
-#    working_directory: ~/project/repo
-#    environment:
-#      - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
-#      - SOFTHSM2_CONF: /tmp/softhsm2.conf
-#    steps:
-#      - checkout
-#      - restore_cache:
-#          keys:
-#            - cargo-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
-#      - rust/install:
-#          version: << parameters.many_rust_version >>
-#      - run:
-#          name: install llvm-tools-preview
-#          command: rustup component add llvm-tools-preview
-#      - run:
-#          name: generate test coverage
-#          command: cargo test --all-targets --all-features
-#          environment:
-#            RUSTFLAGS: "-C instrument-coverage"
-#            LLVM_PROFILE_FILE: "coverage/lcov-%p-%m.profraw"
-#      - run:
-#          name: generate coverage report
-#          command: grcov src -b target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o coverage/report.lcov
-#      - codecov/upload:
-#          file: coverage/report.lcov
-#      - save_cache:
-#          key: cargo-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
-#          paths:
-#            - ~/.cargo/bin/
-#            - ~/.cargo/registry/index/
-#            - ~/.cargo/registry/cache/
-#            - ~/.cargo/git/db/
-#            - target/
+  coverage:
+    parameters:
+      os:
+        type: string
+    executor: << parameters.os >>
+    working_directory: ~/project/repo
+    environment:
+      - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      - SOFTHSM2_CONF: /tmp/softhsm2.conf
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - bazel-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
+      - run:
+          name: coverage
+          command: bazel coverage --combined_report=lcov //...
+      - codecov/upload:
+          file: $(bazel info output_path)/_coverage/_coverage_report.dat
+      - save_cache:
+          key: bazel-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
+          paths:
+            - ~/.cache/bazel
+            - ~/.cache/bazelisk
 #  create:
 #    parameters:
 #      os:
@@ -382,19 +365,18 @@ workflows:
 #              many_rust_version: [*many_rust_version]
 #          requires:
 #            - lint-test-build-v<< matrix.os >>
-#      - coverage:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: coverage-v<< matrix.os >>
-#          context:
-#            - CACHE
-#          matrix:
-#            parameters:
-#              os: [linux2204]
-#              many_rust_version: [*many_rust_version]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
+      - coverage:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: coverage-v<< matrix.os >>
+          context:
+            - CACHE
+          matrix:
+            parameters:
+              os: [linux2204]
+          requires:
+            - lint-test-build-v<< matrix.os >>
 #      - dev_release_artifact:
 #          pre-steps:
 #            - install-deps:
