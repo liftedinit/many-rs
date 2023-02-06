@@ -32,6 +32,9 @@
     },
     "mqdukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iaaaaq25": {
       "MFX": 1000000000
+    },
+    "maeiq7qwpadkfrgh6og7ztsivwhwq3lvhxjj7bvidz66oqqqdl": {
+      "MFX": 2000000000
     }
   },
 
@@ -100,5 +103,5 @@
 
   // Hash calculated after the initial state is created.
   // Note: This will change depending on the migration activated at load
-  hash: "fc0041ca4f7d959fe9e5a337e175bd8a68942cad76745711a3daf820a159f7eb"
+  //hash: "fc0041ca4f7d959fe9e5a337e175bd8a68942cad76745711a3daf820a159f7eb"
 }
