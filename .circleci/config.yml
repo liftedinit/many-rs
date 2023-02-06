@@ -47,7 +47,7 @@ jobs:
           steps:
             - run:
                 name: tests and doc tests (linux)
-                command: bazel test //...
+                command: bazel test //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
       - when:
           condition:
             equal: [ "macos", << parameters.os >> ]
