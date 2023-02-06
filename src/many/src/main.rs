@@ -312,6 +312,7 @@ async fn show_response<'a>(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn message(
     s: Url,
     to: Address,
