@@ -1,6 +1,6 @@
 use crate::error;
 use crate::storage::ledger_tokens::key_for_symbol;
-use crate::storage::{key_for_account_balance, LedgerStorage};
+use crate::storage::{key_for_account_balance, LedgerStorage, ProvingStore};
 use many_error::ManyError;
 use many_modules::ledger::TokenInfoArgs;
 use many_protocol::context::Context;
@@ -72,9 +72,7 @@ impl LedgerStorage {
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit()
     }
 
     pub fn burn_token(
@@ -127,8 +125,6 @@ impl LedgerStorage {
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit()
     }
 }

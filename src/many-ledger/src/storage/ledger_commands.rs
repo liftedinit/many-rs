@@ -92,8 +92,6 @@ impl LedgerStorage {
             memo,
         })?;
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit()
     }
 }

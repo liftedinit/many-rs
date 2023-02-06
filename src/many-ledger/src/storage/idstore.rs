@@ -88,9 +88,7 @@ impl LedgerStorage {
             )])
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-
-        Ok(idstore_seed)
+        self.maybe_commit().map(|_| idstore_seed)
     }
 
     pub fn store(
@@ -142,9 +140,7 @@ impl LedgerStorage {
             .apply(&batch)
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit()
     }
 
     fn get_from_storage(

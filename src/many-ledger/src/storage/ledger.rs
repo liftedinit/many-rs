@@ -1,8 +1,9 @@
 use crate::error;
 use crate::storage::{key_for_account_balance, LedgerStorage};
+use async_channel::TrySendError;
 use many_error::ManyError;
 use many_identity::Address;
-use many_protocol::context::Context;
+use many_protocol::context::{Context, ProofResult};
 use many_types::{
     ledger::{Symbol, TokenAmount},
     ProofOperation,
@@ -48,52 +49,34 @@ impl LedgerStorage {
     fn get_all_balances(
         &self,
         identity: &Address,
-        context: impl AsRef<Context>,
-    ) -> Result<BTreeMap<Symbol, TokenAmount>, ManyError> {
+    ) -> Result<
+        (
+            BTreeMap<Symbol, TokenAmount>,
+            impl IntoIterator<Item = Vec<u8>>,
+        ),
+        ManyError,
+    > {
         Ok(if identity.is_anonymous() {
             // Anonymous cannot hold funds.
-            BTreeMap::new()
+            (BTreeMap::new(), vec![])
         } else {
             let mut result = BTreeMap::new();
-            let mut query = Query::new();
             for symbol in self.get_symbols()? {
-                let key = key_for_account_balance(identity, &symbol);
                 self.persistent_store
-                    .get(&key)
+                    .get(&key_for_account_balance(identity, &symbol))
                     .map_err(error::storage_get_failed)?
                     .map(|value| result.insert(symbol, TokenAmount::from(value)))
                     .map(|_| ())
-                    .unwrap_or_default();
-                query.insert_key(key)
+                    .unwrap_or_default()
             }
-            context
-                .as_ref()
-                .prove(|| {
-                    self.persistent_store
-                        .prove(query)
-                        .and_then(|proof| {
-                            Decoder::new(proof.as_slice())
-                                .map(|fallible_operation| {
-                                    fallible_operation.map(|operation| match operation {
-                                        Child => ProofOperation::Child,
-                                        Parent => ProofOperation::Parent,
-                                        Push(Hash(hash)) => ProofOperation::NodeHash(hash.to_vec()),
-                                        Push(KV(key, value)) => {
-                                            ProofOperation::KeyValuePair(key.into(), value.into())
-                                        }
-                                        Push(KVHash(hash)) => {
-                                            ProofOperation::KeyValueHash(hash.to_vec())
-                                        }
-                                    })
-                                })
-                                .collect::<Result<Vec<_>, _>>()
-                        })
-                        .map_err(|error| ManyError::unknown(error.to_string()))
-                })
-                .map(|error| Err(ManyError::unknown(error.to_string())))
-                .unwrap_or(Ok(()))?;
 
-            result
+            (
+                result,
+                self.get_symbols()?
+                    .into_iter()
+                    .map(|symbol| key_for_account_balance(identity, &symbol))
+                    .collect(),
+            )
         })
     }
 
@@ -103,7 +86,10 @@ impl LedgerStorage {
         symbols: &BTreeSet<Symbol>,
         context: impl AsRef<Context>,
     ) -> Result<BTreeMap<Symbol, TokenAmount>, ManyError> {
-        let balances = self.get_all_balances(identity, context)?;
+        let (balances, keys) = self.get_all_balances(identity)?;
+        self.prove_state(context, keys)
+            .map(|error| Err(ManyError::unknown(error.to_string())))
+            .unwrap_or(Ok(()))?;
         Ok(if symbols.is_empty() {
             balances
         } else {
@@ -111,6 +97,37 @@ impl LedgerStorage {
                 .into_iter()
                 .filter(|(k, _v)| symbols.contains(k))
                 .collect()
+        })
+    }
+
+    pub fn prove_state(
+        &self,
+        context: impl AsRef<Context>,
+        keys: impl IntoIterator<Item = Vec<u8>>,
+    ) -> Option<TrySendError<ProofResult>> {
+        context.as_ref().prove(|| {
+            self.persistent_store
+                .prove({
+                    let mut query = Query::new();
+                    keys.into_iter().for_each(|key| query.insert_key(key));
+                    query
+                })
+                .and_then(|proof| {
+                    Decoder::new(proof.as_slice())
+                        .map(|fallible_operation| {
+                            fallible_operation.map(|operation| match operation {
+                                Child => ProofOperation::Child,
+                                Parent => ProofOperation::Parent,
+                                Push(Hash(hash)) => ProofOperation::NodeHash(hash.to_vec()),
+                                Push(KV(key, value)) => {
+                                    ProofOperation::KeyValuePair(key.into(), value.into())
+                                }
+                                Push(KVHash(hash)) => ProofOperation::KeyValueHash(hash.to_vec()),
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .map_err(|error| ManyError::unknown(error.to_string()))
         })
     }
 }

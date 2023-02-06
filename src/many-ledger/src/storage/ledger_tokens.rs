@@ -296,9 +296,7 @@ impl LedgerStorage {
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-
-        Ok(TokenCreateReturns { info })
+        self.maybe_commit().map(|_| TokenCreateReturns { info })
     }
 
     pub fn info_token(&self, args: TokenInfoArgs) -> Result<TokenInfoReturns, ManyError> {
@@ -451,9 +449,7 @@ impl LedgerStorage {
             memo,
         })?;
 
-        self.maybe_commit()?;
-
-        Ok(TokenAddExtendedInfoReturns {})
+        self.maybe_commit().map(|_| TokenAddExtendedInfoReturns {})
     }
 
     pub fn remove_extended_info(
@@ -495,8 +491,6 @@ impl LedgerStorage {
             memo,
         })?;
 
-        self.maybe_commit()?;
-
-        Ok(TokenRemoveExtendedInfoReturns {})
+        self.maybe_commit().map(|_| TokenRemoveExtendedInfoReturns {})
     }
 }

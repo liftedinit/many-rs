@@ -226,9 +226,7 @@ impl LedgerStorage {
                 .map_err(error::storage_apply_failed)?;
         }
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit()
     }
 
     pub fn set_multisig_defaults(
@@ -287,8 +285,7 @@ impl LedgerStorage {
             )])
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-        Ok(())
+        self.maybe_commit()
     }
 
     pub fn create_multisig_transaction(
@@ -559,8 +556,7 @@ impl LedgerStorage {
             .apply(&[(key_for_multisig_transaction(tx_id), Op::Put(v))])
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-        Ok(())
+        self.maybe_commit()
     }
 
     fn execute_multisig_transaction_internal(

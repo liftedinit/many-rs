@@ -173,9 +173,7 @@ impl LedgerStorage {
             self.commit_account(id, account)?;
             self.log_event(events::EventInfo::AccountDisable { account: *id })?;
 
-            self.maybe_commit()?;
-
-            Ok(())
+            self.maybe_commit()
         } else {
             Err(account::errors::unknown_account(*id))
         }
@@ -318,8 +316,6 @@ impl LedgerStorage {
             )])
             .map_err(|e| ManyError::unknown(e.to_string()))?;
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit()
     }
 }
