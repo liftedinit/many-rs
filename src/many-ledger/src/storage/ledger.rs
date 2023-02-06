@@ -104,7 +104,7 @@ impl LedgerStorage {
             })
     }
 
-    pub fn prove_state(
+    fn prove_state(
         &self,
         context: impl AsRef<Context>,
         keys: impl IntoIterator<Item = Vec<u8>>,

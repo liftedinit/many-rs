@@ -18,7 +18,10 @@ use many_protocol::{
 };
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
-use many_types::Timestamp;
+use many_types::{
+    attributes::{Attribute, AttributeSet},
+    Timestamp,
+};
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -200,6 +203,9 @@ struct MessageOpt {
 
     /// The content of the message itself (its payload).
     data: Option<String>,
+
+    #[clap(long)]
+    attribute: Option<u32>,
 }
 
 #[derive(Parser)]
@@ -313,6 +319,7 @@ async fn message(
     data: Vec<u8>,
     timestamp: Option<SystemTime>,
     r#async: bool,
+    attribute: Option<u32>,
 ) -> Result<(), anyhow::Error> {
     let address = key.address();
     let client = ManyClient::new(s, to, key).unwrap();
@@ -327,7 +334,14 @@ async fn message(
         .to(to)
         .method(method)
         .data(data)
-        .nonce(nonce.to_vec());
+        .nonce(nonce.to_vec())
+        .attributes({
+            let mut set = AttributeSet::new();
+            attribute.into_iter().for_each(|attr| {
+                set.insert(Attribute::id(attr));
+            });
+            set
+        });
 
     if let Some(ts) = timestamp {
         builder.timestamp(Timestamp::from_system_time(ts)?);
@@ -562,6 +576,7 @@ async fn main() {
                         data,
                         timestamp,
                         o.r#async,
+                        o.attribute,
                     )
                     .await
                 };
@@ -586,6 +601,13 @@ async fn main() {
                     .to(to_identity)
                     .method(o.method.expect("--method is required"))
                     .data(data)
+                    .attributes({
+                        let mut set = AttributeSet::new();
+                        o.attribute.into_iter().for_each(|attr| {
+                            set.insert(Attribute::id(attr));
+                        });
+                        set
+                    })
                     .build()
                     .unwrap();
 
