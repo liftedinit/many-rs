@@ -45,11 +45,10 @@ impl LedgerStorage {
             }
 
             // Store the new balance to the DB
-            let (balances, balance_keys) = self.get_multiple_balances(address, &BTreeSet::from([symbol]))?;
+            let (balances, balance_keys) =
+                self.get_multiple_balances(address, &BTreeSet::from([symbol]))?;
             keys.extend(balance_keys);
-            let new_balance = balances
-                .get(&symbol)
-                .map_or(amount.clone(), |b| b + amount);
+            let new_balance = balances.get(&symbol).map_or(amount.clone(), |b| b + amount);
             let key = key_for_account_balance(address, &symbol);
             keys.push(key.clone());
             batch.push((key, Op::Put(new_balance.to_vec())));
