@@ -91,22 +91,6 @@ impl LedgerStorage {
         ),
         ManyError,
     > {
-        //self.get_all_balances(identity)
-        //    .and_then(|(balances, keys)| {
-        //        self.prove_state(context, keys)
-        //            .map(|error| Err(ManyError::unknown(error.to_string())))
-        //            .unwrap_or(Ok(()))
-        //            .map(|_| {
-        //                if symbols.is_empty() {
-        //                    balances
-        //                } else {
-        //                    balances
-        //                        .into_iter()
-        //                        .filter(|(k, _v)| symbols.contains(k))
-        //                        .collect()
-        //                }
-        //            })
-        //    })
         self.get_all_balances(identity).map(|(balances, keys)| {
             (
                 if symbols.is_empty() {

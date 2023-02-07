@@ -95,10 +95,10 @@ impl LedgerStorage {
             }
 
             // Check if we have enough funds
-            let (balances, balance_keys) = self.get_multiple_balances(address, &BTreeSet::from_iter([symbol]))?;
+            let (balances, balance_keys) =
+                self.get_multiple_balances(address, &BTreeSet::from_iter([symbol]))?;
             keys.extend(balance_keys);
-            let balance_amount = match balances.get(&symbol)
-            {
+            let balance_amount = match balances.get(&symbol) {
                 Some(x) if x < amount => Err(error::missing_funds(symbol, amount, x)),
                 Some(x) => Ok(x.clone()),
                 None => Err(error::missing_funds(symbol, amount, TokenAmount::zero())),
