@@ -1,7 +1,9 @@
+use async_channel::unbounded;
 use many_identity::Address;
 use many_ledger_test_utils::*;
 use many_modules::ledger;
 use many_modules::ledger::{LedgerCommandsModuleBackend, LedgerModuleBackend, SendArgs};
+use many_protocol::RequestMessage;
 use many_types::ledger::TokenAmount;
 use proptest::prelude::*;
 
@@ -10,7 +12,11 @@ fn info() {
     let Setup {
         module_impl, id, ..
     } = setup();
-    let result = module_impl.info(&id, ledger::InfoArgs {});
+    let result = module_impl.info(
+        &id,
+        ledger::InfoArgs {},
+        (RequestMessage::default(), unbounded().0).into(),
+    );
     assert!(result.is_ok());
 }
 

@@ -26,7 +26,7 @@ define_attribute_many_error!(
 #[many_module(name = LedgerModule, id = 2, namespace = ledger, many_modules_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait LedgerModuleBackend: Send {
-    fn info(&self, sender: &Address, args: InfoArgs) -> Result<InfoReturns, ManyError>;
+    fn info(&self, sender: &Address, args: InfoArgs, context: Context) -> Result<InfoReturns, ManyError>;
     fn balance(&self, sender: &Address, args: BalanceArgs, context: Context) -> Result<BalanceReturns, ManyError>;
 }
 
@@ -56,7 +56,7 @@ mod tests {
     fn info() {
         let mut mock = MockLedgerModuleBackend::new();
         mock.expect_info()
-            .with(predicate::eq(identity(1)), predicate::eq(InfoArgs {}))
+            .with(predicate::eq(identity(1)), predicate::eq(InfoArgs {}), predicate::always())
             .times(1)
             .return_const(Ok(InfoReturns {
                 symbols: vec![*SYMBOL],

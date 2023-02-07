@@ -9,8 +9,9 @@ use tracing::info;
 impl ledger::LedgerModuleBackend for LedgerModuleImpl {
     fn info(
         &self,
-        _sender: &Address,
-        _args: ledger::InfoArgs,
+        _: &Address,
+        _: ledger::InfoArgs,
+        _: Context,
     ) -> Result<ledger::InfoReturns, ManyError> {
         let storage = &self.storage;
 
