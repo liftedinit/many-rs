@@ -23,7 +23,7 @@ MANY_HSM_CONFIG: &many_hsm_config
   - SOFTHSM2_CONF: /tmp/softhsm2.conf
 
 jobs:
-  lint-test-build:
+  lint-test-build-cov:
     parameters:
       os:
         type: string
@@ -32,6 +32,7 @@ jobs:
       *many_hsm_config
     steps:
       - checkout
+      - detect/init
       - run:
           name: rustfmt
           command: bazel build --config=remote-cache --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=rustfmt_checks //...
@@ -48,6 +49,11 @@ jobs:
             - run:
                 name: tests and doc tests (linux)
                 command: bazel test --config=remote-cache //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
+            - run:
+                name: coverage
+                command: bazel coverage --config=remote-cache --combined_report=lcov //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
+            - codecov/upload:
+                file: $(bazel info output_path)/_coverage/_coverage_report.dat
       - when:
           condition:
             equal: [ "macos", << parameters.os >> ]
@@ -56,6 +62,20 @@ jobs:
                 name: tests and doc tests (macos)
                 # Exclude HSM tests as we are not configured in MacOS for them.
                 command: bazel test --config=remote-cache -- //... -//src/many-identity-hsm:many-identity-hsm-test
+      - run: mkdir -p artifacts
+      - run:
+          name: build release
+          command: |
+            bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
+            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
+      - run:
+          name: create release shasum
+          command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
+      - persist_to_workspace:
+          root: artifacts
+          paths:
+            - "*.tar.gz"
+            - "*.txt"
 #  bats:
 #    parameters:
 #      os:
@@ -102,21 +122,21 @@ jobs:
 #          command: shasum artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
 #      - store_artifacts:
 #          path: artifacts
-  coverage:
-    parameters:
-      os:
-        type: string
-    executor: << parameters.os >>
-    working_directory: ~/project/repo
-    environment:
-      *many_hsm_config
-    steps:
-      - checkout
-      - run:
-          name: coverage
-          command: bazel coverage --config=remote-cache --combined_report=lcov //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
-      - codecov/upload:
-          file: $(bazel info output_path)/_coverage/_coverage_report.dat
+#  coverage:
+#    parameters:
+#      os:
+#        type: string
+#    executor: << parameters.os >>
+#    working_directory: ~/project/repo
+#    environment:
+#      *many_hsm_config
+#    steps:
+#      - checkout
+#      - run:
+#          name: coverage
+#          command: bazel coverage --config=remote-cache --combined_report=lcov //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
+#      - codecov/upload:
+#          file: $(bazel info output_path)/_coverage/_coverage_report.dat
 #  create:
 #    parameters:
 #      os:
@@ -127,15 +147,12 @@ jobs:
 #    steps:
 #      - checkout
 #      - detect/init
-#      - rust/install:
-#          version: << parameters.many_rust_version >>
-#      - rust/build:
-#          release: true
-#          with_cache: false
 #      - run: mkdir -p artifacts
 #      - run:
-#          name: creating release archive
-#          command: file target/release/* | grep 'executable\|shared object' | cut -d ':' -f 1 | xargs tar czvf artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
+#          name: build release
+#          command: |
+#            bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
+#            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
 #      - run:
 #          name: creating release shasum
 #          command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
@@ -328,11 +345,11 @@ workflows:
       not:
         equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
-      - lint-test-build:
+      - lint-test-build-cov:
           pre-steps:
             - install-deps:
                 os: << matrix.os >>
-          name: lint-test-build-v<< matrix.os >>
+          name: lint-test-build-cov-v<< matrix.os >>
           context:
             - CACHE
           matrix:
@@ -351,18 +368,18 @@ workflows:
 #              many_rust_version: [*many_rust_version]
 #          requires:
 #            - lint-test-build-v<< matrix.os >>
-      - coverage:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: coverage-v<< matrix.os >>
-          context:
-            - CACHE
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
+#      - coverage:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: coverage-v<< matrix.os >>
+#          context:
+#            - CACHE
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
 #      - dev_release_artifact:
 #          pre-steps:
 #            - install-deps:

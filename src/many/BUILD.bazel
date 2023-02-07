@@ -1,6 +1,8 @@
 load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 
+package(default_visibility = ["//:__pkg__"])
+
 rust_binary(
     name = "many",
     srcs = glob(include = ["src/**/*.rs"]),
