@@ -136,10 +136,7 @@ impl AccountModuleBackend for LedgerModuleImpl {
         sender: &Address,
         args: account::SetDescriptionArgs,
     ) -> Result<EmptyReturn, ManyError> {
-        let account = self
-            .storage
-            .get_account(&args.account)?
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
+        let (account, _) = self.storage.get_account(&args.account)?;
 
         if !account.has_role(sender, account::Role::Owner) {
             return Err(account::errors::user_needs_role("owner"));
@@ -154,10 +151,7 @@ impl AccountModuleBackend for LedgerModuleImpl {
         _sender: &Address,
         args: account::ListRolesArgs,
     ) -> Result<account::ListRolesReturn, ManyError> {
-        let account = self
-            .storage
-            .get_account(&args.account)?
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
+        let (account, _) = self.storage.get_account(&args.account)?;
         Ok(account::ListRolesReturn {
             roles: get_roles_for_account(&account),
         })
@@ -168,10 +162,7 @@ impl AccountModuleBackend for LedgerModuleImpl {
         _sender: &Address,
         args: account::GetRolesArgs,
     ) -> Result<account::GetRolesReturn, ManyError> {
-        let account = self
-            .storage
-            .get_account(&args.account)?
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
+        let (account, _) = self.storage.get_account(&args.account)?;
 
         let mut roles = BTreeMap::new();
         for id in args.identities {
@@ -186,10 +177,7 @@ impl AccountModuleBackend for LedgerModuleImpl {
         sender: &Address,
         args: account::AddRolesArgs,
     ) -> Result<EmptyReturn, ManyError> {
-        let account = self
-            .storage
-            .get_account(&args.account)?
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
+        let (account, _) = self.storage.get_account(&args.account)?;
 
         if !account.has_role(sender, account::Role::Owner) {
             return Err(account::errors::user_needs_role("owner"));
@@ -203,10 +191,7 @@ impl AccountModuleBackend for LedgerModuleImpl {
         sender: &Address,
         args: account::RemoveRolesArgs,
     ) -> Result<EmptyReturn, ManyError> {
-        let account = self
-            .storage
-            .get_account(&args.account)?
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
+        let (account, _) = self.storage.get_account(&args.account)?;
 
         if !account.has_role(sender, account::Role::Owner) {
             return Err(account::errors::user_needs_role(account::Role::Owner));
@@ -215,20 +200,16 @@ impl AccountModuleBackend for LedgerModuleImpl {
         Ok(EmptyReturn)
     }
 
-    fn info(
-        &self,
-        _sender: &Address,
-        args: account::InfoArgs,
-    ) -> Result<account::InfoReturn, ManyError> {
-        let account::Account {
-            description,
-            roles,
-            features,
-            disabled,
-        } = self
-            .storage
-            .get_account_even_disabled(&args.account)?
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
+    fn info(&self, _: &Address, args: account::InfoArgs) -> Result<account::InfoReturn, ManyError> {
+        let (
+            account::Account {
+                description,
+                roles,
+                features,
+                disabled,
+            },
+            _,
+        ) = self.storage.get_account_even_disabled(&args.account)?;
 
         Ok(account::InfoReturn {
             description,
@@ -243,10 +224,7 @@ impl AccountModuleBackend for LedgerModuleImpl {
         sender: &Address,
         args: account::DisableArgs,
     ) -> Result<EmptyReturn, ManyError> {
-        let account = self
-            .storage
-            .get_account(&args.account)?
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
+        let (account, _) = self.storage.get_account(&args.account)?;
 
         if !account.has_role(sender, account::Role::Owner) {
             return Err(account::errors::user_needs_role(account::Role::Owner));
@@ -264,10 +242,7 @@ impl AccountModuleBackend for LedgerModuleImpl {
         if args.features.is_empty() {
             return Err(account::errors::empty_feature());
         }
-        let account = self
-            .storage
-            .get_account(&args.account)?
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
+        let (account, _) = self.storage.get_account(&args.account)?;
 
         account.needs_role(sender, [account::Role::Owner])?;
         self.storage.add_features(account, args)?;

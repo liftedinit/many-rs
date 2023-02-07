@@ -6,9 +6,15 @@ use many_identity::Address;
 use many_modules::account::features::TryCreateFeature;
 use many_modules::account::Role;
 use many_modules::{account, ledger, EmptyReturn};
+use many_protocol::context::Context;
 
 impl ledger::LedgerCommandsModuleBackend for LedgerModuleImpl {
-    fn send(&mut self, sender: &Address, args: ledger::SendArgs) -> Result<EmptyReturn, ManyError> {
+    fn send(
+        &mut self,
+        sender: &Address,
+        args: ledger::SendArgs,
+        context: Context,
+    ) -> Result<EmptyReturn, ManyError> {
         let ledger::SendArgs {
             from,
             to,
@@ -25,19 +31,22 @@ impl ledger::LedgerCommandsModuleBackend for LedgerModuleImpl {
             return Err(error::unauthorized());
         }
         if from != sender {
-            if let Some(account) = self.storage.get_account(from)? {
-                verify_account_role(
-                    &account,
-                    sender,
-                    account::features::ledger::AccountLedger::ID,
-                    [Role::CanLedgerTransact],
-                )?;
-            } else {
-                return Err(error::unauthorized());
-            }
+            let (account, keys) = self.storage.get_account(from)?;
+            self.storage
+                .prove_state(context, keys)
+                .map(|error| ManyError::unknown(error.to_string()))
+                .map(Err)
+                .unwrap_or(Ok(()))?;
+            verify_account_role(
+                &account,
+                sender,
+                account::features::ledger::AccountLedger::ID,
+                [Role::CanLedgerTransact],
+            )?;
         }
 
-        self.storage.send(from, &to, &symbol, amount, memo)?;
-        Ok(EmptyReturn)
+        self.storage
+            .send(from, &to, &symbol, amount, memo)
+            .map(|_| EmptyReturn)
     }
 }

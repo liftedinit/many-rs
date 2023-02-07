@@ -40,11 +40,8 @@ pub fn verify_acl(
     feature_id: FeatureId,
 ) -> Result<(), ManyError> {
     if addr != sender {
-        if let Some(account) = storage.get_account(addr)? {
-            verify_account_role(&account, sender, feature_id, roles)?;
-        } else {
-            return Err(error::unauthorized());
-        }
+        let (account, _) = storage.get_account(addr)?;
+        verify_account_role(&account, sender, feature_id, roles)?;
     }
     Ok(())
 }
@@ -164,9 +161,7 @@ impl LedgerStorage {
     }
 
     pub fn disable_account(&mut self, id: &Address) -> Result<(), ManyError> {
-        let mut account = self
-            .get_account_even_disabled(id)?
-            .ok_or_else(|| account::errors::unknown_account(*id))?;
+        let (mut account, _) = self.get_account_even_disabled(id)?;
 
         if account.disabled.is_none() || account.disabled == Some(Either::Left(false)) {
             account.disabled = Some(Either::Left(true));
@@ -271,35 +266,33 @@ impl LedgerStorage {
         Ok(())
     }
 
-    pub fn get_account(&self, id: &Address) -> Result<Option<account::Account>, ManyError> {
-        Ok(self.get_account_even_disabled(id)?.and_then(|x| {
-            if x.disabled.is_none() || x.disabled == Some(Either::Left(false)) {
-                Some(x)
-            } else {
-                None
-            }
-        }))
+    pub fn get_account(
+        &self,
+        id: &Address,
+    ) -> Result<(account::Account, impl IntoIterator<Item = Vec<u8>>), ManyError> {
+        let (account, keys) = self.get_account_even_disabled(id)?;
+        if account.disabled.is_none() || account.disabled == Some(Either::Left(false)) {
+            Ok((account, keys))
+        } else {
+            Err(account::errors::unknown_account(id))
+        }
     }
 
     pub fn get_account_even_disabled(
         &self,
         id: &Address,
-    ) -> Result<Option<account::Account>, ManyError> {
+    ) -> Result<(account::Account, impl IntoIterator<Item = Vec<u8>>), ManyError> {
         // TODO: Refactor
-        Ok(
-            if let Some(bytes) = self
-                .persistent_store
-                .get(&key_for_account(id))
-                .unwrap_or_default()
-            {
-                Some(
-                    minicbor::decode::<account::Account>(&bytes)
-                        .map_err(ManyError::deserialization_error)?,
-                )
-            } else {
-                None
-            },
-        )
+        let key = key_for_account(id);
+        self.persistent_store
+            .get(&key)
+            .unwrap_or_default()
+            .map(|bytes| {
+                minicbor::decode::<account::Account>(&bytes)
+                    .map_err(ManyError::deserialization_error)
+                    .map(|account| (account, vec![key]))
+            })
+            .unwrap_or_else(|| Err(account::errors::unknown_account(id)))
     }
 
     pub fn commit_account(

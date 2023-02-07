@@ -280,17 +280,19 @@ impl Setup {
         amount: impl Into<TokenAmount>,
         symbol: Symbol,
     ) -> Result<(), ManyError> {
-        self.module_impl.send(
-            &sender,
-            ledger::SendArgs {
-                from: Some(from),
-                to,
-                amount: amount.into(),
-                symbol,
-                memo: None,
-            },
-        )?;
-        Ok(())
+        self.module_impl
+            .send(
+                &sender,
+                ledger::SendArgs {
+                    from: Some(from),
+                    to,
+                    amount: amount.into(),
+                    symbol,
+                    memo: None,
+                },
+                (RequestMessage::default(), unbounded().0).into(),
+            )
+            .map(|_| ())
     }
 
     pub fn send_(&mut self, from: Address, to: Address, amount: impl Into<TokenAmount>) {

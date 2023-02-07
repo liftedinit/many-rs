@@ -1,5 +1,6 @@
 use many_error::ManyError;
 use many_identity::Address;
+use many_protocol::context::Context;
 use many_macros::many_module;
 
 #[cfg(test)]
@@ -12,7 +13,7 @@ pub use send::*;
 #[many_module(name = LedgerCommandsModule, id = 6, namespace = ledger, many_modules_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait LedgerCommandsModuleBackend: Send {
-    fn send(&mut self, sender: &Address, args: SendArgs) -> Result<SendReturns, ManyError>;
+    fn send(&mut self, sender: &Address, args: SendArgs, context: Context) -> Result<SendReturns, ManyError>;
 }
 
 #[cfg(test)]
@@ -40,9 +41,9 @@ mod tests {
         };
         let mut mock = MockLedgerCommandsModuleBackend::new();
         mock.expect_send()
-            .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
+            .with(predicate::eq(identity(1)), predicate::eq(data.clone()), predicate::always())
             .times(1)
-            .returning(|_sender, _args| Ok(SendReturns {}));
+            .returning(|_, _, _| Ok(SendReturns {}));
         let module = super::LedgerCommandsModule::new(Arc::new(Mutex::new(mock)));
 
         let _: SendReturns = minicbor::decode(
