@@ -124,6 +124,9 @@ jobs:
           keys:
             - bazel-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
       - run:
+          name: touch bazel cache
+          command: find ~/.cache/bazel -type f -exec touch {} +
+      - run:
           name: coverage
           command: bazel coverage --combined_report=lcov //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
       - codecov/upload:
