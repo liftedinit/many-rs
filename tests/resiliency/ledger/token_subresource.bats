@@ -1,6 +1,7 @@
 # Resiliency test verifying the Token subresource exhaustion
 
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
+MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
 MAKEFILE="Makefile.ledger"
 MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
 
@@ -22,42 +23,21 @@ function teardown() {
 }
 
 @test "$SUITE: Token subresource exhaustion" {
-    echo '
-    { "migrations": [
-      {
-        "name": "Account Count Data Attribute",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Token Migration",
-        "block_height": 20,
-        "token_identity": "'$(identity 1)'",
-        "token_next_subresource": 2147483648,
-        "symbol": "'$(subresource 1 2147483647)'",
-        "symbol_name": "Manifest Network Token",
-        "symbol_decimals": 9,
-        "symbol_total": 100000000000000000,
-        "symbol_circulating": 100000000000000000,
-        "symbol_maximum": null,
-        "symbol_owner": "'$(subresource 1 2147483647)'"
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
+    # jq doesn't support bigint
+    jq '(.migrations[] | select(.name == "Token Migration")).block_height |= 20 |
+        (.migrations[] | select(.name == "Token Migration")).disabled |= empty |
+        (.migrations[] | select(.name == "Token Migration")) |= . + {
+            "token_identity": "'$(identity 1)'",
+            "token_next_subresource": 2147483648,
+            "symbol": "'$(subresource 1 2147483647)'",
+            "symbol_name": "Manifest Network Token",
+            "symbol_decimals": 9,
+            "symbol_total": 100000000000,
+            "symbol_circulating": 100000000000,
+            "symbol_maximum": null,
+            "symbol_owner": "'$(subresource 1 2147483647)'"
+        }' \
+        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
     cp "$GIT_ROOT/staging/ledger_state.json5" "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
@@ -87,7 +67,7 @@ function teardown() {
     # Give time to the servers to start.
     sleep 30
     timeout 30s bash <<EOT
-    while ! many message --server http://localhost:8000 status; do
+    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
       sleep 1
     done >/dev/null
 EOT
@@ -99,42 +79,21 @@ EOT
 }
 
 @test "$SUITE: Token subresource exhaustion, existing subresource" {
-    echo '
-    { "migrations": [
-      {
-        "name": "Account Count Data Attribute",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Token Migration",
-        "block_height": 20,
-        "token_identity": "'$(identity 1)'",
-        "token_next_subresource": 2147483646,
-        "symbol": "'$(subresource 1 2147483647)'",
-        "symbol_name": "Manifest Network Token",
-        "symbol_decimals": 9,
-        "symbol_total": 100000000000000000,
-        "symbol_circulating": 100000000000000000,
-        "symbol_maximum": null,
-        "symbol_owner": "'$(subresource 1 2147483647)'"
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
+    # jq doesn't support bigint
+    jq '(.migrations[] | select(.name == "Token Migration")).block_height |= 20 |
+        (.migrations[] | select(.name == "Token Migration")).disabled |= empty |
+        (.migrations[] | select(.name == "Token Migration")) |= . + {
+            "token_identity": "'$(identity 1)'",
+            "token_next_subresource": 2147483646,
+            "symbol": "'$(subresource 1 2147483647)'",
+            "symbol_name": "Manifest Network Token",
+            "symbol_decimals": 9,
+            "symbol_total": 100000000000,
+            "symbol_circulating": 100000000000,
+            "symbol_maximum": null,
+            "symbol_owner": "'$(subresource 1 2147483647)'"
+        }' \
+        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
     cp "$GIT_ROOT/staging/ledger_state.json5" "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
@@ -164,7 +123,7 @@ EOT
     # Give time to the servers to start.
     sleep 30
     timeout 30s bash <<EOT
-    while ! many message --server http://localhost:8000 status; do
+    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
       sleep 1
     done >/dev/null
 EOT

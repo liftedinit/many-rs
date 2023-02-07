@@ -11,7 +11,7 @@ function setup() {
 
     (
       cd "$GIT_ROOT"
-      cargo build --features balance_testing
+      cargo build --all-features
     )
 
     cp "$GIT_ROOT/staging/ledger_state.json5" "$BATS_TEST_ROOTDIR/ledger_state.json5"

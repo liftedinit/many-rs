@@ -13,7 +13,7 @@ function setup() {
 
     (
       cd "$GIT_ROOT"
-      cargo build
+      cargo build --all-features
     )
 
     start_ledger --pem "$(pem 0)"
