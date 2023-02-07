@@ -30,6 +30,7 @@ impl ledger::LedgerCommandsModuleBackend for LedgerModuleImpl {
         if from.is_illegal() {
             return Err(error::unauthorized());
         }
+        let mut keys_to_prove = vec![];
         if from != sender {
             let (account, keys) = self
                 .storage
@@ -41,15 +42,21 @@ impl ledger::LedgerCommandsModuleBackend for LedgerModuleImpl {
                 account::features::ledger::AccountLedger::ID,
                 [Role::CanLedgerTransact],
             )?;
-            self.storage
-                .prove_state(context, keys)
-                .map(|error| ManyError::unknown(error.to_string()))
-                .map(Err)
-                .unwrap_or(Ok(()))?;
+            keys_to_prove.extend(keys);
         }
 
         self.storage
             .send(from, &to, &symbol, amount, memo)
+            .and_then(|keys| {
+                self.storage
+                    .prove_state(context, {
+                        keys_to_prove.extend(keys);
+                        keys_to_prove
+                    })
+                    .map(|error| ManyError::unknown(error.to_string()))
+                    .map(Err)
+                    .unwrap_or(Ok(()))
+            })
             .map(|_| EmptyReturn)
     }
 }
