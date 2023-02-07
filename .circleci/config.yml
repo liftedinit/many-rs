@@ -35,23 +35,23 @@ jobs:
       - detect/init
       - run:
           name: rustfmt
-          command: bazel build --config=remote-cache --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=rustfmt_checks //... -//:many-rs-tar
+          command: bazel build --config=remote-cache --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=rustfmt_checks -- //... -//:many-rs-tar
       - run:
           name: clippy
-          command: bazel build --config=remote-cache --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=clippy_checks //... -//:many-rs-tar
+          command: bazel build --config=remote-cache --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=clippy_checks -- //... -//:many-rs-tar
       - run:
           name: build
-          command: bazel build --config=remote-cache //... -//:many-rs-tar
+          command: bazel build --config=remote-cache -- //... -//:many-rs-tar
       - when:
           condition:
             equal: [ "linux2204", << parameters.os >> ]
           steps:
             - run:
                 name: tests and doc tests (linux)
-                command: bazel test --config=remote-cache //... -//:many-rs-tar --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
+                command: bazel test --config=remote-cache --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF -- //... -//:many-rs-tar
             - run:
                 name: coverage
-                command: bazel coverage --config=remote-cache --combined_report=lcov //... -//:many-rs-tar --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
+                command: bazel coverage --config=remote-cache --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF --combined_report=lcov -- //... -//:many-rs-tar
             - codecov/upload:
                 file: $(bazel info output_path)/_coverage/_coverage_report.dat
       - when:
