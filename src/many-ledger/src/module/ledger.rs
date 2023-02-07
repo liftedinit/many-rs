@@ -1,4 +1,4 @@
-use crate::module::LedgerModuleImpl;
+use crate::{module::LedgerModuleImpl, storage::SYMBOLS_ROOT};
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::ledger;
@@ -11,13 +11,22 @@ impl ledger::LedgerModuleBackend for LedgerModuleImpl {
         &self,
         _: &Address,
         _: ledger::InfoArgs,
-        _: Context,
+        context: Context,
     ) -> Result<ledger::InfoReturns, ManyError> {
         let storage = &self.storage;
 
         // Hash the storage.
         let hash = storage.hash();
         let symbols = storage.get_symbols_and_tickers()?;
+
+        storage
+            .prove_state(
+                context,
+                vec![hash.clone(), SYMBOLS_ROOT.as_bytes().to_vec()],
+            )
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))?;
 
         info!(
             "info(): hash={} symbols={:?}",
