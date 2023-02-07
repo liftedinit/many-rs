@@ -40,7 +40,9 @@ pub fn verify_acl(
     feature_id: FeatureId,
 ) -> Result<(), ManyError> {
     if addr != sender {
-        let (account, _) = storage.get_account(addr)?;
+        let (account, _) = storage
+            .get_account(addr)
+            .map_err(|_| error::unauthorized())?;
         verify_account_role(&account, sender, feature_id, roles)?;
     }
     Ok(())

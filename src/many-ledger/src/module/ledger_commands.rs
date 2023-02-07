@@ -31,18 +31,21 @@ impl ledger::LedgerCommandsModuleBackend for LedgerModuleImpl {
             return Err(error::unauthorized());
         }
         if from != sender {
-            let (account, keys) = self.storage.get_account(from)?;
-            self.storage
-                .prove_state(context, keys)
-                .map(|error| ManyError::unknown(error.to_string()))
-                .map(Err)
-                .unwrap_or(Ok(()))?;
+            let (account, keys) = self
+                .storage
+                .get_account(from)
+                .map_err(|_| error::unauthorized())?;
             verify_account_role(
                 &account,
                 sender,
                 account::features::ledger::AccountLedger::ID,
                 [Role::CanLedgerTransact],
             )?;
+            self.storage
+                .prove_state(context, keys)
+                .map(|error| ManyError::unknown(error.to_string()))
+                .map(Err)
+                .unwrap_or(Ok(()))?;
         }
 
         self.storage
