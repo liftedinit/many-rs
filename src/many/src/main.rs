@@ -306,7 +306,6 @@ async fn show_response<'a>(
             "{}",
             cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
         );
-        println!("Attributes: {attributes:?}",);
     }
 
     Ok(())

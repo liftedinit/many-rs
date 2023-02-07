@@ -41,9 +41,10 @@ pub struct SymbolMeta {
 
 pub fn verify_tokens_sender(sender: &Address, token_identity: Address) -> Result<(), ManyError> {
     if *sender != token_identity {
-        return Err(error::invalid_sender());
+        Err(error::invalid_sender())
+    } else {
+        Ok(())
     }
-    Ok(())
 }
 
 impl LedgerStorage {

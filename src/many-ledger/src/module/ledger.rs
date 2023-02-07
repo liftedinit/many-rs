@@ -43,11 +43,13 @@ impl ledger::LedgerModuleBackend for LedgerModuleImpl {
         let storage = &self.storage;
         let symbols = symbols.unwrap_or_default().0;
 
-        let balances = storage.get_multiple_balances(
-            identity,
-            &BTreeSet::from_iter(symbols.clone().into_iter()),
-            context,
-        )?;
+        let (balances, keys) = storage
+            .get_multiple_balances(identity, &BTreeSet::from_iter(symbols.clone().into_iter()))?;
+        storage
+            .prove_state(context, keys)
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))?;
         info!("balance({}, {:?}): {:?}", identity, &symbols, &balances);
         Ok(ledger::BalanceReturns { balances })
     }

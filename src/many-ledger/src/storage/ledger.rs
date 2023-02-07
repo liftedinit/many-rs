@@ -84,27 +84,45 @@ impl LedgerStorage {
         &self,
         identity: &Address,
         symbols: &BTreeSet<Symbol>,
-        context: impl AsRef<Context>,
-    ) -> Result<BTreeMap<Symbol, TokenAmount>, ManyError> {
-        self.get_all_balances(identity)
-            .and_then(|(balances, keys)| {
-                self.prove_state(context, keys)
-                    .map(|error| Err(ManyError::unknown(error.to_string())))
-                    .unwrap_or(Ok(()))
-                    .map(|_| {
-                        if symbols.is_empty() {
-                            balances
-                        } else {
-                            balances
-                                .into_iter()
-                                .filter(|(k, _v)| symbols.contains(k))
-                                .collect()
-                        }
-                    })
-            })
+    ) -> Result<
+        (
+            BTreeMap<Symbol, TokenAmount>,
+            impl IntoIterator<Item = Vec<u8>>,
+        ),
+        ManyError,
+    > {
+        //self.get_all_balances(identity)
+        //    .and_then(|(balances, keys)| {
+        //        self.prove_state(context, keys)
+        //            .map(|error| Err(ManyError::unknown(error.to_string())))
+        //            .unwrap_or(Ok(()))
+        //            .map(|_| {
+        //                if symbols.is_empty() {
+        //                    balances
+        //                } else {
+        //                    balances
+        //                        .into_iter()
+        //                        .filter(|(k, _v)| symbols.contains(k))
+        //                        .collect()
+        //                }
+        //            })
+        //    })
+        self.get_all_balances(identity).map(|(balances, keys)| {
+            (
+                if symbols.is_empty() {
+                    balances
+                } else {
+                    balances
+                        .into_iter()
+                        .filter(|(k, _v)| symbols.contains(k))
+                        .collect()
+                },
+                keys,
+            )
+        })
     }
 
-    fn prove_state(
+    pub fn prove_state(
         &self,
         context: impl AsRef<Context>,
         keys: impl IntoIterator<Item = Vec<u8>>,

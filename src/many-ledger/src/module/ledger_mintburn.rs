@@ -47,7 +47,12 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
         check_symbol_exists(&symbol, self.storage.get_symbols()?)?;
 
         // Mint into storage
-        self.storage.mint_token(symbol, &distribution, context)?;
+        let keys = self.storage.mint_token(symbol, &distribution)?;
+        self.storage
+            .prove_state(context, keys)
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))?;
 
         // Log event
         self.storage.log_event(EventInfo::TokenMint {
