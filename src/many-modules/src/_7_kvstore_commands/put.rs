@@ -66,7 +66,7 @@ mod tests {
             alternative_owner: None,
         };
 
-        let enc = minicbor::to_vec(&tx).unwrap();
+        let enc = minicbor::to_vec(tx).unwrap();
         let dec = minicbor::decode::<PutArgs>(&enc);
         assert!(dec.is_err());
         assert_eq!(
@@ -83,7 +83,7 @@ mod tests {
             alternative_owner: None,
         };
 
-        let enc = minicbor::to_vec(&tx).unwrap();
+        let enc = minicbor::to_vec(tx).unwrap();
         let dec = minicbor::decode::<PutArgs>(&enc);
         assert!(dec.is_err());
         assert_eq!(
