@@ -67,10 +67,10 @@ jobs:
           name: build release
           command: |
             bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
-            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
+            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
       - run:
           name: create release shasum
-          command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
+          command: shasum artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
       - store_artifacts:
           path: artifacts
 #  bats:
@@ -95,45 +95,6 @@ jobs:
 #          name: running BATs tests
 #          command: bats *
 #          working_directory: ./tests/e2e/
-#  dev_release_artifact:
-#    parameters:
-#      os:
-#        type: string
-#      many_rust_version:
-#        type: string
-#    executor: << parameters.os >>
-#    steps:
-#      - checkout
-#      - detect/init
-#      - rust/install:
-#          version: << parameters.many_rust_version >>
-#      - rust/build:
-#          release: true
-#          with_cache: false
-#      - run: mkdir -p artifacts
-#      - run:
-#          name: creating release archive
-#          command: file target/release/* | grep 'executable\|shared object' | cut -d ':' -f 1 | xargs tar czvf artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
-#      - run:
-#          name: creating release shasum
-#          command: shasum artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
-#      - store_artifacts:
-#          path: artifacts
-#  coverage:
-#    parameters:
-#      os:
-#        type: string
-#    executor: << parameters.os >>
-#    working_directory: ~/project/repo
-#    environment:
-#      *many_hsm_config
-#    steps:
-#      - checkout
-#      - run:
-#          name: coverage
-#          command: bazel coverage --config=remote-cache --combined_report=lcov //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
-#      - codecov/upload:
-#          file: $(bazel info output_path)/_coverage/_coverage_report.dat
 #  create:
 #    parameters:
 #      os:
@@ -332,9 +293,6 @@ commands:
                   wget https://github.com/bazelbuild/bazelisk/releases/download/v1.15.0/bazelisk-linux-amd64  
                   chmod +x bazelisk-linux-amd64 
                   sudo mv bazelisk-linux-amd64 /usr/local/bin/bazel
-#            - run:
-#                name: installing grcov
-#                command: wget https://github.com/mozilla/grcov/releases/download/v0.8.11/grcov-x86_64-unknown-linux-gnu.tar.bz2 -O - | sudo tar -xj -C /usr/local/bin
 
 workflows:
   ci:
@@ -365,34 +323,6 @@ workflows:
 #              many_rust_version: [*many_rust_version]
 #          requires:
 #            - lint-test-build-v<< matrix.os >>
-#      - coverage:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: coverage-v<< matrix.os >>
-#          context:
-#            - CACHE
-#          matrix:
-#            parameters:
-#              os: [linux2204]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
-#      - dev_release_artifact:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: dev_release_artifact-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [linux2204]
-#              many_rust_version: [*many_rust_version]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
-#            - bats-v<< matrix.os >>
-#          filters:
-#            branches:
-#              ignore: main
-#              only: /^pull\/[0-9]+$/
 #  release:
 #    when:
 #      not:
