@@ -32,25 +32,22 @@ jobs:
       *many_hsm_config
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - bazel-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
       - run:
           name: rustfmt
-          command: bazel build --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=rustfmt_checks //...
+          command: bazel build --config=remote-cache --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=rustfmt_checks //...
       - run:
           name: clippy
-          command: bazel build --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=clippy_checks //...
+          command: bazel build --config=remote-cache --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=clippy_checks //...
       - run:
           name: build
-          command: bazel build //...
+          command: bazel build --config=remote-cache //...
       - when:
           condition:
             equal: [ "linux2204", << parameters.os >> ]
           steps:
             - run:
                 name: tests and doc tests (linux)
-                command: bazel test //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
+                command: bazel test --config=remote-cache //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
       - when:
           condition:
             equal: [ "macos", << parameters.os >> ]
@@ -58,12 +55,7 @@ jobs:
             - run:
                 name: tests and doc tests (macos)
                 # Exclude HSM tests as we are not configured in MacOS for them.
-                command: bazel test -- //... -//src/many-identity-hsm:many-identity-hsm-test
-      - save_cache:
-          key: bazel-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
-          paths:
-            - ~/.cache/bazel
-            - ~/.cache/bazelisk
+                command: bazel test --config=remote-cache -- //... -//src/many-identity-hsm:many-identity-hsm-test
 #  bats:
 #    parameters:
 #      os:
@@ -120,22 +112,11 @@ jobs:
       *many_hsm_config
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - bazel-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
-      - run:
-          name: touch bazel cache
-          command: find ~/.cache/bazel -type f -exec touch {} +
       - run:
           name: coverage
-          command: bazel coverage --combined_report=lcov //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
+          command: bazel coverage --config=remote-cache --combined_report=lcov //... --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF
       - codecov/upload:
           file: $(bazel info output_path)/_coverage/_coverage_report.dat
-      - save_cache:
-          key: bazel-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
-          paths:
-            - ~/.cache/bazel
-            - ~/.cache/bazelisk
 #  create:
 #    parameters:
 #      os:
