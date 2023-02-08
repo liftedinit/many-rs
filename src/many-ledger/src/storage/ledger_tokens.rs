@@ -209,18 +209,21 @@ impl LedgerStorage {
         Ok(info_summary)
     }
 
-    fn update_symbols(&mut self, symbol: Symbol, ticker: String) -> Result<(), ManyError> {
+    fn update_symbols(
+        &mut self,
+        symbol: Symbol,
+        ticker: String,
+    ) -> Result<impl IntoIterator<Item = Vec<u8>>, ManyError> {
         let mut symbols = self.get_symbols_and_tickers()?;
         symbols.insert(symbol, ticker);
-
+        let symbols_key = b"/config/symbols".to_vec();
         self.persistent_store
             .apply(&[(
-                b"/config/symbols".to_vec(),
+                symbols_key.clone(),
                 Op::Put(minicbor::to_vec(&symbols).map_err(ManyError::serialization_error)?),
             )])
-            .map_err(error::storage_apply_failed)?;
-
-        Ok(())
+            .map_err(error::storage_apply_failed)
+            .map(|_| vec![symbols_key])
     }
 
     pub fn create_token(
@@ -239,7 +242,7 @@ impl LedgerStorage {
 
         // Create a new token symbol and store in memory and in the persistent store
         let (symbol, _) = self.get_next_subresource(TOKEN_IDENTITY_ROOT)?;
-        self.update_symbols(symbol, summary.ticker.clone())?;
+        let _ = self.update_symbols(symbol, summary.ticker.clone())?;
 
         // Initialize the total supply following the initial token distribution, if any
         let mut batch: Vec<BatchEntry> = Vec::new();
@@ -370,7 +373,7 @@ impl LedgerStorage {
                 if self.get_symbols_and_tickers()?.values().contains(ticker) {
                     return Err(error::ticker_exists(ticker));
                 };
-                self.update_symbols(symbol, ticker.clone())?;
+                let _ = self.update_symbols(symbol, ticker.clone())?;
                 info.summary.ticker = ticker.clone();
             }
             if let Some(decimals) = decimals {
