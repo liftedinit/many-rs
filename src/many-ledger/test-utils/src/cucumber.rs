@@ -263,6 +263,8 @@ fn _create_default_token<T: TokenWorld + LedgerWorld + AccountWorld>(
     id: SomeId,
     max_supply: Option<TokenAmount>,
 ) {
+    use {async_channel::unbounded, many_protocol::RequestMessage};
+
     let (id, owner) = if let Some(id) = id.as_maybe_address(w) {
         (id, TokenMaybeOwner::Left(id))
     } else {
@@ -272,6 +274,7 @@ fn _create_default_token<T: TokenWorld + LedgerWorld + AccountWorld>(
         w.module_impl_mut(),
         &id,
         crate::default_token_create_args(Some(owner), max_supply),
+        (RequestMessage::default(), unbounded().0).into(),
     )
     .expect("Unable to create default token");
     *w.info_mut() = result.info;

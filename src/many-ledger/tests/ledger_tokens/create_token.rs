@@ -1,3 +1,4 @@
+use async_channel::unbounded;
 use many_ledger_test_macros::*;
 use many_ledger_test_utils::cucumber::{
     verify_error_code, verify_error_role, AccountWorld, LedgerWorld, SomeError, SomeId,
@@ -14,6 +15,7 @@ use many_ledger::module::LedgerModuleImpl;
 use many_modules::events::{EventFilter, EventKind, EventsModuleBackend, ListArgs};
 use many_modules::ledger::extended_info::TokenExtendedInfo;
 use many_modules::ledger::{LedgerTokensModuleBackend, TokenCreateArgs};
+use many_protocol::RequestMessage;
 use many_types::cbor::CborNull;
 use many_types::ledger::{LedgerTokensAddressMap, TokenAmount, TokenInfo, TokenMaybeOwner};
 use many_types::Memo;
@@ -40,15 +42,25 @@ impl CreateWorld {
 }
 
 fn create_token(w: &mut CreateWorld, sender: &Address) {
-    w.info = LedgerTokensModuleBackend::create(&mut w.setup.module_impl, sender, w.args.clone())
-        .expect("Could not create token")
-        .info;
+    w.info = LedgerTokensModuleBackend::create(
+        &mut w.setup.module_impl,
+        sender,
+        w.args.clone(),
+        (RequestMessage::default(), unbounded().0).into(),
+    )
+    .expect("Could not create token")
+    .info;
 }
 
 fn fail_create_token(w: &mut CreateWorld, sender: &Address) {
     w.error = Some(
-        LedgerTokensModuleBackend::create(&mut w.setup.module_impl, sender, w.args.clone())
-            .expect_err("Token creation was supposed to fail, it succeeded instead."),
+        LedgerTokensModuleBackend::create(
+            &mut w.setup.module_impl,
+            sender,
+            w.args.clone(),
+            (RequestMessage::default(), unbounded().0).into(),
+        )
+        .expect_err("Token creation was supposed to fail, it succeeded instead."),
     );
 }
 #[given(expr = "a token account")]

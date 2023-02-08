@@ -13,6 +13,7 @@ use many_modules::ledger::{
     TokenRemoveExtendedInfoArgs, TokenRemoveExtendedInfoReturns, TokenUpdateArgs,
     TokenUpdateReturns,
 };
+use many_protocol::context::Context;
 use many_types::Either;
 
 fn check_ticker_length(ticker: &String) -> Result<(), ManyError> {
@@ -27,27 +28,42 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: TokenCreateArgs,
+        context: Context,
     ) -> Result<TokenCreateReturns, ManyError> {
+        use crate::storage::SYMBOLS_ROOT;
+        #[cfg(not(feature = "disable_token_sender_check"))]
+        use crate::storage::{ledger_tokens::TOKEN_IDENTITY_ROOT, IDENTITY_ROOT};
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.create"));
         }
+
+        let mut keys = vec![SYMBOLS_ROOT.to_string().into_bytes()];
 
         #[cfg(not(feature = "disable_token_sender_check"))]
         crate::storage::ledger_tokens::verify_tokens_sender(
             sender,
             self.storage
-                .get_identity(crate::storage::ledger_tokens::TOKEN_IDENTITY_ROOT)
-                .or_else(|_| self.storage.get_identity(crate::storage::IDENTITY_ROOT))?,
+                .get_identity(TOKEN_IDENTITY_ROOT)
+                .map(|identity| {
+                    keys.push(TOKEN_IDENTITY_ROOT.to_vec());
+                    identity
+                })
+                .or_else(|_| {
+                    self.storage.get_identity(IDENTITY_ROOT).map(|identity| {
+                        keys.push(IDENTITY_ROOT.to_vec());
+                        identity
+                    })
+                })?,
         )?;
 
         if let Some(Either::Left(addr)) = &args.owner {
-            let _ = verify_acl(
+            keys.extend(verify_acl(
                 &self.storage,
                 sender,
                 addr,
                 [Role::CanTokensCreate],
                 TokenAccountLedger::ID,
-            )?;
+            )?);
         }
 
         let ticker = &args.summary.ticker;
@@ -63,9 +79,14 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
                 "The ticker {ticker} already exists on this network"
             )));
         }
+        let (result, token_creation_keys) = self.storage.create_token(sender, args)?;
+        keys.extend(token_creation_keys);
         self.storage
-            .create_token(sender, args)
-            .map(|(result, _)| result)
+            .prove_state(context, keys)
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))
+            .map(|_| result)
     }
 
     fn info(&self, _sender: &Address, args: TokenInfoArgs) -> Result<TokenInfoReturns, ManyError> {
