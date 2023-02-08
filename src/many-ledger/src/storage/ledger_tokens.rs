@@ -362,7 +362,7 @@ impl LedgerStorage {
         &mut self,
         _sender: &Address,
         args: TokenUpdateArgs,
-    ) -> Result<TokenUpdateReturns, ManyError> {
+    ) -> Result<(TokenUpdateReturns, impl IntoIterator<Item = Vec<u8>>), ManyError> {
         let TokenUpdateArgs {
             symbol,
             name,
@@ -371,13 +371,16 @@ impl LedgerStorage {
             owner,
             memo,
         } = args;
+        let mut keys: Vec<Vec<u8>> = vec![SYMBOLS_ROOT.into()];
 
         // Try fetching the token info from the persistent storage
+        let symbol_key = key_for_symbol(&symbol);
         if let Some(enc) = self
             .persistent_store
-            .get(key_for_symbol(&symbol).as_bytes())
+            .get(symbol_key.as_bytes())
             .map_err(ManyError::unknown)?
         {
+            keys.push(symbol_key.clone().into());
             let mut info: TokenInfo = minicbor::decode(&enc).unwrap();
 
             if let Some(name) = name.as_ref() {
@@ -387,7 +390,7 @@ impl LedgerStorage {
                 if self.get_symbols_and_tickers()?.values().contains(ticker) {
                     return Err(error::ticker_exists(ticker));
                 };
-                let _ = self.update_symbols(symbol, ticker.clone())?;
+                keys.extend(self.update_symbols(symbol, ticker.clone())?);
                 info.summary.ticker = ticker.clone();
             }
             if let Some(decimals) = decimals {
@@ -403,7 +406,7 @@ impl LedgerStorage {
 
             self.persistent_store
                 .apply(&[(
-                    key_for_symbol(&symbol).into(),
+                    symbol_key.into(),
                     Op::Put(minicbor::to_vec(&info).map_err(ManyError::serialization_error)?),
                 )])
                 .map_err(error::storage_apply_failed)?;
@@ -417,13 +420,12 @@ impl LedgerStorage {
                 memo,
             })?;
 
-            self.maybe_commit()?;
+            self.maybe_commit().map(|_| (TokenUpdateReturns {}, keys))
         } else {
-            return Err(ManyError::unknown(format!(
+            Err(ManyError::unknown(format!(
                 "Symbol {symbol} not found in persistent storage"
-            )));
+            )))
         }
-        Ok(TokenUpdateReturns {})
     }
 
     pub fn add_extended_info(

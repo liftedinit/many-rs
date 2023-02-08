@@ -144,7 +144,8 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             check_ticker_length(ticker)?;
         }
 
-        self.storage.update_token(sender, args)
+        let (result, _) = self.storage.update_token(sender, args)?;
+        Ok(result)
     }
 
     fn add_extended_info(
