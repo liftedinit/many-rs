@@ -297,6 +297,8 @@ commands:
                 command: |
                   sudo DEBIAN_FRONTEND=noninteractive apt -y update
                   sudo DEBIAN_FRONTEND=noninteractive apt -y install build-essential pkg-config clang libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev jq
+                  # Remove `bats` from the CircleCI image
+                  sudo rm -rf /usr/local/bin/bats
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
             - run:
