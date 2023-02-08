@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn round_trip_node_hash() -> Result<(), ()> {
-        let node_hash = ProofOperation::KeyValueHash(vec![1, 2, 3]);
+        let node_hash = ProofOperation::NodeHash(vec![1, 2, 3]);
         assert_eq!(
             minicbor::decode::<ProofOperation>(
                 minicbor::to_vec(node_hash.clone())
