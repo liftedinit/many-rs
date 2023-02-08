@@ -44,12 +44,12 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             self.storage
                 .get_identity(TOKEN_IDENTITY_ROOT)
                 .map(|identity| {
-                    keys.push(TOKEN_IDENTITY_ROOT.to_vec());
+                    keys.push(TOKEN_IDENTITY_ROOT.into());
                     identity
                 })
                 .or_else(|_| {
                     self.storage.get_identity(IDENTITY_ROOT).map(|identity| {
-                        keys.push(IDENTITY_ROOT.to_vec());
+                        keys.push(IDENTITY_ROOT.into());
                         identity
                     })
                 })?,
@@ -169,7 +169,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
-                let _: Vec<_> = verify_acl(
+                let _ = verify_acl(
                     &self.storage,
                     sender,
                     &addr,
@@ -200,7 +200,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
-                let _: Vec<_> = verify_acl(
+                let _ = verify_acl(
                     &self.storage,
                     sender,
                     &addr,
