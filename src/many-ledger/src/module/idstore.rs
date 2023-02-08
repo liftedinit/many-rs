@@ -1,4 +1,4 @@
-use crate::module::LedgerModuleImpl;
+use crate::{module::LedgerModuleImpl, storage::idstore::IDSTORE_ROOT};
 use coset::{CborSerializable, CoseKey};
 use many_error::ManyError;
 use many_identity::Address;
@@ -57,6 +57,7 @@ impl idstore::IdStoreModuleBackend for LedgerModuleImpl {
             CoseKey::from_slice(&public_key.0).map_err(ManyError::deserialization_error)?;
 
         let mut current_try = 1u8;
+        let mut keys: Vec<Vec<u8>> = vec![IDSTORE_ROOT.into()];
         let recall_phrase = loop {
             if current_try > 8 {
                 return Err(idstore::recall_phrase_generation_failed());
@@ -78,7 +79,8 @@ impl idstore::IdStoreModuleBackend for LedgerModuleImpl {
                 _ => unimplemented!(),
             }?;
 
-            if self.storage.get_from_recall_phrase(&recall_phrase).is_ok() {
+            if let Ok((_, _, key)) = self.storage.get_from_recall_phrase(&recall_phrase) {
+                keys.push(key);
                 current_try += 1;
                 tracing::debug!("Recall phrase generation failed, retrying...")
             } else {
@@ -95,7 +97,7 @@ impl idstore::IdStoreModuleBackend for LedgerModuleImpl {
         &self,
         args: idstore::GetFromRecallPhraseArgs,
     ) -> Result<idstore::GetReturns, ManyError> {
-        let (cred_id, public_key) = self.storage.get_from_recall_phrase(&args.0)?;
+        let (cred_id, public_key, _) = self.storage.get_from_recall_phrase(&args.0)?;
         Ok(idstore::GetReturns {
             cred_id,
             public_key,
@@ -106,7 +108,7 @@ impl idstore::IdStoreModuleBackend for LedgerModuleImpl {
         &self,
         args: idstore::GetFromAddressArgs,
     ) -> Result<idstore::GetReturns, ManyError> {
-        let (cred_id, public_key) = self.storage.get_from_address(&args.0)?;
+        let (cred_id, public_key, _) = self.storage.get_from_address(&args.0)?;
         Ok(idstore::GetReturns {
             cred_id,
             public_key,

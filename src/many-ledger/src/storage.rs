@@ -17,7 +17,7 @@ mod abci;
 pub mod account;
 pub mod data;
 pub mod event;
-mod idstore;
+pub(crate) mod idstore;
 pub mod iterator;
 mod ledger;
 mod ledger_commands;
