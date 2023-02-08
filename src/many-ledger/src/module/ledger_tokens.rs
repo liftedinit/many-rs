@@ -107,14 +107,17 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: TokenUpdateArgs,
-        _: Context,
+        context: Context,
     ) -> Result<TokenUpdateReturns, ManyError> {
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.update"));
         }
 
+        let mut keys: Vec<Vec<u8>> = vec![SYMBOLS_ROOT.into()];
+
         // Get the current owner and check if we're allowed to update this token
-        let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
+        let (current_owner, owner_key) = self.storage.get_owner(&args.symbol)?;
+        keys.push(owner_key);
         match current_owner {
             Some(addr) => {
                 let _ = verify_acl(
@@ -144,8 +147,14 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             check_ticker_length(ticker)?;
         }
 
-        let (result, _) = self.storage.update_token(sender, args)?;
-        Ok(result)
+        let (result, update_keys) = self.storage.update_token(sender, args)?;
+        keys.extend(update_keys);
+        self.storage
+            .prove_state(context, keys)
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))
+            .map(|_| result)
     }
 
     fn add_extended_info(
