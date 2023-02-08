@@ -3,10 +3,11 @@
 version: 2.1
 
 orbs:
-  codecov: codecov/codecov@3.2.3
+  codecov: codecov/codecov@3.2.4
   detect: circleci/os-detect@0.3.0
-  bats: circleci/bats@1.0.0
-  docker: circleci/docker@2.1.3
+  rust: circleci/rust@1.6.0
+  bats: circleci/bats@1.1.0
+  docker: circleci/docker@2.2.0
 
 executors:
   linux2204:
@@ -49,11 +50,32 @@ jobs:
             - run:
                 name: tests and doc tests (linux)
                 command: bazel test --config=remote-cache --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF -- //... -//:many-rs-tar
+
+            # COVERAGE
             - run:
                 name: coverage
                 command: bazel coverage --config=remote-cache --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF --combined_report=lcov -- //... -//:many-rs-tar
             - codecov/upload:
                 file: $(bazel info output_path)/_coverage/_coverage_report.dat
+
+            # BATS
+            - run:
+                name: prepare bats
+                command: |
+                  # Fake Cargo output
+                  mkdir -p target/debug
+                  bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug
+            # TODO: We should create a binary release of cbor-diag-cli instead of installing Rust and building it every time
+            - rust/install
+            - run:
+                name: install cbor-diag
+                command: cargo install --force cbor-diag-cli
+            - bats/install
+            - run:
+                name: running BATs tests
+                command: bats *
+                working_directory: ./tests/e2e/
+
       - when:
           condition:
             equal: [ "macos", << parameters.os >> ]

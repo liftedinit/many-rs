@@ -8,6 +8,7 @@ exports_files(["staging/ledger_state.json5"])
 # Required for Vergen
 exports_files([".git"])
 
+# TODO: Get the version from the Cargo manifest
 VERSION = "0.1.0"
 
 # Exposes the value of the compilation mode to the package naming.
