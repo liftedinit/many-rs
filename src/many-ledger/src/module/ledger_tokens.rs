@@ -184,7 +184,8 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             }
         }
 
-        self.storage.add_extended_info(args)
+        let (result, _) = self.storage.add_extended_info(args)?;
+        Ok(result)
     }
 
     fn remove_extended_info(
@@ -214,6 +215,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             }
         }
 
-        self.storage.remove_extended_info(args)
+        let (result, _) = self.storage.remove_extended_info(args)?;
+        Ok(result)
     }
 }

@@ -431,17 +431,17 @@ impl LedgerStorage {
     pub fn add_extended_info(
         &mut self,
         args: TokenAddExtendedInfoArgs,
-    ) -> Result<TokenAddExtendedInfoReturns, ManyError> {
+    ) -> Result<(TokenAddExtendedInfoReturns, Vec<u8>), ManyError> {
         let TokenAddExtendedInfoArgs {
             symbol,
             extended_info,
             memo,
         } = args;
-
+        let ext_info_key = key_for_ext_info(&symbol);
         // Fetch existing extended info, if any
         let mut ext_info = if let Some(ext_info_enc) = self
             .persistent_store
-            .get(&key_for_ext_info(&symbol))
+            .get(&ext_info_key)
             .map_err(error::storage_get_failed)?
         {
             minicbor::decode(&ext_info_enc).map_err(ManyError::deserialization_error)?
@@ -461,7 +461,7 @@ impl LedgerStorage {
 
         self.persistent_store
             .apply(&[(
-                key_for_ext_info(&symbol),
+                ext_info_key.clone(),
                 Op::Put(minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?),
             )])
             .map_err(error::storage_apply_failed)?;
@@ -472,23 +472,24 @@ impl LedgerStorage {
             memo,
         })?;
 
-        self.maybe_commit().map(|_| TokenAddExtendedInfoReturns {})
+        self.maybe_commit()
+            .map(|_| (TokenAddExtendedInfoReturns {}, ext_info_key))
     }
 
     pub fn remove_extended_info(
         &mut self,
         args: TokenRemoveExtendedInfoArgs,
-    ) -> Result<TokenRemoveExtendedInfoReturns, ManyError> {
+    ) -> Result<(TokenRemoveExtendedInfoReturns, Vec<u8>), ManyError> {
         let TokenRemoveExtendedInfoArgs {
             symbol,
             extended_info,
             memo,
         } = args;
-
+        let ext_info_key = key_for_ext_info(&symbol);
         // Fetch existing extended info, if any
         let ext_info_enc = self
             .persistent_store
-            .get(&key_for_ext_info(&symbol))
+            .get(&ext_info_key)
             .map_err(error::storage_get_failed)?
             .ok_or_else(|| error::ext_info_not_found(symbol))?;
 
@@ -503,7 +504,7 @@ impl LedgerStorage {
 
         self.persistent_store
             .apply(&[(
-                key_for_ext_info(&symbol),
+                ext_info_key.clone(),
                 Op::Put(minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?),
             )])
             .map_err(error::storage_apply_failed)?;
@@ -515,6 +516,6 @@ impl LedgerStorage {
         })?;
 
         self.maybe_commit()
-            .map(|_| TokenRemoveExtendedInfoReturns {})
+            .map(|_| (TokenRemoveExtendedInfoReturns {}, ext_info_key))
     }
 }
