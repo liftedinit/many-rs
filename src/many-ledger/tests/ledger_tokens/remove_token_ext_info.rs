@@ -75,7 +75,7 @@ fn fail_remove_ext_info_token(w: &mut RemoveExtInfoWorld, sender: &Address) {
             &mut w.setup.module_impl,
             sender,
             w.args.clone(),
-            (RequestMessage::default(), unbounded().0).into()
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .expect_err("Token remove extended info was supposed to fail, it succeeded instead."),
     );
@@ -130,7 +130,11 @@ fn when_rm_ext_info(w: &mut RemoveExtInfoWorld, ext_info_type: ExtendedInfoType,
     let id = id.as_address(w);
     w.setup
         .module_impl
-        .remove_extended_info(&id, w.args.clone(), (RequestMessage::default(), unbounded().0).into())
+        .remove_extended_info(
+            &id,
+            w.args.clone(),
+            (RequestMessage::default(), unbounded().0).into(),
+        )
         .expect("Unable to remove extended info");
 
     refresh_token_info(w);

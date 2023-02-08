@@ -46,7 +46,7 @@ fn fail_add_ext_info_token(w: &mut AddExtInfoWorld, sender: &Address) {
             &mut w.setup.module_impl,
             sender,
             w.args.clone(),
-            (RequestMessage::default(), unbounded().0).into()
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .expect_err("Token add extended info was supposed to fail, it succeeded instead."),
     );
@@ -112,7 +112,11 @@ fn add_ext_info(w: &mut AddExtInfoWorld, id: SomeId) {
     let id = id.as_address(w);
     w.setup
         .module_impl
-        .add_extended_info(&id, w.args.clone(), (RequestMessage::default(), unbounded().0).into())
+        .add_extended_info(
+            &id,
+            w.args.clone(),
+            (RequestMessage::default(), unbounded().0).into(),
+        )
         .expect("Unable to add extended info");
 
     refresh_token_info(w);

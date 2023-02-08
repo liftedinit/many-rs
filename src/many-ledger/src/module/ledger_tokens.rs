@@ -161,22 +161,23 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: TokenAddExtendedInfoArgs,
-        _: Context
+        context: Context,
     ) -> Result<TokenAddExtendedInfoReturns, ManyError> {
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.addExtendedInfo"));
         }
 
-        let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
+        let (current_owner, owner_key) = self.storage.get_owner(&args.symbol)?;
+        let mut keys = vec![owner_key];
         match current_owner {
             Some(addr) => {
-                let _ = verify_acl(
+                keys.extend(verify_acl(
                     &self.storage,
                     sender,
                     &addr,
                     [Role::CanTokensAddExtendedInfo],
                     TokenAccountLedger::ID,
-                )?;
+                )?);
             }
             None => {
                 return Err(ManyError::unknown(
@@ -185,30 +186,37 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             }
         }
 
-        let (result, _) = self.storage.add_extended_info(args)?;
-        Ok(result)
+        let (result, info_key) = self.storage.add_extended_info(args)?;
+        keys.push(info_key);
+        self.storage
+            .prove_state(context, keys)
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))
+            .map(|_| result)
     }
 
     fn remove_extended_info(
         &mut self,
         sender: &Address,
         args: TokenRemoveExtendedInfoArgs,
-        _: Context
+        context: Context,
     ) -> Result<TokenRemoveExtendedInfoReturns, ManyError> {
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.removeExtendedInfo"));
         }
 
-        let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
+        let (current_owner, owner_key) = self.storage.get_owner(&args.symbol)?;
+        let mut keys = vec![owner_key];
         match current_owner {
             Some(addr) => {
-                let _ = verify_acl(
+                keys.extend(verify_acl(
                     &self.storage,
                     sender,
                     &addr,
                     [Role::CanTokensRemoveExtendedInfo],
                     TokenAccountLedger::ID,
-                )?;
+                )?);
             }
             None => {
                 return Err(ManyError::unknown(
@@ -217,7 +225,13 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             }
         }
 
-        let (result, _) = self.storage.remove_extended_info(args)?;
-        Ok(result)
+        let (result, info_key) = self.storage.remove_extended_info(args)?;
+        keys.push(info_key);
+        self.storage
+            .prove_state(context, keys)
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))
+            .map(|_| result)
     }
 }
