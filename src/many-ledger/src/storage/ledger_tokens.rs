@@ -159,17 +159,21 @@ impl LedgerStorage {
         Ok(self)
     }
 
-    pub(crate) fn get_owner(&self, symbol: &Symbol) -> Result<Option<Address>, ManyError> {
+    pub(crate) fn get_owner(
+        &self,
+        symbol: &Symbol,
+    ) -> Result<(Option<Address>, Vec<u8>), ManyError> {
+        let symbol_key = key_for_symbol(symbol);
         let token_info_enc = self
             .persistent_store
-            .get(key_for_symbol(symbol).as_bytes())
+            .get(symbol_key.as_bytes())
             .map_err(error::storage_get_failed)?
             .ok_or_else(|| error::token_info_not_found(symbol))?;
 
         let info: TokenInfo =
             minicbor::decode(&token_info_enc).map_err(ManyError::deserialization_error)?;
 
-        Ok(info.owner)
+        Ok((info.owner, symbol_key.into()))
     }
 
     /// Fetch symbols from `/config/symbols/{symbol}`

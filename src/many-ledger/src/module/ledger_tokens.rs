@@ -1,7 +1,7 @@
 use crate::error;
 use crate::migration::tokens::TOKEN_MIGRATION;
 use crate::module::LedgerModuleImpl;
-use crate::storage::account::verify_acl;
+use crate::storage::{account::verify_acl, SYMBOLS_ROOT};
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::account::features::tokens::TokenAccountLedger;
@@ -30,7 +30,6 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         args: TokenCreateArgs,
         context: Context,
     ) -> Result<TokenCreateReturns, ManyError> {
-        use crate::storage::SYMBOLS_ROOT;
         #[cfg(not(feature = "disable_token_sender_check"))]
         use crate::storage::{ledger_tokens::TOKEN_IDENTITY_ROOT, IDENTITY_ROOT};
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
@@ -108,16 +107,17 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: TokenUpdateArgs,
+        _: Context,
     ) -> Result<TokenUpdateReturns, ManyError> {
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.update"));
         }
 
         // Get the current owner and check if we're allowed to update this token
-        let current_owner = self.storage.get_owner(&args.symbol)?;
+        let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
-                let _: Vec<_> = verify_acl(
+                let _ = verify_acl(
                     &self.storage,
                     sender,
                     &addr,
@@ -156,7 +156,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             return Err(ManyError::invalid_method_name("tokens.addExtendedInfo"));
         }
 
-        let current_owner = self.storage.get_owner(&args.symbol)?;
+        let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
                 let _: Vec<_> = verify_acl(
@@ -186,7 +186,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             return Err(ManyError::invalid_method_name("tokens.removeExtendedInfo"));
         }
 
-        let current_owner = self.storage.get_owner(&args.symbol)?;
+        let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
                 let _: Vec<_> = verify_acl(

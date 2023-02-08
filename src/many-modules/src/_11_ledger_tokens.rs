@@ -76,6 +76,7 @@ pub trait LedgerTokensModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: TokenUpdateArgs,
+        context: Context
     ) -> Result<TokenUpdateReturns, ManyError>;
 
     #[many(deny_anonymous)]
@@ -156,9 +157,9 @@ mod tests {
             memo: None,
         };
         mock.expect_update()
-            .with(eq(identity(1)), eq(data.clone()))
+            .with(eq(identity(1)), eq(data.clone()), always())
             .times(1)
-            .returning(|_, _| Ok(TokenUpdateReturns {}));
+            .returning(|_, _, _| Ok(TokenUpdateReturns {}));
         let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
 
         let update_returns: TokenUpdateReturns = minicbor::decode(
