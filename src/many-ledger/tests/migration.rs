@@ -1,5 +1,6 @@
 pub mod migration_;
 
+use async_channel::unbounded;
 use many_identity::testing::identity;
 use many_ledger::migration::data::{
     ACCOUNT_COUNT_DATA_ATTRIBUTE, ACCOUNT_TOTAL_COUNT_INDEX, NON_ZERO_ACCOUNT_TOTAL_COUNT_INDEX,
@@ -9,6 +10,7 @@ use many_modules::{
     data::{DataGetInfoArgs, DataModuleBackend, DataQueryArgs},
     EmptyArg,
 };
+use many_protocol::RequestMessage;
 use many_types::{ledger::TokenAmount, VecOrSingle};
 use num_bigint::BigInt;
 
@@ -16,7 +18,11 @@ fn assert_metrics(harness: &Setup, expected_total: u32, expected_non_zero: u32) 
     assert_eq!(
         harness
             .module_impl
-            .info(&harness.id, EmptyArg)
+            .info(
+                &harness.id,
+                EmptyArg,
+                (RequestMessage::default(), unbounded().0).into()
+            )
             .unwrap()
             .indices
             .len(),
@@ -32,7 +38,8 @@ fn assert_metrics(harness: &Setup, expected_total: u32, expected_non_zero: u32) 
                         ACCOUNT_TOTAL_COUNT_INDEX,
                         NON_ZERO_ACCOUNT_TOTAL_COUNT_INDEX
                     ])
-                }
+                },
+                (RequestMessage::default(), unbounded().0).into()
             )
             .unwrap()
             .len(),
@@ -48,6 +55,7 @@ fn assert_metrics(harness: &Setup, expected_total: u32, expected_non_zero: u32) 
                     NON_ZERO_ACCOUNT_TOTAL_COUNT_INDEX,
                 ]),
             },
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .unwrap();
     let total: BigInt = query[&ACCOUNT_TOTAL_COUNT_INDEX]
@@ -81,7 +89,11 @@ fn migration() {
     assert_eq!(
         harness
             .module_impl
-            .info(&harness.id, EmptyArg)
+            .info(
+                &harness.id,
+                EmptyArg,
+                (RequestMessage::default(), unbounded().0).into()
+            )
             .unwrap()
             .indices
             .len(),

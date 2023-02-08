@@ -5,9 +5,10 @@ use many_modules::data::{
     DataGetInfoArgs, DataGetInfoReturns, DataInfoArgs, DataInfoReturns, DataModuleBackend,
     DataQueryArgs, DataQueryReturns,
 };
+use many_protocol::context::Context;
 
 impl DataModuleBackend for LedgerModuleImpl {
-    fn info(&self, _: &Address, _: DataInfoArgs) -> Result<DataInfoReturns, ManyError> {
+    fn info(&self, _: &Address, _: DataInfoArgs, _: Context) -> Result<DataInfoReturns, ManyError> {
         Ok(DataInfoReturns {
             indices: self
                 .storage
@@ -22,6 +23,7 @@ impl DataModuleBackend for LedgerModuleImpl {
         &self,
         _sender: &Address,
         args: DataGetInfoArgs,
+        _: Context,
     ) -> Result<DataGetInfoReturns, ManyError> {
         let filtered = self
             .storage
@@ -33,7 +35,12 @@ impl DataModuleBackend for LedgerModuleImpl {
         Ok(filtered)
     }
 
-    fn query(&self, _sender: &Address, args: DataQueryArgs) -> Result<DataQueryReturns, ManyError> {
+    fn query(
+        &self,
+        _sender: &Address,
+        args: DataQueryArgs,
+        _: Context,
+    ) -> Result<DataQueryReturns, ManyError> {
         let filtered = self
             .storage
             .data_attributes()?
