@@ -41,7 +41,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         )?;
 
         if let Some(Either::Left(addr)) = &args.owner {
-            let _: Vec<_> = verify_acl(
+            let _ = verify_acl(
                 &self.storage,
                 sender,
                 addr,

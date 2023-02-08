@@ -238,7 +238,7 @@ impl LedgerStorage {
         } = args;
 
         // Create a new token symbol and store in memory and in the persistent store
-        let symbol = self.get_next_subresource(TOKEN_IDENTITY_ROOT)?;
+        let (symbol, _) = self.get_next_subresource(TOKEN_IDENTITY_ROOT)?;
         self.update_symbols(symbol, summary.ticker.clone())?;
 
         // Initialize the total supply following the initial token distribution, if any
