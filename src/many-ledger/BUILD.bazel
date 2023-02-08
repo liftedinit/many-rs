@@ -1,11 +1,43 @@
 load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test", "rust_test_suite")
 load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("//:rules.bzl", "rustc_flags_file")
 
 package(default_visibility = [
     "//:__pkg__",
     "//src/many-ledger/test-utils:__pkg__",
 ])
+
+bool_flag(
+    name = "balance_testing",
+    build_setting_default = False,
+)
+
+bool_flag(
+    name = "migration_testing",
+    build_setting_default = False,
+)
+
+bool_flag(
+    name = "webauthn_testing",
+    build_setting_default = False,
+)
+
+bool_flag(
+    name = "disable_token_sender_check",
+    build_setting_default = False,
+)
+
+rustc_flags_file(
+    name = "flags_file",
+    flags = [
+        ":balance_testing",
+        ":migration_testing",
+        ":webauthn_testing",
+        ":disable_token_sender_check",
+    ],
+)
 
 cargo_build_script(
     name = "build_script",
@@ -18,9 +50,16 @@ rust_binary(
     name = "many-ledger",
     srcs = glob(include = ["src/**/*.rs"]),
     aliases = aliases(),
+    compile_data = [
+        ":flags_file",
+    ],
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
     ),
+    rustc_flags = [
+        "--verbose",
+        "@$(location :flags_file)",
+    ],
     deps = all_crate_deps(
         normal = True,
     ) + [
@@ -41,16 +80,18 @@ rust_library(
     name = "many-ledger-lib-for-test",
     srcs = glob(include = ["src/**/*.rs"]),
     aliases = aliases(),
-    crate_features = [
-        "balance_testing",
-        "migration_testing",
-        "disable_token_sender_check",
+    compile_data = [
+        ":flags_file",
     ],
     crate_name = "many_ledger",
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
         proc_macro_dev = True,
     ),
+    rustc_flags = [
+        "--verbose",
+        "@$(location :flags_file)",
+    ],
     deps = all_crate_deps(
         normal = True,
         normal_dev = True,
@@ -69,8 +110,15 @@ rust_library(
 
 rust_test(
     name = "many-ledger-test",
+    compile_data = [
+        ":flags_file",
+    ],
     crate = ":many-ledger-lib-for-test",
     data = ["//:staging/ledger_state.json5"],
+    rustc_flags = [
+        "--verbose",
+        "@$(location :flags_file)",
+    ],
 )
 
 rust_test_suite(
@@ -84,13 +132,17 @@ rust_test_suite(
     compile_data = [
         "tests/migration_/mod.rs",
         "tests/migration_/memo.rs",
+        ":flags_file",
     ],
-    crate_features = ["balance_testing"],
     data = ["//:staging/ledger_state.json5"],
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
         proc_macro_dev = True,
     ),
+    rustc_flags = [
+        "--verbose",
+        "@$(location :flags_file)",
+    ],
     deps = all_crate_deps(
         normal = True,
         normal_dev = True,
@@ -113,7 +165,9 @@ rust_test_suite(
             "tests/ledger_mintburn/*.rs",
         ],
     ),
-    crate_features = ["balance_testing"],
+    compile_data = [
+        ":flags_file",
+    ],
     data = [
         "//:staging/ledger_state.json5",
     ] + glob(include = ["tests/features/**/*.feature"]),
@@ -122,6 +176,10 @@ rust_test_suite(
         proc_macro_dev = True,
     ) + [
         "//src/many-ledger/test-macros:many-ledger-test-macros-lib",
+    ],
+    rustc_flags = [
+        "--verbose",
+        "@$(location :flags_file)",
     ],
     use_libtest_harness = False,
     deps = all_crate_deps(

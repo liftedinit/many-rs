@@ -9,10 +9,10 @@ function setup() {
 
     skip_if_missing_background_utilities
 
-    (
-      cd "$GIT_ROOT"
-      cargo build --all-features
-    )
+#    (
+#      cd "$GIT_ROOT"
+#      cargo build --all-features
+#    )
 
     cp "$GIT_ROOT/staging/ledger_state.json5" "$BATS_TEST_ROOTDIR/ledger_state.json5"
     sed -i.bak 's/token_identity: ".*"/token_identity: "'"$(identity 1)"'"/' "$BATS_TEST_ROOTDIR/ledger_state.json5"

@@ -8,10 +8,10 @@ function setup() {
 
     skip_if_missing_background_utilities
 
-    (
-      cd "$GIT_ROOT"
-      cargo build --all-features
-    )
+#    (
+#      cd "$GIT_ROOT"
+#      cargo build --all-features
+#    )
 
     start_kvstore --pem "$(pem 0)"
 }

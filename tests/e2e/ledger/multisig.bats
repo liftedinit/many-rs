@@ -10,10 +10,10 @@ function setup() {
 
     skip_if_missing_background_utilities
 
-    (
-      cd "$GIT_ROOT"
-      cargo build --all-features
-    )
+#    (
+#      cd "$GIT_ROOT"
+#      cargo build --all-features
+#    )
 
     start_ledger --pem "$(pem 0)" \
           "--balance-only-for-testing=$(identity 1):$START_BALANCE:$MFX_ADDRESS" \

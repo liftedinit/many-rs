@@ -8,10 +8,10 @@ function setup() {
 
     skip_if_missing_background_utilities
 
-    (
-      cd "$GIT_ROOT"
-      cargo build --all-features
-    )
+#    (
+#      cd "$GIT_ROOT"
+#      cargo build --all-features
+#    )
 
     local ALLOW_ADDRS_CONFIG=$(generate_allow_addrs_config 1 2)
 

@@ -36,25 +36,25 @@ jobs:
       - detect/init
       - run:
           name: rustfmt
-          command: bazel build --config=remote-cache --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=rustfmt_checks -- //... -//:many-rs-tar
+          command: bazel build --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=rustfmt_checks -- //... -//:many-rs-tar
       - run:
           name: clippy
-          command: bazel build --config=remote-cache --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=clippy_checks -- //... -//:many-rs-tar
+          command: bazel build --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=clippy_checks -- //... -//:many-rs-tar
       - run:
           name: build
-          command: bazel build --config=remote-cache -- //... -//:many-rs-tar
+          command: bazel build --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check -- //... -//:many-rs-tar
       - when:
           condition:
             equal: [ "linux2204", << parameters.os >> ]
           steps:
             - run:
                 name: tests and doc tests (linux)
-                command: bazel test --config=remote-cache --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF -- //... -//:many-rs-tar
+                command: bazel test --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF -- //... -//:many-rs-tar
 
             # COVERAGE
             - run:
                 name: coverage
-                command: bazel coverage --config=remote-cache --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF --combined_report=lcov -- //... -//:many-rs-tar
+                command: bazel coverage --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF --combined_report=lcov -- //... -//:many-rs-tar
             - codecov/upload:
                 file: $(bazel info output_path)/_coverage/_coverage_report.dat
 
@@ -63,8 +63,8 @@ jobs:
                 name: prepare bats
                 command: |
                   # Fake Cargo output
-                  mkdir -p target/debug
-                  bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug
+                  mkdir -p target/debug/
+                  bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug/
             # TODO: We should create a binary release of cbor-diag-cli instead of installing Rust and building it every time
             - rust/install
             - run:
@@ -83,7 +83,7 @@ jobs:
             - run:
                 name: tests and doc tests (macos)
                 # Exclude HSM tests as we are not configured in MacOS for them.
-                command: bazel test --config=remote-cache -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
+                command: bazel test --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
       - run: mkdir -p artifacts
       - run:
           name: build release
@@ -95,28 +95,6 @@ jobs:
           command: shasum artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
       - store_artifacts:
           path: artifacts
-#  bats:
-#    parameters:
-#      os:
-#        type: string
-#      many_rust_version:
-#        type: string
-#    executor: << parameters.os >>
-#    steps:
-#      - checkout
-#      - restore_cache:
-#          keys:
-#            - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.Bazel.lock" }}
-#      - rust/install:
-#          version: << parameters.many_rust_version >>
-#      - run:
-#          name: install cbor-diag
-#          command: cargo install --force cbor-diag-cli
-#      - bats/install
-#      - run:
-#          name: running BATs tests
-#          command: bats *
-#          working_directory: ./tests/e2e/
 #  create:
 #    parameters:
 #      os:

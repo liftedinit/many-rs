@@ -1,5 +1,5 @@
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-load(":my_package_name.bzl", "basic_naming")
+load(":rules.bzl", "basic_naming")
 
 exports_files(["staging/kvstore_state.json5"])
 
