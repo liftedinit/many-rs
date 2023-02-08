@@ -88,7 +88,8 @@ impl idstore::IdStoreModuleBackend for LedgerModuleImpl {
             }
         };
 
-        self.storage
+        let _ = self
+            .storage
             .store(&recall_phrase, &address, cred_id, public_key)?;
         Ok(idstore::StoreReturns(recall_phrase))
     }

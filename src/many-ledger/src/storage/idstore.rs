@@ -97,7 +97,7 @@ impl LedgerStorage {
         address: &Address,
         cred_id: idstore::CredentialId,
         public_key: idstore::PublicKey,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<Vec<u8>>, ManyError> {
         let recall_phrase_cbor =
             minicbor::to_vec(recall_phrase).map_err(ManyError::serialization_error)?;
         if self
@@ -140,7 +140,23 @@ impl LedgerStorage {
             .apply(&batch)
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()
+        self.maybe_commit().map(|_| {
+            vec![
+                recall_phrase_cbor.clone(),
+                vec![
+                    IDSTORE_ROOT,
+                    IdStoreRootSeparator::RecallPhrase.value(),
+                    &recall_phrase_cbor,
+                ]
+                .concat(),
+                vec![
+                    IDSTORE_ROOT,
+                    IdStoreRootSeparator::Address.value(),
+                    &address.to_vec(),
+                ]
+                .concat(),
+            ]
+        })
     }
 
     fn get_from_storage(
