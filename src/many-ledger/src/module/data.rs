@@ -8,7 +8,20 @@ use many_modules::data::{
 use many_protocol::context::Context;
 
 impl DataModuleBackend for LedgerModuleImpl {
-    fn info(&self, _: &Address, _: DataInfoArgs, _: Context) -> Result<DataInfoReturns, ManyError> {
+    fn info(
+        &self,
+        _: &Address,
+        _: DataInfoArgs,
+        context: Context,
+    ) -> Result<DataInfoReturns, ManyError> {
+        self.storage
+            .prove_state(
+                context,
+                vec![crate::storage::data::DATA_ATTRIBUTES_KEY.into()],
+            )
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))?;
         Ok(DataInfoReturns {
             indices: self
                 .storage
@@ -23,7 +36,7 @@ impl DataModuleBackend for LedgerModuleImpl {
         &self,
         _sender: &Address,
         args: DataGetInfoArgs,
-        _: Context,
+        context: Context,
     ) -> Result<DataGetInfoReturns, ManyError> {
         let filtered = self
             .storage
@@ -32,14 +45,19 @@ impl DataModuleBackend for LedgerModuleImpl {
             .into_iter()
             .filter(|(k, _)| args.indices.0.contains(k))
             .collect();
-        Ok(filtered)
+        self.storage
+            .prove_state(context, vec![crate::storage::data::DATA_INFO_KEY.into()])
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))
+            .map(|_| filtered)
     }
 
     fn query(
         &self,
         _sender: &Address,
         args: DataQueryArgs,
-        _: Context,
+        context: Context,
     ) -> Result<DataQueryReturns, ManyError> {
         let filtered = self
             .storage
@@ -48,6 +66,14 @@ impl DataModuleBackend for LedgerModuleImpl {
             .into_iter()
             .filter(|(k, _)| args.indices.0.contains(k))
             .collect();
-        Ok(filtered)
+        self.storage
+            .prove_state(
+                context,
+                vec![crate::storage::data::DATA_ATTRIBUTES_KEY.into()],
+            )
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))
+            .map(|_| filtered)
     }
 }
