@@ -34,31 +34,38 @@ jobs:
     steps:
       - checkout
       - detect/init
-      - run:
-          name: rustfmt
-          command: bazel build --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect --output_groups=rustfmt_checks -- //... -//:many-rs-tar
-      - run:
-          name: clippy
-          command: bazel build --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect --output_groups=clippy_checks -- //... -//:many-rs-tar
-      - run:
-          name: build
-          command: bazel build --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check -- //... -//:many-rs-tar
       - when:
           condition:
             equal: [ "linux2204", << parameters.os >> ]
           steps:
             - run:
-                name: tests and doc tests (linux)
-                command: bazel test --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF -- //... -//:many-rs-tar
-
-            # COVERAGE
-            - run:
-                name: coverage
-                command: bazel coverage --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check --test_env=PKCS11_SOFTHSM2_MODULE --test_env=SOFTHSM2_CONF --combined_report=lcov -- //... -//:many-rs-tar
-            - codecov/upload:
-                file: $(bazel info output_path)/_coverage/_coverage_report.dat
+                name: rustfmt, clippy, build and tests and doc tests (linux)
+                command: |
+                  bazel test \
+                    --config=remote-cache \
+                    --balance_testing \
+                    --migration_testing \
+                    --webauthn_testing \
+                    --disable_token_sender_check \
+                    --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect \
+                    --output_groups=+rustfmt_checks \
+                    --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect \
+                    --output_groups=+clippy_checks \
+                    --test_env=PKCS11_SOFTHSM2_MODULE \
+                    --test_env=SOFTHSM2_CONF \
+                    -- //... -//:many-rs-tar
 
             # BATS
+            - run:
+                name: build for bats
+                command: |
+                  bazel clean
+                  bazel build \
+                    --config=remote-cache \
+                    --balance_testing \
+                    --migration_testing \
+                    --webauthn_testing \
+                    -- //... -//:many-rs-tar
             - run:
                 name: prepare bats
                 command: |
@@ -75,6 +82,23 @@ jobs:
                 name: running BATs tests
                 command: bats *
                 working_directory: ./tests/e2e/
+
+            # COVERAGE
+            - run:
+                name: coverage
+                command: |
+                  bazel coverage --config=remote-cache \
+                    --balance_testing \
+                    --migration_testing \
+                    --webauthn_testing \
+                    --disable_token_sender_check \
+                    --test_env=PKCS11_SOFTHSM2_MODULE \
+                    --test_env=SOFTHSM2_CONF \
+                    --combined_report=lcov \
+                    -- //... -//:many-rs-tar
+            - codecov/upload:
+                file: $(bazel info output_path)/_coverage/_coverage_report.dat
+
 
       - when:
           condition:
