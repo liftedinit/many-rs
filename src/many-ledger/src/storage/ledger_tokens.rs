@@ -230,7 +230,7 @@ impl LedgerStorage {
         &mut self,
         sender: &Address,
         args: TokenCreateArgs,
-    ) -> Result<TokenCreateReturns, ManyError> {
+    ) -> Result<(TokenCreateReturns, impl IntoIterator<Item = Vec<u8>>), ManyError> {
         let TokenCreateArgs {
             summary,
             owner,
@@ -240,9 +240,13 @@ impl LedgerStorage {
             memo,
         } = args;
 
+        let mut keys: Vec<Vec<u8>> = vec![SYMBOLS_ROOT.into()];
+
         // Create a new token symbol and store in memory and in the persistent store
-        let (symbol, _) = self.get_next_subresource(TOKEN_IDENTITY_ROOT)?;
-        let _ = self.update_symbols(symbol, summary.ticker.clone())?;
+        let (symbol, next_resource_keys) = self.get_next_subresource(TOKEN_IDENTITY_ROOT)?;
+        keys.extend(next_resource_keys.into_iter().collect::<Vec<_>>());
+        let update_symbol_keys = self.update_symbols(symbol, summary.ticker.clone())?;
+        keys.extend(update_symbol_keys.into_iter().collect::<Vec<_>>());
 
         // Initialize the total supply following the initial token distribution, if any
         let mut batch: Vec<BatchEntry> = Vec::new();
@@ -250,6 +254,7 @@ impl LedgerStorage {
             let mut total_supply = TokenAmount::zero();
             for (k, v) in initial_distribution {
                 let key = key_for_account_balance(k, &symbol);
+                keys.push(key.clone());
                 batch.push((key, Op::Put(v.to_vec())));
                 total_supply += v.clone();
             }
@@ -272,16 +277,20 @@ impl LedgerStorage {
             supply,
             owner: maybe_owner,
         };
+        let symbol_key = key_for_symbol(&symbol);
+        keys.push(symbol_key.clone().into_bytes());
         batch.push((
-            key_for_symbol(&symbol).into(),
+            symbol_key.into(),
             Op::Put(minicbor::to_vec(&info).map_err(ManyError::serialization_error)?),
         ));
 
+        let ext_info_key = key_for_ext_info(&symbol);
+        keys.push(ext_info_key.clone());
         let ext_info = extended_info
             .clone()
             .map_or(TokenExtendedInfo::default(), |e| e);
         batch.push((
-            key_for_ext_info(&symbol),
+            ext_info_key,
             Op::Put(minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?),
         ));
 
@@ -303,7 +312,8 @@ impl LedgerStorage {
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit().map(|_| TokenCreateReturns { info })
+        self.maybe_commit()
+            .map(|_| (TokenCreateReturns { info }, keys))
     }
 
     pub fn info_token(&self, args: TokenInfoArgs) -> Result<TokenInfoReturns, ManyError> {

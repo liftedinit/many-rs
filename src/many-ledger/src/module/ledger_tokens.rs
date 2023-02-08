@@ -63,7 +63,9 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
                 "The ticker {ticker} already exists on this network"
             )));
         }
-        self.storage.create_token(sender, args)
+        self.storage
+            .create_token(sender, args)
+            .map(|(result, _)| result)
     }
 
     fn info(&self, _sender: &Address, args: TokenInfoArgs) -> Result<TokenInfoReturns, ManyError> {

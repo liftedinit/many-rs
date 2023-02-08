@@ -322,7 +322,7 @@ impl LedgerStorage {
         let mut keys = vec![key_for_subresource];
 
         self.persistent_store
-            .get(identity_root.clone().as_bytes())
+            .get((*identity_root).as_bytes())
             .map_err(error::storage_get_failed)?
             .map_or(
                 {
