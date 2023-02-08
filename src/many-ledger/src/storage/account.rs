@@ -38,14 +38,15 @@ pub fn verify_acl(
     addr: &Address,
     roles: impl IntoIterator<Item = Role>,
     feature_id: FeatureId,
-) -> Result<(), ManyError> {
+) -> Result<Vec<Vec<u8>>, ManyError> {
     if addr != sender {
-        let (account, _) = storage
+        let (account, keys) = storage
             .get_account(addr)
             .map_err(|_| error::unauthorized())?;
-        verify_account_role(&account, sender, feature_id, roles)?;
+        verify_account_role(&account, sender, feature_id, roles).map(|_| keys.into_iter().collect())
+    } else {
+        Ok(Vec::<Vec<u8>>::new())
     }
-    Ok(())
 }
 
 impl LedgerStorage {

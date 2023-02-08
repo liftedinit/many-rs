@@ -41,7 +41,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         )?;
 
         if let Some(Either::Left(addr)) = &args.owner {
-            verify_acl(
+            let _: Vec<_> = verify_acl(
                 &self.storage,
                 sender,
                 addr,
@@ -94,7 +94,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         let current_owner = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
-                verify_acl(
+                let _: Vec<_> = verify_acl(
                     &self.storage,
                     sender,
                     &addr,
@@ -136,7 +136,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         let current_owner = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
-                verify_acl(
+                let _: Vec<_> = verify_acl(
                     &self.storage,
                     sender,
                     &addr,
@@ -166,7 +166,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         let current_owner = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
-                verify_acl(
+                let _: Vec<_> = verify_acl(
                     &self.storage,
                     sender,
                     &addr,
