@@ -1,3 +1,4 @@
+use async_channel::unbounded;
 use many_ledger_test_macros::*;
 use many_ledger_test_utils::cucumber::{
     refresh_token_info, verify_error_code, verify_error_role, AccountWorld, LedgerWorld, SomeError,
@@ -15,6 +16,7 @@ use many_modules::events::{EventFilter, EventKind, EventsModuleBackend, ListArgs
 use many_modules::ledger::extended_info::visual_logo::VisualTokenLogo;
 use many_modules::ledger::extended_info::TokenExtendedInfo;
 use many_modules::ledger::{LedgerTokensModuleBackend, TokenAddExtendedInfoArgs};
+use many_protocol::RequestMessage;
 use many_types::ledger::TokenInfo;
 use many_types::Memo;
 
@@ -44,6 +46,7 @@ fn fail_add_ext_info_token(w: &mut AddExtInfoWorld, sender: &Address) {
             &mut w.setup.module_impl,
             sender,
             w.args.clone(),
+            (RequestMessage::default(), unbounded().0).into()
         )
         .expect_err("Token add extended info was supposed to fail, it succeeded instead."),
     );
@@ -109,7 +112,7 @@ fn add_ext_info(w: &mut AddExtInfoWorld, id: SomeId) {
     let id = id.as_address(w);
     w.setup
         .module_impl
-        .add_extended_info(&id, w.args.clone())
+        .add_extended_info(&id, w.args.clone(), (RequestMessage::default(), unbounded().0).into())
         .expect("Unable to add extended info");
 
     refresh_token_info(w);

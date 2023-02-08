@@ -84,6 +84,7 @@ pub trait LedgerTokensModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: TokenAddExtendedInfoArgs,
+        context: Context
     ) -> Result<TokenAddExtendedInfoReturns, ManyError>;
 
     #[many(deny_anonymous)]
@@ -91,6 +92,7 @@ pub trait LedgerTokensModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: TokenRemoveExtendedInfoArgs,
+        context: Context
     ) -> Result<TokenRemoveExtendedInfoReturns, ManyError>;
 }
 
@@ -183,9 +185,9 @@ mod tests {
             memo: None,
         };
         mock.expect_add_extended_info()
-            .with(eq(identity(1)), eq(data.clone()))
+            .with(eq(identity(1)), eq(data.clone()), always())
             .times(1)
-            .returning(|_, _| Ok(TokenAddExtendedInfoReturns {}));
+            .returning(|_, _, _| Ok(TokenAddExtendedInfoReturns {}));
         let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
 
         let add_ext_info_returns: TokenAddExtendedInfoReturns = minicbor::decode(
@@ -211,9 +213,9 @@ mod tests {
             memo: None,
         };
         mock.expect_remove_extended_info()
-            .with(eq(identity(1)), eq(data.clone()))
+            .with(eq(identity(1)), eq(data.clone()), always())
             .times(1)
-            .returning(|_, _| Ok(TokenRemoveExtendedInfoReturns {}));
+            .returning(|_, _, _| Ok(TokenRemoveExtendedInfoReturns {}));
         let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
 
         let rm_ext_info_returns: TokenRemoveExtendedInfoReturns = minicbor::decode(

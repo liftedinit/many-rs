@@ -161,6 +161,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: TokenAddExtendedInfoArgs,
+        _: Context
     ) -> Result<TokenAddExtendedInfoReturns, ManyError> {
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.addExtendedInfo"));
@@ -192,6 +193,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: TokenRemoveExtendedInfoArgs,
+        _: Context
     ) -> Result<TokenRemoveExtendedInfoReturns, ManyError> {
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.removeExtendedInfo"));
