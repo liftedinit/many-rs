@@ -218,7 +218,7 @@ jobs:
       - setup_remote_docker
       - restore_cache:
           keys:
-            - nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "many-rs/Cargo.lock" }}
+            - nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "Cargo.lock" }}
       - run:
           name: restoring `nix-store`
           command: |
@@ -233,13 +233,9 @@ jobs:
             bash generate-cargo-nix.sh
             touch ../../src/ledger/src/main.rs
             
-            # Environment
-            export CPUCORES=$(nproc)
-            export UINFO=$(id -u):$(id -g)
-            
             # many-abci
             mkdir -p genfiles-common
-            bash build-image.sh .#docker-many-abci
+            CPUCORES=$(nproc) UINFO=$(id -u):$(id -g) bash build-image.sh .#docker-many-abci
             docker load < genfiles-common/many-abci.tar.gz
           working_directory: ./docker/e2e
       - run:
@@ -271,7 +267,7 @@ jobs:
           command: |
             docker run --rm -v nix-store:/nix -v $(pwd):/backup ubuntu tar cf /backup/backup.tar /nix
       - save_cache:
-          key: nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "many-rs/Cargo.lock" }}
+          key: nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "Cargo.lock" }}
           paths:
             - backup.tar
 
