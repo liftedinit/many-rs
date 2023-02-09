@@ -3,10 +3,11 @@
 version: 2.1
 
 orbs:
+  bats: circleci/bats@1.1.0
   codecov: codecov/codecov@3.2.4
   detect: circleci/os-detect@0.3.0
-  bats: circleci/bats@1.1.0
   docker: circleci/docker@2.2.0
+  rust: circleci/rust@1.6.0
 
 executors:
   linux2204:
@@ -50,6 +51,16 @@ jobs:
                     --test_env=PKCS11_SOFTHSM2_MODULE \
                     --test_env=SOFTHSM2_CONF \
                     -- //... -//:many-rs-tar
+            - run:
+                name: build for bats
+                command: |
+                    bazel build \
+                    --jobs=8 \
+                    --config=remote-cache \
+                    --balance_testing \
+                    --migration_testing \
+                    --webauthn_testing \
+                    -- //... -//:many-rs-tar
       - when:
           condition:
             equal: [ "macos", << parameters.os >> ]
@@ -63,6 +74,26 @@ jobs:
                     --config=remote-cache \
                     --config=all-features \
                     -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
+            - run:
+                name: build for bats
+                command: |
+                  bazel build \
+                    --jobs=4 \
+                    --config=remote-cache \
+                    --balance_testing \
+                    --migration_testing \
+                    --webauthn_testing \
+                    -- //... -//:many-rs-tar
+      - run:
+          name: copy binaries to workspace
+          command: |
+            mkdir -p target/debug
+            bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug/
+      - persist_to_workspace:
+          root: target
+          paths:
+            - "*"
+
   bats:
     parameters:
       os:
@@ -70,16 +101,13 @@ jobs:
     executor: << parameters.os >>
     steps:
       - checkout
-      - run:
-          name: build
-          command: |
-            bazel build \
-            --jobs=8 \
-            --config=remote-cache \
-            --balance_testing \
-            --migration_testing \
-            --webauthn_testing \
-            -- //... -//:many-rs-tar
+      - attach_workspace:
+          at: ~/project/target
+      - when:
+          condition:
+            equal: [ "macos", << parameters.os >> ]
+          steps:
+            - rust/install
       - prepare_bats
       - run:
           name: running BATs tests
@@ -328,13 +356,6 @@ commands:
           name: install cbor-diag
           command: cargo install --force cbor-diag-cli
       - bats/install
-      - run:
-          name: copy binaries
-          command: |
-            # Bats tests are making use of the Cargo output path.
-            # Copy binaries build with Bazel to a Cargo-like folder tree.
-            mkdir -p target/debug/
-            bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug/
 
 workflows:
   ci:
@@ -464,29 +485,29 @@ workflows:
                 - main
           requires:
             - publish_nightly_docker
-#  nightly_macos:
-#    when:
-#      and:
-#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-#        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
-#    jobs:
-#      - lint-test-build:
-#          name: lint-test-build-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [macos]
-#      - bats:
-#          name: bats-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [macos]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
-#      - tag:
-#          name: macos nightly tag
-#          tag: macos-green
-#          context:
-#            - GITHUB_CREDS
-#          requires:
-#            - lint-test-build-vmacos
-#            - bats-vmacos
+  nightly_macos:
+    when:
+      and:
+        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
+    jobs:
+      - lint-test-build:
+          name: lint-test-build-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [macos]
+      - bats:
+          name: bats-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [macos]
+          requires:
+            - lint-test-build-v<< matrix.os >>
+      - tag:
+          name: macos nightly tag
+          tag: macos-green
+          context:
+            - GITHUB_CREDS
+          requires:
+            - lint-test-build-vmacos
+            - bats-vmacos
