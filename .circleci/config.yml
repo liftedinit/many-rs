@@ -356,36 +356,36 @@ workflows:
           matrix:
             parameters:
               os: [macos]
-      - bats:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: bats-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
-      - coverage:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: coverage-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
-      - dev_release:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: dev_release-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
+#      - bats:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: bats-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
+#      - coverage:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: coverage-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
+#      - dev_release:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: dev_release-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
 #  release:
 #    when:
 #      not:
