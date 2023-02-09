@@ -40,6 +40,7 @@ jobs:
                 name: rustfmt, clippy, build and tests and doc tests (linux)
                 command: |
                   bazel test \
+                    --jobs=8 \
                     --config=remote-cache \
                     --config=all-features \
                     --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect \
@@ -62,12 +63,14 @@ jobs:
       os:
         type: string
     executor: << parameters.os >>
+    resource_class: medium
     steps:
       - checkout
       - run:
           name: build
           command: |
             bazel build \
+            --jobs=2 \
             --config=remote-cache \
             --balance_testing \
             --migration_testing \
@@ -100,7 +103,9 @@ jobs:
       - run:
           name: coverage
           command: |
-            bazel coverage --config=remote-cache \
+            bazel coverage \
+              --jobs=8 \
+              --config=remote-cache \
               --config=all-features \
               --test_env=PKCS11_SOFTHSM2_MODULE \
               --test_env=SOFTHSM2_CONF \
@@ -120,7 +125,7 @@ jobs:
       - run:
           name: build release
           command: |
-            bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
+            bazel build --jobs=8 -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
             bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
       - run:
           name: create release shasum
