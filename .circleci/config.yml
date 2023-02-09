@@ -212,9 +212,9 @@ jobs:
     executor: linux2204
     steps:
 #      - docker/check
-      - setup_remote_docker
       - checkout:
           path: many-rs
+      - setup_remote_docker
       - restore_cache:
           keys:
             - nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "many-rs/Cargo.lock" }}
