@@ -62,7 +62,6 @@ jobs:
       os:
         type: string
     executor: << parameters.os >>
-    resource_class: medium
     steps:
       - checkout
       - run:

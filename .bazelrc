@@ -27,6 +27,7 @@ build:remote-cache --bes_backend=grpcs://remote.buildbuddy.io
 build:remote-cache --remote_cache=grpcs://remote.buildbuddy.io
 build:remote-cache --remote_timeout=3600
 build:remote-cache --experimental_remote_cache_compression
+build:remote-cache --experimental_remote_build_event_upload=minimal
 
 # This import should always be last to allow users to override
 # settings for local development.
