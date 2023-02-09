@@ -11,9 +11,9 @@ orbs:
 
 executors:
   linux2204:
-    machine:
-      image: ubuntu-2204:current
-    resource_class: large
+    docker:
+      image: cimg/rust:1.67
+    resource_class: x-large
   macos:
     macos:
       xcode: 13.4.1
@@ -43,10 +43,7 @@ jobs:
                 command: |
                   bazel test \
                     --config=remote-cache \
-                    --balance_testing \
-                    --migration_testing \
-                    --webauthn_testing \
-                    --disable_token_sender_check \
+                    --config=all-features \
                     --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect \
                     --output_groups=+rustfmt_checks \
                     --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect \
@@ -88,10 +85,7 @@ jobs:
                 name: coverage
                 command: |
                   bazel coverage --config=remote-cache \
-                    --balance_testing \
-                    --migration_testing \
-                    --webauthn_testing \
-                    --disable_token_sender_check \
+                    --config=all-features \
                     --test_env=PKCS11_SOFTHSM2_MODULE \
                     --test_env=SOFTHSM2_CONF \
                     --combined_report=lcov \
@@ -107,7 +101,7 @@ jobs:
             - run:
                 name: tests and doc tests (macos)
                 # Exclude HSM tests as we are not configured in MacOS for them.
-                command: bazel test --config=remote-cache --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
+                command: bazel test --config=remote-cache --config=all-features -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
       - run: mkdir -p artifacts
       - run:
           name: build release
@@ -296,17 +290,12 @@ commands:
                 name: installing << parameters.os >> dependencies
                 command: |
                   sudo DEBIAN_FRONTEND=noninteractive apt -y update
-                  sudo DEBIAN_FRONTEND=noninteractive apt -y install build-essential pkg-config clang libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev jq
-                  # Remove `bats` from the CircleCI image
-                  sudo rm -rf /usr/local/bin/bats
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install clang libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
             - run:
                 name: installing Bazel build dependencies
                 command: |
-                  # Required to build `libgit2-sys` (Bazel)
-                  sudo DEBIAN_FRONTEND=noninteractive apt -y install zlib1g-dev
-                  
                   # GCC 12 is needed to build `librocksdb-sys` with the `-Wno-error=coverage-invalid-line-number` CXXFLAGS (Bazel)
                   sudo DEBIAN_FRONTEND=noninteractive apt -y install gcc-12 g++-12
                   sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 11
