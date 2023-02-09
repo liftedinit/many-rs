@@ -23,7 +23,7 @@ MANY_HSM_CONFIG: &many_hsm_config
   - SOFTHSM2_CONF: /tmp/softhsm2.conf
 
 jobs:
-  lint-test-build-cov:
+  lint-test-build:
     parameters:
       os:
         type: string
@@ -50,48 +50,6 @@ jobs:
                     --test_env=PKCS11_SOFTHSM2_MODULE \
                     --test_env=SOFTHSM2_CONF \
                     -- //... -//:many-rs-tar
-
-            # BATS
-            - run:
-                name: build for bats
-                command: |
-                  bazel clean
-                  bazel build \
-                    --config=remote-cache \
-                    --balance_testing \
-                    --migration_testing \
-                    --webauthn_testing \
-                    -- //... -//:many-rs-tar
-            - run:
-                name: prepare bats
-                command: |
-                  # Fake Cargo output
-                  mkdir -p target/debug/
-                  bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug/
-            # TODO: We should create a binary release of cbor-diag-cli instead of installing Rust and building it every time
-            - run:
-                name: install cbor-diag
-                command: cargo install --force cbor-diag-cli
-            - bats/install
-            - run:
-                name: running BATs tests
-                command: bats *
-                working_directory: ./tests/e2e/
-
-            # COVERAGE
-            - run:
-                name: coverage
-                command: |
-                  bazel coverage --config=remote-cache \
-                    --config=all-features \
-                    --test_env=PKCS11_SOFTHSM2_MODULE \
-                    --test_env=SOFTHSM2_CONF \
-                    --combined_report=lcov \
-                    -- //... -//:many-rs-tar
-            - codecov/upload:
-                file: $(bazel info output_path)/_coverage/_coverage_report.dat
-
-
       - when:
           condition:
             equal: [ "macos", << parameters.os >> ]
@@ -111,6 +69,55 @@ jobs:
           command: shasum artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
       - store_artifacts:
           path: artifacts
+  bats:
+    parameters:
+      os:
+        type: string
+    executor: << parameters.os >>
+    resource_class: medium
+    steps:
+      - run:
+          name: build
+          command: |
+            bazel build \
+            --config=remote-cache \
+            --balance_testing \
+            --migration_testing \
+            --webauthn_testing \
+            -- //... -//:many-rs-tar
+      - run:
+          name: prepare bats
+          command: |
+            # Fake Cargo output
+            mkdir -p target/debug/
+            bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug/
+      # TODO: We should create a binary release of cbor-diag-cli instead of installing Rust and building it every time
+      - run:
+          name: install cbor-diag
+          command: cargo install --force cbor-diag-cli
+      - bats/install
+      - run:
+          name: running BATs tests
+          command: bats *
+          working_directory: ./tests/e2e/
+  coverage:
+    parameters:
+      os:
+        type: string
+    executor: << parameters.os >>
+    steps:
+      - run:
+          name: coverage
+          command: |
+            bazel coverage --config=remote-cache \
+              --config=all-features \
+              --test_env=PKCS11_SOFTHSM2_MODULE \
+              --test_env=SOFTHSM2_CONF \
+              --combined_report=lcov \
+              -- //... -//:many-rs-tar
+      - codecov/upload:
+          file: $(bazel info output_path)/_coverage/_coverage_report.dat
+
 #  create:
 #    parameters:
 #      os:
@@ -313,29 +320,35 @@ workflows:
       not:
         equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
-      - lint-test-build-cov:
+      - lint-test-build:
           pre-steps:
             - install-deps:
                 os: << matrix.os >>
-          name: lint-test-build-cov-v<< matrix.os >>
-          context:
-            - CACHE
+          name: lint-test-build-v<< matrix.os >>
           matrix:
             parameters:
               os: [linux2204]
-#      - bats:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: bats-v<< matrix.os >>
-#          context:
-#            - CACHE
-#          matrix:
-#            parameters:
-#              os: [linux2204]
-#              many_rust_version: [*many_rust_version]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
+      - bats:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: bats-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204]
+          requires:
+            - lint-test-build-v<< matrix.os >>
+      - coverage:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: coverage-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204]
+          requires:
+            - lint-test-build-v<< matrix.os >>
+
 #  release:
 #    when:
 #      not:
