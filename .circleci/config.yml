@@ -13,7 +13,7 @@ executors:
   linux2204:
     docker:
       - image: cimg/rust:1.67
-    resource_class: x-large
+    resource_class: xlarge
   macos:
     macos:
       xcode: 13.4.1
