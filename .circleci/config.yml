@@ -209,9 +209,8 @@ jobs:
   # Publish nightly Docker images. Used in resiliency tests.
   # TODO: Refactor to Bazel
   publish_nightly_docker:
-    executor:
-      docker:
-        image: nixos/nix
+    docker:
+      - image: nixos/nix
     resource_class: xlarge
     steps:
 #      - docker/check
@@ -246,11 +245,11 @@ jobs:
       - run:
           name: tag docker images
           command: |
-#            docker tag lifted/many-ledger:latest lifted/many-ledger:nightly
             docker tag lifted/many-abci:latest lifted/many-abci:nightly
+            docker tag lifted/many-abci:latest lifted/many-abci:$CIRCLE_SHA1
+#            docker tag lifted/many-ledger:latest lifted/many-ledger:nightly
 #            docker tag lifted/many-kvstore:latest lifted/many-kvstore:nightly
 #            docker tag lifted/many-ledger:latest lifted/many-ledger:$CIRCLE_SHA1
-            docker tag lifted/many-abci:latest lifted/many-abci:$CIRCLE_SHA1
 #            docker tag lifted/many-kvstore:latest lifted/many-kvstore:$CIRCLE_SHA1
 #      - docker/push:
 #          image: many-abci
