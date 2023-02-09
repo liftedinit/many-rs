@@ -372,9 +372,6 @@ workflows:
 #            parameters:
 #              os: [linux2204, macos]
 #      - bats:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
 #          name: bats-v<< matrix.os >>
 #          matrix:
 #            parameters:
@@ -465,16 +462,16 @@ workflows:
 #        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
     jobs:
       - publish_nightly_docker:
-          pre-steps:
-            - install-deps:
-                os: linux2204
+#          pre-steps:
+#            - install-deps:
+#                os: linux2204
           context:
             - DOCKER_CREDS
             - CACHE
-          filters:
-            branches:
-              only:
-                - main
+#          filters:
+#            branches:
+#              only:
+#                - main
       - resiliency_tests:
           pre-steps:
             - install-deps:
@@ -492,6 +489,9 @@ workflows:
 #        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
     jobs:
       - lint-test-build:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
           name: lint-test-build-v<< matrix.os >>
           matrix:
             parameters:
