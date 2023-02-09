@@ -5,7 +5,6 @@ version: 2.1
 orbs:
   codecov: codecov/codecov@3.2.4
   detect: circleci/os-detect@0.3.0
-  rust: circleci/rust@1.6.0
   bats: circleci/bats@1.1.0
   docker: circleci/docker@2.2.0
 
@@ -70,7 +69,6 @@ jobs:
                   mkdir -p target/debug/
                   bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug/
             # TODO: We should create a binary release of cbor-diag-cli instead of installing Rust and building it every time
-            - rust/install
             - run:
                 name: install cbor-diag
                 command: cargo install --force cbor-diag-cli
@@ -290,7 +288,7 @@ commands:
                 name: installing << parameters.os >> dependencies
                 command: |
                   sudo DEBIAN_FRONTEND=noninteractive apt -y update
-                  sudo DEBIAN_FRONTEND=noninteractive apt -y install clang libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install clang libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev bsdextrautils
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
             - run:

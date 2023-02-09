@@ -30,7 +30,7 @@ function start_ledger() {
         --persistent "$persistent" \
         --state "$state" \
         "$@"
-    wait_for_background_output "$background_output"
+    wait_for_background_output "$background_output" 10
 }
 
 # Do not rename this function `ledger`.
