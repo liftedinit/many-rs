@@ -32,7 +32,6 @@ jobs:
       *many_hsm_config
     steps:
       - checkout
-      - detect/init
       - when:
           condition:
             equal: [ "linux2204", << parameters.os >> ]
@@ -117,6 +116,7 @@ jobs:
     executor: << parameters.os >>
     steps:
       - checkout
+      - detect/init
       - run: mkdir -p artifacts
       - run:
           name: build release
