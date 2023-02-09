@@ -215,7 +215,7 @@ jobs:
     steps:
 #      - docker/check
       - checkout
-      - setup_remote_docker
+#      - setup_remote_docker
       - restore_cache:
           keys:
             - nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "Cargo.lock" }}
@@ -235,7 +235,7 @@ jobs:
             
             # many-abci
             mkdir -p genfiles-common
-            CPUCORES=$(nproc) UINFO=$(id -u):$(id -g) bash build-image.sh .#docker-many-abci
+            CPUCORES=$(nproc) UINFO=$(id -u):$(id -g) bash -c 'build-image.sh .#docker-many-abci'
             docker load < genfiles-common/many-abci.tar.gz
           working_directory: ./docker/e2e
       - run:
