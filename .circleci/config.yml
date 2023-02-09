@@ -362,7 +362,7 @@ workflows:
           pre-steps:
             - install-deps:
                 os: << matrix.os >>
-          name: bats-v<< matrix.os >>
+          name: dev_release-v<< matrix.os >>
           matrix:
             parameters:
               os: [linux2204]
