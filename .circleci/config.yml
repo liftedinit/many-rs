@@ -57,20 +57,24 @@ jobs:
             - run:
                 name: tests and doc tests (macos)
                 # Exclude HSM tests as we are not configured in MacOS for them.
-                command: bazel test --config=remote-cache --config=all-features -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
+                command: |
+                  bazel test \
+                    --jobs=4 \
+                    --config=remote-cache \
+                    --config=all-features \
+                    -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
   bats:
     parameters:
       os:
         type: string
     executor: << parameters.os >>
-    resource_class: medium
     steps:
       - checkout
       - run:
           name: build
           command: |
             bazel build \
-            --jobs=2 \
+            --jobs=8 \
             --config=remote-cache \
             --balance_testing \
             --migration_testing \
@@ -327,7 +331,17 @@ commands:
                   wget https://github.com/bazelbuild/bazelisk/releases/download/v1.15.0/bazelisk-linux-amd64  
                   chmod +x bazelisk-linux-amd64 
                   sudo mv bazelisk-linux-amd64 /usr/local/bin/bazel
-
+      - when:
+          condition:
+            equal: [ "macos", << parameters.os >> ]
+          steps:
+            - run:
+                name: installing bazelisk
+                command: |
+                  wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-darwin-amd64 
+                  chmod +x bazelisk-darwin-amd64 
+                  sudo mv bazelisk-darwin-amd64 /usr/local/bin/bazel
+            
 workflows:
   ci:
     when:
@@ -341,7 +355,7 @@ workflows:
           name: lint-test-build-v<< matrix.os >>
           matrix:
             parameters:
-              os: [linux2204]
+              os: [macos]
       - bats:
           pre-steps:
             - install-deps:
@@ -372,8 +386,6 @@ workflows:
               os: [linux2204]
           requires:
             - lint-test-build-v<< matrix.os >>
-
-
 #  release:
 #    when:
 #      not:
