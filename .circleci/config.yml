@@ -40,7 +40,7 @@ jobs:
                 name: rustfmt, clippy, build and tests and doc tests (linux)
                 command: |
                   bazel test \
-                    --jobs=8 \   # CircleCI Docker executors are over-scheduling if this is not set
+                    --jobs=8 \
                     --config=remote-cache \
                     --config=all-features \
                     --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect \
@@ -59,7 +59,7 @@ jobs:
                 # Exclude HSM tests as we are not configured in MacOS for them.
                 command: |
                   bazel test \
-                    --jobs=4 \   # CircleCI Docker executors are over-scheduling if this is not set 
+                    --jobs=4 \
                     --config=remote-cache \
                     --config=all-features \
                     -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
@@ -74,9 +74,8 @@ jobs:
           name: build
           command: |
             bazel build \
-            --jobs=8 \   # CircleCI Docker executors are over-scheduling if this is not set 
+            --jobs=8 \
             --config=remote-cache \
-            # We need to disable `disable_token_sender_check` for bats tests, for now
             --balance_testing \
             --migration_testing \
             --webauthn_testing \
@@ -99,7 +98,7 @@ jobs:
           name: coverage
           command: |
             bazel coverage \
-              --jobs=8 \   # CircleCI Docker executors are over-scheduling if this is not set
+              --jobs=8 \
               --config=remote-cache \
               --config=all-features \
               --test_env=PKCS11_SOFTHSM2_MODULE \
@@ -228,7 +227,7 @@ jobs:
           name: build
           command: |
             bazel build \
-              --jobs=8 \   # CircleCI Docker executors are over-scheduling if this is not set 
+              --jobs=8 \
               --config=remote-cache \
               --config=all-features \
               -- //... -//:many-rs-tar
