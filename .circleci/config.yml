@@ -12,11 +12,11 @@ executors:
   linux2204:
     docker:
       - image: cimg/rust:1.67
-    resource_class: xlarge
+    resource_class: xlarge # 8 cores, 16Gb
   macos:
     macos:
       xcode: 13.4.1
-    resource_class: medium
+    resource_class: medium # 4 cores, 8Gb
 
 MANY_HSM_CONFIG: &many_hsm_config
   - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
@@ -40,7 +40,7 @@ jobs:
                 name: rustfmt, clippy, build and tests and doc tests (linux)
                 command: |
                   bazel test \
-                    --jobs=8 \
+                    --jobs=8 \   # CircleCI Docker executors are over-scheduling if this is not set
                     --config=remote-cache \
                     --config=all-features \
                     --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect \
@@ -59,7 +59,7 @@ jobs:
                 # Exclude HSM tests as we are not configured in MacOS for them.
                 command: |
                   bazel test \
-                    --jobs=4 \
+                    --jobs=4 \   # CircleCI Docker executors are over-scheduling if this is not set 
                     --config=remote-cache \
                     --config=all-features \
                     -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
@@ -74,23 +74,14 @@ jobs:
           name: build
           command: |
             bazel build \
-            --jobs=8 \
+            --jobs=8 \   # CircleCI Docker executors are over-scheduling if this is not set 
             --config=remote-cache \
+            # We need to disable `disable_token_sender_check` for bats tests, for now
             --balance_testing \
             --migration_testing \
             --webauthn_testing \
             -- //... -//:many-rs-tar
-      - run:
-          name: prepare bats
-          command: |
-            # Fake Cargo output
-            mkdir -p target/debug/
-            bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug/
-      # TODO: We should create a binary release of cbor-diag-cli instead of installing Rust and building it every time
-      - run:
-          name: install cbor-diag
-          command: cargo install --force cbor-diag-cli
-      - bats/install
+      - prepare_bats
       - run:
           name: running BATs tests
           command: bats *
@@ -108,7 +99,7 @@ jobs:
           name: coverage
           command: |
             bazel coverage \
-              --jobs=8 \
+              --jobs=8 \   # CircleCI Docker executors are over-scheduling if this is not set
               --config=remote-cache \
               --config=all-features \
               --test_env=PKCS11_SOFTHSM2_MODULE \
@@ -124,178 +115,154 @@ jobs:
     executor: << parameters.os >>
     steps:
       - checkout
-      - detect/init
-      - run: mkdir -p artifacts
-      - run:
-          name: build release
-          command: |
-            bazel build --jobs=8 -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
-            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
-      - run:
-          name: create release shasum
-          command: shasum artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
+      - build_release
       - store_artifacts:
           path: artifacts
-#  create:
-#    parameters:
-#      os:
-#        type: string
-#      many_rust_version:
-#        type: string
-#    executor: << parameters.os >>
-#    steps:
-#      - checkout
-#      - detect/init
-#      - run: mkdir -p artifacts
-#      - run:
-#          name: build release
-#          command: |
-#            bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
-#            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
-#      - run:
-#          name: creating release shasum
-#          command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
-#      - persist_to_workspace:
-#          root: artifacts
-#          paths:
-#            - "*.tar.gz"
-#            - "*.txt"
-#  publish:
-#    parameters:
-#      pre-release:
-#        type: boolean
-#        default: false
-#    docker:
-#      - image: cibuilds/github:0.10
-#    resource_class: large
-#    steps:
-#      - attach_workspace:
-#          at: ~/project/artifacts
-#      - when:
-#          condition:
-#            not: << parameters.pre-release >>
-#          steps:
-#            - run:
-#                name: publish pre-release
-#                command: ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
-#      - when:
-#          condition: << parameters.pre-release >>
-#          steps:
-#            - run:
-#                name: publish pre-release
-#                command: ghr -prerelease -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
-#  audit:
-#    docker:
-#      - image: rust:latest
-#    resource_class: small
-#    steps:
-#      - checkout
-#      - run:
-#          name: install cargo-audit
-#          command: cargo install cargo-audit
-#      - run:
-#          name: cargo audit
-#          command: cargo audit
-#  publish_nightly_docker:
-#    executor: linux2204
-#    parameters:
-#      many_rust_version:
-#        type: string
-#    resource_class: large
-#    steps:
-#      - docker/check
-#      - checkout:
-#          path: many-rs
-#      - restore_cache:
-#          keys:
-#            - nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "many-rs/Cargo.lock" }}
-#      - run:
-#          name: restoring `nix-store`
-#          command: |
-#            if [[ -f "backup.tar" ]]; then
-#              docker run --rm -v nix-store:/nix -v $(pwd):/backup ubuntu tar xf /backup/backup.tar -C /
-#            else
-#              echo "nix-store backup unavailable; skipping."
-#            fi
-#      - rust/install:
-#          version: << parameters.many_rust_version >>
-#      - run:
-#          name: build docker images
-#          command: |
-#            cd many-rs/docker/e2e
-#            make Cargo.nix many/many-abci many/many-ledger many/many-kvstore
-#            docker tag lifted/many-ledger:latest lifted/many-ledger:nightly
-#            docker tag lifted/many-abci:latest lifted/many-abci:nightly
-#            docker tag lifted/many-kvstore:latest lifted/many-kvstore:nightly
-#            docker tag lifted/many-ledger:latest lifted/many-ledger:$CIRCLE_SHA1
-#            docker tag lifted/many-abci:latest lifted/many-abci:$CIRCLE_SHA1
-#            docker tag lifted/many-kvstore:latest lifted/many-kvstore:$CIRCLE_SHA1
-#      - docker/push:
-#          image: many-abci
-#          registry: lifted
-#          tag: "nightly,$CIRCLE_SHA1"
-#          step-name: "docker push lifted/many-abci"
-#      - docker/push:
-#          image: many-ledger
-#          registry: lifted
-#          tag: "nightly,$CIRCLE_SHA1"
-#          step-name: "docker push lifted/many-ledger"
-#      - docker/push:
-#          image: many-kvstore
-#          registry: lifted
-#          tag: "nightly,$CIRCLE_SHA1"
-#          step-name: "docker push lifted/many-kvstore"
-#      - run:
-#          name: exporting `nix-store` docker volume
-#          command: |
-#            docker run --rm -v nix-store:/nix -v $(pwd):/backup ubuntu tar cf /backup/backup.tar /nix
-#      - save_cache:
-#          key: nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "many-rs/Cargo.lock" }}
-#          paths:
-#            - backup.tar
-#  resiliency_tests:
-#    executor: linux2204
-#    parameters:
-#      many_rust_version:
-#        type: string
-#    resource_class: large
-#    steps:
-#      - checkout
-#      - rust/install:
-#          version: << parameters.many_rust_version >>
-#      - rust/build:
-#          crate: --all-features
-#          with_cache: false
-#      - bats/install
-#      - docker/pull:
-#          images: "lifted/many-ledger:nightly,lifted/many-kvstore:nightly,lifted/many-abci:nightly"
-#      - run:
-#          name: running BATs tests
-#          # https://support.circleci.com/hc/en-us/articles/360046544433-Makefile-Command-Inconsistencies
-#          shell: /bin/bash
-#          command: bats *
-#          working_directory: ./tests/resiliency
-#  tag:
-#    parameters:
-#      tag:
-#        type: string
-#        default: ${CIRCLE_TAG}
-#      branch:
-#        type: string
-#        default: main
-#    docker:
-#      - image: 'cimg/base:stable'
-#    resource_class: small
-#    steps:
-#      - checkout
-#      - run:
-#          name: tag
-#          command: |
-#            git config credential.helper 'cache --timeout=120'
-#            git config user.email "build@liftedinit.org"
-#            git config user.name "ll-build"
-#            git tag -f << parameters.tag >> << parameters.branch >>
-#            git push -f -q https://${GITHUB_TOKEN}@github.com/liftedinit/many-rs.git << parameters.tag >>
+  create:
+    parameters:
+      os:
+        type: string
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - build_release
+      - persist_to_workspace:
+          root: artifacts
+          paths:
+            - "*.tar.gz"
+            - "*.txt"
+  publish:
+    parameters:
+      pre-release:
+        type: boolean
+        default: false
+    docker:
+      - image: cibuilds/github:0.10
+    resource_class: medium
+    steps:
+      - attach_workspace:
+          at: ~/project/artifacts
+      - when:
+          condition:
+            not: << parameters.pre-release >>
+          steps:
+            - run:
+                name: publish pre-release
+                command: ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
+      - when:
+          condition: << parameters.pre-release >>
+          steps:
+            - run:
+                name: publish pre-release
+                command: ghr -prerelease -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
+  audit:
+    executor: linux2204
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: install cargo-audit
+          command: cargo install cargo-audit
+      - run:
+          name: cargo audit
+          command: cargo audit
+
+  # TODO: Refactor to Bazel
+  publish_nightly_docker:
+    executor: linux2204
+    steps:
+      - docker/check
+      - checkout:
+          path: many-rs
+      - restore_cache:
+          keys:
+            - nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "many-rs/Cargo.lock" }}
+      - run:
+          name: restoring `nix-store`
+          command: |
+            if [[ -f "backup.tar" ]]; then
+              docker run --rm -v nix-store:/nix -v $(pwd):/backup ubuntu tar xf /backup/backup.tar -C /
+            else
+              echo "nix-store backup unavailable; skipping."
+            fi
+      - run:
+          name: build docker images
+          command: |
+            cd many-rs/docker/e2e
+            make Cargo.nix many/many-abci many/many-ledger many/many-kvstore
+            docker tag lifted/many-ledger:latest lifted/many-ledger:nightly
+            docker tag lifted/many-abci:latest lifted/many-abci:nightly
+            docker tag lifted/many-kvstore:latest lifted/many-kvstore:nightly
+            docker tag lifted/many-ledger:latest lifted/many-ledger:$CIRCLE_SHA1
+            docker tag lifted/many-abci:latest lifted/many-abci:$CIRCLE_SHA1
+            docker tag lifted/many-kvstore:latest lifted/many-kvstore:$CIRCLE_SHA1
+      - docker/push:
+          image: many-abci
+          registry: lifted
+          tag: "nightly,$CIRCLE_SHA1"
+          step-name: "docker push lifted/many-abci"
+      - docker/push:
+          image: many-ledger
+          registry: lifted
+          tag: "nightly,$CIRCLE_SHA1"
+          step-name: "docker push lifted/many-ledger"
+      - docker/push:
+          image: many-kvstore
+          registry: lifted
+          tag: "nightly,$CIRCLE_SHA1"
+          step-name: "docker push lifted/many-kvstore"
+      - run:
+          name: exporting `nix-store` docker volume
+          command: |
+            docker run --rm -v nix-store:/nix -v $(pwd):/backup ubuntu tar cf /backup/backup.tar /nix
+      - save_cache:
+          key: nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "many-rs/Cargo.lock" }}
+          paths:
+            - backup.tar
+
+  resiliency_tests:
+    executor: linux2204
+    steps:
+      - checkout
+      - run:
+          name: build
+          command: |
+            bazel build \
+              --jobs=8 \   # CircleCI Docker executors are over-scheduling if this is not set 
+              --config=remote-cache \
+              --config=all-features \
+              -- //... -//:many-rs-tar
+      - prepare_bats
+      - docker/pull:
+          images: "lifted/many-ledger:nightly,lifted/many-kvstore:nightly,lifted/many-abci:nightly"
+      - run:
+          name: running BATs tests
+          # https://support.circleci.com/hc/en-us/articles/360046544433-Makefile-Command-Inconsistencies
+          shell: /bin/bash
+          command: bats *
+          working_directory: ./tests/resiliency
+
+  tag:
+    parameters:
+      tag:
+        type: string
+        default: ${CIRCLE_TAG}
+      branch:
+        type: string
+        default: main
+    docker:
+      - image: 'cimg/base:stable'
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: tag
+          command: |
+            git config credential.helper 'cache --timeout=120'
+            git config user.email "build@liftedinit.org"
+            git config user.name "ll-build"
+            git tag -f << parameters.tag >> << parameters.branch >>
+            git push -f -q https://${GITHUB_TOKEN}@github.com/liftedinit/many-rs.git << parameters.tag >>
 
 # Re-usable commands
 commands:
@@ -341,7 +308,35 @@ commands:
                   curl -L -O https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-darwin-amd64 
                   chmod +x bazelisk-darwin-amd64 
                   sudo mv bazelisk-darwin-amd64 /usr/local/bin/bazel
-            
+  build_release:
+    description: build release
+    steps:
+      - detect/init
+      - run: mkdir -p artifacts
+      - run:
+          name: build release
+          command: |
+            bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
+            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
+      - run:
+          name: creating release shasum
+          command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
+  prepare_bats:
+    description: prepare environment for bats testing
+    steps:
+      # TODO: We should create a binary release of cbor-diag-cli instead of installing Rust and building it every time
+      - run:
+          name: install cbor-diag
+          command: cargo install --force cbor-diag-cli
+      - bats/install
+      - run:
+          name: copy binaries
+          command: |
+            # Bats tests are making use of the Cargo output path.
+            # Copy binaries build with Bazel to a Cargo-like folder tree.
+            mkdir -p target/debug/
+            bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug/
+
 workflows:
   ci:
     when:
@@ -355,124 +350,121 @@ workflows:
           name: lint-test-build-v<< matrix.os >>
           matrix:
             parameters:
-              os: [macos]
-#      - bats:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: bats-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [linux2204]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
-#      - coverage:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: coverage-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [linux2204]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
-#      - dev_release:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: dev_release-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [linux2204]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
-#  release:
-#    when:
-#      not:
-#        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-#    jobs:
-#      - create:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: create-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [linux2204]
-#              many_rust_version: [*many_rust_version]
-#          filters:
-#            branches:
-#              ignore: /.*/
-#            tags:
-#              only:
-#                - /^\d+\.\d+\.\d+$/                 # e.g., 0.1.1, 1.0.0
-#                - /^\d+\.\d+\.\d+-(alpha|beta)$/    # e.g., 0.1.1-alpha, 2.3.1-beta
-#                - /^\d+\.\d+\.\d+-.*-rc.*$/         # e.g., 0.1.1-alpha-rc1, 1.3.4-beta-rc4
-#                - /^\d+\.\d+\.\d+-pre.*$/           # e.g., 0.1.1-prealpha-3, 1.5.6-prealpha-8
-#      - publish:
-#          name: publish
-#          pre-release: false
-#          context:
-#            - GITHUB_CREDS
-#          requires:
-#            - create
-#          filters:
-#            branches:
-#              ignore: /.*/
-#            tags:
-#              only:
-#                - /^\d+\.\d+\.\d+$/                 # e.g., 0.1.1, 1.0.0
-#                - /^\d+\.\d+\.\d+-(alpha|beta)$/    # e.g., 0.1.1-alpha, 2.3.1-beta
-#      - publish:
-#          name: publish-pre-release
-#          pre-release: true
-#          context:
-#            - GITHUB_CREDS
-#          requires:
-#            - create
-#          filters:
-#            branches:
-#              ignore: /.*/
-#            tags:
-#              only:
-#                - /^\d+\.\d+\.\d+-.*-rc.*$/         # e.g., 0.1.1-alpha-rc1, 1.3.4-beta-rc4
-#                - /^\d+\.\d+\.\d+-pre.*$/           # e.g., 0.1.1-prealpha-3, 1.5.6-prealpha-8
-#  security:
-#    when:
-#      and:
-#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-#        - equal: [ "Audit", << pipeline.schedule.name >> ]
-#    jobs:
-#      - audit
-#  nightly_docker_and_resiliency_tests:
-#    when:
-#      and:
-#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-#        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
-#    jobs:
-#      - publish_nightly_docker:
-#          pre-steps:
-#            - install-deps:
-#                os: linux2204
-#          context:
-#            - DOCKER_CREDS
-#            - CACHE
-#          filters:
-#            branches:
-#              only:
-#                - main
-#          many_rust_version: *many_rust_version
-#      - resiliency_tests:
-#          pre-steps:
-#            - install-deps:
-#                os: linux2204
-#          filters:
-#            branches:
-#              only:
-#                - main
-#          many_rust_version: *many_rust_version
-#          requires:
-#            - publish_nightly_docker
+              os: [linux2204, macos]
+      - bats:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: bats-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204, macos]
+          requires:
+            - lint-test-build-v<< matrix.os >>
+      - coverage:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: coverage-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204]
+          requires:
+            - lint-test-build-v<< matrix.os >>
+      - dev_release:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: dev_release-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204]
+          requires:
+            - lint-test-build-v<< matrix.os >>
+  release:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - create:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: create-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204]
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+$/                 # e.g., 0.1.1, 1.0.0
+                - /^\d+\.\d+\.\d+-(alpha|beta)$/    # e.g., 0.1.1-alpha, 2.3.1-beta
+                - /^\d+\.\d+\.\d+-.*-rc.*$/         # e.g., 0.1.1-alpha-rc1, 1.3.4-beta-rc4
+                - /^\d+\.\d+\.\d+-pre.*$/           # e.g., 0.1.1-prealpha-3, 1.5.6-prealpha-8
+      - publish:
+          name: publish
+          pre-release: false
+          context:
+            - GITHUB_CREDS
+          requires:
+            - create
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+$/                 # e.g., 0.1.1, 1.0.0
+                - /^\d+\.\d+\.\d+-(alpha|beta)$/    # e.g., 0.1.1-alpha, 2.3.1-beta
+      - publish:
+          name: publish-pre-release
+          pre-release: true
+          context:
+            - GITHUB_CREDS
+          requires:
+            - create
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^\d+\.\d+\.\d+-.*-rc.*$/         # e.g., 0.1.1-alpha-rc1, 1.3.4-beta-rc4
+                - /^\d+\.\d+\.\d+-pre.*$/           # e.g., 0.1.1-prealpha-3, 1.5.6-prealpha-8
+  security:
+    when:
+      and:
+        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+        - equal: [ "Audit", << pipeline.schedule.name >> ]
+    jobs:
+      - audit
+  nightly_docker_and_resiliency_tests:
+    when:
+      and:
+        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
+    jobs:
+      - publish_nightly_docker:
+          pre-steps:
+            - install-deps:
+                os: linux2204
+          context:
+            - DOCKER_CREDS
+            - CACHE
+          filters:
+            branches:
+              only:
+                - main
+      - resiliency_tests:
+          pre-steps:
+            - install-deps:
+                os: linux2204
+          filters:
+            branches:
+              only:
+                - main
+          requires:
+            - publish_nightly_docker
 #  nightly_macos:
 #    when:
 #      and:
@@ -481,20 +473,14 @@ workflows:
 #    jobs:
 #      - lint-test-build:
 #          name: lint-test-build-v<< matrix.os >>
-#          context:
-#            - CACHE
 #          matrix:
 #            parameters:
 #              os: [macos]
-#              many_rust_version: [*many_rust_version]
 #      - bats:
 #          name: bats-v<< matrix.os >>
-#          context:
-#            - CACHE
 #          matrix:
 #            parameters:
 #              os: [macos]
-#              many_rust_version: [*many_rust_version]
 #          requires:
 #            - lint-test-build-v<< matrix.os >>
 #      - tag:
