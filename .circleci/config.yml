@@ -58,17 +58,6 @@ jobs:
                 name: tests and doc tests (macos)
                 # Exclude HSM tests as we are not configured in MacOS for them.
                 command: bazel test --config=remote-cache --config=all-features -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
-      - run: mkdir -p artifacts
-      - run:
-          name: build release
-          command: |
-            bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
-            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
-      - run:
-          name: create release shasum
-          command: shasum artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
-      - store_artifacts:
-          path: artifacts
   bats:
     parameters:
       os:
@@ -76,6 +65,7 @@ jobs:
     executor: << parameters.os >>
     resource_class: medium
     steps:
+      - checkout
       - run:
           name: build
           command: |
@@ -105,7 +95,10 @@ jobs:
       os:
         type: string
     executor: << parameters.os >>
+    environment:
+      *many_hsm_config
     steps:
+      - checkout
       - run:
           name: coverage
           command: |
@@ -117,7 +110,24 @@ jobs:
               -- //... -//:many-rs-tar
       - codecov/upload:
           file: $(bazel info output_path)/_coverage/_coverage_report.dat
-
+  dev_release:
+    parameters:
+      os:
+        type: string
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - run: mkdir -p artifacts
+      - run:
+          name: build release
+          command: |
+            bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
+            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
+      - run:
+          name: create release shasum
+          command: shasum artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
+      - store_artifacts:
+          path: artifacts
 #  create:
 #    parameters:
 #      os:
@@ -348,6 +358,17 @@ workflows:
               os: [linux2204]
           requires:
             - lint-test-build-v<< matrix.os >>
+      - dev_release:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: bats-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204]
+          requires:
+            - lint-test-build-v<< matrix.os >>
+
 
 #  release:
 #    when:
