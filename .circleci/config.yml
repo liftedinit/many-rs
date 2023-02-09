@@ -209,11 +209,13 @@ jobs:
   # Publish nightly Docker images. Used in resiliency tests.
   # TODO: Refactor to Bazel
   publish_nightly_docker:
-    executor: linux2204
+    executor:
+      docker:
+        image: nixos/nix
+    resource_class: xlarge
     steps:
 #      - docker/check
-      - checkout:
-          path: many-rs
+      - checkout
       - setup_remote_docker
       - restore_cache:
           keys:
@@ -229,14 +231,27 @@ jobs:
       - run:
           name: build docker images
           command: |
-            cd many-rs/docker/e2e
-            make Cargo.nix many/many-abci many/many-ledger many/many-kvstore
-            docker tag lifted/many-ledger:latest lifted/many-ledger:nightly
+            bash generate-cargo-nix.sh
+            touch ../../src/ledger/src/main.rs
+            
+            # Environment
+            export CPUCORES=$(nproc)
+            export UINFO=$(id -u):$(id -g)
+            
+            # many-abci
+            mkdir -p genfiles-common
+            bash build-image.sh .#docker-many-abci
+            docker load < genfiles-common/many-abci.tar.gz
+          working_directory: ./docker/e2e
+      - run:
+          name: tag docker images
+          command: |
+#            docker tag lifted/many-ledger:latest lifted/many-ledger:nightly
             docker tag lifted/many-abci:latest lifted/many-abci:nightly
-            docker tag lifted/many-kvstore:latest lifted/many-kvstore:nightly
-            docker tag lifted/many-ledger:latest lifted/many-ledger:$CIRCLE_SHA1
+#            docker tag lifted/many-kvstore:latest lifted/many-kvstore:nightly
+#            docker tag lifted/many-ledger:latest lifted/many-ledger:$CIRCLE_SHA1
             docker tag lifted/many-abci:latest lifted/many-abci:$CIRCLE_SHA1
-            docker tag lifted/many-kvstore:latest lifted/many-kvstore:$CIRCLE_SHA1
+#            docker tag lifted/many-kvstore:latest lifted/many-kvstore:$CIRCLE_SHA1
 #      - docker/push:
 #          image: many-abci
 #          registry: lifted
