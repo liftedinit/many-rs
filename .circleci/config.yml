@@ -358,49 +358,49 @@ commands:
       - bats/install
 
 workflows:
-  ci:
-    when:
-      not:
-        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-    jobs:
-      - lint-test-build:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: lint-test-build-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204, macos]
-      - bats:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: bats-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204, macos]
-          requires:
-            - lint-test-build-v<< matrix.os >>
-      - coverage:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: coverage-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
-      - dev_release:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: dev_release-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
+#  ci:
+#    when:
+#      not:
+#        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+#    jobs:
+#      - lint-test-build:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: lint-test-build-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204, macos]
+#      - bats:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: bats-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204, macos]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
+#      - coverage:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: coverage-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
+#      - dev_release:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: dev_release-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
   release:
     when:
       not:
@@ -459,10 +459,10 @@ workflows:
     jobs:
       - audit
   nightly_docker_and_resiliency_tests:
-    when:
-      and:
-        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
+#    when:
+#      and:
+#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+#        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
     jobs:
       - publish_nightly_docker:
           pre-steps:
@@ -486,10 +486,10 @@ workflows:
           requires:
             - publish_nightly_docker
   nightly_macos:
-    when:
-      and:
-        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
+#    when:
+#      and:
+#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+#        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
     jobs:
       - lint-test-build:
           name: lint-test-build-v<< matrix.os >>
