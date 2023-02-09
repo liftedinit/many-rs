@@ -336,12 +336,9 @@ commands:
             equal: [ "macos", << parameters.os >> ]
           steps:
             - run:
-                name: install << parameters.os >> dependencies
-                command: brew install wget
-            - run:
                 name: installing bazelisk
                 command: |
-                  wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-darwin-amd64 
+                  curl -O https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-darwin-amd64 
                   chmod +x bazelisk-darwin-amd64 
                   sudo mv bazelisk-darwin-amd64 /usr/local/bin/bazel
             
