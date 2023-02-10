@@ -3,6 +3,7 @@ use crate::EmptyReturn;
 use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
+use many_protocol::context::Context;
 use many_types::{Either, VecOrSingle};
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
@@ -464,7 +465,7 @@ pub type AddFeaturesReturn = EmptyReturn;
 #[cfg_attr(test, mockall::automock)]
 pub trait AccountModuleBackend: Send {
     /// Create an account.
-    fn create(&mut self, sender: &Address, args: CreateArgs) -> Result<CreateReturn, ManyError>;
+    fn create(&mut self, sender: &Address, args: CreateArgs, context: Context) -> Result<CreateReturn, ManyError>;
 
     /// Set the description of an account.
     fn set_description(
@@ -526,7 +527,7 @@ mod module_tests {
 
         mock.expect_create().returning({
             let account_map = Arc::clone(&account_map);
-            move |sender, args| {
+            move |sender, args, _| {
                 let mut account_map = account_map.write().unwrap();
                 let (id, _) = account_map.insert(Account::create(sender, args))?;
                 Ok(CreateReturn { id })

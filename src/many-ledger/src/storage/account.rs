@@ -68,7 +68,7 @@ impl LedgerStorage {
 
         if let Some(accounts) = accounts {
             for account in accounts {
-                let id = self._add_account(
+                let (id, _) = self._add_account(
                     account::Account {
                         description: account.description.clone(),
                         roles: account.roles,
@@ -101,8 +101,9 @@ impl LedgerStorage {
         &mut self,
         mut account: account::Account,
         add_event: bool,
-    ) -> Result<Address, ManyError> {
-        let (id, _) = self.get_next_subresource(ACCOUNT_IDENTITY_ROOT)?;
+    ) -> Result<(Address, impl IntoIterator<Item = Vec<u8>>), ManyError> {
+        let (id, resource_keys) = self.get_next_subresource(ACCOUNT_IDENTITY_ROOT)?;
+        let mut keys: Vec<_> = resource_keys.into_iter().collect();
 
         // The account MUST own itself.
         account.add_role(&id, account::Role::Owner);
@@ -154,13 +155,17 @@ impl LedgerStorage {
             })?;
         }
 
-        self.commit_account(&id, account)?;
-        Ok(id)
+        self.commit_account(&id, account).map(|key| {
+            keys.push(key);
+            (id, keys)
+        })
     }
 
-    pub fn add_account(&mut self, account: account::Account) -> Result<Address, ManyError> {
-        let id = self._add_account(account, true)?;
-        Ok(id)
+    pub fn add_account(
+        &mut self,
+        account: account::Account,
+    ) -> Result<(Address, impl IntoIterator<Item = Vec<u8>>), ManyError> {
+        self._add_account(account, true)
     }
 
     pub fn disable_account(&mut self, id: &Address) -> Result<(), ManyError> {
@@ -168,7 +173,7 @@ impl LedgerStorage {
 
         if account.disabled.is_none() || account.disabled == Some(Either::Left(false)) {
             account.disabled = Some(Either::Left(true));
-            self.commit_account(id, account)?;
+            self.commit_account(id, account).map(|_| ())?;
             self.log_event(events::EventInfo::AccountDisable { account: *id })?;
 
             self.maybe_commit()
@@ -302,16 +307,17 @@ impl LedgerStorage {
         &mut self,
         id: &Address,
         account: account::Account,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         tracing::debug!("commit({:?})", account);
+        let key = key_for_account(id);
 
         self.persistent_store
             .apply(&[(
-                key_for_account(id),
+                key.clone(),
                 Op::Put(minicbor::to_vec(account).map_err(ManyError::serialization_error)?),
             )])
             .map_err(|e| ManyError::unknown(e.to_string()))?;
 
-        self.maybe_commit()
+        self.maybe_commit().map(|_| key)
     }
 }

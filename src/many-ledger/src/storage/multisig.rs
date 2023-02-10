@@ -64,7 +64,7 @@ fn _execute_multisig_tx(
             let account = account::Account::create(sender, args.clone());
             validate_account(&account)?;
 
-            let id = ledger.add_account(account)?;
+            let (id, _) = ledger.add_account(account)?;
             minicbor::to_vec(account::CreateReturn { id })
         }
 

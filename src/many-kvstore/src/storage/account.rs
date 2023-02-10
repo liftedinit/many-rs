@@ -30,8 +30,7 @@ impl KvStoreStorage {
             });
         }
 
-        self.commit_account(&id, account)?;
-        Ok(id)
+        self.commit_account(&id, account).map(|_| id)
     }
 
     pub fn add_account(&mut self, account: account::Account) -> Result<Address, ManyError> {
@@ -71,8 +70,7 @@ impl KvStoreStorage {
             account: args.account,
             description: args.description,
         });
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        self.commit_account(&args.account, account).map(|_| ())
     }
 
     pub fn add_roles(
@@ -90,8 +88,7 @@ impl KvStoreStorage {
             account: args.account,
             roles: args.clone().roles,
         });
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        self.commit_account(&args.account, account).map(|_| ())
     }
 
     pub fn remove_roles(
@@ -120,8 +117,7 @@ impl KvStoreStorage {
             account: args.account,
             roles: args.clone().roles,
         });
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        self.commit_account(&args.account, account).map(|_| ())
     }
 
     pub fn add_features(
@@ -149,8 +145,7 @@ impl KvStoreStorage {
             roles: args.clone().roles.unwrap_or_default(), // TODO: Verify this
             features: args.clone().features,
         });
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        self.commit_account(&args.account, account).map(|_| ())
     }
 
     pub fn commit_account(
@@ -185,7 +180,7 @@ impl KvStoreStorage {
 
         if account.disabled.is_none() || account.disabled == Some(Either::Left(false)) {
             account.disabled = Some(Either::Left(true));
-            self.commit_account(id, account)?;
+            self.commit_account(id, account).map(|_| ())?;
             self.log_event(events::EventInfo::AccountDisable { account: *id });
 
             if !self.blockchain {

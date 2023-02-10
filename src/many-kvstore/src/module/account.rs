@@ -5,7 +5,7 @@ use many_identity::Address;
 use many_modules::account::features::{FeatureInfo, TryCreateFeature};
 use many_modules::account::{AccountModuleBackend, Role};
 use many_modules::{account, EmptyReturn, ManyModule, ManyModuleInfo};
-use many_protocol::{RequestMessage, ResponseMessage};
+use many_protocol::{context::Context, RequestMessage, ResponseMessage};
 use many_types::cbor::CborAny;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Formatter};
@@ -121,6 +121,7 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         &mut self,
         sender: &Address,
         args: account::CreateArgs,
+        _: Context,
     ) -> Result<account::CreateReturn, ManyError> {
         if args.features.is_empty() {
             return Err(account::errors::empty_feature());

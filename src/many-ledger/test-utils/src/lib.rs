@@ -306,7 +306,13 @@ impl Setup {
         account_type: AccountType,
     ) -> Result<Address, ManyError> {
         let args = create_account_args(account_type);
-        AccountModuleBackend::create(&mut self.module_impl, &id, args).map(|x| x.id)
+        AccountModuleBackend::create(
+            &mut self.module_impl,
+            &id,
+            args,
+            (RequestMessage::default(), unbounded().0).into(),
+        )
+        .map(|x| x.id)
     }
 
     pub fn create_account(&mut self, account_type: AccountType) -> Result<Address, ManyError> {
@@ -532,7 +538,13 @@ pub fn setup_with_account(account_type: AccountType) -> SetupWithAccount {
         id,
         args,
     } = setup_with_args(account_type);
-    let account = AccountModuleBackend::create(&mut module_impl, &id, args).unwrap();
+    let account = AccountModuleBackend::create(
+        &mut module_impl,
+        &id,
+        args,
+        (RequestMessage::default(), unbounded().0).into(),
+    )
+    .unwrap();
     SetupWithAccount {
         module_impl,
         id,

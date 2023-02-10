@@ -1,3 +1,4 @@
+use async_channel::unbounded;
 use cucumber::Parameter;
 use many_error::{ManyError, ManyErrorCode};
 use many_identity::testing::identity;
@@ -12,6 +13,7 @@ use many_modules::account::{
 };
 use many_modules::ledger::extended_info::TokenExtendedInfo;
 use many_modules::ledger::{LedgerTokensModuleBackend, TokenInfoArgs};
+use many_protocol::RequestMessage;
 use many_types::cbor::CborNull;
 use many_types::ledger::{TokenAmount, TokenInfo, TokenMaybeOwner};
 use std::collections::{BTreeMap, BTreeSet};
@@ -206,6 +208,7 @@ pub fn given_token_account<T: LedgerWorld + AccountWorld>(w: &mut T) {
                 account::features::tokens::TokenAccountLedger.as_feature()
             ]),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     )
     .expect("Unable to create account");
     *w.account_mut() = account.id
@@ -263,8 +266,6 @@ fn _create_default_token<T: TokenWorld + LedgerWorld + AccountWorld>(
     id: SomeId,
     max_supply: Option<TokenAmount>,
 ) {
-    use {async_channel::unbounded, many_protocol::RequestMessage};
-
     let (id, owner) = if let Some(id) = id.as_maybe_address(w) {
         (id, TokenMaybeOwner::Left(id))
     } else {

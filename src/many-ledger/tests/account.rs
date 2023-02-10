@@ -1,3 +1,4 @@
+use async_channel::unbounded;
 use many_identity::testing::identity;
 use many_identity::Address;
 use many_ledger::module::LedgerModuleImpl;
@@ -5,6 +6,7 @@ use many_ledger_test_utils::*;
 use many_modules::account;
 use many_modules::account::features::{FeatureInfo, TryCreateFeature};
 use many_modules::account::AccountModuleBackend;
+use many_protocol::RequestMessage;
 use many_types::{Either, VecOrSingle};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -32,7 +34,7 @@ fn create() {
         id,
         args,
     } = setup_with_args(AccountType::Multisig);
-    let result = module_impl.create(&id, args);
+    let result = module_impl.create(&id, args, (RequestMessage::default(), unbounded().0).into());
     assert!(result.is_ok());
 
     // Verify the account owns itself
@@ -60,7 +62,7 @@ fn create_invalid_role() {
             BTreeSet::from_iter([account::Role::CanLedgerTransact]),
         );
     }
-    let result = module_impl.create(&id, args);
+    let result = module_impl.create(&id, args, (RequestMessage::default(), unbounded().0).into());
     assert!(result.is_err());
     assert_eq!(
         result.unwrap_err().code(),
@@ -542,7 +544,7 @@ fn empty_feature_create() {
     args.roles = None;
     args.features = account::features::FeatureSet::empty();
 
-    let result = module_impl.create(&id, args);
+    let result = module_impl.create(&id, args, (RequestMessage::default(), unbounded().0).into());
     assert!(result.is_err());
     assert_many_err(result, account::errors::empty_feature());
 }

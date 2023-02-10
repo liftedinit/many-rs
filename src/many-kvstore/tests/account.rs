@@ -2,12 +2,14 @@ pub mod common;
 
 use crate::common::*;
 
+use async_channel::unbounded;
 use many_identity::testing::identity;
 use many_identity::Address;
 use many_kvstore::module::KvStoreModuleImpl;
 use many_modules::account;
 use many_modules::account::features::{FeatureInfo, TryCreateFeature};
 use many_modules::account::AccountModuleBackend;
+use many_protocol::RequestMessage;
 use many_types::{Either, VecOrSingle};
 use std::collections::{BTreeMap, BTreeSet};
 use std::ops::{Deref, DerefMut};
@@ -34,7 +36,11 @@ fn create() {
     let setup = setup_with_args(AccountType::KvStore);
     let id = setup.id();
     let args = setup.args.clone();
-    let result = setup.module_impl_mut().create(&id, args);
+    let result = setup.module_impl_mut().create(
+        &id,
+        args,
+        (RequestMessage::default(), unbounded().0).into(),
+    );
     assert!(result.is_ok());
 
     // Verify the account owns itself
@@ -61,7 +67,11 @@ fn create_invalid_role() {
             BTreeSet::from_iter([account::Role::CanLedgerTransact]),
         );
     }
-    let result = setup.module_impl_mut().create(&id, args);
+    let result = setup.module_impl_mut().create(
+        &id,
+        args,
+        (RequestMessage::default(), unbounded().0).into(),
+    );
     assert!(result.is_err());
     assert_eq!(
         result.unwrap_err().code(),
@@ -490,7 +500,11 @@ fn empty_feature_create() {
     args.roles = None;
     args.features = account::features::FeatureSet::empty();
 
-    let result = setup.module_impl_mut().create(&id, args);
+    let result = setup.module_impl_mut().create(
+        &id,
+        args,
+        (RequestMessage::default(), unbounded().0).into(),
+    );
     assert!(result.is_err());
     assert_many_err(result, account::errors::empty_feature());
 }

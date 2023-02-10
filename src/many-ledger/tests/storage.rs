@@ -46,6 +46,7 @@ fn load() {
                     account::features::ledger::AccountLedger.as_feature(),
                 ]),
             },
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .unwrap()
         .id;
@@ -140,6 +141,7 @@ fn load_symbol_meta() {
                     account::features::ledger::AccountLedger.as_feature(),
                 ]),
             },
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .unwrap()
         .id;
