@@ -191,9 +191,8 @@ impl LedgerStorage {
         self.log_event(events::EventInfo::AccountSetDescription {
             account: args.account,
             description: args.description,
-        })?;
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        })
+        .and_then(|_| self.commit_account(&args.account, account).map(|_| ()))
     }
 
     pub fn add_roles(
@@ -210,9 +209,8 @@ impl LedgerStorage {
         self.log_event(events::EventInfo::AccountAddRoles {
             account: args.account,
             roles: args.clone().roles,
-        })?;
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        })
+        .and_then(|_| self.commit_account(&args.account, account).map(|_| ()))
     }
 
     pub fn remove_roles(
@@ -240,9 +238,7 @@ impl LedgerStorage {
         self.log_event(events::EventInfo::AccountRemoveRoles {
             account: args.account,
             roles: args.clone().roles,
-        })?;
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        }).and_then(|_| self.commit_account(&args.account, account).map(|_| ()))
     }
 
     pub fn add_features(
@@ -269,9 +265,7 @@ impl LedgerStorage {
             account: args.account,
             roles: args.clone().roles.unwrap_or_default(), // TODO: Verify this
             features: args.clone().features,
-        })?;
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        }).and_then(|_| self.commit_account(&args.account, account).map(|_| ()))
     }
 
     pub fn get_account(

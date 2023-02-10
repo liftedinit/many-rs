@@ -149,7 +149,9 @@ impl AccountModuleBackend for LedgerModuleImpl {
             return Err(account::errors::user_needs_role("owner"));
         }
 
-        self.storage.set_description(account, args).map(|_| EmptyReturn)
+        self.storage
+            .set_description(account, args)
+            .map(|_| EmptyReturn)
     }
 
     fn list_roles(
