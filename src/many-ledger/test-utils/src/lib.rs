@@ -45,7 +45,7 @@ pub fn default_token_create_args(
     TokenCreateArgs {
         summary: TokenInfoSummary {
             name: "Test Token".to_string(),
-            ticker: "TT".to_string(),
+            ticker: "TTT".to_string(),
             decimals: 9,
         },
         owner,

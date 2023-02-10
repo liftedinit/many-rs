@@ -20,6 +20,40 @@ Scenario: Creating a new token as myself
 	And the memo is "Fun"
 
 @tokens
+Scenario: Token ticker too short
+	Given a ticker A
+	And a name Foobar
+	And a decimals of 9
+	Then creating the token as myself fails with invalid ticker length
+
+@tokens
+Scenario: Token ticker too long
+	Given a ticker ABCDEF
+	And a name Foobar
+	And a decimals of 9
+	Then creating the token as myself fails with invalid ticker length
+
+@tokens
+Scenario: Shortest token ticker allowed
+	Given a ticker ABC
+	And a name Foobar
+	And a decimals of 9
+	When the token is created as myself
+	Then the token symbol is a subresource
+	And the token ticker is ABC
+	And the token name is Foobar
+
+@tokens
+Scenario: Longest token ticker allowed
+	Given a ticker ABCDE
+	And a name Foobar
+	And a decimals of 9
+	When the token is created as myself
+	Then the token symbol is a subresource
+	And the token ticker is ABCDE
+	And the token name is Foobar
+
+@tokens
 Scenario: Creating a new token, sender is myself, token owner is random
 	Given random as owner
 	Then creating the token as myself fails with unauthorized
@@ -48,6 +82,7 @@ Scenario: Creating a new token, sender is myself, token owner is account I'm the
 	Given a token account
 	And myself as the account owner
 	And setting the account as the owner
+	And a ticker FBR
 	When the token is created as myself
 	Then the token owner is the account
 
@@ -56,6 +91,7 @@ Scenario: Creating a new token, sender is some id, token owner is account where 
 	Given a token account
 	And id 5 has token creation permission
 	And setting the account as the owner
+	And a ticker FBR
 	When the token is created as id 5
 	Then the token owner is the account
 

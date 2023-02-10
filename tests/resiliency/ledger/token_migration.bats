@@ -3,6 +3,7 @@
 # Token endpoints should be activated after the migration
 
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
+MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
 MAKEFILE="Makefile.ledger"
 MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
 
@@ -12,42 +13,21 @@ load '../../test_helper/ledger'
 function setup() {
     mkdir "$BATS_TEST_ROOTDIR"
 
-    echo '
-    { "migrations": [
-      {
-        "name": "Account Count Data Attribute",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Token Migration",
-        "block_height": 30,
-        "token_identity": "'$(identity 1)'",
-        "token_next_subresource": 0,
-        "symbol": "'${MFX_ADDRESS}'",
-        "symbol_name": "Manifest Network Token",
-        "symbol_decimals": 9,
-        "symbol_total": 100000000000000000,
-        "symbol_circulating": 100000000000000000,
-        "symbol_maximum": null,
-        "symbol_owner": "'${MFX_ADDRESS}'"
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
+    # jq doesn't support bigint
+    jq '(.migrations[] | select(.name == "Token Migration")).block_height |= 30 |
+        (.migrations[] | select(.name == "Token Migration")).disabled |= empty |
+        (.migrations[] | select(.name == "Token Migration")) |= . + {
+            "token_identity": "'$(identity 1)'",
+            "token_next_subresource": 0,
+            "symbol": "'${MFX_ADDRESS}'",
+            "symbol_name": "Manifest Network Token",
+            "symbol_decimals": 9,
+            "symbol_total": 100000000000000,
+            "symbol_circulating": 100000000000000,
+            "symbol_maximum": null,
+            "symbol_owner": "'${MFX_ADDRESS}'"
+        }' \
+        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
     (
       cd "$GIT_ROOT/docker/e2e/" || exit
@@ -65,7 +45,7 @@ function setup() {
     # Give time to the servers to start.
     sleep 30
     timeout 30s bash <<EOT
-    while ! many message --server http://localhost:8000 status; do
+    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
       sleep 1
     done >/dev/null
 EOT
@@ -95,8 +75,8 @@ function teardown() {
         assert_output --partial "ticker: \"MFX\""
         assert_output --partial "decimals: 9"
         assert_output --regexp "owner:.*${MFX_ADDRESS}.*)"
-        assert_output --regexp "total:.*(.*100000000000000000,.*)"
-        assert_output --regexp "circulating:.*(.*100000000000000000,.*)"
+        assert_output --regexp "total:.*(.*100000000000000,.*)"
+        assert_output --regexp "circulating:.*(.*100000000000000,.*)"
         assert_output --regexp "maximum:.*None,.*"
     done
 }
@@ -132,8 +112,8 @@ function teardown() {
     assert_output --partial "name: \"Manifest Network Token\""
     assert_output --partial "ticker: \"MFX\""
     assert_output --partial "decimals: 9"
-    assert_output --regexp "total:.*(.*100000000000000000,.*)"
-    assert_output --regexp "circulating:.*(.*100000000000000000,.*)"
+    assert_output --regexp "total:.*(.*100000000000000,.*)"
+    assert_output --regexp "circulating:.*(.*100000000000000,.*)"
     assert_output --regexp "maximum:.*None,.*"
 
     # Test token update

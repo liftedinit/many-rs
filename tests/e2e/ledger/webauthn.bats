@@ -26,7 +26,7 @@ function setup() {
 
     (
       cd "$GIT_ROOT"
-      cargo build --features webauthn_testing
+      cargo build --all-features
     )
 }
 

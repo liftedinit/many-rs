@@ -257,7 +257,7 @@ impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
 }
 
 impl<'a, T, E> Migration<'a, T, E> {
-    fn new(migration: &'a InnerMigration<T, E>, metadata: Metadata) -> Self {
+    pub fn new(migration: &'a InnerMigration<T, E>, metadata: Metadata) -> Self {
         let enabled = !metadata.disabled;
         Self {
             migration,
@@ -436,6 +436,10 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
         })
     }
 
+    pub fn insert(&mut self, migration: Migration<'a, T, E>) {
+        self.inner.insert(migration.name().to_string(), migration);
+    }
+
     pub fn load(
         registry: &'a [InnerMigration<T, E>],
         config: MigrationConfig,
@@ -553,43 +557,4 @@ impl<'a, T, E, IDX: AsRef<str>> Index<IDX> for MigrationSet<'a, T, E> {
     fn index(&self, index: IDX) -> &Self::Output {
         &self.inner[index.as_ref()]
     }
-}
-
-/// Kept for backward compatibility.
-/// Should use MigrationSet::load() instead.
-pub fn load_migrations<'a, T, E>(
-    registry: &'a [InnerMigration<T, E>],
-    config: &str,
-) -> Result<MigrationSet<'a, T, E>, String> {
-    let config: MigrationConfig = serde_json::from_str(config).map_err(|e| e.to_string())?;
-    MigrationSet::load(registry, config, 0)
-}
-
-/// Enable all migrations from the registry EXCEPT the hotfix.
-/// Should not be used outside of tests.
-/// Should use MigrationSet::load() instead.
-pub fn load_enable_all_regular_migrations<T, E>(
-    registry: &[InnerMigration<T, E>],
-) -> MigrationSet<T, E> {
-    // Keep a default of block height 1 for backward compatibility.
-    let metadata = Metadata {
-        block_height: 1,
-        ..Metadata::default()
-    };
-
-    let inner: BTreeMap<String, Migration<T, E>> = registry
-        .iter()
-        .map(|m| {
-            let mut migration = Migration::new(m, metadata.clone());
-            match m.r#type {
-                MigrationType::Regular(_) => migration.enable(),
-                MigrationType::Hotfix(_) => migration.disable(),
-                _ => migration.disable(),
-            }
-
-            (m.name.to_string(), migration)
-        })
-        .collect();
-
-    MigrationSet { inner }
 }

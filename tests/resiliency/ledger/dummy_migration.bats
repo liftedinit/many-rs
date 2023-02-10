@@ -1,4 +1,5 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
+MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
 MAKEFILE="Makefile.ledger"
 
 load '../../test_helper/load'
@@ -7,34 +8,10 @@ load '../../test_helper/ledger'
 function setup() {
     mkdir "$BATS_TEST_ROOTDIR"
 
-    echo '
-    { "migrations": [
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 20
-      },
-      {
-        "name": "Account Count Data Attribute",
-        "block_height": 0,
-        "issue": "https://github.com/liftedinit/many-framework/issues/190",
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Token Migration",
-        "block_height": 0,
-        "disabled": true
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migration.json"
+    jq '(.migrations[] | select(.name == "Dummy Hotfix")).block_height |= 20 |
+        (.migrations[] | select(.name == "Dummy Hotfix")).disabled |= empty' \
+        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
+
     (
       cd "$GIT_ROOT/docker/e2e/" || exit
       make -f $MAKEFILE clean
@@ -42,7 +19,7 @@ function setup() {
           ABCI_TAG=$(img_tag) \
           LEDGER_TAG=$(img_tag) \
           ID_WITH_BALANCES="$(identity 1):1000000" \
-          MIGRATIONS="$BATS_TEST_ROOTDIR/migration.json" || {
+          MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
         echo Could not start nodes... >&3
         exit 1
       }
@@ -51,7 +28,7 @@ function setup() {
     # Give time to the servers to start.
     sleep 30
     timeout 30s bash <<EOT
-    while ! many message --server http://localhost:8000 status; do
+    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
       sleep 1
     done >/dev/null
 EOT
@@ -86,15 +63,7 @@ function teardown() {
     assert_output --partial "Transaction Token"
     tx_id=$(echo "$output" | grep "Transaction Token" | grep -oE "[0-9a-f]+$")
 
-    # Get the current blockchain height
-    current_height=$(many_message --pem=1 blockchain.info | head -n 4 | grep "1:" | cut -f 2 -d ':' | cut -f 2 -d ' ' | grep -oE "^[0-9]+")
-
-    # Wait until we reach block 19
-    while [ "$current_height" -lt 19 ]; do
-      current_height=$(many_message --pem=1 blockchain.info | head -n 4 | grep "1:" | cut -f 2 -d ':' | cut -f 2 -d ' ' | grep -oE "^[0-9]+")
-      echo "$current_height"
-      sleep 0.5
-    done >/dev/null
+    wait_for_block 19
 
     # Approve and execute the transaction
     # At this point the Dummy Hotfix should execute!

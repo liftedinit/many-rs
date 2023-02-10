@@ -113,6 +113,7 @@ impl ManyAbciModuleBackend for KvStoreModuleImpl {
                 ("kvstore.query".to_string(), EndpointInfo { is_command: false }),
                 ("kvstore.put".to_string(), EndpointInfo { is_command: true }),
                 ("kvstore.disable".to_string(), EndpointInfo { is_command: true }),
+                ("kvstore.transfer".to_string(), EndpointInfo { is_command: true }),
 
                 // Accounts
                 ("account.create".to_string(), EndpointInfo { is_command: true }),
