@@ -12,7 +12,7 @@ function setup() {
 
     (
       cd "$GIT_ROOT"
-      cargo build --features balance_testing
+      cargo build --all-features
     )
 
     local ALLOW_ADDRS_CONFIG=$(generate_allow_addrs_config 1 2)

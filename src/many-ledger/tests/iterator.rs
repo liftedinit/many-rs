@@ -17,9 +17,9 @@ fn setup() -> LedgerStorage {
     let balances = BTreeMap::from([(id0, BTreeMap::from([(symbol0, TokenAmount::from(1000u16))]))]);
     let persistent_path = tempfile::tempdir().unwrap();
 
-    let mut storage = LedgerStorage::new(&symbols, persistent_path, id2, false)
+    let mut storage = LedgerStorage::new(persistent_path, false)
         .unwrap()
-        .with_balances(&symbols, &balances)
+        .with_balances(&id2, &symbols, &balances)
         .unwrap()
         .build()
         .unwrap();

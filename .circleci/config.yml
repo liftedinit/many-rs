@@ -9,6 +9,8 @@ orbs:
   bats: circleci/bats@1.0.0
   docker: circleci/docker@2.1.3
 
+MANY_RUST_VERSION: &many_rust_version nightly-2023-01-03
+
 executors:
   linux2204:
     machine:
@@ -24,17 +26,19 @@ jobs:
     parameters:
       os:
         type: string
+      many_rust_version:
+        type: string
     executor: << parameters.os >>
     environment:
-      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
-      SOFTHSM2_CONF: /tmp/softhsm2.conf
+      - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      - SOFTHSM2_CONF: /tmp/softhsm2.conf
     steps:
       - checkout
       - restore_cache:
           keys:
             - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: nightly
+          version: << parameters.many_rust_version >>
       - rust/format:
           with_cache: false
       - rust/clippy:
@@ -61,9 +65,6 @@ jobs:
       - rust/build:
           crate: --all-features
           with_cache: false
-      - run:
-          name: cargo install
-          command: cargo install --force --root target/ --path src/many/ many
       - save_cache:
           key: cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
           paths:
@@ -76,6 +77,8 @@ jobs:
     parameters:
       os:
         type: string
+      many_rust_version:
+        type: string
     executor: << parameters.os >>
     steps:
       - checkout
@@ -83,34 +86,28 @@ jobs:
           keys:
             - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: nightly
-      - run:
-          name: install `many` CLI
-          command: cargo install --force --path src/many many
-      - run:
-          name: install `ledger` CLI
-          command: cargo install --force --path src/ledger ledger
-      - run:
-          name: install `kvstore` CLI
-          command: cargo install --force --path src/kvstore kvstore
+          version: << parameters.many_rust_version >>
       - run:
           name: install cbor-diag
           command: cargo install --force cbor-diag-cli
       - bats/install
       - run:
           name: running BATs tests
+          no_output_timeout: 20m
           command: bats *
           working_directory: ./tests/e2e/
   dev_release_artifact:
     parameters:
       os:
         type: string
+      many_rust_version:
+        type: string
     executor: << parameters.os >>
     steps:
       - checkout
       - detect/init
       - rust/install:
-          version: nightly
+          version: << parameters.many_rust_version >>
       - rust/build:
           release: true
           with_cache: false
@@ -127,18 +124,20 @@ jobs:
     parameters:
       os:
         type: string
+      many_rust_version:
+        type: string
     executor: << parameters.os >>
     working_directory: ~/project/repo
     environment:
-      PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
-      SOFTHSM2_CONF: /tmp/softhsm2.conf
+      - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+      - SOFTHSM2_CONF: /tmp/softhsm2.conf
     steps:
       - checkout
       - restore_cache:
           keys:
             - cargo-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
       - rust/install:
-          version: nightly
+          version: << parameters.many_rust_version >>
       - run:
           name: install llvm-tools-preview
           command: rustup component add llvm-tools-preview
@@ -165,12 +164,14 @@ jobs:
     parameters:
       os:
         type: string
+      many_rust_version:
+        type: string
     executor: << parameters.os >>
     steps:
       - checkout
       - detect/init
       - rust/install:
-          version: nightly
+          version: << parameters.many_rust_version >>
       - rust/build:
           release: true
           with_cache: false
@@ -224,6 +225,9 @@ jobs:
           command: cargo audit
   publish_nightly_docker:
     executor: linux2204
+    parameters:
+      many_rust_version:
+        type: string
     resource_class: large
     steps:
       - docker/check
@@ -241,7 +245,7 @@ jobs:
               echo "nix-store backup unavailable; skipping."
             fi
       - rust/install:
-          version: nightly
+          version: << parameters.many_rust_version >>
       - run:
           name: build docker images
           command: |
@@ -278,20 +282,17 @@ jobs:
             - backup.tar
   resiliency_tests:
     executor: linux2204
+    parameters:
+      many_rust_version:
+        type: string
     resource_class: large
     steps:
       - checkout
       - rust/install:
-          version: nightly
-      - run:
-          name: install `many` CLI
-          command: cargo install --path src/many many
-      - run:
-          name: install `ledger` CLI
-          command: cargo install --path src/ledger ledger
-      - run:
-          name: install `kvstore` CLI
-          command: cargo install --path src/kvstore kvstore
+          version: << parameters.many_rust_version >>
+      - rust/build:
+          crate: --all-features
+          with_cache: false
       - bats/install
       - docker/pull:
           images: "lifted/many-ledger:nightly,lifted/many-kvstore:nightly,lifted/many-abci:nightly"
@@ -299,6 +300,7 @@ jobs:
           name: running BATs tests
           # https://support.circleci.com/hc/en-us/articles/360046544433-Makefile-Command-Inconsistencies
           shell: /bin/bash
+          no_output_timeout: 20m
           command: bats *
           working_directory: ./tests/resiliency
   tag:
@@ -362,6 +364,7 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
+              many_rust_version: [*many_rust_version]
       - bats:
           pre-steps:
             - install-deps:
@@ -372,6 +375,7 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
+              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
       - coverage:
@@ -384,6 +388,7 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
+              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
       - dev_release_artifact:
@@ -394,6 +399,7 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
+              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
             - bats-v<< matrix.os >>
@@ -414,6 +420,7 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
+              many_rust_version: [*many_rust_version]
           filters:
             branches:
               ignore: /.*/
@@ -475,6 +482,7 @@ workflows:
             branches:
               only:
                 - main
+          many_rust_version: *many_rust_version
       - resiliency_tests:
           pre-steps:
             - install-deps:
@@ -483,6 +491,7 @@ workflows:
             branches:
               only:
                 - main
+          many_rust_version: *many_rust_version
           requires:
             - publish_nightly_docker
   nightly_macos:
@@ -498,6 +507,7 @@ workflows:
           matrix:
             parameters:
               os: [macos]
+              many_rust_version: [*many_rust_version]
       - bats:
           name: bats-v<< matrix.os >>
           context:
@@ -505,6 +515,7 @@ workflows:
           matrix:
             parameters:
               os: [macos]
+              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
       - tag:

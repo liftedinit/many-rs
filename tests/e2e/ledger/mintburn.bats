@@ -3,6 +3,7 @@
 
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
+MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -14,37 +15,11 @@ function setup() {
 
     (
       cd "$GIT_ROOT"
-      cargo build --features migration_testing --features balance_testing
+      cargo build --all-features
     )
-
-    echo '
-    { "migrations": [
-      {
-        "name": "Account Count Data Attribute",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Token Migration",
-        "block_height": 0
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
-
+    jq '(.migrations[] | select(.name == "Token Migration")).block_height |= 0 |
+        (.migrations[] | select(.name == "Token Migration")).disabled |= empty' \
+        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
     # Dummy image
      echo -n -e '\x68\x65\x6c\x6c\x6f' > "$BATS_TEST_ROOTDIR/image.png"
@@ -82,10 +57,24 @@ function teardown() {
     assert_output --regexp "circulating:.*(.*2000000579,.*)"
 }
 
+# Test for https://github.com/liftedinit/many-rs/issues/291
+@test "$SUITE: mint and burn distribution ordering" {
+    call_ledger --pem=1 --port=8000 token mint MFX ''\''{"mahtbpgjmrhjrqn6smpd6rr5tkgnkd3w2qjioe3dzfhnl2tqxj": 123, "mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz": 456}'\'''
+    refute_output --partial "Unable to apply change to persistent storage: Batch Key Error: Keys in batch must be sorted"
+    check_consistency --balance=123 --id=mahtbpgjmrhjrqn6smpd6rr5tkgnkd3w2qjioe3dzfhnl2tqxj 8000
+    check_consistency --balance=456 --id=mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz 8000
+
+    call_ledger --pem=1 --port=8000 token burn MFX ''\''{"mahtbpgjmrhjrqn6smpd6rr5tkgnkd3w2qjioe3dzfhnl2tqxj": 123, "mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz": 456}'\''' --error-on-under-burn
+    refute_output --partial "Unable to apply change to persistent storage: Batch Key Error: Keys in batch must be sorted"
+    check_consistency --balance=0 --id=mahtbpgjmrhjrqn6smpd6rr5tkgnkd3w2qjioe3dzfhnl2tqxj 8000
+    check_consistency --balance=0 --id=mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz 8000
+}
+
 @test "$SUITE: can burn token" {
     call_ledger --pem=1 --port=8000 send $(identity 2) 123 MFX
     call_ledger --pem=1 --port=8000 send $(identity 3) 456 MFX
     call_ledger --pem=1 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\''' --error-on-under-burn
+    sleep 2
     check_consistency --pem=2 --balance=0 8000
     check_consistency --pem=3 --balance=0 8000
 

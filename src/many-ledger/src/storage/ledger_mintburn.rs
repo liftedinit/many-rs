@@ -66,6 +66,10 @@ impl LedgerStorage {
             Op::Put(minicbor::to_vec(&info).map_err(ManyError::serialization_error)?),
         ));
 
+        // We need to sort here because `distribution` is sorted by Address (bytes)
+        // while the `merk` Ops are sorted by String
+        batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
+
         self.persistent_store
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;
@@ -119,6 +123,10 @@ impl LedgerStorage {
             key_for_symbol(&symbol).into(),
             Op::Put(minicbor::to_vec(&info).map_err(ManyError::serialization_error)?),
         ));
+
+        // We need to sort here because `distribution` is sorted by Address (bytes)
+        // while the `merk` Ops are sorted by String
+        batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
         self.persistent_store
             .apply(batch.as_slice())

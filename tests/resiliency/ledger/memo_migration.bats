@@ -1,4 +1,5 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
+MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
 MAKEFILE="Makefile.ledger"
 
 load '../../test_helper/load'
@@ -7,33 +8,9 @@ load '../../test_helper/ledger'
 function setup() {
     mkdir "$BATS_TEST_ROOTDIR"
 
-    echo '
-    { "migrations": [
-      {
-        "name": "Account Count Data Attribute",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Dummy Hotfix",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Block 9400",
-        "block_height": 0,
-        "disabled": true
-      },
-      {
-        "name": "Memo Migration",
-        "block_height": 30
-      },
-      {
-        "name": "Token Migration",
-        "block_height": 0,
-        "disabled": true
-      }
-    ] }' > "$BATS_TEST_ROOTDIR/migrations.json"
+    jq '(.migrations[] | select(.name == "Memo Migration")).block_height |= 30 |
+        (.migrations[] | select(.name == "Memo Migration")).disabled |= empty' \
+        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
     (
       cd "$GIT_ROOT/docker/e2e/" || exit
@@ -51,7 +28,7 @@ function setup() {
     # Give time to the servers to start.
     sleep 30
     timeout 30s bash <<EOT
-    while ! many message --server http://localhost:8000 status; do
+    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
       sleep 1
     done >/dev/null
 EOT
