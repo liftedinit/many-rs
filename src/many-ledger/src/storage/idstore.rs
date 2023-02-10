@@ -3,7 +3,7 @@ use crate::storage::LedgerStorage;
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::idstore;
-use merk::{BatchEntry, Op};
+use merk::Op;
 use std::collections::BTreeMap;
 
 pub(crate) const IDSTORE_ROOT: &[u8] = b"/idstore/";
@@ -39,7 +39,6 @@ impl LedgerStorage {
         maybe_seed: Option<u64>,
         maybe_keys: Option<BTreeMap<String, String>>,
     ) -> Result<Self, ManyError> {
-        let mut batch: Vec<BatchEntry> = Vec::new();
         let maybe_keys = maybe_keys.map(|keys| {
             keys.iter()
                 .map(|(k, v)| {
@@ -52,20 +51,20 @@ impl LedgerStorage {
 
         // Apply keys and seed.
         if let Some(seed) = maybe_seed {
-            batch.push((
-                IDSTORE_SEED_ROOT.to_vec(),
-                Op::Put(seed.to_be_bytes().to_vec()),
-            ));
+            self.persistent_store
+                .apply(&[(
+                    IDSTORE_SEED_ROOT.to_vec(),
+                    Op::Put(seed.to_be_bytes().to_vec()),
+                )])
+                .map_err(error::storage_apply_failed)?;
         }
         if let Some(keys) = maybe_keys {
             for (k, v) in keys {
-                batch.push((k, Op::Put(v)));
+                self.persistent_store
+                    .apply(&[(k, Op::Put(v))])
+                    .map_err(error::storage_apply_failed)?;
             }
         }
-
-        self.persistent_store
-            .apply(batch.as_slice())
-            .map_err(error::storage_apply_failed)?;
 
         Ok(self)
     }
