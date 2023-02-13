@@ -75,7 +75,7 @@ EOT
 
 # Tests https://github.com/liftedinit/many-framework/issues/289
 @test "$SUITE: First block after load has a transaction" {
-    cd "$GIT_ROOT/docker/e2e" || exit 1
+    cd "$GIT_ROOT/docker/" || exit 1
 
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000 MFX
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000 MFX

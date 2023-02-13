@@ -14,6 +14,9 @@ executors:
     docker:
       - image: cimg/rust:1.67
     resource_class: xlarge # 8 cores, 16Gb
+  linux2204_machine:
+    machine:
+      image: ubuntu-2204:current
   macos:
     macos:
       xcode: 13.4.1
@@ -177,12 +180,10 @@ jobs:
           command: cargo audit
 
   # Publish nightly Docker images. Used in resiliency tests.
-  # TODO: Refactor to Bazel
   publish_nightly_docker:
-    executor: linux2204
+    executor: linux2204_machine
     steps:
 #      - docker/check
-      - setup_remote_docker
       - checkout
       - run:
           name: build docker images
@@ -215,9 +216,8 @@ jobs:
 
   # Perform resiliency testing
   resiliency_tests:
-    executor: linux2204
+    executor: linux2204_machine
     steps:
-      - setup_remote_docker
       - checkout
       - prepare_bats
       - docker/pull:
