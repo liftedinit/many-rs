@@ -21,7 +21,7 @@ genfiles-kvstore/generate-allow-addrs-config:
 	mkdir -p $(dir $@) && touch $@
 
 many/many-kvstore:
-	bazel build --config=remote-cache $(FEATURES) //src/many-kvstore:many-kvstore-image.tar
+	bazel build --jobs=$(nproc) --config=remote-cache $(FEATURES) //src/many-kvstore:many-kvstore-image.tar
 	docker load < ../$(shell bazel cquery $(FEATURES) //src/many-kvstore:many-kvstore-image.tar --output=files)
 	docker tag bazel/src/many-kvstore:many-kvstore-image lifted/many-kvstore:latest
 
