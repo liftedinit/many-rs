@@ -186,6 +186,7 @@ jobs:
       - run:
           name: build docker images
           command: make docker
+          working_directory: ./docker/
       - run:
           name: tag docker images
           command: |
