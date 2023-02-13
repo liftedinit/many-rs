@@ -113,6 +113,7 @@ jobs:
       - prepare_bats
       - run:
           name: running BATs tests
+          no_output_timeout: 20m
           command: bats *
           working_directory: ./tests/e2e/
 
@@ -291,6 +292,7 @@ jobs:
           name: running BATs tests
           # https://support.circleci.com/hc/en-us/articles/360046544433-Makefile-Command-Inconsistencies
           shell: /bin/bash
+          no_output_timeout: 20m
           command: bats *
           working_directory: ./tests/resiliency
 
