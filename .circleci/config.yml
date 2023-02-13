@@ -217,6 +217,7 @@ jobs:
   resiliency_tests:
     executor: linux2204
     steps:
+      - setup_remote_docker
       - checkout
       - prepare_bats
       - docker/pull:
