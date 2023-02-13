@@ -426,6 +426,9 @@ workflows:
 #        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
     jobs:
       - publish_nightly_docker:
+          pre-steps:
+            - install-deps:
+                os: linux2204
           context:
             - DOCKER_CREDS
             - CACHE
