@@ -28,7 +28,7 @@ genfiles-ledger/generate-allow-addrs-config:
 	mkdir -p $(dir $@) && touch $@
 
 many/many-ledger:
-	bazel build --jobs=$(nproc) --config=remote-cache $(FEATURES) //src/many-ledger:many-ledger-image.tar
+	bazel build --jobs=$(shell nproc) --config=remote-cache $(FEATURES) //src/many-ledger:many-ledger-image.tar
 	docker load < ../$(shell bazel cquery $(FEATURES) //src/many-ledger:many-ledger-image.tar --output=files)
 	docker tag bazel/src/many-ledger:many-ledger-image lifted/many-ledger:latest
 

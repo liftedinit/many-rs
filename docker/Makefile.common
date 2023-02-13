@@ -10,7 +10,7 @@ SHELL = bash
 
 .PHONY: many/many-abci
 many/many-abci:
-	bazel build --jobs=$(nproc) --config=remote-cache $(FEATURES) //src/many-abci:many-abci-image.tar $(FEATURES)
+	bazel build --jobs=$(shell nproc) --config=remote-cache $(FEATURES) //src/many-abci:many-abci-image.tar $(FEATURES)
 	docker load < ../$(shell bazel cquery $(FEATURES) //src/many-abci:many-abci-image.tar --output=files)
 	docker tag bazel/src/many-abci:many-abci-image lifted/many-abci:latest
 
