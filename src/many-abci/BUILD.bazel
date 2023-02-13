@@ -23,6 +23,7 @@ rust_binary(
     ) + [
         ":build_script",
         "//src/many-client",
+        "//src/many-cli-helpers",
         "//src/many-error",
         "//src/many-identity",
         "//src/many-identity-dsa",
@@ -46,6 +47,7 @@ rust_library(
         normal = True,
     ) + [
         "//src/many-client",
+        "//src/many-cli-helpers",
         "//src/many-error",
         "//src/many-identity",
         "//src/many-identity-dsa",
