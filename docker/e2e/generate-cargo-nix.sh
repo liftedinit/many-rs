@@ -6,6 +6,6 @@ echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 #cd docker/e2e
 #nix flake lock --update-input cargo2nix
 #cd ../..
-nix run github:cargo2nix/cargo2nix/unstable --max-jobs $CPUCORES -- -f docker/e2e/Cargo.nix.new
-mv docker/e2e/Cargo.nix.new docker/e2e/Cargo.nix
-chown $UINFO docker/e2e/Cargo.nix
+nix run github:cargo2nix/cargo2nix/unstable --max-jobs $CPUCORES -- -f Cargo.nix.new
+mv Cargo.nix.new Cargo.nix
+chown $UINFO Cargo.nix

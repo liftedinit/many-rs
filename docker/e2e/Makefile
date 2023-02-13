@@ -13,8 +13,8 @@ Cargo.nix: lockfile
 	docker run --rm -e CPUCORES=$(CPUCORES) -e UINFO=$(UINFO) \
 	           -v nix-store:/nix \
 	           -v $(VOLUME):/volume/many-rs \
-	           -w /volume/many-rs \
-	           nixos/nix bash docker/e2e/generate-cargo-nix.sh
+	           -w /volume/many-rs/docker/e2e \
+	           nixos/nix bash generate-cargo-nix.sh
 	touch ../../src/ledger/src/main.rs
 
 .PHONY: many/many-abci
