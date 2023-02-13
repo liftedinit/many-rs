@@ -25,9 +25,9 @@ fn load() {
             identity(5),
             BTreeMap::from([(identity(1000), 10000000u64.into())]),
         )]);
-        let _ = LedgerStorage::new(&symbols, path.clone(), identity(666), false)
+        let _ = LedgerStorage::new(path.clone(), false)
             .unwrap()
-            .with_balances(&symbols, &balances)
+            .with_balances(&identity(666), &symbols, &balances)
             .unwrap()
             .build()
             .unwrap();
@@ -115,11 +115,11 @@ fn load_symbol_meta() {
             identity(5),
             BTreeMap::from([(identity(1000), 10000000u64.into())]),
         )]);
-        let _ = LedgerStorage::new(&symbols, path.clone(), identity(666), false)
+        let _ = LedgerStorage::new(path.clone(), false)
             .unwrap()
             .with_migrations(migration_config.clone())
             .unwrap()
-            .with_balances(&symbols, &initial_balance)
+            .with_balances(&identity(666), &symbols, &initial_balance)
             .unwrap()
             .with_tokens(&symbols, Some(meta), None, None, initial_balance)
             .unwrap()

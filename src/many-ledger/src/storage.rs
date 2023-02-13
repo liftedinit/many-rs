@@ -168,32 +168,8 @@ impl LedgerStorage {
         })
     }
 
-    pub fn new<P: AsRef<Path>>(
-        symbols: &BTreeMap<Symbol, String>,
-        persistent_path: P,
-        identity: Address,
-        blockchain: bool,
-    ) -> Result<Self, ManyError> {
-        let mut persistent_store =
-            InnerStorage::open(persistent_path).map_err(ManyError::unknown)?; // TODO: Custom error
-
-        persistent_store
-            .apply(&[
-                (
-                    IDENTITY_ROOT.as_bytes().to_vec(),
-                    Op::Put(identity.to_vec()),
-                ),
-                (
-                    SYMBOLS_ROOT.as_bytes().to_vec(),
-                    Op::Put(minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?),
-                ),
-            ])
-            .map_err(error::storage_apply_failed)?;
-
-        // We need to commit, because we need IDENTITY_ROOT to be available for the next steps, if any.
-        persistent_store
-            .commit(&[])
-            .map_err(error::storage_commit_failed)?;
+    pub fn new<P: AsRef<Path>>(persistent_path: P, blockchain: bool) -> Result<Self, ManyError> {
+        let persistent_store = InnerStorage::open(persistent_path).map_err(ManyError::unknown)?; // TODO: Custom error
 
         Ok(Self {
             persistent_store,

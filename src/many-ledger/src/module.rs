@@ -42,20 +42,19 @@ impl LedgerModuleImpl {
             .accounts
             .map(|a| a.into_iter().map(|v| v.into()).collect());
 
-        let storage =
-            LedgerStorage::new(&symbols, persistence_store_path, state.identity, blockchain)?
-                .with_migrations(migration_config)?
-                .with_balances(&symbols, &balances)?
-                .with_idstore(state.id_store_seed, state.id_store_keys)?
-                .with_tokens(
-                    &symbols,
-                    symbols_meta,
-                    state.token_identity,
-                    state.token_next_subresource,
-                    balances,
-                )?
-                .with_account(state.account_identity, accounts)?
-                .build()?;
+        let storage = LedgerStorage::new(persistence_store_path, blockchain)?
+            .with_migrations(migration_config)?
+            .with_balances(&state.identity, &symbols, &balances)?
+            .with_idstore(state.id_store_seed, state.id_store_keys)?
+            .with_tokens(
+                &symbols,
+                symbols_meta,
+                state.token_identity,
+                state.token_next_subresource,
+                balances,
+            )?
+            .with_account(state.account_identity, accounts)?
+            .build()?;
 
         if let Some(h) = state.hash {
             // Verify the hash.

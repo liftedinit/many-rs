@@ -1,5 +1,5 @@
 use crate::error;
-use crate::storage::{key_for_account_balance, LedgerStorage};
+use crate::storage::{key_for_account_balance, LedgerStorage, IDENTITY_ROOT, SYMBOLS_ROOT};
 use async_channel::TrySendError;
 use many_error::ManyError;
 use many_identity::Address;
@@ -22,6 +22,7 @@ use std::collections::{BTreeMap, BTreeSet};
 impl LedgerStorage {
     pub fn with_balances(
         mut self,
+        identity: &Address,
         symbols: &BTreeMap<Symbol, String>,
         initial_balances: &BTreeMap<Address, BTreeMap<Symbol, TokenAmount>>,
     ) -> Result<Self, ManyError> {
@@ -38,6 +39,15 @@ impl LedgerStorage {
                 batch.push((key, Op::Put(tokens.to_vec())));
             }
         }
+
+        batch.push((
+            IDENTITY_ROOT.as_bytes().to_vec(),
+            Op::Put(identity.to_vec()),
+        ));
+        batch.push((
+            SYMBOLS_ROOT.as_bytes().to_vec(),
+            Op::Put(minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?),
+        ));
 
         self.persistent_store
             .apply(batch.as_slice())
