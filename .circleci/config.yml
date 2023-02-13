@@ -231,12 +231,14 @@ jobs:
       - run:
           name: build docker images
           command: |
-            CPUCORES=8 UINFO=$(id -u):$(id -g) bash generate-cargo-nix.sh
+            CPUCORES=$(nproc)
+            UINFO=$(id -u):$(id -g)
+            bash generate-cargo-nix.sh
             touch ../../src/ledger/src/main.rs
             
             # many-abci
             mkdir -p genfiles-common
-            CPUCORES=8 UINFO=$(id -u):$(id -g) bash build-image.sh .#docker-many-abci
+            bash build-image.sh .#docker-many-abci
             docker load < genfiles-common/many-abci.tar.gz
           working_directory: ./docker/e2e
       - run:
