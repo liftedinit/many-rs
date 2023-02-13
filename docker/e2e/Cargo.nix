@@ -48,7 +48,7 @@ args@{
   ignoreLockHash,
 }:
 let
-  nixifiedLockHash = "baa61cb994a698a054920cd4a2db03b8768d4cdb7385eeca8717b233d9dd38cd";
+  nixifiedLockHash = "412debbd94d9927f24471df6181f354fc9ddfd7d6db43f574e535bb3761f9cf5";
   workspaceSrc = if args.workspaceSrc == null then ./. else args.workspaceSrc;
   currentLockHash = builtins.hashFile "sha256" (workspaceSrc + /Cargo.lock);
   lockHashIgnored = if ignoreLockHash
@@ -4389,7 +4389,7 @@ in
       url = https://github.com/liftedinit/merk.git;
       name = "merk";
       version = "2.0.0";
-      rev = "3d509c8efd3a68d85a5769f7fff300e10290d137";};
+      rev = "857bf81963d9282ab03438da5013e1f816bd9da1";};
     features = builtins.concatLists [
       [ "blake3" ]
       [ "byteorder" ]
@@ -4407,6 +4407,7 @@ in
       blake3 = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".blake3."0.3.8" { inherit profileName; }).out;
       byteorder = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".byteorder."1.4.3" { inherit profileName; }).out;
       colored = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".colored."2.0.0" { inherit profileName; }).out;
+      digest = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".digest."0.9.0" { inherit profileName; }).out;
       ed = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".ed."0.3.0" { inherit profileName; }).out;
       hex = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".hex."0.4.3" { inherit profileName; }).out;
       num_cpus = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".num_cpus."1.15.0" { inherit profileName; }).out;
