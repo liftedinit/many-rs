@@ -3002,7 +3002,7 @@ in
     name = "http_proxy";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/http_proxy");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/http_proxy");
     dependencies = {
       clap = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".clap."3.2.23" { inherit profileName; }).out;
       hex = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".hex."0.4.3" { inherit profileName; }).out;
@@ -3172,7 +3172,7 @@ in
     name = "idstore-export";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/idstore-export");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/idstore-export");
     dependencies = {
       base64 = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".base64."0.20.0" { inherit profileName; }).out;
       clap = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".clap."3.2.23" { inherit profileName; }).out;
@@ -3390,7 +3390,7 @@ in
     name = "kvstore";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/kvstore");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/kvstore");
     dependencies = {
       clap = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".clap."3.2.23" { inherit profileName; }).out;
       hex = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".hex."0.4.3" { inherit profileName; }).out;
@@ -3429,7 +3429,7 @@ in
     name = "ledger";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/ledger");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/ledger");
     dependencies = {
       clap = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".clap."3.2.23" { inherit profileName; }).out;
       crc_any = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".crc-any."2.4.3" { inherit profileName; }).out;
@@ -3465,7 +3465,7 @@ in
     name = "ledger-db";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/ledger-db");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/ledger-db");
     dependencies = {
       clap = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".clap."3.2.23" { inherit profileName; }).out;
       hex = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".hex."0.4.3" { inherit profileName; }).out;
@@ -3671,7 +3671,7 @@ in
     name = "many";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many");
     dependencies = {
       anyhow = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".anyhow."1.0.68" { inherit profileName; }).out;
       async_recursion = (buildRustPackages."registry+https://github.com/rust-lang/crates.io-index".async-recursion."1.0.2" { profileName = "__noProfile"; }).out;
@@ -3706,7 +3706,7 @@ in
     name = "many-abci";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-abci");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-abci");
     dependencies = {
       async_trait = (buildRustPackages."registry+https://github.com/rust-lang/crates.io-index".async-trait."0.1.64" { profileName = "__noProfile"; }).out;
       ciborium = (rustPackages."git+https://github.com/enarx/ciborium".ciborium."0.2.0" { inherit profileName; }).out;
@@ -3750,7 +3750,7 @@ in
     name = "many-client";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-client");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-client");
     features = builtins.concatLists [
       (lib.optional (rootFeatures' ? "many-client/client") "client")
       [ "default" ]
@@ -3801,7 +3801,7 @@ in
     name = "many-client-macros";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-client-macros");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-client-macros");
     dependencies = {
       proc_macro2 = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".proc-macro2."1.0.50" { inherit profileName; }).out;
       quote = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".quote."1.0.23" { inherit profileName; }).out;
@@ -3813,7 +3813,7 @@ in
     name = "many-error";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-error");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-error");
     features = builtins.concatLists [
       (lib.optional (rootFeatures' ? "many-error/backtrace" || rootFeatures' ? "many-error/trace_error_creation") "backtrace")
       [ "default" ]
@@ -3835,7 +3835,7 @@ in
     name = "many-identity";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-identity");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-identity");
     features = builtins.concatLists [
       [ "coset" ]
       [ "default" ]
@@ -3870,7 +3870,7 @@ in
     name = "many-identity-dsa";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-identity-dsa");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-identity-dsa");
     features = builtins.concatLists [
       [ "coset" ]
       [ "default" ]
@@ -3916,7 +3916,7 @@ in
     name = "many-identity-hsm";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-identity-hsm");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-identity-hsm");
     dependencies = {
       asn1 = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".asn1."0.10.0" { inherit profileName; }).out;
       coset = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".coset."0.3.4" { inherit profileName; }).out;
@@ -3938,7 +3938,7 @@ in
     name = "many-identity-webauthn";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-identity-webauthn");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-identity-webauthn");
     features = builtins.concatLists [
       [ "default" ]
       [ "identity" ]
@@ -3976,7 +3976,7 @@ in
     name = "many-kvstore";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-kvstore");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-kvstore");
     dependencies = {
       async_trait = (buildRustPackages."registry+https://github.com/rust-lang/crates.io-index".async-trait."0.1.64" { profileName = "__noProfile"; }).out;
       clap = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".clap."3.2.23" { inherit profileName; }).out;
@@ -4022,7 +4022,7 @@ in
     name = "many-ledger";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-ledger");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-ledger");
     features = builtins.concatLists [
       [ "balance_testing" ]
       [ "disable_token_sender_check" ]
@@ -4093,7 +4093,7 @@ in
     name = "many-ledger-test-macros";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-ledger/test-macros");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-ledger/test-macros");
     dependencies = {
       quote = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".quote."1.0.23" { inherit profileName; }).out;
       syn = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".syn."1.0.107" { inherit profileName; }).out;
@@ -4104,7 +4104,7 @@ in
     name = "many-ledger-test-utils";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-ledger/test-utils");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-ledger/test-utils");
     dependencies = {
       coset = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".coset."0.3.4" { inherit profileName; }).out;
       cucumber = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".cucumber."0.17.0" { inherit profileName; }).out;
@@ -4132,7 +4132,7 @@ in
     name = "many-macros";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-macros");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-macros");
     dependencies = {
       inflections = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".inflections."1.1.1" { inherit profileName; }).out;
       proc_macro2 = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".proc-macro2."1.0.50" { inherit profileName; }).out;
@@ -4147,7 +4147,7 @@ in
     name = "many-migration";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-migration");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-migration");
     dependencies = {
       many_error = (rustPackages."unknown".many-error."0.1.0" { inherit profileName; }).out;
       minicbor = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".minicbor."0.18.0" { inherit profileName; }).out;
@@ -4165,7 +4165,7 @@ in
     name = "many-mock";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-mock");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-mock");
     dependencies = {
       async_trait = (buildRustPackages."registry+https://github.com/rust-lang/crates.io-index".async-trait."0.1.64" { profileName = "__noProfile"; }).out;
       cbor_diag = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".cbor-diag."0.1.11" { inherit profileName; }).out;
@@ -4195,7 +4195,7 @@ in
     name = "many-modules";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-modules");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-modules");
     features = builtins.concatLists [
       [ "cucumber" ]
     ];
@@ -4230,7 +4230,7 @@ in
     name = "many-protocol";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-protocol");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-protocol");
     dependencies = {
       base64 = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".base64."0.13.1" { inherit profileName; }).out;
       coset = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".coset."0.3.4" { inherit profileName; }).out;
@@ -4260,7 +4260,7 @@ in
     name = "many-server";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-server");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-server");
     features = builtins.concatLists [
       (lib.optional (rootFeatures' ? "many-server/backtrace" || rootFeatures' ? "many-server/trace_error_creation") "backtrace")
       (lib.optional (rootFeatures' ? "many-server/client") "client")
@@ -4330,7 +4330,7 @@ in
     name = "many-types";
     version = "0.1.0";
     registry = "unknown";
-    src = fetchCrateLocal (workspaceSrc + "/src/many-types");
+    src = fetchCrateLocal (workspaceSrc + "/../../src/many-types");
     features = builtins.concatLists [
       [ "cucumber" ]
       [ "proptest" ]

@@ -216,7 +216,6 @@ jobs:
     steps:
 #      - docker/check
       - checkout
-#      - setup_remote_docker
       - restore_cache:
           keys:
             - nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "Cargo.lock" }}
