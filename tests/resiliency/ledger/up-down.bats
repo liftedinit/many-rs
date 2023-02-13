@@ -8,7 +8,7 @@ function setup() {
     mkdir "$BATS_TEST_ROOTDIR"
 
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit
+      cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
       make -f $MAKEFILE $(ciopt start-nodes-dettached) ABCI_TAG=$(img_tag) LEDGER_TAG=$(img_tag) ID_WITH_BALANCES="$(identity 1):1000000" || {
         echo Could not start nodes... >&3
@@ -17,17 +17,12 @@ function setup() {
     ) > /dev/null
 
     # Give time to the servers to start.
-    sleep 30
-    timeout 30s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
-      sleep 1
-    done >/dev/null
-EOT
+    timeout 60s bash -c probe_server
 }
 
 function teardown() {
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit 1
+      cd "$GIT_ROOT/docker/" || exit 1
       make -f $MAKEFILE stop-nodes
     ) 2> /dev/null
 
@@ -60,7 +55,7 @@ function teardown() {
 }
 
 @test "$SUITE: Network is consistent with 1 node down" {
-    cd "$GIT_ROOT/docker/e2e/" || exit 1
+    cd "$GIT_ROOT/docker/" || exit 1
 
     # Bring down node 3.
     make -f $MAKEFILE stop-single-node-3
@@ -90,7 +85,7 @@ function teardown() {
 
     # Give time to the servers to start.
     timeout 60s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8003 status; do
+    while ! bazel run //src/many message -- --server http://localhost:8003 status; do
       sleep 1
     done >/dev/null
 EOT

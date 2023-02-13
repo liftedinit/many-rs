@@ -24,7 +24,7 @@ function start_ledger() {
         esac
     done
 
-    run_in_background "$GIT_ROOT/target/debug/many-ledger" \
+    run_in_background bazel run $MANY_BAZEL_OPTIONS //src/many-ledger $MANY_FEATURES -- \
         -v \
         $clean \
         --persistent "$persistent" \
@@ -48,10 +48,10 @@ function call_ledger() {
       esac
     done
 
-    echo "$GIT_ROOT/target/debug/ledger $pem_arg http://localhost:${port}/ $*" >&2
+    echo "bazel run //src/ledger $MANY_BAZEL_OPTIONS $MANY_FEATURES -- $pem_arg http://localhost:${port}/ $*" >&2
     # `run` doesn't handle empty parameters well, i.e., $pem_arg is empty
     # We need to use `bash -c` to fix the issue
-    run bash -c "$GIT_ROOT/target/debug/ledger $pem_arg http://localhost:${port}/ $*"
+    run bash -c "bazel run //src/ledger $MANY_BAZEL_OPTIONS $MANY_FEATURES -- $pem_arg http://localhost:${port}/ $*"
 }
 
 function check_consistency() {

@@ -51,17 +51,7 @@ jobs:
                     --output_groups=+clippy_checks \
                     --test_env=PKCS11_SOFTHSM2_MODULE \
                     --test_env=SOFTHSM2_CONF \
-                    -- //... -//:many-rs-tar
-            - run:
-                name: build for bats
-                command: |
-                    bazel build \
-                    --jobs=8 \
-                    --config=remote-cache \
-                    --balance_testing \
-                    --migration_testing \
-                    --webauthn_testing \
-                    -- //... -//:many-rs-tar
+                    -- //... -//:many-rs-tar -//:docker
       - when:
           condition:
             equal: [ "macos", << parameters.os >> ]
@@ -74,26 +64,7 @@ jobs:
                     --jobs=4 \
                     --config=remote-cache \
                     --config=all-features \
-                    -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test
-            - run:
-                name: build for bats
-                command: |
-                  bazel build \
-                    --jobs=4 \
-                    --config=remote-cache \
-                    --balance_testing \
-                    --migration_testing \
-                    --webauthn_testing \
-                    -- //... -//:many-rs-tar
-      - run:
-          name: copy binaries to workspace
-          command: |
-            mkdir -p target/debug
-            bazel cquery "kind(rust_binary, //... except filter("build_script_", //...))" --output=files | xargs -I % cp % target/debug/
-      - persist_to_workspace:
-          root: target
-          paths:
-            - "*"
+                    -- //... -//:many-rs-tar -//src/many-identity-hsm:many-identity-hsm-test -//:docker
 
   # Run e2e bats tests using the binaries build from the previous step.
   bats:
@@ -103,13 +74,6 @@ jobs:
     executor: << parameters.os >>
     steps:
       - checkout
-      - attach_workspace:
-          at: ~/project/target
-      - when:
-          condition:
-            equal: [ "macos", << parameters.os >> ]
-          steps:
-            - rust/install
       - prepare_bats
       - run:
           name: running BATs tests
@@ -137,7 +101,7 @@ jobs:
               --test_env=PKCS11_SOFTHSM2_MODULE \
               --test_env=SOFTHSM2_CONF \
               --combined_report=lcov \
-              -- //... -//:many-rs-tar
+              -- //... -//:many-rs-tar -//:docker
       - codecov/upload:
           file: $(bazel info output_path)/_coverage/_coverage_report.dat
 
@@ -210,45 +174,22 @@ jobs:
   # Publish nightly Docker images. Used in resiliency tests.
   # TODO: Refactor to Bazel
   publish_nightly_docker:
-    docker:
-      - image: nixos/nix
     resource_class: xlarge
     steps:
 #      - docker/check
       - checkout
-      - restore_cache:
-          keys:
-            - nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "Cargo.lock" }}
-      - run:
-          name: restoring `nix-store`
-          command: |
-            if [[ -f "backup.tar" ]]; then
-              docker run --rm -v nix-store:/nix -v $(pwd):/backup ubuntu tar xf /backup/backup.tar -C /
-            else
-              echo "nix-store backup unavailable; skipping."
-            fi
       - run:
           name: build docker images
-          command: |
-            export CPUCORES=$(nproc)
-            export UINFO=$(id -u):$(id -g)
-            bash generate-cargo-nix.sh
-            touch ../../src/ledger/src/main.rs
-            
-            # many-abci
-            mkdir -p genfiles-common
-            bash build-image.sh .#docker-many-abci
-            docker load < genfiles-common/many-abci.tar.gz
-          working_directory: ./docker/e2e
+          command: make docker
       - run:
           name: tag docker images
           command: |
             docker tag lifted/many-abci:latest lifted/many-abci:nightly
             docker tag lifted/many-abci:latest lifted/many-abci:$CIRCLE_SHA1
-#            docker tag lifted/many-ledger:latest lifted/many-ledger:nightly
-#            docker tag lifted/many-kvstore:latest lifted/many-kvstore:nightly
-#            docker tag lifted/many-ledger:latest lifted/many-ledger:$CIRCLE_SHA1
-#            docker tag lifted/many-kvstore:latest lifted/many-kvstore:$CIRCLE_SHA1
+            docker tag lifted/many-ledger:latest lifted/many-ledger:nightly
+            docker tag lifted/many-ledger:latest lifted/many-ledger:$CIRCLE_SHA1
+            docker tag lifted/many-kvstore:latest lifted/many-kvstore:nightly
+            docker tag lifted/many-kvstore:latest lifted/many-kvstore:$CIRCLE_SHA1
 #      - docker/push:
 #          image: many-abci
 #          registry: lifted
@@ -264,28 +205,12 @@ jobs:
 #          registry: lifted
 #          tag: "nightly,$CIRCLE_SHA1"
 #          step-name: "docker push lifted/many-kvstore"
-      - run:
-          name: exporting `nix-store` docker volume
-          command: |
-            docker run --rm -v nix-store:/nix -v $(pwd):/backup ubuntu tar cf /backup/backup.tar /nix
-      - save_cache:
-          key: nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ checksum "Cargo.lock" }}
-          paths:
-            - backup.tar
 
   # Perform resiliency testing
   resiliency_tests:
     executor: linux2204
     steps:
       - checkout
-      - run:
-          name: build
-          command: |
-            bazel build \
-              --jobs=8 \
-              --config=remote-cache \
-              --config=all-features \
-              -- //... -//:many-rs-tar
       - prepare_bats
       - docker/pull:
           images: "lifted/many-ledger:nightly,lifted/many-kvstore:nightly,lifted/many-abci:nightly"
@@ -385,6 +310,11 @@ commands:
   prepare_bats:
     description: prepare environment for bats testing
     steps:
+      - when:
+          condition:
+            equal: [ "macos", << parameters.os >> ]
+          steps:
+            - rust/install
       # TODO: We should create a binary release of cbor-diag-cli instead of installing Rust and building it every time
       - run:
           name: install cbor-diag

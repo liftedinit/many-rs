@@ -9,7 +9,7 @@ function setup() {
     mkdir "$BATS_TEST_ROOTDIR"
 
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit
+      cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
       for i in {0..2}
       do
@@ -21,17 +21,12 @@ function setup() {
     ) > /dev/null
 
     # Give time to the servers to start.
-    sleep 30
-    timeout 60s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
-      sleep 1
-    done >/dev/null
-EOT
+    timeout 60s bash -c probe_server
 }
 
 function teardown() {
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit 1
+      cd "$GIT_ROOT/docker/" || exit 1
       make -f $MAKEFILE stop-nodes
     ) 2> /dev/null
 
@@ -64,7 +59,7 @@ function teardown() {
     check_consistency --pem=1 --balance=990000 --id="$(identity 1)" 8000 8001 8002
     check_consistency --pem=2 --balance=10000 --id="$(identity 2)" 8000 8001 8002
 
-    cd "$GIT_ROOT/docker/e2e/" || exit 1
+    cd "$GIT_ROOT/docker/" || exit 1
 
     sleep 300
 
@@ -77,7 +72,7 @@ function teardown() {
     # Give the 4th node some time to boot
     sleep 30
     timeout 30s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8003 status; do
+    while ! bazel run //src/many message -- --server http://localhost:8003 status; do
       sleep 1
     done >/dev/null
 EOT

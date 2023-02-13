@@ -1,21 +1,13 @@
-CPUCORES ?= $$(docker run --rm nixos/nix nproc)
-VOLUME = $(abspath $(dir $(abspath $(dir $(abspath $(dir $$PWD))))))
-UINFO = $$(id -u):$$(id -g)
 SHELL = bash
 
 .PHONY: lockfile
 lockfile:
-	cd ../..; cargo fetch
+	cd ..; cargo fetch
 
-../../Cargo.lock: lockfile
+../Cargo.lock: lockfile
 
-Cargo.nix: lockfile
-	docker run --rm -e CPUCORES=$(CPUCORES) -e UINFO=$(UINFO) \
-	           -v nix-store:/nix \
-	           -v $(VOLUME):/volume/many-rs \
-	           -w /volume/many-rs/docker/e2e \
-	           nixos/nix bash generate-cargo-nix.sh
-	touch ../../src/ledger/src/main.rs
+.PHONY: docker
+docker: many/many-abci many/many-kvstore many/many-ledger
 
 .PHONY: many/many-abci
 many/many-abci:

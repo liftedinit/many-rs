@@ -4,6 +4,7 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
 MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
+MANY_FEATURES=--config=all-features
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -13,10 +14,6 @@ function setup() {
 
     skip_if_missing_background_utilities
 
-#    (
-#      cd "$GIT_ROOT"
-#      cargo build --all-features
-#    )
     jq '(.migrations[] | select(.name == "Token Migration")).block_height |= 0 |
         (.migrations[] | select(.name == "Token Migration")).disabled |= empty' \
         "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"

@@ -9,12 +9,10 @@
 # $1 : The output directory
 # $2 : The directory containing the PEM files to extract the MANY addresses from.
 #      The MANY addresses will be added to the JSON list
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-
 echo "[]" > ${1}/allow_addrs.json5
 
 for i in ${2}/*.pem;
 do
-    jq --arg id "$("$SCRIPT_DIR/../../target/debug/many" id "${i}")" '. += [$id]' < "${1}"/allow_addrs.json5 > "${1}"/allow_addrs_tmp.json5
+    jq --arg id "$(bazel run //src/many -- id "${i}")" '. += [$id]' < "${1}"/allow_addrs.json5 > "${1}"/allow_addrs_tmp.json5
     mv ${1}/allow_addrs_tmp.json5 ${1}/allow_addrs.json5
 done

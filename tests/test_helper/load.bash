@@ -1,4 +1,4 @@
-function timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
+MANY_BAZEL_OPTIONS="--noshow_progress --ui_event_filters=error --config=remote-cache"
 
 # Do not regen Docker images on CI.
 # Docker images will be pulled by CI.
@@ -25,7 +25,7 @@ function generate_allow_addrs_config() {
     echo "[]" > "$CONFIG_ROOT"/allow_addrs.json5
     for i in "$PEM_ROOT"/*.pem;
     do
-        jq --arg id "$("$GIT_ROOT/target/debug/many" id "${i}")" '. += [$id]' < "$CONFIG_ROOT"/allow_addrs.json5 > "$CONFIG_ROOT"/allow_addrs_tmp.json5
+        jq --arg id "$(call_many id "${i}")" '. += [$id]' < "$CONFIG_ROOT"/allow_addrs.json5 > "$CONFIG_ROOT"/allow_addrs_tmp.json5
         mv "$CONFIG_ROOT"/allow_addrs_tmp.json5 "$CONFIG_ROOT"/allow_addrs.json5
     done
     echo "$CONFIG_ROOT"/allow_addrs.json5

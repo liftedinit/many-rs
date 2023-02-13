@@ -14,7 +14,7 @@ function setup() {
 
 function teardown() {
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit 1
+      cd "$GIT_ROOT/docker/" || exit 1
       make -f $MAKEFILE stop-nodes
     ) 2> /dev/null
 
@@ -51,7 +51,7 @@ function teardown() {
     sed -i.bak 's/hash/\/\/hash/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit
+      cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
       make -f $MAKEFILE $(ciopt start-nodes-dettached) \
           ABCI_TAG=$(img_tag) \
@@ -65,12 +65,7 @@ function teardown() {
     ) > /dev/null
 
     # Give time to the servers to start.
-    sleep 30
-    timeout 30s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
-      sleep 1
-    done >/dev/null
-EOT
+    timeout 60s bash -c probe_server
 
     wait_for_block 20
 
@@ -107,7 +102,7 @@ EOT
     sed -i.bak 's/hash/\/\/hash/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit
+      cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
       make -f $MAKEFILE $(ciopt start-nodes-dettached) \
           ABCI_TAG=$(img_tag) \
@@ -123,7 +118,7 @@ EOT
     # Give time to the servers to start.
     sleep 30
     timeout 30s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
+    while ! bazel run //src/many message -- --server http://localhost:8000 status; do
       sleep 1
     done >/dev/null
 EOT

@@ -32,7 +32,6 @@ local abci(i, user, abci_tag, allow_addrs) = {
     volumes: [ "./node" + i + ":/genfiles:ro" ],
     user: "" + user,
     command: [
-        "many-abci",
         "--verbose", "--verbose",
         "--many", "0.0.0.0:8000",
         "--many-app", "http://ledger-" + i + ":8000",
@@ -51,7 +50,6 @@ local ledger(i, user, id_with_balances, ledger_tag, enable_migrations) = {
         "./node" + i + ":/genfiles:ro",
     ],
     command: [
-        "many-ledger",
         "--verbose", "--verbose",
         "--abci",
         "--state=/genfiles/ledger_state.json5",

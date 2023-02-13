@@ -1,5 +1,6 @@
 KVSTORE_TAG ?= "latest"
 ALLOW_ADDRS ?= false
+FEATURES ?=
 
 include Makefile.common
 
@@ -19,13 +20,10 @@ genfiles-kvstore/generate-allow-addrs-config:
 	done
 	mkdir -p $(dir $@) && touch $@
 
-genfiles-kvstore/many-kvstore.tar.gz: $(shell find ../../src -type f) flake.nix flake.lock
-	@mkdir -p genfiles-kvstore
-	$(BUILDER_COMMAND) .#docker-many-kvstore
-
-.PHONY: many/many-kvstore
-many/many-kvstore: genfiles-kvstore/many-kvstore.tar.gz
-	docker load < genfiles-kvstore/many-kvstore.tar.gz
+many/many-kvstore:
+	bazel build --config=remote-cache $(FEATURES) //src/many-kvstore:many-kvstore-image.tar
+	docker load < ../$(shell bazel cquery $(FEATURES) //src/many-kvstore:many-kvstore-image.tar --output=files)
+	docker tag bazel/src/many-kvstore:many-kvstore-image lifted/many-kvstore:latest
 
 genfiles-kvstore/docker-compose.json: genfiles-common/jsonnet-docker docker-compose-kvstore.jsonnet
 	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-kvstore:/genfiles-kvstore" bitnami/jsonnet \

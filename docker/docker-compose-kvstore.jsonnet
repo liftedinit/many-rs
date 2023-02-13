@@ -12,7 +12,6 @@ local abci(i, user, abci_tag, allow_addrs) = {
     volumes: [ "./node" + i + ":/genfiles:ro" ],
     user: "" + user,
     command: [
-        "many-abci",
         "--verbose", "--verbose",
         "--many", "0.0.0.0:8000",
         "--many-app", "http://kvstore-" + i + ":8000",
@@ -31,7 +30,6 @@ local kvstore(i, user, kvstore_tag) = {
         "./node" + i + ":/genfiles:ro",
     ],
     command: [
-        "many-kvstore",
         "--verbose", "--verbose",
         "--abci",
         "--state=/genfiles/kvstore_state.json5",

@@ -12,7 +12,7 @@ function setup() {
     pem 2
 
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit
+      cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
       # Generate the `allow addrs` config file using the PEM files from $PEM_ROOT
       make -f $MAKEFILE genfiles-ledger/generate-allow-addrs-config PEM_ROOT=$PEM_ROOT
@@ -24,17 +24,12 @@ function setup() {
     ) > /dev/null
 
     # Give time to the servers to start.
-    sleep 30
-    timeout 60s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
-      sleep 1
-    done >/dev/null
-EOT
+    timeout 60s bash -c probe_server
 }
 
 function teardown() {
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit 1
+      cd "$GIT_ROOT/docker/" || exit 1
       make -f $MAKEFILE stop-nodes
     ) 2> /dev/null
 
@@ -70,5 +65,5 @@ function teardown() {
     # Even anonymous
     check_consistency --balance=1000 --id="$(identity 3)" 8000 8001 8002 8003
 
-    cd "$GIT_ROOT/docker/e2e/" || exit 1
+    cd "$GIT_ROOT/docker/" || exit 1
 }

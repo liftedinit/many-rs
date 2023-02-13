@@ -1,4 +1,5 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
+MANY_FEATURES=--config=all-features
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -23,11 +24,6 @@ function setup() {
     mkdir "$BATS_TEST_ROOTDIR"
 
     skip_if_missing_background_utilities
-
-#    (
-#      cd "$GIT_ROOT"
-#      cargo build --all-features
-#    )
 }
 
 function teardown() {

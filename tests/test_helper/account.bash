@@ -9,7 +9,7 @@ function account_create() {
     done
 
     account_id="$(many_message "$pem_arg" account.create "$@" | grep -o "h'[0-9a-z]*'" | grep -oE "[0-9a-z][0-9a-z]+")"
-    account_many_id=$("$GIT_ROOT/target/debug/many" id "$account_id")
+    account_many_id=$(call_many id "$account_id")
     assert [ "${account_many_id::1}" = "m" ]  # Check the account ID starts with an "m"
     assert [ ${#account_many_id} -eq 55 ]     # Check the account ID has the right length
     echo "${account_many_id}"

@@ -1,6 +1,13 @@
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load(":rules.bzl", "basic_naming")
 
+# Visibility for Docker image
+package(default_visibility = [
+    "//src/many-abci:__pkg__",
+    "//src/many-kvstore:__pkg__",
+    "//src/many-ledger:__pkg__",
+])
+
 exports_files(["staging/kvstore_state.json5"])
 
 exports_files(["staging/ledger_state.json5"])
@@ -8,6 +15,7 @@ exports_files(["staging/ledger_state.json5"])
 # Required for Vergen
 exports_files([".git"])
 
+## PACKAGE CONFIGURATION ##
 # TODO: Get the version from the Cargo manifest
 VERSION = "0.1.0"
 
@@ -35,3 +43,55 @@ pkg_tar(
     package_file_name = "{product_name}-{version}-{compilation_mode}.tar.gz",
     package_variables = ":package-naming",
 )
+## END PACKAGE CONFIGURATION ##
+
+## DOCKER BASE IMAGE CONFIGURATION ##
+filegroup(
+    name = "docker",
+    srcs = [
+        "//src/many-abci:many-abci-image",
+        "//src/many-kvstore:many-kvstore-image",
+        "//src/many-ledger:many-ledger-image",
+    ],
+)
+
+filegroup(
+    name = "bins",
+    srcs = [
+        "//src/http_proxy",
+        "//src/idstore-export",
+        "//src/kvstore",
+        "//src/ledger",
+        "//src/ledger-db",
+        "//src/many",
+        "//src/many-abci",
+        "//src/many-kvstore",
+        "//src/many-ledger",
+    ],
+)
+
+load(
+    "@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl",
+    "download_pkgs",
+)
+
+# Install openssl3 in the base image
+download_pkgs(
+    name = "ubuntu_download",
+    image_tar = "@ubuntu_base//image",
+    packages = ["libssl3"],
+)
+
+load(
+    "@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl",
+    "install_pkgs",
+)
+
+install_pkgs(
+    name = "ubuntu_image",
+    image_tar = "@ubuntu_base//image",
+    installables_tar = ":ubuntu_download.tar",
+    installation_cleanup_commands = "rm -rf /var/lib/apt/lists/*",
+    output_image_name = "many_docker_ubuntu_image",
+)
+## END DOCKER BASE IMAGE CONFIGURATION ##

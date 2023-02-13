@@ -1,6 +1,7 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 START_BALANCE=100000000000
 MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
+MANY_FEATURES=--config=all-features
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -9,11 +10,6 @@ function setup() {
     mkdir "$BATS_TEST_ROOTDIR"
 
     skip_if_missing_background_utilities
-
-#    (
-#      cd "$GIT_ROOT"
-#      cargo build --all-features
-#    )
 
     start_ledger --pem "$(pem 0)" \
           "--balance-only-for-testing=$(identity 1):$START_BALANCE:$MFX_ADDRESS" \

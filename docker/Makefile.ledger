@@ -2,6 +2,7 @@ LEDGER_TAG ?= "latest"
 MIGRATIONS ?=
 ALLOW_ADDRS ?= false
 STATE ?= "ledger_state.json"
+FEATURES ?= --balance_testing --migration_testing --webauthn_testing
 
 ENABLE_MIGRATIONS := false
 ifdef MIGRATIONS
@@ -26,13 +27,10 @@ genfiles-ledger/generate-allow-addrs-config:
 	done
 	mkdir -p $(dir $@) && touch $@
 
-genfiles-ledger/many-ledger.tar.gz: $(shell find ../../src -type f) flake.nix flake.lock
-	@mkdir -p genfiles-ledger
-	$(BUILDER_COMMAND) .#docker-many-ledger
-
-.PHONY: many/many-ledger
-many/many-ledger: genfiles-ledger/many-ledger.tar.gz
-	docker load < genfiles-ledger/many-ledger.tar.gz
+many/many-ledger:
+	bazel build --config=remote-cache $(FEATURES) //src/many-ledger:many-ledger-image.tar
+	docker load < ../$(shell bazel cquery $(FEATURES) //src/many-ledger:many-ledger-image.tar --output=files)
+	docker tag bazel/src/many-ledger:many-ledger-image lifted/many-ledger:latest
 
 genfiles-ledger/docker-compose.json: genfiles-common/jsonnet-docker docker-compose-ledger.jsonnet
 	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-ledger:/genfiles-ledger" bitnami/jsonnet \
