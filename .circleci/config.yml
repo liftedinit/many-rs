@@ -74,6 +74,11 @@ jobs:
     executor: << parameters.os >>
     steps:
       - checkout
+      - when:
+          condition:
+            equal: [ "macos", << parameters.os >> ]
+          steps:
+            - rust/install
       - prepare_bats
       - run:
           name: running BATs tests
@@ -174,7 +179,7 @@ jobs:
   # Publish nightly Docker images. Used in resiliency tests.
   # TODO: Refactor to Bazel
   publish_nightly_docker:
-    resource_class: xlarge
+    executor: linux2204
     steps:
 #      - docker/check
       - checkout
@@ -310,11 +315,6 @@ commands:
   prepare_bats:
     description: prepare environment for bats testing
     steps:
-      - when:
-          condition:
-            equal: [ "macos", << parameters.os >> ]
-          steps:
-            - rust/install
       # TODO: We should create a binary release of cbor-diag-cli instead of installing Rust and building it every time
       - run:
           name: install cbor-diag
