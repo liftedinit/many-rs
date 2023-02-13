@@ -231,8 +231,8 @@ jobs:
       - run:
           name: build docker images
           command: |
-            CPUCORES=$(nproc)
-            UINFO=$(id -u):$(id -g)
+            export CPUCORES=$(nproc)
+            export UINFO=$(id -u):$(id -g)
             bash generate-cargo-nix.sh
             touch ../../src/ledger/src/main.rs
             
