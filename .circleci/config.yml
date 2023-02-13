@@ -219,6 +219,7 @@ jobs:
     executor: linux2204_machine
     steps:
       - checkout
+      - rust/install
       - prepare_bats
       - docker/pull:
           images: "lifted/many-ledger:nightly,lifted/many-kvstore:nightly,lifted/many-abci:nightly"
