@@ -24,13 +24,13 @@ function start_ledger() {
         esac
     done
 
-    run_in_background "$MANY_BAZEL_SCRIPT_DIR/many-ledger" \
+    run_in_background many-ledger \
         -v \
         $clean \
         --persistent "$persistent" \
         --state "$state" \
         "$@"
-    wait_for_background_output "$background_output" 10
+    wait_for_background_output "$background_output"
 }
 
 # Do not rename this function `ledger`.
@@ -48,10 +48,10 @@ function call_ledger() {
       esac
     done
 
-    echo "$MANY_BAZEL_SCRIPT_DIR/ledger $pem_arg http://localhost:${port}/ $*" >&2
+    echo "ledger $pem_arg http://localhost:${port}/ $*" >&2
     # `run` doesn't handle empty parameters well, i.e., $pem_arg is empty
     # We need to use `bash -c` to fix the issue
-    run bash -c "$MANY_BAZEL_SCRIPT_DIR/ledger $pem_arg http://localhost:${port}/ $*"
+    run bash -c "ledger $pem_arg http://localhost:${port}/ $*"
 }
 
 function check_consistency() {

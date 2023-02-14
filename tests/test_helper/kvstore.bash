@@ -19,7 +19,7 @@ function start_kvstore() {
         esac
     done
 
-    run_in_background "$MANY_BAZEL_SCRIPT_DIR/many-kvstore" \
+    run_in_background many-kvstore \
         -v \
         $clean \
         --persistent "$persistent" \
@@ -43,10 +43,10 @@ function call_kvstore() {
       esac
     done
 
-    echo "$MANY_BAZEL_SCRIPT_DIR/kvstore $pem_arg http://localhost:${port}/ $*" >&2
+    echo "kvstore $pem_arg http://localhost:${port}/ $*" >&2
     # `run` doesn't handle empty parameters well, i.e., $pem_arg is empty
     # We need to use `bash -c` to this the issue
-    run bash -c "$MANY_BAZEL_SCRIPT_DIR/kvstore $pem_arg http://localhost:${port}/ $*"
+    run bash -c "kvstore $pem_arg http://localhost:${port}/ $*"
 }
 
 function check_consistency() {

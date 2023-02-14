@@ -4,6 +4,9 @@ load '../../test_helper/load'
 load '../../test_helper/kvstore'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     skip_if_missing_background_utilities
@@ -13,14 +16,6 @@ function setup() {
 
 function teardown() {
     stop_background_run
-}
-
-function setup_file() {
-    create_binary_links
-}
-
-function teardown_file() {
-    remove_binary_links
 }
 
 @test "$SUITE: can put and get data" {

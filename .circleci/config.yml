@@ -3,7 +3,6 @@
 version: 2.1
 
 orbs:
-  bats: circleci/bats@1.1.0
   codecov: codecov/codecov@3.2.4
   detect: circleci/os-detect@0.3.0
   docker: circleci/docker@2.2.0
@@ -83,9 +82,11 @@ jobs:
             - rust/install
       - prepare_bats
       - run:
-          name: running BATs tests
-          command: bats kvstore/*
-          working_directory: ./tests/e2e/
+          name: running tests
+          command: |
+              bazel run --config=all-features --config=remote-cache //:bats-kvstore
+              bazel run --config=all-features --config=remote-cache //:bats-ledger
+              bazel run --balance_testing --migration_testing --config=remote-cache //:bats-ledger-tokens
 
   # Compute code coverage and push the results to CodeCov.
   coverage:
@@ -323,7 +324,6 @@ commands:
       - run:
           name: install cbor-diag
           command: cargo install --force cbor-diag-cli
-      - bats/install
 
 workflows:
   ci:

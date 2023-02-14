@@ -1,5 +1,4 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
-MANY_FEATURES=--config=all-features
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -21,6 +20,9 @@ function assert_idstore() {
 }
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     skip_if_missing_background_utilities
@@ -28,14 +30,6 @@ function setup() {
 
 function teardown() {
     stop_background_run
-}
-
-function setup_file() {
-    create_binary_links
-}
-
-function teardown_file() {
-    remove_binary_links
 }
 
 @test "$SUITE: IdStore store and get" {
@@ -90,7 +84,7 @@ function teardown_file() {
     # Export to a temp file.
     local export_file
     export_file="$(mktemp)"
-    "$MANY_BAZEL_SCRIPT_DIR/idstore-export" "$ledger_db" > "$export_file"
+    idstore-export "$ledger_db" > "$export_file"
     local import_file
     import_file="$(mktemp)"
     jq -s '.[0] * .[1]' "$state" "$export_file" > "$import_file"

@@ -1,12 +1,14 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 START_BALANCE=1000000
 MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
-MANY_FEATURES=--config=all-features
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     skip_if_missing_background_utilities
@@ -20,14 +22,6 @@ function setup() {
 
 function teardown() {
     stop_background_run
-}
-
-function setup_file() {
-    create_binary_links
-}
-
-function teardown_file() {
-    remove_binary_links
 }
 
 @test "$SUITE: allow addrs" {

@@ -99,3 +99,90 @@ install_pkgs(
     tags = ["manual"],
 )
 ## END DOCKER BASE IMAGE CONFIGURATION ##
+
+## BATS SECTION ##
+load("@bazel_bats//:rules.bzl", "bats_test")
+
+sh_library(
+    name = "bats-helpers",
+    srcs = [
+        "tests/test_helper/account.bash",
+        "tests/test_helper/bats-utils",
+        "tests/test_helper/kvstore.bash",
+        "tests/test_helper/ledger.bash",
+        "tests/test_helper/load.bash",
+        "tests/test_helper/many.bash",
+        "tests/test_helper/token.bash",
+    ],
+)
+
+filegroup(
+    name = "kvstore-staging",
+    srcs = ["staging/kvstore_state.json5"],
+)
+
+filegroup(
+    name = "ledger-staging",
+    srcs = ["staging/ledger_state.json5"],
+)
+
+filegroup(
+    name = "webauthn-state",
+    srcs = ["tests/e2e/ledger/webauthn_state.json"],
+)
+
+filegroup(
+    name = "ledger-migrations",
+    srcs = ["tests/ledger_migrations.json"],
+)
+
+bats_test(
+    name = "bats-kvstore",
+    srcs = [
+        "tests/e2e/kvstore/allow_addrs.bats",
+        "tests/e2e/kvstore/kvstore.bats",
+    ],
+    uses_bats_assert = True,
+    deps = [
+        ":bats-helpers",
+        ":bins",
+        ":kvstore-staging",
+    ],
+)
+
+bats_test(
+    name = "bats-ledger",
+    srcs = [
+        "tests/e2e/ledger/allow_addrs.bats",
+        "tests/e2e/ledger/ledger.bats",
+        "tests/e2e/ledger/migrations.bats",
+        "tests/e2e/ledger/mintburn.bats",
+        "tests/e2e/ledger/multisig.bats",
+        "tests/e2e/ledger/staging.bats",
+        "tests/e2e/ledger/tokens_no_migration.bats",
+        "tests/e2e/ledger/webauthn.bats",
+    ],
+    uses_bats_assert = True,
+    deps = [
+        ":bats-helpers",
+        ":bins",
+        ":ledger-migrations",
+        ":ledger-staging",
+        ":webauthn-state",
+    ],
+)
+
+bats_test(
+    name = "bats-ledger-tokens",
+    srcs = [
+        "tests/e2e/ledger/tokens.bats",
+    ],
+    uses_bats_assert = True,
+    deps = [
+        ":bats-helpers",
+        ":bins",
+        ":ledger-migrations",
+        ":ledger-staging",
+    ],
+)
+## END BATS SECTION ##

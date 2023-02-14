@@ -63,7 +63,7 @@ function wait_for_block() {
 }
 
 function call_many() {
-    command "$MANY_BAZEL_SCRIPT_DIR/many" "$@"
+    command many "$@"
 }
 
 function probe_server() {
