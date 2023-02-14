@@ -90,7 +90,7 @@ function teardown_file() {
     # Export to a temp file.
     local export_file
     export_file="$(mktemp)"
-    "$GIT_ROOT/target/debug/idstore-export" "$ledger_db" > "$export_file"
+    "$MANY_BAZEL_SCRIPT_DIR/idstore-export" "$ledger_db" > "$export_file"
     local import_file
     import_file="$(mktemp)"
     jq -s '.[0] * .[1]' "$state" "$export_file" > "$import_file"
