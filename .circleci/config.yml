@@ -17,6 +17,7 @@ executors:
   linux2204_machine:
     machine:
       image: ubuntu-2204:current
+    resource_class: large # 4 cores, 15Gb
   macos:
     macos:
       xcode: 13.4.1
@@ -183,7 +184,7 @@ jobs:
   publish_nightly_docker:
     executor: linux2204_machine
     steps:
-#      - docker/check
+      - docker/check
       - checkout
       - run:
           name: build docker images
@@ -198,21 +199,21 @@ jobs:
             docker tag lifted/many-ledger:latest lifted/many-ledger:$CIRCLE_SHA1
             docker tag lifted/many-kvstore:latest lifted/many-kvstore:nightly
             docker tag lifted/many-kvstore:latest lifted/many-kvstore:$CIRCLE_SHA1
-#      - docker/push:
-#          image: many-abci
-#          registry: lifted
-#          tag: "nightly,$CIRCLE_SHA1"
-#          step-name: "docker push lifted/many-abci"
-#      - docker/push:
-#          image: many-ledger
-#          registry: lifted
-#          tag: "nightly,$CIRCLE_SHA1"
-#          step-name: "docker push lifted/many-ledger"
-#      - docker/push:
-#          image: many-kvstore
-#          registry: lifted
-#          tag: "nightly,$CIRCLE_SHA1"
-#          step-name: "docker push lifted/many-kvstore"
+      - docker/push:
+          image: many-abci
+          registry: lifted
+          tag: "nightly,$CIRCLE_SHA1"
+          step-name: "docker push lifted/many-abci"
+      - docker/push:
+          image: many-ledger
+          registry: lifted
+          tag: "nightly,$CIRCLE_SHA1"
+          step-name: "docker push lifted/many-ledger"
+      - docker/push:
+          image: many-kvstore
+          registry: lifted
+          tag: "nightly,$CIRCLE_SHA1"
+          step-name: "docker push lifted/many-kvstore"
 
   # Perform resiliency testing
   resiliency_tests:
@@ -329,46 +330,46 @@ commands:
       - bats/install
 
 workflows:
-#  ci:
-#    when:
-#      not:
-#        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-#    jobs:
-#      - lint-test-build:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: lint-test-build-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [linux2204, macos]
-#      - bats:
-#          name: bats-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [linux2204, macos]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
-#      - coverage:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: coverage-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [linux2204]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
-#      - dev_release:
-#          pre-steps:
-#            - install-deps:
-#                os: << matrix.os >>
-#          name: dev_release-v<< matrix.os >>
-#          matrix:
-#            parameters:
-#              os: [linux2204]
-#          requires:
-#            - lint-test-build-v<< matrix.os >>
+  ci:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - lint-test-build:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: lint-test-build-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204, macos]
+      - bats:
+          name: bats-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204, macos]
+          requires:
+            - lint-test-build-v<< matrix.os >>
+      - coverage:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: coverage-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204]
+          requires:
+            - lint-test-build-v<< matrix.os >>
+      - dev_release:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
+          name: dev_release-v<< matrix.os >>
+          matrix:
+            parameters:
+              os: [linux2204]
+          requires:
+            - lint-test-build-v<< matrix.os >>
   release:
     when:
       not:
@@ -427,30 +428,30 @@ workflows:
     jobs:
       - audit
   nightly_docker_and_resiliency_tests:
-#    when:
-#      and:
-#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-#        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
+    when:
+      and:
+        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
     jobs:
       - publish_nightly_docker:
           pre-steps:
             - install-deps:
-                os: linux2204
+                os: linux2204_machine
           context:
             - DOCKER_CREDS
             - CACHE
-#          filters:
-#            branches:
-#              only:
-#                - main
+          filters:
+            branches:
+              only:
+                - main
       - resiliency_tests:
           pre-steps:
             - install-deps:
-                os: linux2204
-#          filters:
-#            branches:
-#              only:
-#                - main
+                os: linux2204_machine
+          filters:
+            branches:
+              only:
+                - main
           requires:
             - publish_nightly_docker
   nightly_macos:

@@ -57,7 +57,7 @@ function wait_for_block() {
     # https://salsa.debian.org/debian/grep/-/blob/debian/master/NEWS
     current=$(call_many message --server http://localhost:8000/ blockchain.info | grep -oE '1: [0-9]+' | colrm 1 3)
     while [ "$current" -lt "$block" ]; do
-      sleep 1
+      sleep 0.5
       current=$(call_many message --server http://localhost:8000/ blockchain.info | grep -oE '1: [0-9]+' | colrm 1 3)
     done >/dev/null
 }
