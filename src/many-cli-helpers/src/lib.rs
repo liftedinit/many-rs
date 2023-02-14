@@ -1,3 +1,4 @@
+use std::os::unix::ffi::OsStrExt;
 use tracing::metadata::LevelFilter;
 use tracing_subscriber::fmt::Subscriber;
 
@@ -62,8 +63,10 @@ impl CommonCliFlags {
                 subscriber.init();
             }
             LogStrategy::Syslog => {
-                let identity = std::ffi::CStr::from_bytes_with_nul(b"many-ledger\0")
-                    .map_err(|e| e.to_string())?;
+                let exe_path = std::env::current_exe().map_err(|e| e.to_string())?;
+                let process_name = exe_path.file_name().unwrap();
+                let identity =
+                    std::ffi::CString::new(process_name.as_bytes()).map_err(|e| e.to_string())?;
                 let (options, facility) = Default::default();
                 let syslog = syslog_tracing::Syslog::new(identity, options, facility)
                     .ok_or_else(|| "Could not create syslog logger.".to_string())?;
