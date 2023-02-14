@@ -220,6 +220,9 @@ jobs:
     steps:
       - checkout
       - rust/install
+      - run:
+          name: remove old bats from system
+          command: sudo rm $(which bats)
       - prepare_bats
       - docker/pull:
           images: "lifted/many-ledger:nightly,lifted/many-kvstore:nightly,lifted/many-abci:nightly"
