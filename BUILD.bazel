@@ -138,7 +138,7 @@ filegroup(
 )
 
 bats_test(
-    name = "bats-kvstore",
+    name = "bats-e2e-kvstore",
     srcs = [
         "tests/e2e/kvstore/allow_addrs.bats",
         "tests/e2e/kvstore/kvstore.bats",
@@ -153,7 +153,7 @@ bats_test(
 )
 
 bats_test(
-    name = "bats-ledger",
+    name = "bats-e2e-ledger",
     srcs = [
         "tests/e2e/ledger/allow_addrs.bats",
         "tests/e2e/ledger/ledger.bats",
@@ -176,7 +176,7 @@ bats_test(
 )
 
 bats_test(
-    name = "bats-ledger-tokens",
+    name = "bats-e2e-ledger-tokens",
     srcs = [
         "tests/e2e/ledger/tokens.bats",
     ],

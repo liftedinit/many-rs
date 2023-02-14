@@ -29,9 +29,6 @@ function generate_allow_addrs_config() {
     echo "$CONFIG_ROOT"/allow_addrs.json5
 }
 
-#source "test_helper/bats-assert/load.bash"
-#source "test_helper/bats-support/load.bash"
-
 . "$(dirname ${BASH_SOURCE[0]})/bats-utils/helpers"
 set_bats_test_suite_name "${BASH_SOURCE[0]%/*}"
 remove_bats_test_dirs
