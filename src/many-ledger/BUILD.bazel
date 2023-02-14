@@ -192,6 +192,7 @@ rust_image(
         "--verbose",
         "@$(location :flags_file)",
     ],
+    tags = ["manual"],
     deps = all_crate_deps(
         normal = True,
     ) + [

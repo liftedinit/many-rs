@@ -88,6 +88,7 @@ rust_image(
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
     ),
+    tags = ["manual"],
     deps = all_crate_deps(
         normal = True,
     ) + [

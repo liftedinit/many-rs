@@ -42,6 +42,7 @@ pkg_tar(
     extension = ".tar.gz",
     package_file_name = "{product_name}-{version}-{compilation_mode}.tar.gz",
     package_variables = ":package-naming",
+    tags = ["manual"],
 )
 ## END PACKAGE CONFIGURATION ##
 
@@ -53,6 +54,7 @@ filegroup(
         "//src/many-kvstore:many-kvstore-image",
         "//src/many-ledger:many-ledger-image",
     ],
+    tags = ["manual"],
 )
 
 filegroup(
@@ -80,6 +82,7 @@ download_pkgs(
     name = "ubuntu_download",
     image_tar = "@ubuntu_base//image",
     packages = ["libssl3"],
+    tags = ["manual"],
 )
 
 load(
@@ -93,5 +96,6 @@ install_pkgs(
     installables_tar = ":ubuntu_download.tar",
     installation_cleanup_commands = "rm -rf /var/lib/apt/lists/*",
     output_image_name = "many_docker_ubuntu_image",
+    tags = ["manual"],
 )
 ## END DOCKER BASE IMAGE CONFIGURATION ##
