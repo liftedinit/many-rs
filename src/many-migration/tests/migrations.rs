@@ -2,9 +2,9 @@
 
 use linkme::distributed_slice;
 use many_migration::{
-    load_enable_all_regular_migrations, load_migrations, InnerMigration, Metadata, MigrationConfig,
-    MigrationSet,
+    InnerMigration, Metadata, Migration, MigrationConfig, MigrationSet, MigrationType,
 };
+use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
 
 type Storage = BTreeMap<StorageKey, u64>;
@@ -18,14 +18,27 @@ enum StorageKey {
 #[distributed_slice]
 static SOME_MANY_RS_MIGRATIONS: [InnerMigration<Storage, String>] = [..];
 
-fn _initialize(s: &mut Storage) -> Result<(), String> {
+fn _initialize(s: &mut Storage, _: &HashMap<String, Value>) -> Result<(), String> {
     s.insert(StorageKey::Init, 1);
     Ok(())
 }
 
-fn _update(s: &mut Storage) -> Result<(), String> {
+fn _initialize_extra(s: &mut Storage, extra: &HashMap<String, Value>) -> Result<(), String> {
+    s.insert(StorageKey::Init, extra.get("n").unwrap().as_u64().unwrap());
+    Ok(())
+}
+
+fn _update(s: &mut Storage, _: &HashMap<String, Value>) -> Result<(), String> {
     if let Some(counter) = s.get_mut(&StorageKey::Counter) {
         *counter += 1;
+        return Ok(());
+    }
+    Err("Counter entry not found".to_string())
+}
+
+fn _update_extra(s: &mut Storage, extra: &HashMap<String, Value>) -> Result<(), String> {
+    if let Some(counter) = s.get_mut(&StorageKey::Counter) {
+        *counter += extra.get("n").unwrap().as_u64().unwrap();
         return Ok(());
     }
     Err("Counter entry not found".to_string())
@@ -54,6 +67,40 @@ static C: InnerMigration<Storage, String> =
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
 static D: InnerMigration<Storage, String> = InnerMigration::new_hotfix(_hotfix, "D", "D desc");
 
+#[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
+static E: InnerMigration<Storage, String> =
+    InnerMigration::new_initialize(_initialize_extra, "E", "E desc");
+
+#[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
+static F: InnerMigration<Storage, String> =
+    InnerMigration::new_update(_update_extra, "F", "F desc");
+
+/// Enable all migrations from the registry EXCEPT the hotfix.
+/// Should not be used outside of tests.
+pub fn load_enable_all_regular_migrations<T, E>(
+    registry: &[InnerMigration<T, E>],
+) -> MigrationSet<T, E> {
+    // Keep a default of block height 1 for backward compatibility.
+    let metadata = Metadata {
+        block_height: 1,
+        ..Metadata::default()
+    };
+
+    let mut set = MigrationSet::empty().unwrap();
+    for m in registry.iter() {
+        let mut migration = Migration::new(m, metadata.clone());
+        match m.r#type() {
+            MigrationType::Regular(_) => migration.enable(),
+            MigrationType::Hotfix(_) => migration.disable(),
+            _ => migration.disable(),
+        }
+
+        set.insert(migration);
+    }
+
+    set
+}
+
 #[test]
 fn initialize() {
     let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
@@ -78,6 +125,27 @@ fn initialize() {
 }
 
 #[test]
+fn initialize_extra() {
+    let content = r#"{
+    "migrations": [
+            {
+                "name": "E",
+                "block_height": 2,
+                "n": 42
+            }
+        ]
+    }"#;
+
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
+    assert!(migrations.contains_key("E"));
+    let mut storage = Storage::new();
+
+    migrations["E"].initialize(&mut storage, 2).unwrap();
+    assert_eq!(storage[&StorageKey::Init], 42);
+}
+
+#[test]
 fn update() {
     let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     assert!(migrations.contains_key("B"));
@@ -97,6 +165,34 @@ fn update() {
     for i in 2..10 {
         migrations["B"].update(&mut storage, 2).unwrap();
         assert_eq!(storage[&StorageKey::Counter], i - 1);
+    }
+}
+
+#[test]
+fn update_extra() {
+    let content = r#"{
+    "migrations": [
+            {
+                "name": "F",
+                "block_height": 22,
+                "n": 5
+            }
+        ]
+    }"#;
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
+    assert!(migrations.contains_key("F"));
+    let mut storage = Storage::from_iter([(StorageKey::Counter, 0)]);
+
+    for i in 20..26 {
+        migrations["F"].update(&mut storage, i).unwrap();
+        match i {
+            20 | 21 | 22 => assert_eq!(storage[&StorageKey::Counter], 0),
+            23 => assert_eq!(storage[&StorageKey::Counter], 5),
+            24 => assert_eq!(storage[&StorageKey::Counter], 10),
+            25 => assert_eq!(storage[&StorageKey::Counter], 15),
+            _ => unimplemented!(),
+        }
     }
 }
 
@@ -155,7 +251,8 @@ fn hotfix() {
             }
         ]
     }"#;
-    let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
     assert!(migrations.contains_key("D"));
 
     let data = [1u8; 8];
@@ -221,7 +318,8 @@ fn metadata() {
         }
     ]}
     "#;
-    let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
     let metadata = migrations["D"].metadata();
     assert_eq!(metadata.block_height, 200);
     assert_eq!(metadata.issue, Some("foobar".to_string()));
@@ -349,7 +447,7 @@ fn strict_config_one() {
 
     assert_eq!(
         MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap_err(),
-        r#"Migration Config is missing migration "D""#.to_string(),
+        r#"Migration Config is missing migrations ["D", "E", "F"]"#.to_string(),
     );
 }
 
@@ -362,6 +460,6 @@ fn strict_config_many() {
 
     assert_eq!(
         MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap_err(),
-        r#"Migration Config is missing migrations ["C", "D"]"#.to_string()
+        r#"Migration Config is missing migrations ["C", "D", "E", "F"]"#.to_string()
     );
 }

@@ -1,0 +1,24 @@
+[package]
+name = "ledger-db"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Lifted Initiative"]
+license = "Apache-2.0"
+description = ""
+readme = "README.md"
+homepage = "https://liftedinit.org"
+repository = "https://github.com/liftedinit/many-framework"
+keywords = ["cli", "web3", "blockchain", "tendermint", "proto", "crypto", "liftedinit"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "ledger-db"
+doc = false
+
+[dependencies]
+clap = { version = "3.0.0", features = ["derive"] }
+hex = "0.4.3"
+merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
+many-modules = { path = "../many-modules", version = "0.1.0" }
+many-types = { path = "../many-types", version = "0.1.0" }
+minicbor = "0.18.0"

@@ -309,6 +309,7 @@ impl Display for ManyError {
     }
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for ManyErrorCode {
     #[inline]
     fn default() -> Self {

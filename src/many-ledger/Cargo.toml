@@ -1,0 +1,101 @@
+[package]
+name = "many-ledger"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Lifted Initiative"]
+license = "Apache-2.0"
+description = ""
+readme = "README.md"
+homepage = "https://liftedinit.org"
+repository = "https://github.com/liftedinit/many-framework"
+keywords = ["cli", "web3", "blockchain", "tendermint", "proto", "crypto", "liftedinit"]
+categories = ["command-line-utilities"]
+build = "build.rs"
+
+[[bin]]
+name = "many-ledger"
+doc = false
+
+[dependencies]
+async-trait = "0.1.51"
+base64 = "0.20.0-alpha.1"
+bip39-dict = "0.1"
+clap = { version = "3.0.0", features = ["derive"] }
+coset = "0.3"
+const_format = "0.2.30"
+fixed = "1.11.0"
+merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
+hex = "0.4.3"
+itertools = "0.10.3"
+json5 = "0.4.1"
+linkme = { version = "0.3.5", features = ["used_linker"] }
+log-panics = { version = "2", features = ["with-backtrace"]}
+num-bigint = "0.4.3"
+num-traits = "0.2.14"
+minicbor = { version = "0.18.0", features = ["derive", "std"] }
+many-error = { path = "../many-error", version = "0.1.0" }
+many-identity = { path = "../many-identity", version = "0.1.0", features = ["default", "serde"] }
+many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0", features = ["ed25519", "ecdsa"]  }
+many-identity-webauthn = { path = "../many-identity-webauthn", version = "0.1.0" }
+many-migration = { path = "../many-migration", version = "0.1.0" }
+many-modules = { path = "../many-modules", version = "0.1.0" }
+many-protocol = { path = "../many-protocol", version = "0.1.0" }
+many-server = { path = "../many-server", version = "0.1.0" }
+many-types = { path = "../many-types", version = "0.1.0" }
+rand = "0.8"
+serde = "1.0.130"
+serde_json = "1.0.72"
+sha3 = "0.9.1"
+signal-hook = "0.3.13"
+simple_asn1 = "0.6.2"
+strum = "0.24.1"
+syslog-tracing = "0.1"
+tracing = "0.1.28"
+tokio = { version = "1.24.1", features = [ "full" ] }
+tracing-subscriber = "0.3"
+typenum = "1.15.0"
+typetag = "0.2.3"
+
+[dev-dependencies]
+cucumber = { version = "0.17.0", features = ["libtest"] }
+once_cell = "1.12"
+many-client = { path = "../many-client", version = "0.1.0" }
+many-identity = { path = "../many-identity", version = "0.1.0", features = ["default", "serde", "testing"] }
+many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0", features = [ "ed25519", "testing" ] }
+many-ledger = { path = ".", features = ["balance_testing", "migration_testing", "disable_token_sender_check"]}
+many-modules = { path = "../many-modules", version = "0.1.0", features = ["cucumber"] }
+many-types = { path = "../many-types", version = "0.1.0", features = ["cucumber"] }
+proptest = "1"
+tempfile = "3.3.0"
+tokio = "1.13.0"
+many-ledger-test-utils = { path = "test-utils" }
+many-ledger-test-macros = { path = "test-macros" }
+
+[[test]]
+name = "create_token"
+path = "tests/ledger_tokens/create_token.rs"
+harness = false
+
+[[test]]
+name = "update_token"
+path = "tests/ledger_tokens/update_token.rs"
+harness = false
+
+[[test]]
+name = "add_token_ext_info"
+path = "tests/ledger_tokens/add_token_ext_info.rs"
+harness = false
+
+[[test]]
+name = "remove_token_ext_info"
+path = "tests/ledger_tokens/remove_token_ext_info.rs"
+harness = false
+
+[build-dependencies]
+vergen = "7"
+
+[features]
+balance_testing=[]                  # Enable balance initialization from the CLI
+migration_testing=[]                # Enable Dummy migration
+webauthn_testing=[]                 # Disable WebAuthn token validation from the CLI
+disable_token_sender_check=[]       # Disable token endpoint sender validation

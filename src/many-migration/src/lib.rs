@@ -9,7 +9,9 @@ use std::ops::Index;
 use strum::Display;
 use tracing::trace;
 
-pub type FnPtr<T, E> = fn(&mut T) -> Result<(), E>;
+// Initialize and update functions receive the `metadata.extra` fields.
+// The `metadata.extra` field can be used to provide custom parameters to migrations.
+pub type FnPtr<T, E> = fn(&mut T, &HashMap<String, Value>) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -143,7 +145,7 @@ impl<T, E> InnerMigration<T, E> {
         Self {
             r#type: MigrationType::Regular(RegularMigration {
                 initialize_fn,
-                update_fn: |_| Ok(()),
+                update_fn: |_, _| Ok(()),
             }),
             name,
             description,
@@ -157,7 +159,7 @@ impl<T, E> InnerMigration<T, E> {
     ) -> Self {
         Self {
             r#type: MigrationType::Regular(RegularMigration {
-                initialize_fn: |_| Ok(()),
+                initialize_fn: |_, _| Ok(()),
                 update_fn,
             }),
             name,
@@ -181,9 +183,9 @@ impl<T, E> InnerMigration<T, E> {
     }
 
     /// This function gets executed when the storage block height == the migration block height
-    fn initialize(&self, storage: &mut T) -> Result<(), E> {
+    fn initialize(&self, storage: &mut T, extra: &HashMap<String, Value>) -> Result<(), E> {
         match &self.r#type {
-            MigrationType::Regular(migration) => (migration.initialize_fn)(storage),
+            MigrationType::Regular(migration) => (migration.initialize_fn)(storage, extra),
             MigrationType::Hotfix(_) => Ok(()),
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
@@ -193,9 +195,9 @@ impl<T, E> InnerMigration<T, E> {
     }
 
     /// This function gets executed when the storage block height > the migration block height
-    fn update(&self, storage: &mut T) -> Result<(), E> {
+    fn update(&self, storage: &mut T, extra: &HashMap<String, Value>) -> Result<(), E> {
         match &self.r#type {
-            MigrationType::Regular(migration) => (migration.update_fn)(storage),
+            MigrationType::Regular(migration) => (migration.update_fn)(storage, extra),
             MigrationType::Hotfix(_) => Ok(()),
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
@@ -255,7 +257,7 @@ impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
 }
 
 impl<'a, T, E> Migration<'a, T, E> {
-    fn new(migration: &'a InnerMigration<T, E>, metadata: Metadata) -> Self {
+    pub fn new(migration: &'a InnerMigration<T, E>, metadata: Metadata) -> Self {
         let enabled = !metadata.disabled;
         Self {
             migration,
@@ -274,9 +276,9 @@ impl<'a, T, E> Migration<'a, T, E> {
         if self.is_enabled() {
             if block_height == self.metadata.block_height && !self.active {
                 self.active = true;
-                self.migration.initialize(storage)?;
+                self.migration.initialize(storage, &self.metadata.extra)?;
             } else if block_height > self.metadata.block_height {
-                self.migration.update(storage)?;
+                self.migration.update(storage, &self.metadata.extra)?;
             }
         }
 
@@ -287,7 +289,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     #[inline]
     pub fn initialize(&self, storage: &mut T, block_height: u64) -> Result<(), E> {
         if self.is_enabled() && block_height == self.metadata.block_height {
-            self.migration.initialize(storage)?;
+            self.migration.initialize(storage, &self.metadata.extra)?;
         }
         Ok(())
     }
@@ -295,7 +297,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     #[inline]
     pub fn update(&self, storage: &mut T, block_height: u64) -> Result<(), E> {
         if self.is_enabled() && block_height > self.metadata.block_height {
-            self.migration.update(storage)?;
+            self.migration.update(storage, &self.metadata.extra)?;
         }
         Ok(())
     }
@@ -355,7 +357,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SingleMigrationConfig {
     name: String,
 
@@ -372,7 +374,7 @@ impl<T, E> From<(&InnerMigration<T, E>, Metadata)> for SingleMigrationConfig {
     }
 }
 
-#[derive(Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct MigrationConfig {
     #[serde(skip)]
     strict: Option<bool>,
@@ -434,6 +436,10 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
         })
     }
 
+    pub fn insert(&mut self, migration: Migration<'a, T, E>) {
+        self.inner.insert(migration.name().to_string(), migration);
+    }
+
     pub fn load(
         registry: &'a [InnerMigration<T, E>],
         config: MigrationConfig,
@@ -465,9 +471,7 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
         if is_strict {
             let maybe_missing = registry
                 .keys()
-                .into_iter()
                 .filter(|name| !inner.contains_key(&name.to_string()))
-                .cloned()
                 .collect::<Vec<_>>();
 
             match maybe_missing.as_slice() {
@@ -553,43 +557,4 @@ impl<'a, T, E, IDX: AsRef<str>> Index<IDX> for MigrationSet<'a, T, E> {
     fn index(&self, index: IDX) -> &Self::Output {
         &self.inner[index.as_ref()]
     }
-}
-
-/// Kept for backward compatibility.
-#[deprecated = "Should use MigrationSet::load() instead."]
-pub fn load_migrations<'a, T, E>(
-    registry: &'a [InnerMigration<T, E>],
-    config: &str,
-) -> Result<MigrationSet<'a, T, E>, String> {
-    let config: MigrationConfig = serde_json::from_str(config).map_err(|e| e.to_string())?;
-    MigrationSet::load(registry, config, 0)
-}
-
-/// Enable all migrations from the registry EXCEPT the hotfix.
-/// Should not be used outside of tests.
-#[deprecated = "Should use MigrationSet::load() instead."]
-pub fn load_enable_all_regular_migrations<T, E>(
-    registry: &[InnerMigration<T, E>],
-) -> MigrationSet<T, E> {
-    // Keep a default of block height 1 for backward compatibility.
-    let metadata = Metadata {
-        block_height: 1,
-        ..Metadata::default()
-    };
-
-    let inner: BTreeMap<String, Migration<T, E>> = registry
-        .iter()
-        .map(|m| {
-            let mut migration = Migration::new(m, metadata.clone());
-            match m.r#type {
-                MigrationType::Regular(_) => migration.enable(),
-                MigrationType::Hotfix(_) => migration.disable(),
-                _ => migration.disable(),
-            }
-
-            (m.name.to_string(), migration)
-        })
-        .collect();
-
-    MigrationSet { inner }
 }

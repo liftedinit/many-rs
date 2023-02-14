@@ -1,0 +1,24 @@
+[package]
+name = "idstore-export"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Lifted Initiative"]
+license = "Apache-2.0"
+description = ""
+readme = "README.md"
+homepage = "https://liftedinit.org"
+repository = "https://github.com/liftedinit/many-framework"
+keywords = ["cli", "web3", "blockchain", "tendermint", "proto", "crypto", "liftedinit"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "idstore-export"
+doc = false
+
+[dependencies]
+base64 = "0.20.0"
+clap = { version = "3.0.0", features = ["derive"] }
+merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
+serde = "1.0.137"
+serde_derive = "1.0.137"
+serde_json = "1.0.81"

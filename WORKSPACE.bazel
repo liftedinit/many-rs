@@ -2,20 +2,19 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "rules_rust",
-    sha256 = "dd79bd4e2e2adabae738c5e93c36d351cf18071ff2acf6590190acf4138984f6",
-    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.14.0/rules_rust-v0.14.0.tar.gz"],
+    sha256 = "aaaa4b9591a5dad8d8907ae2dbe6e0eb49e6314946ce4c7149241648e56a1277",
+    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.16.1/rules_rust-v0.16.1.tar.gz"],
 )
 
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
 
 rules_rust_dependencies()
 
-RUST_VERSION = "nightly"
+RUST_VERSION = "nightly/2023-01-03"
 
 rust_register_toolchains(
     edition = "2021",
-    iso_date = "2022-11-13",
-    version = RUST_VERSION,
+    versions = [RUST_VERSION],
 )
 
 load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
@@ -31,18 +30,34 @@ load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
 
 crates_repository(
     name = "crate_index",
+    # The following annotations are needed to prevent Bazel passing incompatible C/CXX flags when coverage is enabled
+    # https://github.com/bazelbuild/rules_rust/issues/1550
+    annotations = {"librocksdb-sys": [crate.annotation(
+        build_script_env = {
+            "CXXFLAGS": "-Wno-error=coverage-invalid-line-number",
+        },
+    )]},
     cargo_lockfile = "//:Cargo.Bazel.lock",
     lockfile = "//:cargo-bazel-lock.json",
     manifests = [
         "//:Cargo.toml",
-        "//src/many:Cargo.toml",
-        "//src/many-client:Cargo.toml",
+        "//src/http_proxy:Cargo.toml",
+        "//src/idstore-export:Cargo.toml",
+        "//src/kvstore:Cargo.toml",
+        "//src/ledger-db:Cargo.toml",
+        "//src/ledger:Cargo.toml",
+        "//src/many-abci:Cargo.toml",
         "//src/many-client-macros:Cargo.toml",
+        "//src/many-client:Cargo.toml",
         "//src/many-error:Cargo.toml",
-        "//src/many-identity:Cargo.toml",
         "//src/many-identity-dsa:Cargo.toml",
         "//src/many-identity-hsm:Cargo.toml",
         "//src/many-identity-webauthn:Cargo.toml",
+        "//src/many-identity:Cargo.toml",
+        "//src/many-kvstore:Cargo.toml",
+        "//src/many-ledger/test-macros:Cargo.toml",
+        "//src/many-ledger/test-utils:Cargo.toml",
+        "//src/many-ledger:Cargo.toml",
         "//src/many-macros:Cargo.toml",
         "//src/many-migration:Cargo.toml",
         "//src/many-mock:Cargo.toml",
@@ -50,6 +65,7 @@ crates_repository(
         "//src/many-protocol:Cargo.toml",
         "//src/many-server:Cargo.toml",
         "//src/many-types:Cargo.toml",
+        "//src/many:Cargo.toml",
     ],
     rust_version = RUST_VERSION,
 )

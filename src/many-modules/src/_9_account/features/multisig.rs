@@ -1,6 +1,6 @@
 use crate::account::features::{Feature, FeatureId, TryCreateFeature};
 use crate::account::Role;
-use crate::events::AccountMultisigTransaction;
+use crate::events::{AccountMultisigTransaction, AddressContainer};
 use crate::ledger::SendArgs;
 use crate::EmptyReturn;
 use many_error::ManyError;
@@ -151,7 +151,13 @@ pub struct SubmitTransactionArgs {
 }
 
 impl SubmitTransactionArgs {
-    pub fn send(from: Address, to: Address, symbol: Address, amount: TokenAmount) -> Self {
+    pub fn send(
+        from: Address,
+        to: Address,
+        symbol: Address,
+        amount: TokenAmount,
+        memo: Option<Memo>,
+    ) -> Self {
         Self {
             account: from,
             transaction: Box::new(AccountMultisigTransaction::Send(SendArgs {
@@ -159,6 +165,7 @@ impl SubmitTransactionArgs {
                 to,
                 symbol,
                 amount,
+                memo,
             })),
             threshold: None,
             timeout_in_secs: None,
@@ -167,6 +174,14 @@ impl SubmitTransactionArgs {
             data_: None,
             memo: None,
         }
+    }
+}
+
+impl AddressContainer for SubmitTransactionArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        let mut set = BTreeSet::from([self.account]);
+        set.extend(self.transaction.addresses());
+        set
     }
 }
 
@@ -279,6 +294,12 @@ pub struct SetDefaultsArgs {
 
     #[n(3)]
     pub execute_automatically: Option<bool>,
+}
+
+impl AddressContainer for SetDefaultsArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        BTreeSet::from([self.account])
+    }
 }
 
 pub type SetDefaultsReturn = EmptyReturn;
