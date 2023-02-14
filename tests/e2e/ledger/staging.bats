@@ -15,6 +15,14 @@ function teardown() {
     stop_background_run
 }
 
+function setup_file() {
+    create_binary_links
+}
+
+function teardown_file() {
+    remove_binary_links
+}
+
 @test "$SUITE: Make sure token and account identities are different" {
     cp "$GIT_ROOT/staging/ledger_state.json5" "$BATS_TEST_ROOTDIR/ledger_state.json5"
     sed -i.bak 's/token_identity: ".*"/token_identity: "'"$(identity 1)"'"/' "$BATS_TEST_ROOTDIR/ledger_state.json5"

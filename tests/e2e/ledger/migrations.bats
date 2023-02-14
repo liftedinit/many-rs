@@ -15,6 +15,14 @@ function teardown() {
     stop_background_run
 }
 
+function setup_file() {
+    create_binary_links
+}
+
+function teardown_file() {
+    remove_binary_links
+}
+
 @test "$SUITE: Load migrations" {
     jq '(.migrations[] | select(.name == "Account Count Data Attribute")).block_height |= 20 |
         (.migrations[] | select(.name == "Account Count Data Attribute")).disabled |= empty' \

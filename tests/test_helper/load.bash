@@ -1,4 +1,19 @@
 MANY_BAZEL_OPTIONS="--noshow_progress --ui_event_filters=error --config=remote-cache"
+MANY_BAZEL_SCRIPT_DIR="$GIT_ROOT/tmp"
+
+# Create links to binaries built by Bazel
+function create_binary_links() {
+    echo '# Creating binary links' >&3
+    mkdir -p "$MANY_BAZEL_SCRIPT_DIR"
+    for i in $(bazel query "kind(rust_binary, //... except filter("build_script_", //...) except filter("image_binary", //...))" --output=label);
+    do
+        bazel run $MANY_FEATURES $MANY_BAZEL_OPTIONS --script_path="$MANY_BAZEL_SCRIPT_DIR/${i##*:}" $i;
+    done
+}
+
+function remove_binary_links() {
+    rm -r "$MANY_BAZEL_SCRIPT_DIR"
+}
 
 # Do not regen Docker images on CI.
 # Docker images will be pulled by CI.

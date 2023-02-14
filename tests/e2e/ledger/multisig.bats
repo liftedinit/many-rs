@@ -20,6 +20,14 @@ function teardown() {
     stop_background_run
 }
 
+function setup_file() {
+    create_binary_links
+}
+
+function teardown_file() {
+    remove_binary_links
+}
+
 @test "$SUITE: Ledger shows a balance and can send tokens" {
     check_consistency --pem=1 --balance=$START_BALANCE --id="$(identity 1)" 8000
 

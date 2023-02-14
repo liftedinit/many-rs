@@ -48,6 +48,14 @@ function teardown() {
     stop_background_run
 }
 
+function setup_file() {
+    create_binary_links
+}
+
+function teardown_file() {
+    remove_binary_links
+}
+
 @test "$SUITE: ledger can return balance with token info summary" {
     call_ledger --port=8000 balance "$(identity 8)"
     assert_output --partial "${START_BALANCE} MFX ($(subresource 1 1))"

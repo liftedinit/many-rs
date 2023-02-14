@@ -30,6 +30,14 @@ function teardown() {
     stop_background_run
 }
 
+function setup_file() {
+    create_binary_links
+}
+
+function teardown_file() {
+    remove_binary_links
+}
+
 @test "$SUITE: IdStore store and get" {
     start_ledger --pem "$(pem 0)" \
                  --disable-webauthn-only-for-testing # Disable WebAuthn check for this test

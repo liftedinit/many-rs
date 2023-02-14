@@ -19,6 +19,14 @@ function teardown() {
     stop_background_run
 }
 
+function setup_file() {
+    create_binary_links
+}
+
+function teardown_file() {
+    remove_binary_links
+}
+
 @test "$SUITE: tokens.create is disabled" {
     call_ledger --pem=1 --port=8000 token create "Foobar" "FBR" 9
     assert_output --partial "Invalid method name"

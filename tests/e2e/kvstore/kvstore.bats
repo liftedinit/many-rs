@@ -15,6 +15,14 @@ function teardown() {
     stop_background_run
 }
 
+function setup_file() {
+    create_binary_links
+}
+
+function teardown_file() {
+    remove_binary_links
+}
+
 @test "$SUITE: can put and get data" {
   call_kvstore --pem=1 --port=8000 put "010203" "foobar"
   call_kvstore --pem=1 --port=8000 get "010203"

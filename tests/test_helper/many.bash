@@ -63,7 +63,7 @@ function wait_for_block() {
 }
 
 function call_many() {
-    command bazel run $MANY_BAZEL_OPTIONS //src/many -- "$@"
+    command "$MANY_BAZEL_SCRIPT_DIR/many" "$@"
 }
 
 function probe_server() {

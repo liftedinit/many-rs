@@ -20,6 +20,14 @@ function teardown() {
     stop_background_run
 }
 
+function setup_file() {
+    create_binary_links
+}
+
+function teardown_file() {
+    remove_binary_links
+}
+
 @test "$SUITE: ledger can send tokens on behalf of an account" {
     account_id=$(account_create --pem=1 '{ 1: { "'"$(identity 2)"'": ["canLedgerTransact"] }, 2: [0] }')
     call_ledger --pem=1 --port=8000 send "$account_id" 1000000 MFX

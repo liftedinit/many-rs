@@ -18,6 +18,14 @@ function teardown() {
     stop_background_run
 }
 
+function setup_file() {
+    create_binary_links
+}
+
+function teardown_file() {
+    remove_binary_links
+}
+
 @test "$SUITE: allow addrs" {
     call_kvstore --pem=1 --port=8000 put "01" "one"
     call_kvstore --pem=1 --port=8000 get "01"
