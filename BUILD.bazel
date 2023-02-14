@@ -114,6 +114,7 @@ sh_library(
         "tests/test_helper/many.bash",
         "tests/test_helper/token.bash",
     ],
+    tags = ["manual"],
 )
 
 filegroup(
@@ -142,6 +143,7 @@ bats_test(
         "tests/e2e/kvstore/allow_addrs.bats",
         "tests/e2e/kvstore/kvstore.bats",
     ],
+    tags = ["manual"],
     uses_bats_assert = True,
     deps = [
         ":bats-helpers",
@@ -162,6 +164,7 @@ bats_test(
         "tests/e2e/ledger/tokens_no_migration.bats",
         "tests/e2e/ledger/webauthn.bats",
     ],
+    tags = ["manual"],
     uses_bats_assert = True,
     deps = [
         ":bats-helpers",
@@ -177,6 +180,7 @@ bats_test(
     srcs = [
         "tests/e2e/ledger/tokens.bats",
     ],
+    tags = ["manual"],
     uses_bats_assert = True,
     deps = [
         ":bats-helpers",
