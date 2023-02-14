@@ -121,7 +121,7 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         &mut self,
         sender: &Address,
         args: account::CreateArgs,
-        _: Context,
+        context: Context,
     ) -> Result<account::CreateReturn, ManyError> {
         if args.features.is_empty() {
             return Err(account::errors::empty_feature());
@@ -130,7 +130,12 @@ impl AccountModuleBackend for KvStoreModuleImpl {
 
         validate_account(&account)?;
 
-        let id = self.storage.add_account(account)?;
+        let (id, keys) = self.storage.add_account(account)?;
+        self.storage
+            .prove_state(context, keys)
+            .map(|error| ManyError::unknown(error.to_string()))
+            .map(Err)
+            .unwrap_or(Ok(()))?;
         Ok(account::CreateReturn { id })
     }
 
@@ -138,6 +143,7 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         &mut self,
         sender: &Address,
         args: account::SetDescriptionArgs,
+        _: Context,
     ) -> Result<EmptyReturn, ManyError> {
         let account = self
             .storage

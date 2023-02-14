@@ -472,6 +472,7 @@ pub trait AccountModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: SetDescriptionArgs,
+        context: Context
     ) -> Result<SetDescriptionReturn, ManyError>;
 
     /// List all the roles supported by an account.
@@ -535,7 +536,7 @@ mod module_tests {
         });
         mock.expect_set_description().returning({
             let account_map = Arc::clone(&account_map);
-            move |_, args| {
+            move |_, args, _| {
                 let mut account_map = account_map.write().unwrap();
                 let mut account = account_map
                     .get_mut(&args.account)

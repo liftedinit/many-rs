@@ -15,8 +15,8 @@ impl KvStoreStorage {
         &mut self,
         mut account: account::Account,
         add_event: bool,
-    ) -> Result<Address, ManyError> {
-        let id = self.new_subresource_id()?;
+    ) -> Result<(Address, impl IntoIterator<Item = Vec<u8>>), ManyError> {
+        let (id, subresource_key) = self.new_subresource_id()?;
 
         // The account MUST own itself.
         account.add_role(&id, account::Role::Owner);
@@ -30,12 +30,15 @@ impl KvStoreStorage {
             });
         }
 
-        self.commit_account(&id, account).map(|_| id)
+        self.commit_account(&id, account)
+            .map(|commit_key| (id, vec![commit_key, subresource_key]))
     }
 
-    pub fn add_account(&mut self, account: account::Account) -> Result<Address, ManyError> {
-        let id = self._add_account(account, true)?;
-        Ok(id)
+    pub fn add_account(
+        &mut self,
+        account: account::Account,
+    ) -> Result<(Address, impl IntoIterator<Item = Vec<u8>>), ManyError> {
+        self._add_account(account, true)
     }
 
     pub fn get_account(&self, id: &Address) -> Option<account::Account> {
@@ -152,12 +155,12 @@ impl KvStoreStorage {
         &mut self,
         id: &Address,
         account: account::Account,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         tracing::debug!("commit({:?})", account);
-
+        let key = key_for_account(id);
         self.persistent_store
             .apply(&[(
-                key_for_account(id),
+                key.clone(),
                 Op::Put(
                     minicbor::to_vec(account)
                         .map_err(|e| ManyError::serialization_error(e.to_string()))?,
@@ -170,7 +173,7 @@ impl KvStoreStorage {
                 .commit(&[])
                 .expect("Could not commit to store.");
         }
-        Ok(())
+        Ok(key)
     }
 
     pub fn disable_account(&mut self, id: &Address) -> Result<(), ManyError> {

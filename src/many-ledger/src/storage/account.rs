@@ -186,13 +186,13 @@ impl LedgerStorage {
         &mut self,
         mut account: account::Account,
         args: account::SetDescriptionArgs,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         account.set_description(Some(args.clone().description));
         self.log_event(events::EventInfo::AccountSetDescription {
             account: args.account,
             description: args.description,
         })
-        .and_then(|_| self.commit_account(&args.account, account).map(|_| ()))
+        .and_then(|_| self.commit_account(&args.account, account))
     }
 
     pub fn add_roles(
@@ -238,7 +238,8 @@ impl LedgerStorage {
         self.log_event(events::EventInfo::AccountRemoveRoles {
             account: args.account,
             roles: args.clone().roles,
-        }).and_then(|_| self.commit_account(&args.account, account).map(|_| ()))
+        })
+        .and_then(|_| self.commit_account(&args.account, account).map(|_| ()))
     }
 
     pub fn add_features(
@@ -265,7 +266,8 @@ impl LedgerStorage {
             account: args.account,
             roles: args.clone().roles.unwrap_or_default(), // TODO: Verify this
             features: args.clone().features,
-        }).and_then(|_| self.commit_account(&args.account, account).map(|_| ()))
+        })
+        .and_then(|_| self.commit_account(&args.account, account).map(|_| ()))
     }
 
     pub fn get_account(

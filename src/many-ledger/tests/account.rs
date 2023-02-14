@@ -84,6 +84,7 @@ fn set_description() {
             account: account_id,
             description: "New".to_string(),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_ok());
     assert_eq!(
@@ -106,6 +107,7 @@ fn set_description_non_owner() {
             account: account_id,
             description: "Other".to_string(),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_err());
     assert_eq!(

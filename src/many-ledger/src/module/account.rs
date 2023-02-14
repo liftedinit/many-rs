@@ -142,8 +142,10 @@ impl AccountModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: account::SetDescriptionArgs,
+        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, _) = self.storage.get_account(&args.account)?;
+        let (account, keys) = self.storage.get_account(&args.account)?;
+        let mut keys: Vec<_> = keys.into_iter().collect();
 
         if !account.has_role(sender, account::Role::Owner) {
             return Err(account::errors::user_needs_role("owner"));
@@ -151,6 +153,14 @@ impl AccountModuleBackend for LedgerModuleImpl {
 
         self.storage
             .set_description(account, args)
+            .and_then(|description_key| {
+                keys.push(description_key);
+                self.storage
+                    .prove_state(context, keys)
+                    .map(|error| ManyError::unknown(error.to_string()))
+                    .map(Err)
+                    .unwrap_or(Ok(()))
+            })
             .map(|_| EmptyReturn)
     }
 
