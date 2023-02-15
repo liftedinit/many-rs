@@ -187,19 +187,19 @@ jobs:
       - run:
           name: build docker images
           command: |
-              bazel build --jobs=$(shell nproc) \
+              bazel build --jobs=$(nproc) \
                 --config=remote-cache \
                 //src/many-kvstore:many-kvstore-image.tar \
                 //src/many-abci:many-abci-image.tar
-              docker load < ../$(shell bazel cquery $(FEATURES) //src/many-kvstore:many-kvstore-image.tar --output=files)
-              docker load < ../$(shell bazel cquery $(FEATURES) //src/many-abci:many-abci-image.tar --output=files)
+              docker load < ../$(bazel cquery $(FEATURES) //src/many-kvstore:many-kvstore-image.tar --output=files)
+              docker load < ../$(bazel cquery $(FEATURES) //src/many-abci:many-abci-image.tar --output=files)
             
-              bazel build --jobs=$(shell nproc) \
+              bazel build --jobs=$(nproc) \
                 --config=remote-cache \
                 --balance_testing \
                 --migration_testing \
                 //src/many-ledger:many-ledger-image.tar
-              docker load < ../$(shell bazel cquery \
+              docker load < ../$(bazel cquery \
                 --balance_testing \
                 --migration_testing \
                 //src/many-ledger:many-ledger-image.tar \
