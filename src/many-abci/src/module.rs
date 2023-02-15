@@ -1,4 +1,4 @@
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use clap::__macro_refs::once_cell;
 use coset::CborSerializable;
 use itertools::Itertools;
@@ -126,15 +126,12 @@ impl<C: Client + Send + Sync> r#async::AsyncModuleBackend for AbciBlockchainModu
 
         if let Ok(hash) = TryInto::<[u8; 32]>::try_into(hash) {
             block_on(async {
-                match self
-                    .client
-                    .tx(tendermint::Hash::Sha256(hash), false)
-                    .await
-                {
+                match self.client.tx(tendermint::Hash::Sha256(hash), false).await {
                     Ok(tx) => {
-                         // Bse64 decode is required because of an issue in `tendermint-rs` 0.28.0
+                        // Bse64 decode is required because of an issue in `tendermint-rs` 0.28.0
                         // TODO: Remove when https://github.com/informalsystems/tendermint-rs/issues/1251 is fixed
-                        let cbor_tx_result_data = general_purpose::STANDARD.decode(&tx.tx_result.data)
+                        let cbor_tx_result_data = general_purpose::STANDARD
+                            .decode(&tx.tx_result.data)
                             .map_err(ManyError::deserialization_error)?;
                         tracing::warn!("result: {}", hex::encode(&cbor_tx_result_data));
                         Ok(StatusReturn::Done {
@@ -322,9 +319,7 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
 
         tracing::debug!("blockchain.request: {}", hex::encode(&tx.tx));
 
-        Ok(blockchain::RequestReturns {
-            request: tx.tx,
-        })
+        Ok(blockchain::RequestReturns { request: tx.tx })
     }
 
     fn response(
@@ -349,12 +344,9 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
             }
         })?;
 
-        tracing::debug!(
-            "blockchain.response: {}",
-            hex::encode(&tx.tx_result.data)
-        );
-        let response: ResponseMessage = minicbor::decode(&tx.tx_result.data)
-            .map_err(ManyError::deserialization_error)?;
+        tracing::debug!("blockchain.response: {}", hex::encode(&tx.tx_result.data));
+        let response: ResponseMessage =
+            minicbor::decode(&tx.tx_result.data).map_err(ManyError::deserialization_error)?;
         Ok(blockchain::ResponseReturns {
             response: encode_cose_sign1_from_response(response, &AnonymousIdentity)?
                 .to_vec()
