@@ -1,5 +1,5 @@
 {
-  "checksum": "226d22f0e2119c76cf4d3ea01401f4294b82ccb898c74e4e72c81c3404897027",
+  "checksum": "50db9b5432d3826340add268b181f214855713e8f4e8a55269f8cc087d916d44",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -29,7 +29,7 @@
         "deps": {
           "common": [
             {
-              "id": "gimli 0.27.1",
+              "id": "gimli 0.27.2",
               "target": "gimli"
             }
           ],
@@ -2325,7 +2325,7 @@
         "deps": {
           "common": [
             {
-              "id": "cryptoxide 0.4.2",
+              "id": "cryptoxide 0.4.3",
               "target": "cryptoxide"
             }
           ],
@@ -3801,13 +3801,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "clap 4.1.4": {
+    "clap 4.1.6": {
       "name": "clap",
-      "version": "4.1.4",
+      "version": "4.1.6",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap/4.1.4/download",
-          "sha256": "f13b9c79b5d1dd500d20ef541215a6423c75829ef43117e1b4d17fd8af0b5d76"
+          "url": "https://crates.io/api/v1/crates/clap/4.1.6/download",
+          "sha256": "ec0b0588d44d4d63a87dbd75c136c166bbfd9a86a31cb89e09906521c7d3f5e3"
         }
       },
       "targets": [
@@ -3864,7 +3864,7 @@
               "target": "termcolor"
             },
             {
-              "id": "terminal_size 0.2.3",
+              "id": "terminal_size 0.2.5",
               "target": "terminal_size"
             }
           ],
@@ -3880,7 +3880,7 @@
           ],
           "selects": {}
         },
-        "version": "4.1.4"
+        "version": "4.1.6"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -5167,13 +5167,13 @@
       },
       "license": "Apache-2.0"
     },
-    "cryptoxide 0.4.2": {
+    "cryptoxide 0.4.3": {
       "name": "cryptoxide",
-      "version": "0.4.2",
+      "version": "0.4.3",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/cryptoxide/0.4.2/download",
-          "sha256": "129eabb7b0b78644a3a7e7cf220714aba47463bb281f69fa7a71ca5d12564cca"
+          "url": "https://crates.io/api/v1/crates/cryptoxide/0.4.3/download",
+          "sha256": "e71fc7b8ebdfe6f948c2b6cc237301846958ba07a0e3fd8bea4a39f22cc94f2c"
         }
       },
       "targets": [
@@ -5193,6 +5193,7 @@
           "**"
         ],
         "crate_features": [
+          "argon2",
           "blake2",
           "chacha",
           "curve25519",
@@ -5213,7 +5214,7 @@
           "x25519"
         ],
         "edition": "2018",
-        "version": "0.4.2"
+        "version": "0.4.3"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -5456,7 +5457,7 @@
               "target": "atty"
             },
             {
-              "id": "clap 4.1.4",
+              "id": "clap 4.1.6",
               "target": "clap"
             },
             {
@@ -9615,13 +9616,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "gimli 0.27.1": {
+    "gimli 0.27.2": {
       "name": "gimli",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/gimli/0.27.1/download",
-          "sha256": "221996f774192f0f718773def8201c4ae31f02616a54ccfc2d358bb0e5cefdec"
+          "url": "https://crates.io/api/v1/crates/gimli/0.27.2/download",
+          "sha256": "ad0a93d233ebf96623465aad4046a8d3aa4da22d4f4beba5388838c8a434bbb4"
         }
       },
       "targets": [
@@ -9645,7 +9646,7 @@
           "read-core"
         ],
         "edition": "2018",
-        "version": "0.27.1"
+        "version": "0.27.2"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -12266,10 +12267,6 @@
               "target": "lazy_static"
             },
             {
-              "id": "log-panics 2.1.0",
-              "target": "log_panics"
-            },
-            {
               "id": "mime_guess 2.0.4",
               "target": "mime_guess"
             },
@@ -12298,20 +12295,12 @@
               "target": "serde_json"
             },
             {
-              "id": "syslog-tracing 0.1.0",
-              "target": "syslog_tracing"
-            },
-            {
               "id": "tokio 1.25.0",
               "target": "tokio"
             },
             {
               "id": "tracing 0.1.37",
               "target": "tracing"
-            },
-            {
-              "id": "tracing-subscriber 0.3.16",
-              "target": "tracing_subscriber"
             }
           ],
           "selects": {}
@@ -13358,10 +13347,6 @@
               "target": "lazy_static"
             },
             {
-              "id": "log-panics 2.1.0",
-              "target": "log_panics"
-            },
-            {
               "id": "many-abci 0.1.0",
               "target": "build_script_build"
             },
@@ -13390,10 +13375,6 @@
               "target": "smol"
             },
             {
-              "id": "syslog-tracing 0.1.0",
-              "target": "syslog_tracing"
-            },
-            {
               "id": "tendermint 0.24.0-pre.2",
               "target": "tendermint"
             },
@@ -13416,10 +13397,6 @@
             {
               "id": "tracing 0.1.37",
               "target": "tracing"
-            },
-            {
-              "id": "tracing-subscriber 0.3.16",
-              "target": "tracing_subscriber"
             }
           ],
           "selects": {}
@@ -13451,6 +13428,56 @@
         }
       },
       "license": "Apache-2.0"
+    },
+    "many-cli-helpers 0.1.0": {
+      "name": "many-cli-helpers",
+      "version": "0.1.0",
+      "repository": null,
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "many_cli_helpers",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "many_cli_helpers",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "clap 3.2.23",
+              "target": "clap"
+            },
+            {
+              "id": "log-panics 2.1.0",
+              "target": "log_panics"
+            },
+            {
+              "id": "syslog-tracing 0.1.0",
+              "target": "syslog_tracing"
+            },
+            {
+              "id": "tracing 0.1.37",
+              "target": "tracing"
+            },
+            {
+              "id": "tracing-subscriber 0.3.16",
+              "target": "tracing_subscriber"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.1.0"
+      },
+      "license": null
     },
     "many-client 0.1.0": {
       "name": "many-client",
@@ -14160,10 +14187,6 @@
               "target": "lazy_static"
             },
             {
-              "id": "log-panics 2.1.0",
-              "target": "log_panics"
-            },
-            {
               "id": "many-kvstore 0.1.0",
               "target": "build_script_build"
             },
@@ -14204,20 +14227,12 @@
               "target": "strum"
             },
             {
-              "id": "syslog-tracing 0.1.0",
-              "target": "syslog_tracing"
-            },
-            {
               "id": "tokio 1.25.0",
               "target": "tokio"
             },
             {
               "id": "tracing 0.1.37",
               "target": "tracing"
-            },
-            {
-              "id": "tracing-subscriber 0.3.16",
-              "target": "tracing_subscriber"
             }
           ],
           "selects": {}
@@ -14340,10 +14355,6 @@
               "target": "linkme"
             },
             {
-              "id": "log-panics 2.1.0",
-              "target": "log_panics"
-            },
-            {
               "id": "many-ledger 0.1.0",
               "target": "build_script_build"
             },
@@ -14392,20 +14403,12 @@
               "target": "strum"
             },
             {
-              "id": "syslog-tracing 0.1.0",
-              "target": "syslog_tracing"
-            },
-            {
               "id": "tokio 1.25.0",
               "target": "tokio"
             },
             {
               "id": "tracing 0.1.37",
               "target": "tracing"
-            },
-            {
-              "id": "tracing-subscriber 0.3.16",
-              "target": "tracing_subscriber"
             },
             {
               "id": "typenum 1.16.0",
@@ -24674,13 +24677,13 @@
       },
       "license": "Unlicense OR MIT"
     },
-    "terminal_size 0.2.3": {
+    "terminal_size 0.2.5": {
       "name": "terminal_size",
-      "version": "0.2.3",
+      "version": "0.2.5",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/terminal_size/0.2.3/download",
-          "sha256": "cb20089a8ba2b69debd491f8d2d023761cbf196e999218c591fa1e7e15a21907"
+          "url": "https://crates.io/api/v1/crates/terminal_size/0.2.5/download",
+          "sha256": "4c9afddd2cec1c0909f06b00ef33f94ab2cc0578c4a610aa208ddfec8aa2b43a"
         }
       },
       "targets": [
@@ -24710,14 +24713,14 @@
             ],
             "cfg(windows)": [
               {
-                "id": "windows-sys 0.42.0",
+                "id": "windows-sys 0.45.0",
                 "target": "windows_sys"
               }
             ]
           }
         },
         "edition": "2018",
-        "version": "0.2.3"
+        "version": "0.2.5"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -29546,6 +29549,7 @@
     "ledger-db 0.1.0": "src/ledger-db",
     "many 0.1.0": "src/many",
     "many-abci 0.1.0": "src/many-abci",
+    "many-cli-helpers 0.1.0": "src/many-cli-helpers",
     "many-client 0.1.0": "src/many-client",
     "many-client-macros 0.1.0": "src/many-client-macros",
     "many-error 0.1.0": "src/many-error",

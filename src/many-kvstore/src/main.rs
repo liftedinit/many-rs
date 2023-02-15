@@ -11,7 +11,6 @@ use std::collections::BTreeSet;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tracing::level_filters::LevelFilter;
 use tracing::{debug, info};
 
 mod error;
@@ -20,21 +19,10 @@ mod storage;
 
 use module::*;
 
-#[derive(clap::ArgEnum, Clone, Debug)]
-enum LogStrategy {
-    Terminal,
-    Syslog,
-}
-
 #[derive(Debug, Parser)]
 struct Opts {
-    /// Increase output logging verbosity to DEBUG level.
-    #[clap(short, long, parse(from_occurrences))]
-    verbose: i8,
-
-    /// Suppress all output logging. Can be used multiple times to suppress more.
-    #[clap(short, long, parse(from_occurrences))]
-    quiet: i8,
+    #[clap(flatten)]
+    common_flags: many_cli_helpers::CommonCliFlags,
 
     /// The location of a PEM file for the identity of this server.
     #[clap(long)]
@@ -61,10 +49,6 @@ struct Opts {
     #[clap(long, short)]
     clean: bool,
 
-    /// Use given logging strategy
-    #[clap(long, arg_enum, default_value_t = LogStrategy::Terminal)]
-    logmode: LogStrategy,
-
     /// Path to a JSON file containing an array of MANY addresses
     /// Only addresses from this array will be able to execute commands, e.g., send, put, ...
     /// Any addresses will be able to execute queries, e.g., balance, get, ...
@@ -74,45 +58,17 @@ struct Opts {
 
 fn main() {
     let Opts {
-        verbose,
-        quiet,
+        common_flags,
         pem,
         addr,
         abci,
         mut state,
         persistent,
         clean,
-        logmode,
         allow_addrs,
     } = Opts::parse();
 
-    let verbose_level = 2 + verbose - quiet;
-    let log_level = match verbose_level {
-        x if x > 3 => LevelFilter::TRACE,
-        3 => LevelFilter::DEBUG,
-        2 => LevelFilter::INFO,
-        1 => LevelFilter::WARN,
-        0 => LevelFilter::ERROR,
-        x if x < 0 => LevelFilter::OFF,
-        _ => unreachable!(),
-    };
-    let subscriber = tracing_subscriber::fmt::Subscriber::builder().with_max_level(log_level);
-
-    match logmode {
-        LogStrategy::Terminal => {
-            let subscriber = subscriber.with_writer(std::io::stderr);
-            subscriber.init();
-        }
-        LogStrategy::Syslog => {
-            let identity = std::ffi::CStr::from_bytes_with_nul(b"many-kvstore\0").unwrap();
-            let (options, facility) = Default::default();
-            let syslog = syslog_tracing::Syslog::new(identity, options, facility).unwrap();
-
-            let subscriber = subscriber.with_ansi(false).with_writer(syslog);
-            subscriber.init();
-            log_panics::init();
-        }
-    };
+    common_flags.init_logging().unwrap();
 
     debug!("{:?}", Opts::parse());
     info!(

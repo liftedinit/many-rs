@@ -14,7 +14,6 @@ use std::sync::{Arc, Mutex};
 use tendermint_abci::ServerBuilder;
 use tendermint_rpc::Client;
 use tracing::{debug, error, info, trace};
-use tracing_subscriber::filter::LevelFilter;
 
 mod abci_app;
 mod many_app;
@@ -24,14 +23,11 @@ use abci_app::AbciApp;
 use many_app::AbciModuleMany;
 use module::AbciBlockchainModuleImpl;
 
-#[derive(clap::ArgEnum, Clone, Debug)]
-enum LogStrategy {
-    Terminal,
-    Syslog,
-}
-
 #[derive(Debug, Parser)]
 struct Opts {
+    #[clap(flatten)]
+    common_flags: many_cli_helpers::CommonCliFlags,
+
     /// Address and port to bind the ABCI server to.
     #[clap(long)]
     abci: String,
@@ -56,23 +52,11 @@ struct Opts {
     #[clap(short, long, default_value = "1048576")]
     abci_read_buf_size: usize,
 
-    /// Increase output logging verbosity to DEBUG level.
-    #[clap(short, long, parse(from_occurrences))]
-    verbose: i8,
-
-    /// Suppress all output logging. Can be used multiple times to suppress more.
-    #[clap(short, long, parse(from_occurrences))]
-    quiet: i8,
-
     /// Application absolute URLs allowed to communicate with this server. Any
     /// application will be able to communicate with this server if left empty.
     /// Multiple occurences of this argument can be given.
     #[clap(long)]
     allow_origin: Option<Vec<ManyUrl>>,
-
-    /// Use given logging strategy
-    #[clap(long, arg_enum, default_value_t = LogStrategy::Terminal)]
-    logmode: LogStrategy,
 
     /// Path to a JSON file containing an array of MANY addresses
     /// Only addresses from this array will be able to execute commands, e.g., send, put, ...
@@ -84,46 +68,18 @@ struct Opts {
 #[tokio::main]
 async fn main() {
     let Opts {
+        common_flags,
         abci,
         tendermint,
         many_app,
         many,
         many_pem,
         abci_read_buf_size,
-        verbose,
-        quiet,
         allow_origin,
-        logmode,
         allow_addrs,
     } = Opts::parse();
 
-    let verbose_level = 2 + verbose - quiet;
-    let log_level = match verbose_level {
-        x if x > 3 => LevelFilter::TRACE,
-        3 => LevelFilter::DEBUG,
-        2 => LevelFilter::INFO,
-        1 => LevelFilter::WARN,
-        0 => LevelFilter::ERROR,
-        x if x < 0 => LevelFilter::OFF,
-        _ => unreachable!(),
-    };
-    let subscriber = tracing_subscriber::fmt::Subscriber::builder().with_max_level(log_level);
-
-    match logmode {
-        LogStrategy::Terminal => {
-            let subscriber = subscriber.with_writer(std::io::stderr);
-            subscriber.init();
-        }
-        LogStrategy::Syslog => {
-            let identity = std::ffi::CStr::from_bytes_with_nul(b"many-abci\0").unwrap();
-            let (options, facility) = Default::default();
-            let syslog = syslog_tracing::Syslog::new(identity, options, facility).unwrap();
-
-            let subscriber = subscriber.with_ansi(false).with_writer(syslog);
-            subscriber.init();
-            log_panics::init();
-        }
-    };
+    common_flags.init_logging().unwrap();
 
     debug!("{:?}", Opts::parse());
     info!(

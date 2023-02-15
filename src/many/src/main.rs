@@ -29,19 +29,14 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use std::{fs, process, sync};
-use tracing::{debug, error, info, level_filters::LevelFilter, trace};
+use std::{process, sync};
+use tracing::{debug, error, info, trace};
 use url::Url;
 
 #[derive(Parser)]
 struct Opts {
-    /// Increase output logging verbosity to DEBUG level.
-    #[clap(short, long, parse(from_occurrences))]
-    verbose: i8,
-
-    /// Suppress all output logging. Can be used multiple times to suppress more.
-    #[clap(short, long, parse(from_occurrences))]
-    quiet: i8,
+    #[clap(flatten)]
+    verbosity: many_cli_helpers::Verbosity,
 
     #[clap(subcommand)]
     subcommand: SubCommand,
@@ -342,7 +337,7 @@ async fn message(
     let mut nonce = [0u8; 16];
     rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut nonce);
 
-    let mut builder = many_protocol::RequestMessageBuilder::default();
+    let mut builder = RequestMessageBuilder::default();
     builder
         .version(1)
         .from(address)
@@ -438,21 +433,12 @@ async fn create_webauthn_identity(
 #[tokio::main]
 async fn main() {
     let Opts {
-        verbose,
-        quiet,
+        verbosity,
         subcommand,
     } = Opts::parse();
-    let verbose_level = 2 + verbose - quiet;
-    let log_level = match verbose_level {
-        x if x > 3 => LevelFilter::TRACE,
-        3 => LevelFilter::DEBUG,
-        2 => LevelFilter::INFO,
-        1 => LevelFilter::WARN,
-        0 => LevelFilter::ERROR,
-        x if x < 0 => LevelFilter::OFF,
-        _ => unreachable!(),
-    };
-    tracing_subscriber::fmt().with_max_level(log_level).init();
+    tracing_subscriber::fmt()
+        .with_max_level(verbosity.level())
+        .init();
 
     match subcommand {
         SubCommand::Id(o) => {
@@ -584,7 +570,7 @@ async fn main() {
             let delegation = o.delegation.map(|values| {
                 let certificates = values
                     .iter()
-                    .flat_map(|p| pem::parse_many(fs::read_to_string(p).unwrap()).unwrap())
+                    .flat_map(|p| pem::parse_many(std::fs::read_to_string(p).unwrap()).unwrap())
                     .filter(|pem| pem.tag == "MANY DELEGATION CERTIFICATE")
                     .map(|pem| CoseSign1::from_slice(&pem.contents).unwrap())
                     .collect::<Vec<CoseSign1>>();

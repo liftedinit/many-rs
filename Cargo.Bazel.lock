@@ -738,9 +738,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.1.4"
+version = "4.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f13b9c79b5d1dd500d20ef541215a6423c75829ef43117e1b4d17fd8af0b5d76"
+checksum = "ec0b0588d44d4d63a87dbd75c136c166bbfd9a86a31cb89e09906521c7d3f5e3"
 dependencies = [
  "bitflags",
  "clap_derive 4.1.0",
@@ -1010,9 +1010,9 @@ dependencies = [
 
 [[package]]
 name = "cryptoxide"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "129eabb7b0b78644a3a7e7cf220714aba47463bb281f69fa7a71ca5d12564cca"
+checksum = "e71fc7b8ebdfe6f948c2b6cc237301846958ba07a0e3fd8bea4a39f22cc94f2c"
 
 [[package]]
 name = "ct-logs"
@@ -1067,7 +1067,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "atty",
- "clap 4.1.4",
+ "clap 4.1.6",
  "console",
  "cucumber-codegen 0.17.0",
  "cucumber-expressions",
@@ -1892,9 +1892,9 @@ dependencies = [
 
 [[package]]
 name = "gimli"
-version = "0.27.1"
+version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "221996f774192f0f718773def8201c4ae31f02616a54ccfc2d358bb0e5cefdec"
+checksum = "ad0a93d233ebf96623465aad4046a8d3aa4da22d4f4beba5388838c8a434bbb4"
 
 [[package]]
 name = "git2"
@@ -2465,7 +2465,7 @@ dependencies = [
  "indicatif",
  "itertools",
  "lazy_static",
- "log-panics",
+ "many-cli-helpers",
  "many-client",
  "many-error",
  "many-identity",
@@ -2481,10 +2481,8 @@ dependencies = [
  "ring",
  "rpassword 6.0.1",
  "serde_json",
- "syslog-tracing",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -2652,6 +2650,7 @@ dependencies = [
  "clap 3.2.23",
  "coset",
  "hex",
+ "many-cli-helpers",
  "many-client",
  "many-error",
  "many-identity",
@@ -2685,7 +2684,7 @@ dependencies = [
  "itertools",
  "json5",
  "lazy_static",
- "log-panics",
+ "many-cli-helpers",
  "many-client",
  "many-error",
  "many-identity",
@@ -2701,15 +2700,24 @@ dependencies = [
  "sha2 0.10.6",
  "signal-hook",
  "smol",
- "syslog-tracing",
  "tendermint",
  "tendermint-abci",
  "tendermint-proto",
  "tendermint-rpc",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "vergen",
+]
+
+[[package]]
+name = "many-cli-helpers"
+version = "0.1.0"
+dependencies = [
+ "clap 3.2.23",
+ "log-panics",
+ "syslog-tracing",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -2888,7 +2896,7 @@ dependencies = [
  "itertools",
  "json5",
  "lazy_static",
- "log-panics",
+ "many-cli-helpers",
  "many-error",
  "many-identity",
  "many-identity-dsa",
@@ -2906,11 +2914,9 @@ dependencies = [
  "signal-hook",
  "simple_asn1",
  "strum",
- "syslog-tracing",
  "tempfile",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "vergen",
 ]
 
@@ -2930,7 +2936,7 @@ dependencies = [
  "itertools",
  "json5",
  "linkme",
- "log-panics",
+ "many-cli-helpers",
  "many-client",
  "many-error",
  "many-identity",
@@ -2957,11 +2963,9 @@ dependencies = [
  "signal-hook",
  "simple_asn1",
  "strum",
- "syslog-tracing",
  "tempfile",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "typenum",
  "typetag",
  "vergen",
@@ -5008,12 +5012,12 @@ dependencies = [
 
 [[package]]
 name = "terminal_size"
-version = "0.2.3"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb20089a8ba2b69debd491f8d2d023761cbf196e999218c591fa1e7e15a21907"
+checksum = "4c9afddd2cec1c0909f06b00ef33f94ab2cc0578c4a610aa208ddfec8aa2b43a"
 dependencies = [
  "rustix",
- "windows-sys 0.42.0",
+ "windows-sys 0.45.0",
 ]
 
 [[package]]
