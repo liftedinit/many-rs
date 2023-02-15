@@ -5,6 +5,9 @@ load '../../test_helper/load'
 load '../../test_helper/kvstore'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     (
@@ -12,15 +15,15 @@ function setup() {
       make -f $MAKEFILE clean
       for i in {0..2}
       do
-          make -f $MAKEFILE $(ciopt start-single-node-dettached)-${i} ABCI_TAG=$(img_tag) KVSTORE_TAG=$(img_tag) || {
-            echo Could not start nodes... >&3
+          make -f $MAKEFILE start-single-node-dettached-${i} || {
+            echo '# Could not start nodes...' >&3
             exit 1
           }
       done
     ) > /dev/null
 
     # Give time to the servers to start.
-    timeout 60s bash -c probe_server
+    timeout 60s bash -c probe_server 8000 8001 8002 8003
 }
 
 function teardown() {
@@ -51,18 +54,14 @@ function teardown() {
     sleep 300
 
     # At this point, start the 4th node and check it can catch up
-    make -f $MAKEFILE $(ciopt start-single-node-dettached)-3 ABCI_TAG=$(img_tag) KVSTORE_TAG=$(img_tag) || {
-      echo Could not start nodes... >&3
+    make -f $MAKEFILE start-single-node-dettached-3 || {
+      echo '# Could not start nodes...' >&3
       exit 1
     }
 
     # Give the 4th node some time to boot
-    sleep 30
-    timeout 30s bash <<EOT
-    while ! bazel run //src/many message -- --server http://localhost:8003 status; do
-      sleep 1
-    done >/dev/null
-EOT
+    timeout 60s bash -c probe_server 8003
+
     sleep 12  # Three consensus round.
     check_consistency --pem=1 --key=foo --value=bar 8000 8001 8002 8003
     check_consistency --pem=1 --key=bar --value=foo 8000 8001 8002 8003

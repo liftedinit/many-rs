@@ -109,6 +109,16 @@ load("@rules_rust//rust:repositories.bzl", "rust_repositories")
 rust_repositories()
 
 load(
+    "@io_bazel_rules_docker//toolchains/docker:toolchain.bzl",
+    docker_toolchain_configure = "toolchain_configure",
+)
+
+# Force Docker toolchain to use 'which' to find Docker binary.
+docker_toolchain_configure(
+    name = "docker_config",
+)
+
+load(
     "@io_bazel_rules_docker//repositories:repositories.bzl",
     container_repositories = "repositories",
 )
@@ -135,6 +145,30 @@ container_pull(
     registry = "index.docker.io",
     repository = "ubuntu",
 )
+
+container_pull(
+    name = "tendermint",
+    registry = "index.docker.io",
+    repository = "tendermint/tendermint",
+    tag = "v0.35.8",
+)
+
+# TODO: LL should have it's own openssl image
+#       This image is not official nor tagged
+container_pull(
+    name = "openssl",
+    registry = "index.docker.io",
+    repository = "alpine/openssl",
+    tag = "latest",
+)
+
+container_pull(
+    name = "jsonnet",
+    registry = "index.docker.io",
+    repository = "bitnami/jsonnet",
+    tag = "0.19.1",
+)
+
 ### END DOCKER SECTION ##
 
 ### BATS SECTION ###

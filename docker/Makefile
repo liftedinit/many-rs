@@ -6,21 +6,6 @@ lockfile:
 
 ../Cargo.lock: lockfile
 
-.PHONY: docker
-docker: many/many-abci many/many-kvstore many/many-ledger
-
-.PHONY: many/many-abci
-many/many-abci:
-	make -f Makefile.common many/many-abci
-
-.PHONY: many/many-ledger
-many/many-ledger:
-	make -f Makefile.ledger many/many-ledger
-
-.PHONY: many/many-kvstore
-many/many-kvstore:
-	make -f Makefile.kvstore many/many-kvstore
-
 .PHONY: start-ledger-cluster
 start-ledger-cluster:
 	make -f Makefile.ledger start-nodes
@@ -49,4 +34,3 @@ start-kvstore-cluster-dettached:
 clean:
 	make -f Makefile.ledger clean
 	make -f Makefile.kvstore clean
-	rm -rf genfiles-common

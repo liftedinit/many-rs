@@ -1,6 +1,5 @@
-KVSTORE_TAG ?= "latest"
 ALLOW_ADDRS ?= false
-FEATURES ?=
+FEATURES ?= --config=all-features
 
 include Makefile.common
 
@@ -20,19 +19,13 @@ genfiles-kvstore/generate-allow-addrs-config:
 	done
 	mkdir -p $(dir $@) && touch $@
 
-many/many-kvstore:
-	bazel build --jobs=$(shell nproc) --config=remote-cache $(FEATURES) //src/many-kvstore:many-kvstore-image.tar
-	docker load < ../$(shell bazel cquery $(FEATURES) //src/many-kvstore:many-kvstore-image.tar --output=files)
-	docker tag bazel/src/many-kvstore:many-kvstore-image lifted/many-kvstore:latest
-
-genfiles-kvstore/docker-compose.json: genfiles-common/jsonnet-docker docker-compose-kvstore.jsonnet
-	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-kvstore:/genfiles-kvstore" bitnami/jsonnet \
-		/volume/docker-compose-kvstore.jsonnet \
+genfiles-kvstore/docker-compose.json:
+	# One is unable to mount a symlink in a docker container; create a real copy
+	cp -Lr docker-compose-kvstore.jsonnet copy-docker-compose-kvstore.jsonnet
+	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-kvstore:/genfiles-kvstore" bazel:jsonnet_image \
+		/volume/copy-docker-compose-kvstore.jsonnet \
 		--tla-code nb_nodes=$(NB_NODES) \
 		--tla-code user=$$(id -u) \
-		--tla-code abci_tag=\"$(ABCI_TAG)\" \
-		--tla-code kvstore_tag=\"$(KVSTORE_TAG)\" \
-		--tla-code tendermint_tag=\"$(TENDERMINT_VERSION)\" \
 		--tla-code allow_addrs=$(ALLOW_ADDRS) \
 		-o /$@
 
@@ -45,24 +38,24 @@ genfiles-kvstore/generate-tendermint-e2e-config:
 	bash update_config.sh -c "genfiles-kvstore/node%/tendermint/config" -i tendermint-% $(NB_NODES)
 	mkdir -p $(dir $@) && touch $@
 
-genfiles-kvstore/node%: genfiles-common/openssl-docker genfiles-common/tendermint-docker
+genfiles-kvstore/node%:
 	mkdir -p "$@/tendermint"
-	docker run --user $$(id -u) -it --rm -v "${PWD}/$@/tendermint:/tendermint" tendermint/tendermint:v$(TENDERMINT_VERSION) init validator
-	docker run --user $$(id -u) -it --rm -v ${PWD}/$@/:/export alpine/openssl genpkey -algorithm Ed25519 -out /export/kvstore.pem
-	docker run --user $$(id -u) -it --rm -v ${PWD}/$@/:/export alpine/openssl genpkey -algorithm Ed25519 -out /export/abci.pem
+	docker run --user $$(id -u) --rm -v "${PWD}/$@/tendermint:/tendermint" bazel:tendermint_image init validator
+	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel:openssl_image genpkey -algorithm Ed25519 -out /export/kvstore.pem
+	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel:openssl_image genpkey -algorithm Ed25519 -out /export/abci.pem
 	mkdir -p "$@/persistent-kvstore"
 	cp kvstore_state.json $@/kvstore_state.json5
 
 .PHONY: start-nodes
-start-nodes: many/many-kvstore many/many-abci genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json
+start-nodes: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up
 
 .PHONY: start-abci-%
-start-abci-%: genfiles-kvstore/docker-compose.json many/many-abci
+start-abci-%: genfiles-kvstore/docker-compose.json
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up abci-$*
 
 .PHONY: start-kvstore-%
-start-kvstore-%: genfiles-kvstore/docker-compose.json many/many-kvstore genfiles-kvstore/generate-tendermint-e2e-config
+start-kvstore-%: genfiles-kvstore/docker-compose.json genfiles-kvstore/generate-tendermint-e2e-config
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up kvstore-$*
 
 .PHONY: start-tendermint-%
@@ -112,21 +105,11 @@ stop-tendermint-%: genfiles-kvstore/docker-compose.json
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop tendermint-$*
 
 .PHONY: start-nodes-dettached
-start-nodes-dettached: many/many-kvstore many/many-abci genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up --detach
-
-.PHONY: start-nodes-dettached-no-img-regen
-start-nodes-dettached-no-img-regen: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json
+start-nodes-dettached: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up --detach
 
 .PHONY: start-single-node-dettached-%
-start-single-node-dettached-%: many/many-kvstore many/many-abci genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up abci-$* --detach
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up kvstore-$* --detach
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up tendermint-$* --detach
-
-.PHONY: start-single-node-dettached-no-img-regen-%
-start-single-node-dettached-no-img-regen-%: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json
+start-single-node-dettached-%: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up abci-$* --detach
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up kvstore-$* --detach
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up tendermint-$* --detach

@@ -6,6 +6,9 @@ load '../../test_helper/load'
 load '../../test_helper/ledger'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     jq '(.migrations[] | select(.name == "Account Count Data Attribute")).block_height |= 20 |
@@ -15,18 +18,16 @@ function setup() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE $(ciopt start-nodes-dettached) \
-          ABCI_TAG=$(img_tag) \
-          LEDGER_TAG=$(img_tag) \
+      make -f $MAKEFILE start-nodes-dettached \
           ID_WITH_BALANCES="$(identity 1):1000000" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
-        echo Could not start nodes... >&3
+        echo '# Could not start nodes...' >&3
         exit 1
       }
     ) > /dev/null
 
     # Give time to the servers to start.
-    timeout 60s bash -c probe_server
+    timeout 60s bash -c probe_server 8000 8001 8002 8003
 }
 
 function teardown() {

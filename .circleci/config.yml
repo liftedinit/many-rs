@@ -182,36 +182,53 @@ jobs:
   publish_nightly_docker:
     executor: linux2204_machine
     steps:
-      - docker/check
+#      - docker/check
       - checkout
       - run:
           name: build docker images
-          command: make docker
-          working_directory: ./docker/
+          command: |
+              bazel build --jobs=$(shell nproc) \
+                --config=remote-cache \
+                //src/many-kvstore:many-kvstore-image.tar \
+                //src/many-abci:many-abci-image.tar
+              docker load < ../$(shell bazel cquery $(FEATURES) //src/many-kvstore:many-kvstore-image.tar --output=files)
+              docker load < ../$(shell bazel cquery $(FEATURES) //src/many-abci:many-abci-image.tar --output=files)
+            
+              bazel build --jobs=$(shell nproc) \
+                --config=remote-cache \
+                --balance_testing \
+                --migration_testing \
+                //src/many-ledger:many-ledger-image.tar
+              docker load < ../$(shell bazel cquery \
+                --balance_testing \
+                --migration_testing \
+                //src/many-ledger:many-ledger-image.tar \
+                --output=files)
+            
       - run:
           name: tag docker images
           command: |
-            docker tag lifted/many-abci:latest lifted/many-abci:nightly
-            docker tag lifted/many-abci:latest lifted/many-abci:$CIRCLE_SHA1
-            docker tag lifted/many-ledger:latest lifted/many-ledger:nightly
-            docker tag lifted/many-ledger:latest lifted/many-ledger:$CIRCLE_SHA1
-            docker tag lifted/many-kvstore:latest lifted/many-kvstore:nightly
-            docker tag lifted/many-kvstore:latest lifted/many-kvstore:$CIRCLE_SHA1
-      - docker/push:
-          image: many-abci
-          registry: lifted
-          tag: "nightly,$CIRCLE_SHA1"
-          step-name: "docker push lifted/many-abci"
-      - docker/push:
-          image: many-ledger
-          registry: lifted
-          tag: "nightly,$CIRCLE_SHA1"
-          step-name: "docker push lifted/many-ledger"
-      - docker/push:
-          image: many-kvstore
-          registry: lifted
-          tag: "nightly,$CIRCLE_SHA1"
-          step-name: "docker push lifted/many-kvstore"
+            docker tag bazel/src/many-abci:many-abci-image lifted/many-abci:nightly
+            docker tag bazel/src/many-abci:many-abci-image lifted/many-abci:$CIRCLE_SHA1
+            docker tag bazel/src/many-ledger:many-ledger-image lifted/many-ledger:nightly
+            docker tag bazel/src/many-ledger:many-ledger-image lifted/many-ledger:$CIRCLE_SHA1
+            docker tag bazel/src/many-kvstore:many-kvstore-image lifted/many-kvstore:nightly
+            docker tag bazel/src/many-kvstore:many-kvstore-image lifted/many-kvstore:$CIRCLE_SHA1
+#      - docker/push:
+#          image: many-abci
+#          registry: lifted
+#          tag: "nightly,$CIRCLE_SHA1"
+#          step-name: "docker push lifted/many-abci"
+#      - docker/push:
+#          image: many-ledger
+#          registry: lifted
+#          tag: "nightly,$CIRCLE_SHA1"
+#          step-name: "docker push lifted/many-ledger"
+#      - docker/push:
+#          image: many-kvstore
+#          registry: lifted
+#          tag: "nightly,$CIRCLE_SHA1"
+#          step-name: "docker push lifted/many-kvstore"
 
   # Perform resiliency testing
   resiliency_tests:
@@ -219,18 +236,12 @@ jobs:
     steps:
       - checkout
       - rust/install
-      - run:
-          name: remove old bats from system
-          command: sudo rm $(which bats)
       - prepare_bats
-      - docker/pull:
-          images: "lifted/many-ledger:nightly,lifted/many-kvstore:nightly,lifted/many-abci:nightly"
       - run:
-          name: running BATs tests
-          # https://support.circleci.com/hc/en-us/articles/360046544433-Makefile-Command-Inconsistencies
-          shell: /bin/bash
-          command: bats *
-          working_directory: ./tests/resiliency
+          name: running tests
+          command: |
+              bazel run --config=remote-cache //:bats-resiliency-ledger
+              bazel run --config=remote-cache //:bats-resiliency-kvstore
 
   # Push a tag to GitHub
   tag:
@@ -326,49 +337,49 @@ commands:
           command: cargo install --force cbor-diag-cli
 
 workflows:
-  ci:
-    when:
-      not:
-        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-    jobs:
-      - lint-test-build:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: lint-test-build-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204, macos]
-      - bats:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: bats-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204, macos]
-          requires:
-            - lint-test-build-v<< matrix.os >>
-      - coverage:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: coverage-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
-      - dev_release:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: dev_release-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
+#  ci:
+#    when:
+#      not:
+#        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+#    jobs:
+#      - lint-test-build:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: lint-test-build-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204, macos]
+#      - bats:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: bats-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204, macos]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
+#      - coverage:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: coverage-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
+#      - dev_release:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: dev_release-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
   release:
     when:
       not:
@@ -427,10 +438,10 @@ workflows:
     jobs:
       - audit
   nightly_docker_and_resiliency_tests:
-    when:
-      and:
-        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
+#    when:
+#      and:
+#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+#        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
     jobs:
       - publish_nightly_docker:
           pre-steps:

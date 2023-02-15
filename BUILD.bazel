@@ -48,7 +48,7 @@ pkg_tar(
 
 ## DOCKER BASE IMAGE CONFIGURATION ##
 filegroup(
-    name = "docker",
+    name = "docker-images",
     srcs = [
         "//src/many-abci:many-abci-image",
         "//src/many-kvstore:many-kvstore-image",
@@ -189,4 +189,105 @@ bats_test(
         ":ledger-staging",
     ],
 )
+
+filegroup(
+    name = "docker-kvstore-deps",
+    srcs = [
+        "docker/Makefile",
+        "docker/Makefile.common",
+        "docker/Makefile.kvstore",
+        "docker/docker-compose-kvstore.jsonnet",
+        "docker/generate-allow-addrs.sh",
+        "docker/kvstore_state.json",
+        "docker/update_config.sh",
+    ],
+)
+
+filegroup(
+    name = "docker-ledger-deps",
+    srcs = [
+        "docker/Makefile",
+        "docker/Makefile.common",
+        "docker/Makefile.ledger",
+        "docker/docker-compose-ledger.jsonnet",
+        "docker/generate-allow-addrs.sh",
+        "docker/ledger_state.json",
+        "docker/update_config.sh",
+        "staging/ledger_state.json5",
+        "tests/ledger_migrations.json",
+    ],
+)
+
+bats_test(
+    name = "bats-resiliency-kvstore",
+    srcs = [
+        "tests/resiliency/kvstore/abci-allow-addrs.bats",
+        "tests/resiliency/kvstore/catch-up.bats",
+        "tests/resiliency/kvstore/persistent_store.bats",
+        "tests/resiliency/kvstore/up-down.bats",
+    ],
+    tags = ["manual"],
+    uses_bats_assert = True,
+    deps = [
+        ":bats-helpers",
+        ":docker-kvstore-deps",
+        ":jsonnet_image",
+        ":openssl_image",
+        ":tendermint_image",
+        "//src/kvstore",
+        "//src/many",
+        "//src/many-abci",
+        "//src/many-abci:many-abci-image",
+        "//src/many-kvstore",
+        "//src/many-kvstore:many-kvstore-image",
+    ],
+)
+
+bats_test(
+    name = "bats-resiliency-ledger",
+    srcs = [
+        "tests/resiliency/ledger/abci-allow-addrs.bats",
+        "tests/resiliency/ledger/account_count_migration.bats",
+        "tests/resiliency/ledger/catch-up.bats",
+        "tests/resiliency/ledger/dummy_migration.bats",
+        "tests/resiliency/ledger/memo_migration.bats",
+        "tests/resiliency/ledger/persistent_store.bats",
+        "tests/resiliency/ledger/token_migration.bats",
+        "tests/resiliency/ledger/token_subresource.bats",
+        "tests/resiliency/ledger/up-down.bats",
+    ],
+    tags = ["manual"],
+    uses_bats_assert = True,
+    deps = [
+        ":bats-helpers",
+        ":docker-ledger-deps",
+        ":jsonnet_image",
+        ":openssl_image",
+        ":tendermint_image",
+        "//src/ledger",
+        "//src/many",
+        "//src/many-abci",
+        "//src/many-abci:many-abci-image",
+        "//src/many-ledger",
+        "//src/many-ledger:many-ledger-image",
+    ],
+)
+
+load("@io_bazel_rules_docker//container:image.bzl", "container_image")
+
+container_image(
+    name = "tendermint_image",
+    base = "@tendermint//image",
+)
+
+container_image(
+    name = "openssl_image",
+    base = "@openssl//image",
+)
+
+container_image(
+    name = "jsonnet_image",
+    base = "@jsonnet//image",
+)
+
 ## END BATS SECTION ##

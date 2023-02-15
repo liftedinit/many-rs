@@ -67,9 +67,12 @@ function call_many() {
 }
 
 function probe_server() {
-    while ! call_many message --server http://localhost:8000 status; do
-      sleep 1
-    done >/dev/null
+    sleep 30 # Required because of https://github.com/liftedinit/many-rs/issues/307
+    for port in "$@"; do
+        while ! many message --server http://localhost:${port} status; do
+          sleep 1
+        done >/dev/null
+    done
 }
 
 export -f call_many

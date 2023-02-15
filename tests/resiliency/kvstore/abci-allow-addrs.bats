@@ -6,6 +6,9 @@ load '../../test_helper/load'
 load '../../test_helper/kvstore'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     # Create PEM files beforehand, so we can generate the `allow addrs` config file
@@ -18,14 +21,14 @@ function setup() {
       # Generate the `allow addrs` config file using the PEM files from $PEM_ROOT
       make -f $MAKEFILE genfiles-kvstore/generate-allow-addrs-config PEM_ROOT=$PEM_ROOT
       # Start the nodes, enabling MANY address filtering using the `allow addrs` config file
-      make -f $MAKEFILE $(ciopt start-nodes-dettached) ABCI_TAG=$(img_tag) KVSTORE_TAG=$(img_tag) ALLOW_ADDRS=true || {
-            echo Could not start nodes... >&3
+      make -f $MAKEFILE start-nodes-dettached ALLOW_ADDRS=true || {
+            echo '# Could not start nodes...' >&3
             exit 1
           }
     ) > /dev/null
 
     # Give time to the servers to start.
-    timeout 60s bash -c probe_server
+    timeout 60s bash -c probe_server 8000 8001 8002 8003
 }
 
 function teardown() {

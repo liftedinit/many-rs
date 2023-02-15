@@ -9,6 +9,9 @@ load '../../test_helper/load'
 load '../../test_helper/ledger'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 }
 
@@ -53,19 +56,17 @@ function teardown() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE $(ciopt start-nodes-dettached) \
-          ABCI_TAG=$(img_tag) \
-          LEDGER_TAG=$(img_tag) \
+      make -f $MAKEFILE start-nodes-dettached \
           ID_WITH_BALANCES="$(identity 1):1000000:$(subresource 1 2147483647)" \
           STATE="$BATS_TEST_ROOTDIR/ledger_state.json5" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
-        echo Could not start nodes... >&3
+        echo '# Could not start nodes...' >&3
         exit 1
       }
     ) > /dev/null
 
     # Give time to the servers to start.
-    timeout 60s bash -c probe_server
+    timeout 60s bash -c probe_server 8000 8001 8002 8003
 
     wait_for_block 20
 
@@ -104,24 +105,17 @@ function teardown() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE $(ciopt start-nodes-dettached) \
-          ABCI_TAG=$(img_tag) \
-          LEDGER_TAG=$(img_tag) \
+      make -f $MAKEFILE start-nodes-dettached \
           ID_WITH_BALANCES="$(identity 1):1000000:$(subresource 1 2147483647)" \
           STATE="$BATS_TEST_ROOTDIR/ledger_state.json5" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
-        echo Could not start nodes... >&3
+        echo '# Could not start nodes...' >&3
         exit 1
       }
     ) > /dev/null
 
     # Give time to the servers to start.
-    sleep 30
-    timeout 30s bash <<EOT
-    while ! bazel run //src/many message -- --server http://localhost:8000 status; do
-      sleep 1
-    done >/dev/null
-EOT
+    timeout 60s bash -c probe_server 8000 8001 8002 8003
 
     wait_for_block 20
 

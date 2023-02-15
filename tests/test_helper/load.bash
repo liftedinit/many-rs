@@ -1,19 +1,3 @@
-# Do not regen Docker images on CI.
-# Docker images will be pulled by CI.
-function ciopt() {
-    [[ "$CI" == "true" ]]\
-      && echo ${1}-no-img-regen \
-      || echo ${1}
-}
-
-# Use the nightly Docker image when running the tests on CI.
-# Use the latest Docker image when running the tests locally.
-function img_tag {
-    [[ "$CI" == "true" ]]\
-      && echo "nightly" \
-      || echo "latest"
-}
-
 # Generate allow_addrs.json5 config file
 function generate_allow_addrs_config() {
     for i in "$@";
