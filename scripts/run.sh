@@ -18,14 +18,66 @@ toml_set() {
     rm $tmp
 }
 
-# Ver1 <= Ver2
-verlte() {
-    printf '%s\n%s' "$1" "$2" | sort -C -V
+# Compare $1 and $2 as semver.
+# Returns 0 for equal, 1 for $1 > $2 and 2 for $2 > $1.
+vercomp () {
+    if [[ "$1" == "$2" ]]
+    then
+        return 0
+    fi
+
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+
+    # fill empty fields in ver1 with zeros
+    for (( i = ${#ver1[@]}; i < ${#ver2[@]}; i++ ))
+    do
+        ver1[i]=0
+    done
+
+    for (( i = 0; i < ${#ver2[@]}; i++ ))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if (( 10#${ver1[i]} > 10#${ver2[i]} ))
+        then
+            return 1
+        fi
+        if (( 10#${ver1[i]} < 10#${ver2[i]} ))
+        then
+            return 2
+        fi
+    done
+
+    return 0
 }
 
-# Ver1 < Ver2
-verlt() {
-    ! verlte "$2" "$1"
+# Check a version with an operator.
+vercheck() {
+    vercomp "$1" "$3"
+    case $? in
+        0) [ "$2" == "eq" ] || [ "$2" == "gte" ] || [ "$2" == "lte" ];;
+        1) [ "$2" == "gt" ];;
+        2) [ "$2" == "lt" ];;
+        *) false;;
+    esac
+}
+
+# Check that the version ($1) is correct.
+# Returns 0 if okay or 1 if not.
+check_tm_version() {
+    if vercheck "$1" lt 0.34; then
+        echo Tendermint version should be at least 0.34.0
+        false
+    elif vercheck "$1" eq 0.35; then
+        echo Tendermint version should not be 0.35.
+        false
+    else
+        true
+    fi
 }
 
 check_dep() {
@@ -51,9 +103,9 @@ check_deps() {
     else
         local tm_current_version
         tm_current_version=$(tendermint version | cut -d '-' -f 1)
-        verlt "$tm_current_version" $TM_MIN_VERSION && {
-            echo Tendermint version should be at least $TM_MIN_VERSION.
-            echo Current version is "$tm_current_version".
+
+        ! check_tm_version "$tm_current_version" && {
+            echo Current version of tendermint is "$tm_current_version".
             return_value=$((return_value + 1))
         }
     fi
