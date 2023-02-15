@@ -26,5 +26,4 @@ many-types = { path = ".", features = ["proptest"] }
 serde_test = "1.0.139"
 
 [features]
-memo-backward-compatible = []
 cucumber = []
