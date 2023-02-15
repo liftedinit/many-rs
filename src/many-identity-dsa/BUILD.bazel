@@ -63,7 +63,6 @@ rust_library(
     ) + [
         "//src/many-error",
         "//src/many-identity:many-identity-for-test",
-        "//src/many-protocol:many-protocol-for-test",
     ],
 )
 
@@ -78,5 +77,8 @@ rust_test(
         "ed25519",
         "serde",
         "testing",
+    ],
+    deps = [
+        "//src/many-protocol:many-protocol-for-test",
     ],
 )

@@ -45,7 +45,7 @@ rust_library(
     ) + [
         "//src/many-error",
         "//src/many-identity:many-identity-for-test",
-        "//src/many-identity-dsa",
+        "//src/many-identity-dsa:many-identity-dsa-for-test",
     ],
 )
 

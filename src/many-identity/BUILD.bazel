@@ -29,6 +29,7 @@ rust_library(
         "minicbor",
         "raw",  # Needed in many-server
         "serde",  # Needed in CLI tools.
+        "testing",
     ],
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
