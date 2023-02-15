@@ -44,7 +44,7 @@ function setup() {
     ) > /dev/null
 
     # Give time to the servers to start.
-    timeout 60s bash -c probe_server 8000 8001 8002 8003
+    wait_for_server 8000 8001 8002 8003
 }
 
 function teardown() {

@@ -23,7 +23,7 @@ function setup() {
     ) > /dev/null
 
     # Give time to the servers to start.
-    timeout 60s bash -c probe_server 8000 8001 8002 8003
+    wait_for_server 8000 8001 8002 8003
 }
 
 function teardown() {
@@ -60,7 +60,7 @@ function teardown() {
     }
 
     # Give the 4th node some time to boot
-    timeout 60s bash -c probe_server 8003
+    wait_for_server 8003
 
     sleep 12  # Three consensus round.
     check_consistency --pem=1 --key=foo --value=bar 8000 8001 8002 8003

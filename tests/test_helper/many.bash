@@ -67,12 +67,16 @@ function call_many() {
 }
 
 function probe_server() {
-    sleep 30 # Required because of https://github.com/liftedinit/many-rs/issues/307
     for port in "$@"; do
         while ! many message --server http://localhost:${port} status; do
           sleep 1
         done >/dev/null
     done
+}
+
+function wait_for_server() {
+    sleep 30 # Required because of https://github.com/liftedinit/many-rs/issues/307
+    timeout 60s bash -c probe_server "$@"
 }
 
 export -f call_many

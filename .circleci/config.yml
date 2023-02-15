@@ -245,7 +245,9 @@ jobs:
               bazel run :openssl_image
               bazel run :jsonnet_image
               bazel run --config=remote-cache //src/many-abci:many-abci-image -- --norun
-              bazel run --config=remote-cache //src/many-ledger:many-ledger-image -- --norun
+              bazel run --config=remote-cache \
+                --balance_testing \
+                --migration_testing //src/many-ledger:many-ledger-image -- --norun
               bazel run --config=remote-cache //src/many-kvstore:many-kvstore-image -- --norun
 
               # Run the resiliency tests

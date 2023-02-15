@@ -21,7 +21,7 @@ function setup() {
     ) > /dev/null
 
     # Give time to the servers to start.
-    timeout 60s bash -c probe_server 8000 8001 8002 8003
+    wait_for_server 8000 8001 8002 8003
 }
 
 function teardown() {
@@ -62,7 +62,7 @@ function teardown() {
     # At this point, node 3 should catch up and the global application hash should be valid
 
     # Give time to the servers to start.
-    timeout 60s bash -c probe_server 8003
+    wait_for_server 8003
     sleep 10
 }
 

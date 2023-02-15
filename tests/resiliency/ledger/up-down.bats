@@ -20,7 +20,7 @@ function setup() {
     ) > /dev/null
 
     # Give time to the servers to start.
-    timeout 60s bash -c probe_server 8000 8001 8002 8003
+    wait_for_server 8000 8001 8002 8003
 }
 
 function teardown() {
@@ -87,7 +87,7 @@ function teardown() {
     }
 
     # Give time to the servers to start.
-    timeout 60s bash -c probe_server 8003
+    wait_for_server 8003
 
     sleep 10
     check_consistency --pem=1 --balance=994000 --id="$(identity 1)" 8000 8001 8002 8003
