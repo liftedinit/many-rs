@@ -47,6 +47,7 @@ crates_repository(
         "//src/ledger-db:Cargo.toml",
         "//src/ledger:Cargo.toml",
         "//src/many-abci:Cargo.toml",
+        "//src/many-cli-helpers:Cargo.toml",
         "//src/many-client-macros:Cargo.toml",
         "//src/many-client:Cargo.toml",
         "//src/many-error:Cargo.toml",

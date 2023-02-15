@@ -19,16 +19,9 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 use tracing::{debug, error, info, trace};
-use tracing_subscriber::filter::LevelFilter;
 
 mod multisig;
 mod tokens;
-
-#[derive(clap::ArgEnum, Clone, Debug)]
-enum LogStrategy {
-    Terminal,
-    Syslog,
-}
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
@@ -66,6 +59,9 @@ impl<'b> minicbor::Decode<'b, ()> for Amount {
     )
 )]
 struct Opts {
+    #[clap(flatten)]
+    common_flags: many_cli_helpers::CommonCliFlags,
+
     /// Many server URL to connect to.
     #[clap(default_value = "http://localhost:8000")]
     server: String,
@@ -90,18 +86,6 @@ struct Opts {
     /// HSM PKCS#11 key ID
     #[clap(long, conflicts_with("pem"))]
     keyid: Option<String>,
-
-    /// Increase output logging verbosity to DEBUG level.
-    #[clap(short, long, parse(from_occurrences))]
-    verbose: i8,
-
-    /// Suppress all output logging. Can be used multiple times to suppress more.
-    #[clap(short, long, parse(from_occurrences))]
-    quiet: i8,
-
-    /// Use given logging strategy
-    #[clap(long, arg_enum, default_value_t = LogStrategy::Terminal)]
-    logmode: LogStrategy,
 
     #[clap(subcommand)]
     subcommand: SubCommand,
@@ -325,6 +309,7 @@ fn send(
 
 fn main() {
     let Opts {
+        common_flags,
         pem,
         module,
         slot,
@@ -332,38 +317,9 @@ fn main() {
         server,
         server_id,
         subcommand,
-        verbose,
-        quiet,
-        logmode,
     } = Opts::parse();
 
-    let verbose_level = 2 + verbose - quiet;
-    let log_level = match verbose_level {
-        x if x > 3 => LevelFilter::TRACE,
-        3 => LevelFilter::DEBUG,
-        2 => LevelFilter::INFO,
-        1 => LevelFilter::WARN,
-        0 => LevelFilter::ERROR,
-        x if x < 0 => LevelFilter::OFF,
-        _ => unreachable!(),
-    };
-    let subscriber = tracing_subscriber::fmt::Subscriber::builder().with_max_level(log_level);
-
-    match logmode {
-        LogStrategy::Terminal => {
-            let subscriber = subscriber.with_writer(std::io::stderr);
-            subscriber.init();
-        }
-        LogStrategy::Syslog => {
-            let identity = std::ffi::CStr::from_bytes_with_nul(b"ledger\0").unwrap();
-            let (options, facility) = Default::default();
-            let syslog = syslog_tracing::Syslog::new(identity, options, facility).unwrap();
-
-            let subscriber = subscriber.with_writer(syslog);
-            subscriber.init();
-            log_panics::init();
-        }
-    };
+    common_flags.init_logging().unwrap();
 
     let key: Box<dyn Identity> = if let (Some(module), Some(slot), Some(keyid)) =
         (module, slot, keyid)

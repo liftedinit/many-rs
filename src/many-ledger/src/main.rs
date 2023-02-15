@@ -1,6 +1,7 @@
 #![feature(used_with_arg)]
 
 use clap::Parser;
+use many_cli_helpers::CommonCliFlags;
 use many_identity::verifiers::AnonymousVerifier;
 use many_identity::{Address, Identity};
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
@@ -15,7 +16,6 @@ use std::collections::BTreeSet;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tracing::level_filters::LevelFilter;
 use tracing::{debug, info, warn};
 
 use crate::allow_addrs::AllowAddrsModule;
@@ -33,22 +33,11 @@ mod migration;
 mod module;
 mod storage;
 
-#[derive(clap::ArgEnum, Clone, Debug)]
-enum LogStrategy {
-    Terminal,
-    Syslog,
-}
-
 #[derive(Parser, Debug)]
 #[clap(args_override_self(true))]
 struct Opts {
-    /// Increase output logging verbosity to DEBUG level.
-    #[clap(short, long, parse(from_occurrences))]
-    verbose: i8,
-
-    /// Suppress all output logging. Can be used multiple times to suppress more.
-    #[clap(short, long, parse(from_occurrences))]
-    quiet: i8,
+    #[clap(flatten)]
+    common_flags: CommonCliFlags,
 
     /// The location of a PEM file for the identity of this server.
     // The field needs to be an Option for the clap derive to work properly.
@@ -100,10 +89,6 @@ struct Opts {
     #[clap(long)]
     disable_webauthn_only_for_testing: bool,
 
-    /// Use given logging strategy
-    #[clap(long, arg_enum, default_value_t = LogStrategy::Terminal)]
-    logmode: LogStrategy,
-
     /// Path to a JSON file containing the configurations for the
     /// migrations. Migrations are DISABLED unless this configuration file
     /// is given.
@@ -123,15 +108,13 @@ struct Opts {
 
 fn main() {
     let Opts {
-        verbose,
-        quiet,
+        common_flags,
         pem,
         addr,
         abci,
         mut state,
         persistent,
         clean,
-        logmode,
         migrations_config,
         allow_origin,
         allow_addrs,
@@ -139,33 +122,7 @@ fn main() {
         ..
     } = Opts::parse();
 
-    let verbose_level = 2 + verbose - quiet;
-    let log_level = match verbose_level {
-        x if x > 3 => LevelFilter::TRACE,
-        3 => LevelFilter::DEBUG,
-        2 => LevelFilter::INFO,
-        1 => LevelFilter::WARN,
-        0 => LevelFilter::ERROR,
-        x if x < 0 => LevelFilter::OFF,
-        _ => unreachable!(),
-    };
-    let subscriber = tracing_subscriber::fmt::Subscriber::builder().with_max_level(log_level);
-
-    match logmode {
-        LogStrategy::Terminal => {
-            let subscriber = subscriber.with_writer(std::io::stderr);
-            subscriber.init();
-        }
-        LogStrategy::Syslog => {
-            let identity = std::ffi::CStr::from_bytes_with_nul(b"many-ledger\0").unwrap();
-            let (options, facility) = Default::default();
-            let syslog = syslog_tracing::Syslog::new(identity, options, facility).unwrap();
-
-            let subscriber = subscriber.with_ansi(false).with_writer(syslog);
-            subscriber.init();
-            log_panics::init();
-        }
-    };
+    common_flags.init_logging().unwrap();
 
     debug!("{:?}", Opts::parse());
     info!(
