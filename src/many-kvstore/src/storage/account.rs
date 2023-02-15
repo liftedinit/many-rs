@@ -41,39 +41,47 @@ impl KvStoreStorage {
         self._add_account(account, true)
     }
 
-    pub fn get_account(&self, id: &Address) -> Option<account::Account> {
-        self.get_account_even_disabled(id).and_then(|x| {
-            if x.disabled.is_none() || x.disabled == Some(Either::Left(false)) {
-                Some(x)
-            } else {
-                None
-            }
-        })
+    pub fn get_account(&self, id: &Address) -> (Option<account::Account>, Vec<u8>) {
+        let (account, key) = self.get_account_even_disabled(id);
+        (
+            account.and_then(|x| {
+                if x.disabled.is_none() || x.disabled == Some(Either::Left(false)) {
+                    Some(x)
+                } else {
+                    None
+                }
+            }),
+            key,
+        )
     }
 
-    pub fn get_account_even_disabled(&self, id: &Address) -> Option<account::Account> {
-        self.persistent_store
-            .get(&key_for_account(id))
-            .unwrap_or_default()
-            .as_ref()
-            .and_then(|bytes| {
-                minicbor::decode::<account::Account>(bytes)
-                    .map_err(|e| ManyError::deserialization_error(e.to_string()))
-                    .ok()
-            })
+    pub fn get_account_even_disabled(&self, id: &Address) -> (Option<account::Account>, Vec<u8>) {
+        let key = key_for_account(id);
+        (
+            self.persistent_store
+                .get(&key)
+                .unwrap_or_default()
+                .as_ref()
+                .and_then(|bytes| {
+                    minicbor::decode::<account::Account>(bytes)
+                        .map_err(|e| ManyError::deserialization_error(e.to_string()))
+                        .ok()
+                }),
+            key,
+        )
     }
 
     pub fn set_description(
         &mut self,
         mut account: account::Account,
         args: account::SetDescriptionArgs,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         account.set_description(Some(args.clone().description));
         self.log_event(events::EventInfo::AccountSetDescription {
             account: args.account,
             description: args.description,
         });
-        self.commit_account(&args.account, account).map(|_| ())
+        self.commit_account(&args.account, account)
     }
 
     pub fn add_roles(
@@ -179,6 +187,7 @@ impl KvStoreStorage {
     pub fn disable_account(&mut self, id: &Address) -> Result<(), ManyError> {
         let mut account = self
             .get_account_even_disabled(id)
+            .0
             .ok_or_else(|| account::errors::unknown_account(*id))?;
 
         if account.disabled.is_none() || account.disabled == Some(Either::Left(false)) {

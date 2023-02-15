@@ -135,51 +135,58 @@ impl AccountModuleBackend for KvStoreModuleImpl {
             .prove_state(context, keys)
             .map(|error| ManyError::unknown(error.to_string()))
             .map(Err)
-            .unwrap_or(Ok(()))?;
-        Ok(account::CreateReturn { id })
+            .unwrap_or(Ok(()))
+            .map(|_| account::CreateReturn { id })
     }
 
     fn set_description(
         &mut self,
         sender: &Address,
         args: account::SetDescriptionArgs,
-        _: Context,
+        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let account = self
-            .storage
-            .get_account(&args.account)
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
+        let (account, account_key) = self.storage.get_account(&args.account);
+        let account = account.ok_or_else(|| account::errors::unknown_account(args.account))?;
 
         if !account.has_role(sender, account::Role::Owner) {
             return Err(account::errors::user_needs_role("owner"));
         }
 
-        self.storage.set_description(account, args)?;
-        Ok(EmptyReturn)
+        self.storage
+            .set_description(account, args)
+            .and_then(|description_key| {
+                self.storage
+                    .prove_state(context, vec![account_key, description_key])
+                    .map(|error| ManyError::unknown(error.to_string()))
+                    .map(Err)
+                    .unwrap_or(Ok(()))
+                    .map(|_| EmptyReturn)
+            })
     }
 
     fn list_roles(
         &self,
-        _sender: &Address,
+        _: &Address,
         args: account::ListRolesArgs,
     ) -> Result<account::ListRolesReturn, ManyError> {
-        let account = self
-            .storage
+        self.storage
             .get_account(&args.account)
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
-        Ok(account::ListRolesReturn {
-            roles: get_roles_for_account(&account),
-        })
+            .0
+            .ok_or_else(|| account::errors::unknown_account(args.account))
+            .map(|account| account::ListRolesReturn {
+                roles: get_roles_for_account(&account),
+            })
     }
 
     fn get_roles(
         &self,
-        _sender: &Address,
+        _: &Address,
         args: account::GetRolesArgs,
     ) -> Result<account::GetRolesReturn, ManyError> {
         let account = self
             .storage
             .get_account(&args.account)
+            .0
             .ok_or_else(|| account::errors::unknown_account(args.account))?;
 
         let mut roles = BTreeMap::new();
@@ -198,13 +205,13 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         let account = self
             .storage
             .get_account(&args.account)
+            .0
             .ok_or_else(|| account::errors::unknown_account(args.account))?;
 
         if !account.has_role(sender, account::Role::Owner) {
             return Err(account::errors::user_needs_role("owner"));
         }
-        self.storage.add_roles(account, args)?;
-        Ok(EmptyReturn)
+        self.storage.add_roles(account, args).map(|_| EmptyReturn)
     }
 
     fn remove_roles(
@@ -215,36 +222,35 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         let account = self
             .storage
             .get_account(&args.account)
+            .0
             .ok_or_else(|| account::errors::unknown_account(args.account))?;
 
         if !account.has_role(sender, account::Role::Owner) {
             return Err(account::errors::user_needs_role(Role::Owner));
         }
-        self.storage.remove_roles(account, args)?;
-        Ok(EmptyReturn)
+        self.storage
+            .remove_roles(account, args)
+            .map(|_| EmptyReturn)
     }
 
-    fn info(
-        &self,
-        _sender: &Address,
-        args: account::InfoArgs,
-    ) -> Result<account::InfoReturn, ManyError> {
-        let account::Account {
-            description,
-            roles,
-            features,
-            disabled,
-        } = self
-            .storage
+    fn info(&self, _: &Address, args: account::InfoArgs) -> Result<account::InfoReturn, ManyError> {
+        self.storage
             .get_account_even_disabled(&args.account)
-            .ok_or_else(|| account::errors::unknown_account(args.account))?;
-
-        Ok(account::InfoReturn {
-            description,
-            roles,
-            features,
-            disabled,
-        })
+            .0
+            .ok_or_else(|| account::errors::unknown_account(args.account))
+            .map(
+                |account::Account {
+                     description,
+                     roles,
+                     features,
+                     disabled,
+                 }| account::InfoReturn {
+                    description,
+                    roles,
+                    features,
+                    disabled,
+                },
+            )
     }
 
     fn disable(
@@ -255,14 +261,16 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         let account = self
             .storage
             .get_account(&args.account)
+            .0
             .ok_or_else(|| account::errors::unknown_account(args.account))?;
 
         if !account.has_role(sender, Role::Owner) {
             return Err(account::errors::user_needs_role(Role::Owner));
         }
 
-        self.storage.disable_account(&args.account)?;
-        Ok(EmptyReturn)
+        self.storage
+            .disable_account(&args.account)
+            .map(|_| EmptyReturn)
     }
 
     fn add_features(
@@ -276,11 +284,13 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         let account = self
             .storage
             .get_account(&args.account)
+            .0
             .ok_or_else(|| account::errors::unknown_account(args.account))?;
 
         account.needs_role(sender, [Role::Owner])?;
-        self.storage.add_features(account, args)?;
-        Ok(EmptyReturn)
+        self.storage
+            .add_features(account, args)
+            .map(|_| EmptyReturn)
     }
 }
 
@@ -293,7 +303,7 @@ impl KvStoreModuleImpl {
         alternative_owner: &Address,
         roles: impl IntoIterator<Item = R>,
     ) -> Result<(), ManyError> {
-        if let Some(account) = self.storage.get_account(alternative_owner) {
+        if let Some(account) = self.storage.get_account(alternative_owner).0 {
             account.needs_role(sender, roles)
         } else if alternative_owner.is_subresource() {
             // TODO: Subresource alternative owner support
