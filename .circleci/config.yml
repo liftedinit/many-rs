@@ -191,15 +191,15 @@ jobs:
                 --config=remote-cache \
                 //src/many-kvstore:many-kvstore-image.tar \
                 //src/many-abci:many-abci-image.tar
-              docker load < ../$(bazel cquery //src/many-kvstore:many-kvstore-image.tar --output=files)
-              docker load < ../$(bazel cquery //src/many-abci:many-abci-image.tar --output=files)
+              docker load < $(bazel cquery //src/many-kvstore:many-kvstore-image.tar --output=files)
+              docker load < $(bazel cquery //src/many-abci:many-abci-image.tar --output=files)
             
               bazel build --jobs=$(nproc) \
                 --config=remote-cache \
                 --balance_testing \
                 --migration_testing \
                 //src/many-ledger:many-ledger-image.tar
-              docker load < ../$(bazel cquery \
+              docker load < $(bazel cquery \
                 --balance_testing \
                 --migration_testing \
                 //src/many-ledger:many-ledger-image.tar \
