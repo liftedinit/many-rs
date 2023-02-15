@@ -56,12 +56,14 @@ vercomp () {
 }
 
 # Check a version with an operator.
+# Use this like `vercheck 0.1 lt 0.3`.
+# Supported operators are neq, eq, lt, lte, gt and gte.
 vercheck() {
     vercomp "$1" "$3"
     case $? in
         0) [ "$2" == "eq" ] || [ "$2" == "gte" ] || [ "$2" == "lte" ];;
-        1) [ "$2" == "gt" ];;
-        2) [ "$2" == "lt" ];;
+        1) [ "$2" == "gt" ] || [ "$2" == "neq" ];;
+        2) [ "$2" == "lt" ] || [ "$2" == "neq" ];;
         *) false;;
     esac
 }
