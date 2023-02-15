@@ -240,10 +240,13 @@ jobs:
       - run:
           name: running tests
           command: |
-              # Load external images in local Docker client
+              # Load images in local Docker instance
               bazel run :tendermint_image
               bazel run :openssl_image
               bazel run :jsonnet_image
+              bazel run --config=remote-cache //src/many-abci:many-abci-image -- --norun
+              bazel run --config=remote-cache //src/many-ledger:many-ledger-image -- --norun
+              bazel run --config=remote-cache //src/many-kvstore:many-kvstore-image -- --norun
 
               # Run the resiliency tests
               bazel run --config=remote-cache //:bats-resiliency-ledger
