@@ -450,18 +450,18 @@ workflows:
           context:
             - DOCKER_CREDS
             - CACHE
-          filters:
-            branches:
-              only:
-                - main
+#          filters:
+#            branches:
+#              only:
+#                - main
       - resiliency_tests:
           pre-steps:
             - install-deps:
                 os: linux2204_machine
-          filters:
-            branches:
-              only:
-                - main
+#          filters:
+#            branches:
+#              only:
+#                - main
           requires:
             - publish_nightly_docker
   nightly_macos:
