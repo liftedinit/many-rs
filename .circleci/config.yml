@@ -188,7 +188,10 @@ jobs:
       - checkout
       - run:
           name: publish nightly docker images
-          command: bazel build --jobs=$(nproc) --config=remote-cache //:many-abci-docker //:many-kvstore-docker //:many-ledger-docker
+          command: |
+              bazel run --jobs=$(nproc) --config=remote-cache //:many-abci-docker 
+              bazel run --jobs=$(nproc) --config=remote-cache //:many-kvstore-docker
+              bazel run --jobs=$(nproc) --config=remote-cache //:many-ledger-docker
 #              bazel build --jobs=$(nproc) \
 #                --config=remote-cache \
 #                //src/many-kvstore:many-kvstore-image.tar \
