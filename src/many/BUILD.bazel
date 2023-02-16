@@ -11,6 +11,7 @@ rust_binary(
     deps = all_crate_deps(
         normal = True,
     ) + [
+        "//src/many-cli-helpers",
         "//src/many-client",
         "//src/many-error",
         "//src/many-identity",

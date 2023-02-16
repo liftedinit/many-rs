@@ -22,6 +22,7 @@ rust_binary(
         normal = True,
     ) + [
         ":build_script",
+        "//src/many-cli-helpers",
         "//src/many-error",
         "//src/many-identity",
         "//src/many-identity-dsa",
