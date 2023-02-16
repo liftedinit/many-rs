@@ -294,7 +294,7 @@ commands:
           command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
 
 workflows:
-  ci:
+#  ci:
 #    when:
 #      not:
 #        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
