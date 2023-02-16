@@ -241,8 +241,8 @@ jobs:
           name: running tests
           command: |
               # Run the resiliency tests
-              bazel run --config=remote-cache --balance_testing --migration_testing //:bats-resiliency-ledger
-              bazel run --config=remote-cache //:bats-resiliency-kvstore
+              bazel run --config=ledger-resiliency //:bats-resiliency-ledger
+              bazel run --config=kvstore-resiliency //:bats-resiliency-kvstore
 
   # Push a tag to GitHub
   tag:
