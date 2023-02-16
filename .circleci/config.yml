@@ -191,9 +191,9 @@ jobs:
       - run:
           name: publish nightly docker images
           command: |
-              bazel run --jobs=$(nproc) --config=remote-cache //:many-abci-docker 
-              bazel run --jobs=$(nproc) --config=remote-cache //:many-kvstore-docker
-              bazel run --jobs=$(nproc) --config=remote-cache //:many-ledger-docker
+              bazel run --jobs=$(nproc) --config=remote-cache //:many-abci-push-docker 
+              bazel run --jobs=$(nproc) --config=remote-cache //:many-kvstore-push-docker
+              bazel run --jobs=$(nproc) --config=remote-cache //:many-ledger-push-docker
 
   # Perform resiliency testing
   kvstore_resiliency_tests:
