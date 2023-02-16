@@ -287,16 +287,19 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 container_image(
     name = "tendermint_image",
     base = "@tendermint//image",
+    tags = ["manual"],
 )
 
 container_image(
     name = "openssl_image",
     base = "@openssl//image",
+    tags = ["manual"],
 )
 
 container_image(
     name = "jsonnet_image",
     base = "@jsonnet//image",
+    tags = ["manual"],
 )
 
 container_push(
@@ -306,6 +309,7 @@ container_push(
     registry = "index.docker.io",
     repository = "lifted/many-abci",
     tag = "nightly",
+    tags = ["manual"],
 )
 
 container_push(
@@ -315,6 +319,7 @@ container_push(
     registry = "index.docker.io",
     repository = "lifted/many-ledger",
     tag = "nightly",
+    tags = ["manual"],
 )
 
 container_push(
@@ -324,6 +329,7 @@ container_push(
     registry = "index.docker.io",
     repository = "lifted/many-kvstore",
     tag = "nightly",
+    tags = ["manual"],
 )
 
 ## END BATS SECTION ##
