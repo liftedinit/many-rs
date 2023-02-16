@@ -1,5 +1,5 @@
 {
-  "checksum": "dd826cd79673957fbb9413c0d2999714b3ee033692e6e54a1ffe8902ee2c95f0",
+  "checksum": "793bb3b1db676e2597b0ed27e5f2b6f534b20341670ced9fb31a238bdab4348a",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -29,7 +29,7 @@
         "deps": {
           "common": [
             {
-              "id": "gimli 0.27.1",
+              "id": "gimli 0.27.2",
               "target": "gimli"
             }
           ],
@@ -174,7 +174,7 @@
             ],
             "cfg(not(all(target_arch = \"arm\", target_os = \"none\")))": [
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ]
@@ -881,7 +881,7 @@
               "target": "concurrent_queue"
             },
             {
-              "id": "fastrand 1.8.0",
+              "id": "fastrand 1.9.0",
               "target": "fastrand"
             },
             {
@@ -2325,7 +2325,7 @@
         "deps": {
           "common": [
             {
-              "id": "cryptoxide 0.4.2",
+              "id": "cryptoxide 0.4.3",
               "target": "cryptoxide"
             }
           ],
@@ -2737,7 +2737,7 @@
               "target": "atomic_waker"
             },
             {
-              "id": "fastrand 1.8.0",
+              "id": "fastrand 1.9.0",
               "target": "fastrand"
             },
             {
@@ -3769,7 +3769,7 @@
               "target": "indexmap"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -3801,13 +3801,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "clap 4.1.4": {
+    "clap 4.1.6": {
       "name": "clap",
-      "version": "4.1.4",
+      "version": "4.1.6",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap/4.1.4/download",
-          "sha256": "f13b9c79b5d1dd500d20ef541215a6423c75829ef43117e1b4d17fd8af0b5d76"
+          "url": "https://crates.io/api/v1/crates/clap/4.1.6/download",
+          "sha256": "ec0b0588d44d4d63a87dbd75c136c166bbfd9a86a31cb89e09906521c7d3f5e3"
         }
       },
       "targets": [
@@ -3852,7 +3852,7 @@
               "target": "is_terminal"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -3864,7 +3864,7 @@
               "target": "termcolor"
             },
             {
-              "id": "terminal_size 0.2.3",
+              "id": "terminal_size 0.2.5",
               "target": "terminal_size"
             }
           ],
@@ -3880,7 +3880,7 @@
           ],
           "selects": {}
         },
-        "version": "4.1.4"
+        "version": "4.1.6"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -5167,13 +5167,13 @@
       },
       "license": "Apache-2.0"
     },
-    "cryptoxide 0.4.2": {
+    "cryptoxide 0.4.3": {
       "name": "cryptoxide",
-      "version": "0.4.2",
+      "version": "0.4.3",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/cryptoxide/0.4.2/download",
-          "sha256": "129eabb7b0b78644a3a7e7cf220714aba47463bb281f69fa7a71ca5d12564cca"
+          "url": "https://crates.io/api/v1/crates/cryptoxide/0.4.3/download",
+          "sha256": "e71fc7b8ebdfe6f948c2b6cc237301846958ba07a0e3fd8bea4a39f22cc94f2c"
         }
       },
       "targets": [
@@ -5193,6 +5193,7 @@
           "**"
         ],
         "crate_features": [
+          "argon2",
           "blake2",
           "chacha",
           "curve25519",
@@ -5213,7 +5214,7 @@
           "x25519"
         ],
         "edition": "2018",
-        "version": "0.4.2"
+        "version": "0.4.3"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -5378,7 +5379,7 @@
               "target": "linked_hash_map"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -5456,7 +5457,7 @@
               "target": "atty"
             },
             {
-              "id": "clap 4.1.4",
+              "id": "clap 4.1.6",
               "target": "clap"
             },
             {
@@ -5504,7 +5505,7 @@
               "target": "linked_hash_map"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -5809,66 +5810,6 @@
         },
         "edition": "2015",
         "version": "3.2.0"
-      },
-      "license": "BSD-3-Clause"
-    },
-    "curve25519-dalek-ng 4.1.1": {
-      "name": "curve25519-dalek-ng",
-      "version": "4.1.1",
-      "repository": {
-        "Http": {
-          "url": "https://crates.io/api/v1/crates/curve25519-dalek-ng/4.1.1/download",
-          "sha256": "1c359b7249347e46fb28804470d071c921156ad62b3eef5d34e2ba867533dec8"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "curve25519_dalek_ng",
-            "crate_root": "src/lib.rs",
-            "srcs": [
-              "**/*.rs"
-            ]
-          }
-        }
-      ],
-      "library_target_name": "curve25519_dalek_ng",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": [
-          "alloc",
-          "u64_backend"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "byteorder 1.4.3",
-              "target": "byteorder"
-            },
-            {
-              "id": "digest 0.9.0",
-              "target": "digest"
-            },
-            {
-              "id": "rand_core 0.6.4",
-              "target": "rand_core"
-            },
-            {
-              "id": "subtle-ng 2.5.0",
-              "target": "subtle_ng",
-              "alias": "subtle"
-            },
-            {
-              "id": "zeroize 1.4.3",
-              "target": "zeroize"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2015",
-        "version": "4.1.1"
       },
       "license": "BSD-3-Clause"
     },
@@ -7292,62 +7233,6 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
-    "ed25519-consensus 1.2.1": {
-      "name": "ed25519-consensus",
-      "version": "1.2.1",
-      "repository": {
-        "Http": {
-          "url": "https://crates.io/api/v1/crates/ed25519-consensus/1.2.1/download",
-          "sha256": "758e2a0cd8a6cdf483e1d369e7d081647e00b88d8953e34d8f2cbba05ae28368"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "ed25519_consensus",
-            "crate_root": "src/lib.rs",
-            "srcs": [
-              "**/*.rs"
-            ]
-          }
-        }
-      ],
-      "library_target_name": "ed25519_consensus",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "curve25519-dalek-ng 4.1.1",
-              "target": "curve25519_dalek_ng",
-              "alias": "curve25519_dalek"
-            },
-            {
-              "id": "hex 0.4.3",
-              "target": "hex"
-            },
-            {
-              "id": "rand_core 0.6.4",
-              "target": "rand_core"
-            },
-            {
-              "id": "sha2 0.9.9",
-              "target": "sha2"
-            },
-            {
-              "id": "zeroize 1.4.3",
-              "target": "zeroize"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "1.2.1"
-      },
-      "license": "MIT OR Apache-2.0"
-    },
     "ed25519-dalek 1.0.1": {
       "name": "ed25519-dalek",
       "version": "1.0.1",
@@ -8023,7 +7908,7 @@
               "target": "indenter"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             }
           ],
@@ -8039,13 +7924,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "fastrand 1.8.0": {
+    "fastrand 1.9.0": {
       "name": "fastrand",
-      "version": "1.8.0",
+      "version": "1.9.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/fastrand/1.8.0/download",
-          "sha256": "a7a407cfaa3385c4ae6b23e84623d48c2798d06e3e6a1878f7f59f17b3f86499"
+          "url": "https://crates.io/api/v1/crates/fastrand/1.9.0/download",
+          "sha256": "e51093e27b0797c359783294ca4f0a911c270184cb10f85783b118614a1501be"
         }
       },
       "targets": [
@@ -8067,7 +7952,7 @@
         "deps": {
           "common": [],
           "selects": {
-            "cfg(target_arch = \"wasm32\")": [
+            "cfg(all(target_arch = \"wasm32\", not(target_os = \"wasi\")))": [
               {
                 "id": "instant 0.1.12",
                 "target": "instant"
@@ -8076,7 +7961,7 @@
           }
         },
         "edition": "2018",
-        "version": "1.8.0"
+        "version": "1.9.0"
       },
       "license": "Apache-2.0 OR MIT"
     },
@@ -8781,7 +8666,7 @@
         "deps": {
           "common": [
             {
-              "id": "fastrand 1.8.0",
+              "id": "fastrand 1.9.0",
               "target": "fastrand"
             },
             {
@@ -9585,13 +9470,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "gimli 0.27.1": {
+    "gimli 0.27.2": {
       "name": "gimli",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/gimli/0.27.1/download",
-          "sha256": "221996f774192f0f718773def8201c4ae31f02616a54ccfc2d358bb0e5cefdec"
+          "url": "https://crates.io/api/v1/crates/gimli/0.27.2/download",
+          "sha256": "ad0a93d233ebf96623465aad4046a8d3aa4da22d4f4beba5388838c8a434bbb4"
         }
       },
       "targets": [
@@ -9615,7 +9500,7 @@
           "read-core"
         ],
         "edition": "2018",
-        "version": "0.27.1"
+        "version": "0.27.2"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -13284,6 +13169,10 @@
         "deps": {
           "common": [
             {
+              "id": "base64 0.21.0",
+              "target": "base64"
+            },
+            {
               "id": "ciborium 0.2.0",
               "target": "ciborium"
             },
@@ -13340,19 +13229,19 @@
               "target": "smol"
             },
             {
-              "id": "tendermint 0.24.0-pre.2",
+              "id": "tendermint 0.28.0",
               "target": "tendermint"
             },
             {
-              "id": "tendermint-abci 0.24.0-pre.2",
+              "id": "tendermint-abci 0.28.0",
               "target": "tendermint_abci"
             },
             {
-              "id": "tendermint-proto 0.24.0-pre.2",
+              "id": "tendermint-proto 0.28.0",
               "target": "tendermint_proto"
             },
             {
-              "id": "tendermint-rpc 0.24.0-pre.2",
+              "id": "tendermint-rpc 0.28.0",
               "target": "tendermint_rpc"
             },
             {
@@ -13746,7 +13635,7 @@
               "target": "minicbor"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -13862,7 +13751,7 @@
               "target": "minicbor"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -13962,7 +13851,7 @@
               "target": "hex"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -14036,7 +13925,7 @@
               "target": "minicbor"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -14205,7 +14094,7 @@
         "deps_dev": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -14393,7 +14282,7 @@
               "target": "cucumber"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -14516,7 +14405,7 @@
               "target": "minicbor"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -14807,7 +14696,7 @@
               "target": "mockall"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -14919,7 +14808,7 @@
         "deps_dev": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -15038,7 +14927,7 @@
               "target": "num_traits"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -15748,13 +15637,13 @@
       },
       "license": "MIT OR Zlib OR Apache-2.0"
     },
-    "mio 0.8.5": {
+    "mio 0.8.6": {
       "name": "mio",
-      "version": "0.8.5",
+      "version": "0.8.6",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/mio/0.8.5/download",
-          "sha256": "e5d732bc30207a6423068df043e3d02e0735b155ad7ce1a6f76fe2baa5b158de"
+          "url": "https://crates.io/api/v1/crates/mio/0.8.6/download",
+          "sha256": "5b9d9a46eff5b4ff64b45a9e316a6d1e0bc719ef429cbec4dc630684212bfdf9"
         }
       },
       "targets": [
@@ -15805,14 +15694,14 @@
             ],
             "cfg(windows)": [
               {
-                "id": "windows-sys 0.42.0",
+                "id": "windows-sys 0.45.0",
                 "target": "windows_sys"
               }
             ]
           }
         },
         "edition": "2018",
-        "version": "0.8.5"
+        "version": "0.8.6"
       },
       "license": "MIT"
     },
@@ -17098,13 +16987,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "once_cell 1.17.0": {
+    "once_cell 1.17.1": {
       "name": "once_cell",
-      "version": "1.17.0",
+      "version": "1.17.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/once_cell/1.17.0/download",
-          "sha256": "6f61fba1741ea2b3d6a1e3178721804bb716a68a6aeba1149b5d52e3d464ea66"
+          "url": "https://crates.io/api/v1/crates/once_cell/1.17.1/download",
+          "sha256": "b7e5500299e16ebb147ae15a00a942af264cf3688f47923b8fc2cd5858f23ad3"
         }
       },
       "targets": [
@@ -17141,7 +17030,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.17.0"
+        "version": "1.17.1"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -17231,7 +17120,7 @@
               "target": "libc"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -18424,7 +18313,7 @@
         "deps": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -19105,7 +18994,7 @@
         "deps": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -19439,13 +19328,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "prost 0.10.4": {
+    "prost 0.11.6": {
       "name": "prost",
-      "version": "0.10.4",
+      "version": "0.11.6",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/prost/0.10.4/download",
-          "sha256": "71adf41db68aa0daaefc69bb30bcd68ded9b9abaad5d1fbb6304c4fb390e083e"
+          "url": "https://crates.io/api/v1/crates/prost/0.11.6/download",
+          "sha256": "21dc42e00223fc37204bd4aa177e69420c604ca4a183209a8f9de30c6d934698"
         }
       },
       "targets": [
@@ -19476,27 +19365,27 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
+        "edition": "2021",
         "proc_macro_deps": {
           "common": [
             {
-              "id": "prost-derive 0.10.1",
+              "id": "prost-derive 0.11.6",
               "target": "prost_derive"
             }
           ],
           "selects": {}
         },
-        "version": "0.10.4"
+        "version": "0.11.6"
       },
       "license": "Apache-2.0"
     },
-    "prost-derive 0.10.1": {
+    "prost-derive 0.11.6": {
       "name": "prost-derive",
-      "version": "0.10.1",
+      "version": "0.11.6",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/prost-derive/0.10.1/download",
-          "sha256": "7b670f45da57fb8542ebdbb6105a925fe571b67f9e7ed9f47a06a84e72b4e7cc"
+          "url": "https://crates.io/api/v1/crates/prost-derive/0.11.6/download",
+          "sha256": "8bda8c0881ea9f722eb9629376db3d0b903b462477c1aafcb0566610ac28ac5d"
         }
       },
       "targets": [
@@ -19540,18 +19429,18 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "0.10.1"
+        "edition": "2021",
+        "version": "0.11.6"
       },
       "license": "Apache-2.0"
     },
-    "prost-types 0.10.1": {
+    "prost-types 0.11.6": {
       "name": "prost-types",
-      "version": "0.10.1",
+      "version": "0.11.6",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/prost-types/0.10.1/download",
-          "sha256": "2d0a014229361011dc8e69c8a1ec6c2e8d0f2af7c91e3ea3f5b2170298461e68"
+          "url": "https://crates.io/api/v1/crates/prost-types/0.11.6/download",
+          "sha256": "a5e0526209433e96d83d750dd81a99118edbc55739e7e61a46764fd2ad537788"
         }
       },
       "targets": [
@@ -19577,14 +19466,14 @@
               "target": "bytes"
             },
             {
-              "id": "prost 0.10.4",
+              "id": "prost 0.11.6",
               "target": "prost"
             }
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "0.10.1"
+        "edition": "2021",
+        "version": "0.11.6"
       },
       "license": "Apache-2.0"
     },
@@ -20398,7 +20287,7 @@
                 "alias": "native_tls_crate"
               },
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               },
               {
@@ -20523,13 +20412,13 @@
                 "target": "libc"
               },
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ],
             "cfg(any(target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"illumos\", target_os = \"netbsd\", target_os = \"openbsd\", target_os = \"solaris\"))": [
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ],
@@ -23521,36 +23410,6 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
-    "subtle-ng 2.5.0": {
-      "name": "subtle-ng",
-      "version": "2.5.0",
-      "repository": {
-        "Http": {
-          "url": "https://crates.io/api/v1/crates/subtle-ng/2.5.0/download",
-          "sha256": "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "subtle_ng",
-            "crate_root": "src/lib.rs",
-            "srcs": [
-              "**/*.rs"
-            ]
-          }
-        }
-      ],
-      "library_target_name": "subtle_ng",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "edition": "2015",
-        "version": "2.5.0"
-      },
-      "license": "BSD-3-Clause"
-    },
     "syn 1.0.107": {
       "name": "syn",
       "version": "1.0.107",
@@ -23876,7 +23735,7 @@
             ],
             "cfg(any(windows, target_os = \"linux\", target_os = \"android\"))": [
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ],
@@ -24038,7 +23897,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "fastrand 1.8.0",
+              "id": "fastrand 1.9.0",
               "target": "fastrand"
             },
             {
@@ -24072,13 +23931,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "tendermint 0.24.0-pre.2": {
+    "tendermint 0.28.0": {
       "name": "tendermint",
-      "version": "0.24.0-pre.2",
+      "version": "0.28.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tendermint/0.24.0-pre.2/download",
-          "sha256": "c321f411bdfb772bca0c5d9c94d8f45e3a992fae44baa60d17b99d8aaae58d04"
+          "url": "https://crates.io/api/v1/crates/tendermint/0.28.0/download",
+          "sha256": "c518c082146825f10d6f9a32159ae46edcfd7dae8ac630c8067594bb2a784d72"
         }
       },
       "targets": [
@@ -24113,8 +23972,8 @@
               "target": "ed25519"
             },
             {
-              "id": "ed25519-consensus 1.2.1",
-              "target": "ed25519_consensus"
+              "id": "ed25519-dalek 1.0.1",
+              "target": "ed25519_dalek"
             },
             {
               "id": "flex-error 0.4.4",
@@ -24129,15 +23988,15 @@
               "target": "num_traits"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
-              "id": "prost 0.10.4",
+              "id": "prost 0.11.6",
               "target": "prost"
             },
             {
-              "id": "prost-types 0.10.1",
+              "id": "prost-types 0.11.6",
               "target": "prost_types"
             },
             {
@@ -24169,7 +24028,7 @@
               "target": "subtle_encoding"
             },
             {
-              "id": "tendermint-proto 0.24.0-pre.2",
+              "id": "tendermint-proto 0.28.0",
               "target": "tendermint_proto"
             },
             {
@@ -24183,13 +24042,9 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
+        "edition": "2021",
         "proc_macro_deps": {
           "common": [
-            {
-              "id": "async-trait 0.1.64",
-              "target": "async_trait"
-            },
             {
               "id": "serde_repr 0.1.10",
               "target": "serde_repr"
@@ -24197,17 +24052,17 @@
           ],
           "selects": {}
         },
-        "version": "0.24.0-pre.2"
+        "version": "0.28.0"
       },
       "license": "Apache-2.0"
     },
-    "tendermint-abci 0.24.0-pre.2": {
+    "tendermint-abci 0.28.0": {
       "name": "tendermint-abci",
-      "version": "0.24.0-pre.2",
+      "version": "0.28.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tendermint-abci/0.24.0-pre.2/download",
-          "sha256": "f53ac0f0d3c1e479c35db7fe815257be95a1c9b37630b0a58292766ecf1a65e9"
+          "url": "https://crates.io/api/v1/crates/tendermint-abci/0.28.0/download",
+          "sha256": "890340677de267793c691648d8e10d5e50f5a7fb5a8b60f96c36041cc68a1f04"
         }
       },
       "targets": [
@@ -24240,11 +24095,11 @@
               "target": "flex_error"
             },
             {
-              "id": "prost 0.10.4",
+              "id": "prost 0.11.6",
               "target": "prost"
             },
             {
-              "id": "tendermint-proto 0.24.0-pre.2",
+              "id": "tendermint-proto 0.28.0",
               "target": "tendermint_proto"
             },
             {
@@ -24255,17 +24110,17 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.24.0-pre.2"
+        "version": "0.28.0"
       },
       "license": "Apache-2.0"
     },
-    "tendermint-config 0.24.0-pre.2": {
+    "tendermint-config 0.28.0": {
       "name": "tendermint-config",
-      "version": "0.24.0-pre.2",
+      "version": "0.28.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tendermint-config/0.24.0-pre.2/download",
-          "sha256": "ac3eac1b63f911a7524ab44a67dcf4370dd44a3ee8f9e6524bd7be426dcfdc55"
+          "url": "https://crates.io/api/v1/crates/tendermint-config/0.28.0/download",
+          "sha256": "6f58b86374e3bcfc8135770a6c55388fce101c00de4a5f03224fa5830c9240b7"
         }
       },
       "targets": [
@@ -24299,7 +24154,7 @@
               "target": "serde_json"
             },
             {
-              "id": "tendermint 0.24.0-pre.2",
+              "id": "tendermint 0.28.0",
               "target": "tendermint"
             },
             {
@@ -24314,17 +24169,17 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.24.0-pre.2"
+        "version": "0.28.0"
       },
       "license": "Apache-2.0"
     },
-    "tendermint-proto 0.24.0-pre.2": {
+    "tendermint-proto 0.28.0": {
       "name": "tendermint-proto",
-      "version": "0.24.0-pre.2",
+      "version": "0.28.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tendermint-proto/0.24.0-pre.2/download",
-          "sha256": "5820a81dfb85011220d2b24323870ad30a56ae446f92b170911574c79d385bc5"
+          "url": "https://crates.io/api/v1/crates/tendermint-proto/0.28.0/download",
+          "sha256": "890f1fb6dee48900c85f0cdf711ebf130e505ac09ad918cee5c34ed477973b05"
         }
       },
       "targets": [
@@ -24358,11 +24213,11 @@
               "target": "num_traits"
             },
             {
-              "id": "prost 0.10.4",
+              "id": "prost 0.11.6",
               "target": "prost"
             },
             {
-              "id": "prost-types 0.10.1",
+              "id": "prost-types 0.11.6",
               "target": "prost_types"
             },
             {
@@ -24394,17 +24249,17 @@
           ],
           "selects": {}
         },
-        "version": "0.24.0-pre.2"
+        "version": "0.28.0"
       },
       "license": "Apache-2.0"
     },
-    "tendermint-rpc 0.24.0-pre.2": {
+    "tendermint-rpc 0.28.0": {
       "name": "tendermint-rpc",
-      "version": "0.24.0-pre.2",
+      "version": "0.28.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tendermint-rpc/0.24.0-pre.2/download",
-          "sha256": "2f2a9433b4385bf54dbda310fa6df993b6777123d77caa08119361ce6fb7d628"
+          "url": "https://crates.io/api/v1/crates/tendermint-rpc/0.28.0/download",
+          "sha256": "06df4715f9452ec0a21885d6da8d804799455ba50d8bc40be1ec1c800afd4bd8"
         }
       },
       "targets": [
@@ -24498,16 +24353,12 @@
               "target": "subtle_encoding"
             },
             {
-              "id": "tendermint 0.24.0-pre.2",
+              "id": "tendermint 0.28.0",
               "target": "tendermint"
             },
             {
-              "id": "tendermint-config 0.24.0-pre.2",
+              "id": "tendermint-config 0.28.0",
               "target": "tendermint_config"
-            },
-            {
-              "id": "tendermint-proto 0.24.0-pre.2",
-              "target": "tendermint_proto"
             },
             {
               "id": "thiserror 1.0.38",
@@ -24550,7 +24401,7 @@
           ],
           "selects": {}
         },
-        "version": "0.24.0-pre.2"
+        "version": "0.28.0"
       },
       "license": "Apache-2.0"
     },
@@ -24595,13 +24446,13 @@
       },
       "license": "Unlicense OR MIT"
     },
-    "terminal_size 0.2.3": {
+    "terminal_size 0.2.5": {
       "name": "terminal_size",
-      "version": "0.2.3",
+      "version": "0.2.5",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/terminal_size/0.2.3/download",
-          "sha256": "cb20089a8ba2b69debd491f8d2d023761cbf196e999218c591fa1e7e15a21907"
+          "url": "https://crates.io/api/v1/crates/terminal_size/0.2.5/download",
+          "sha256": "4c9afddd2cec1c0909f06b00ef33f94ab2cc0578c4a610aa208ddfec8aa2b43a"
         }
       },
       "targets": [
@@ -24631,14 +24482,14 @@
             ],
             "cfg(windows)": [
               {
-                "id": "windows-sys 0.42.0",
+                "id": "windows-sys 0.45.0",
                 "target": "windows_sys"
               }
             ]
           }
         },
         "edition": "2018",
-        "version": "0.2.3"
+        "version": "0.2.5"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -24944,7 +24795,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             }
           ],
@@ -25294,7 +25145,7 @@
               "target": "memchr"
             },
             {
-              "id": "mio 0.8.5",
+              "id": "mio 0.8.6",
               "target": "mio"
             },
             {
@@ -25869,7 +25720,7 @@
         "deps": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             }
           ],
@@ -26223,7 +26074,7 @@
               "target": "inventory"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -27472,7 +27323,7 @@
               "target": "log"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -28275,7 +28126,7 @@
           "selects": {
             "cfg(windows)": [
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ]
@@ -28728,6 +28579,7 @@
           "Win32_System_Console",
           "Win32_System_IO",
           "Win32_System_LibraryLoader",
+          "Win32_System_Pipes",
           "Win32_System_SystemServices",
           "Win32_System_Threading",
           "Win32_System_WindowsProgramming",
@@ -29516,6 +29368,9 @@
     ],
     "cfg(all(target_arch = \"aarch64\", target_os = \"linux\"))": [
       "aarch64-unknown-linux-gnu"
+    ],
+    "cfg(all(target_arch = \"wasm32\", not(target_os = \"wasi\")))": [
+      "wasm32-unknown-unknown"
     ],
     "cfg(all(target_arch = \"wasm32\", target_os = \"unknown\"))": [
       "wasm32-unknown-unknown"
