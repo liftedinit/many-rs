@@ -252,7 +252,7 @@ jobs:
 
               # Run the resiliency tests
               bazel run --config=remote-cache //:bats-resiliency-ledger
-              # bazel run --config=remote-cache //:bats-resiliency-kvstore
+              bazel run --config=remote-cache //:bats-resiliency-kvstore
 
   # Push a tag to GitHub
   tag:
