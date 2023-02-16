@@ -480,16 +480,18 @@ pub trait AccountModuleBackend: Send {
         &self,
         sender: &Address,
         args: ListRolesArgs,
+        context: Context
     ) -> Result<ListRolesReturn, ManyError>;
 
     /// Get roles associated with an identity for an account.
-    fn get_roles(&self, sender: &Address, args: GetRolesArgs) -> Result<GetRolesReturn, ManyError>;
+    fn get_roles(&self, sender: &Address, args: GetRolesArgs, context: Context) -> Result<GetRolesReturn, ManyError>;
 
     /// Add roles to identities for an account.
     fn add_roles(
         &mut self,
         sender: &Address,
         args: AddRolesArgs,
+        context: Context
     ) -> Result<AddRolesReturn, ManyError>;
 
     /// Remove roles from an identity for an account.
@@ -497,19 +499,21 @@ pub trait AccountModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: RemoveRolesArgs,
+        context: Context
     ) -> Result<RemoveRolesReturn, ManyError>;
 
     /// Returns the information related to an account.
-    fn info(&self, sender: &Address, args: InfoArgs) -> Result<InfoReturn, ManyError>;
+    fn info(&self, sender: &Address, args: InfoArgs, context: Context) -> Result<InfoReturn, ManyError>;
 
     /// Disable or delete an account.
-    fn disable(&mut self, sender: &Address, args: DisableArgs) -> Result<DisableReturn, ManyError>;
+    fn disable(&mut self, sender: &Address, args: DisableArgs, context: Context) -> Result<DisableReturn, ManyError>;
 
     /// Add additional features to an account.
     fn add_features(
         &mut self,
         sender: &Address,
         args: AddFeaturesArgs,
+        context: Context
     ) -> Result<AddFeaturesReturn, ManyError>;
 }
 
@@ -547,7 +551,7 @@ mod module_tests {
         });
         mock.expect_info().returning({
             let account_map = Arc::clone(&account_map);
-            move |_, args| {
+            move |_, args, _| {
                 let account_map = account_map.write().unwrap();
                 let account = account_map
                     .get(&args.account)
@@ -562,7 +566,7 @@ mod module_tests {
         });
         mock.expect_list_roles().returning({
             let account_map = Arc::clone(&account_map);
-            move |_, args| {
+            move |_, args, _| {
                 let account_map = account_map.write().unwrap();
                 let _ = account_map
                     .get(&args.account)
@@ -577,7 +581,7 @@ mod module_tests {
         });
         mock.expect_disable().returning({
             let account_map = Arc::clone(&account_map);
-            move |sender, args| {
+            move |sender, args, _| {
                 let mut account_map = account_map.write().unwrap();
                 account_map.needs_role(&args.account, sender, [Role::Owner])?;
                 account_map.remove(&args.account).map_or_else(

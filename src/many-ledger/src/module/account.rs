@@ -166,105 +166,190 @@ impl AccountModuleBackend for LedgerModuleImpl {
 
     fn list_roles(
         &self,
-        _sender: &Address,
+        _: &Address,
         args: account::ListRolesArgs,
+        context: Context,
     ) -> Result<account::ListRolesReturn, ManyError> {
-        let (account, _) = self.storage.get_account(&args.account)?;
-        Ok(account::ListRolesReturn {
-            roles: get_roles_for_account(&account),
-        })
+        self.storage
+            .get_account(&args.account)
+            .and_then(|(account, keys)| {
+                self.storage
+                    .prove_state(context, keys)
+                    .map(|error| ManyError::unknown(error.to_string()))
+                    .map(Err)
+                    .unwrap_or(Ok(()))
+                    .map(|_| account::ListRolesReturn {
+                        roles: get_roles_for_account(&account),
+                    })
+            })
     }
 
     fn get_roles(
         &self,
-        _sender: &Address,
+        _: &Address,
         args: account::GetRolesArgs,
+        context: Context,
     ) -> Result<account::GetRolesReturn, ManyError> {
-        let (account, _) = self.storage.get_account(&args.account)?;
-
-        let mut roles = BTreeMap::new();
-        for id in args.identities {
-            roles.insert(id, account.get_roles(&id));
-        }
-
-        Ok(account::GetRolesReturn { roles })
+        self.storage
+            .get_account(&args.account)
+            .and_then(|(account, keys)| {
+                self.storage
+                    .prove_state(context, keys)
+                    .map(|error| ManyError::unknown(error.to_string()))
+                    .map(Err)
+                    .unwrap_or(Ok(()))
+                    .map(|_| account::GetRolesReturn {
+                        roles: args
+                            .identities
+                            .into_iter()
+                            .map(|id| (id, account.get_roles(&id)))
+                            .collect::<BTreeMap<_, _>>(),
+                    })
+            })
     }
 
     fn add_roles(
         &mut self,
         sender: &Address,
         args: account::AddRolesArgs,
+        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, _) = self.storage.get_account(&args.account)?;
+        let (account, account_keys) = self.storage.get_account(&args.account)?;
 
         if !account.has_role(sender, account::Role::Owner) {
-            return Err(account::errors::user_needs_role("owner"));
+            Err(account::errors::user_needs_role("owner"))
+        } else {
+            self.storage.add_roles(account, args).and_then(|role_key| {
+                self.storage
+                    .prove_state(context, {
+                        let mut keys = account_keys.into_iter().collect::<Vec<_>>();
+                        keys.push(role_key);
+                        keys
+                    })
+                    .map(|error| ManyError::unknown(error.to_string()))
+                    .map(Err)
+                    .unwrap_or(Ok(()))
+                    .map(|_| EmptyReturn)
+            })
         }
-        self.storage.add_roles(account, args)?;
-        Ok(EmptyReturn)
     }
 
     fn remove_roles(
         &mut self,
         sender: &Address,
         args: account::RemoveRolesArgs,
+        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, _) = self.storage.get_account(&args.account)?;
+        let (account, account_keys) = self.storage.get_account(&args.account)?;
 
         if !account.has_role(sender, account::Role::Owner) {
-            return Err(account::errors::user_needs_role(account::Role::Owner));
+            Err(account::errors::user_needs_role(account::Role::Owner))
+        } else {
+            self.storage
+                .remove_roles(account, args)
+                .and_then(|role_key| {
+                    self.storage
+                        .prove_state(context, {
+                            let mut keys = account_keys.into_iter().collect::<Vec<_>>();
+                            keys.push(role_key);
+                            keys
+                        })
+                        .map(|error| ManyError::unknown(error.to_string()))
+                        .map(Err)
+                        .unwrap_or(Ok(()))
+                        .map(|_| EmptyReturn)
+                })
         }
-        self.storage.remove_roles(account, args)?;
-        Ok(EmptyReturn)
     }
 
-    fn info(&self, _: &Address, args: account::InfoArgs) -> Result<account::InfoReturn, ManyError> {
-        let (
-            account::Account {
-                description,
-                roles,
-                features,
-                disabled,
-            },
-            _,
-        ) = self.storage.get_account_even_disabled(&args.account)?;
-
-        Ok(account::InfoReturn {
-            description,
-            roles,
-            features,
-            disabled,
-        })
+    fn info(
+        &self,
+        _: &Address,
+        args: account::InfoArgs,
+        context: Context,
+    ) -> Result<account::InfoReturn, ManyError> {
+        self.storage
+            .get_account_even_disabled(&args.account)
+            .and_then(
+                |(
+                    account::Account {
+                        description,
+                        roles,
+                        features,
+                        disabled,
+                    },
+                    keys,
+                )| {
+                    self.storage
+                        .prove_state(context, keys)
+                        .map(|error| ManyError::unknown(error.to_string()))
+                        .map(Err)
+                        .unwrap_or(Ok(()))
+                        .map(|_| account::InfoReturn {
+                            description,
+                            roles,
+                            features,
+                            disabled,
+                        })
+                },
+            )
     }
 
     fn disable(
         &mut self,
         sender: &Address,
         args: account::DisableArgs,
+        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, _) = self.storage.get_account(&args.account)?;
+        let (account, keys) = self.storage.get_account(&args.account)?;
+        let mut keys = keys.into_iter().collect::<Vec<_>>();
 
         if !account.has_role(sender, account::Role::Owner) {
-            return Err(account::errors::user_needs_role(account::Role::Owner));
+            Err(account::errors::user_needs_role(account::Role::Owner))
+        } else {
+            self.storage
+                .disable_account(&args.account)
+                .and_then(|disable_keys| {
+                    self.storage
+                        .prove_state(context, {
+                            keys.extend(disable_keys);
+                            keys
+                        })
+                        .map(|error| ManyError::unknown(error.to_string()))
+                        .map(Err)
+                        .unwrap_or(Ok(()))
+                        .map(|_| EmptyReturn)
+                })
         }
-
-        self.storage.disable_account(&args.account)?;
-        Ok(EmptyReturn)
     }
 
     fn add_features(
         &mut self,
         sender: &Address,
         args: account::AddFeaturesArgs,
+        context: Context,
     ) -> Result<account::AddFeaturesReturn, ManyError> {
         if args.features.is_empty() {
-            return Err(account::errors::empty_feature());
-        }
-        let (account, _) = self.storage.get_account(&args.account)?;
+            Err(account::errors::empty_feature())
+        } else {
+            let (account, keys) = self.storage.get_account(&args.account)?;
 
-        account.needs_role(sender, [account::Role::Owner])?;
-        self.storage.add_features(account, args)?;
-        Ok(EmptyReturn)
+            account.needs_role(sender, [account::Role::Owner])?;
+            self.storage
+                .add_features(account, args)
+                .and_then(|features_key| {
+                    let mut keys = keys.into_iter().collect::<Vec<_>>();
+                    self.storage
+                        .prove_state(context, {
+                            keys.push(features_key);
+                            keys
+                        })
+                        .map(|error| ManyError::unknown(error.to_string()))
+                        .map(Err)
+                        .unwrap_or(Ok(()))
+                        .map(|_| EmptyReturn)
+                })
+        }
     }
 }
 

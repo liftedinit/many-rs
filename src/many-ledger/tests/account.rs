@@ -21,6 +21,7 @@ fn account_info(
         account::InfoArgs {
             account: *account_id,
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_ok());
     result.unwrap()
@@ -129,6 +130,7 @@ fn list_roles() {
         account::ListRolesArgs {
             account: account_id,
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_ok());
     let mut roles = BTreeSet::<account::Role>::new();
@@ -157,6 +159,7 @@ fn get_roles() {
             account: account_id,
             identities: VecOrSingle::from(identities.clone()),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_ok());
     assert_eq!(
@@ -187,6 +190,7 @@ fn add_roles() {
             account: account_id,
             roles: BTreeMap::from_iter([new_role.clone()]),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_ok());
     let identities = vec![identity(4)];
@@ -218,6 +222,7 @@ fn add_roles_non_owner() {
             account: account_id,
             roles: new_role.clone(),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_err());
     assert_eq!(
@@ -243,6 +248,7 @@ fn remove_roles() {
                 BTreeSet::from_iter([account::Role::CanMultisigApprove]),
             )]),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_ok());
 
@@ -252,6 +258,7 @@ fn remove_roles() {
             account: account_id,
             identities: VecOrSingle::from(vec![identity(2)]),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_ok());
     assert_eq!(
@@ -277,6 +284,7 @@ fn remove_roles_non_owner() {
                 BTreeSet::from_iter([account::Role::CanMultisigApprove]),
             )]),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_err());
     assert_eq!(
@@ -300,6 +308,7 @@ fn remove_owner_role() {
             account: account_id,
             roles: BTreeMap::from_iter([(account_id, BTreeSet::from_iter([account::Role::Owner]))]),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_err());
     assert_many_err(result, account::errors::account_must_own_itself());
@@ -318,6 +327,7 @@ fn disable() {
         account::DisableArgs {
             account: account_id,
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_ok());
 
@@ -327,6 +337,7 @@ fn disable() {
         account::InfoArgs {
             account: account_id,
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().disabled.unwrap(), Either::Left(true));
@@ -345,6 +356,7 @@ fn disable_non_owner() {
         account::DisableArgs {
             account: account_id,
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_err());
     assert_eq!(
@@ -368,6 +380,7 @@ fn add_feature() {
         account::InfoArgs {
             account: account_id,
         },
+        (RequestMessage::default(), unbounded().0).into(),
     )
     .expect("Could not get info");
 
@@ -386,6 +399,7 @@ fn add_feature() {
                     account::features::ledger::AccountLedger.as_feature(),
                 ]),
             },
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .expect("Could not add feature");
 
@@ -395,6 +409,7 @@ fn add_feature() {
         account::InfoArgs {
             account: account_id,
         },
+        (RequestMessage::default(), unbounded().0).into(),
     )
     .expect("Could not get info");
 
@@ -422,6 +437,7 @@ fn add_feature_non_owner() {
                     account::features::ledger::AccountLedger.as_feature(),
                 ]),
             },
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .is_err());
 
@@ -461,6 +477,7 @@ fn add_feature_and_role() {
                     account::features::ledger::AccountLedger.as_feature(),
                 ]),
             },
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .expect("Could not add feature");
 
@@ -500,6 +517,7 @@ fn add_feature_existing() {
                 account::features::multisig::MultisigAccountFeature::default().as_feature(),
             ]),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_err());
 
@@ -567,6 +585,7 @@ fn empty_feature_add_features() {
             roles: None,
             features: account::features::FeatureSet::empty(),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_err());
     assert_many_err(result, account::errors::empty_feature());

@@ -88,7 +88,7 @@ impl KvStoreStorage {
         &mut self,
         mut account: account::Account,
         args: account::AddRolesArgs,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         for (id, roles) in &args.roles {
             for r in roles {
                 account.add_role(id, *r);
@@ -99,14 +99,14 @@ impl KvStoreStorage {
             account: args.account,
             roles: args.clone().roles,
         });
-        self.commit_account(&args.account, account).map(|_| ())
+        self.commit_account(&args.account, account)
     }
 
     pub fn remove_roles(
         &mut self,
         mut account: account::Account,
         args: account::RemoveRolesArgs,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         // We should not be able to remove the Owner role from the account itself
         if args.roles.contains_key(&args.account)
             && args
@@ -128,14 +128,14 @@ impl KvStoreStorage {
             account: args.account,
             roles: args.clone().roles,
         });
-        self.commit_account(&args.account, account).map(|_| ())
+        self.commit_account(&args.account, account)
     }
 
     pub fn add_features(
         &mut self,
         mut account: account::Account,
         args: account::AddFeaturesArgs,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         for new_f in args.features.iter() {
             if account.features.insert(new_f.clone()) {
                 return Err(ManyError::unknown("Feature already part of the account."));
@@ -156,7 +156,7 @@ impl KvStoreStorage {
             roles: args.clone().roles.unwrap_or_default(), // TODO: Verify this
             features: args.clone().features,
         });
-        self.commit_account(&args.account, account).map(|_| ())
+        self.commit_account(&args.account, account)
     }
 
     pub fn commit_account(
@@ -184,24 +184,26 @@ impl KvStoreStorage {
         Ok(key)
     }
 
-    pub fn disable_account(&mut self, id: &Address) -> Result<(), ManyError> {
-        let mut account = self
-            .get_account_even_disabled(id)
-            .0
-            .ok_or_else(|| account::errors::unknown_account(*id))?;
+    pub fn disable_account(
+        &mut self,
+        id: &Address,
+    ) -> Result<impl IntoIterator<Item = Vec<u8>>, ManyError> {
+        let (account, account_key) = self.get_account_even_disabled(id);
+        let mut account = account.ok_or_else(|| account::errors::unknown_account(*id))?;
 
         if account.disabled.is_none() || account.disabled == Some(Either::Left(false)) {
             account.disabled = Some(Either::Left(true));
-            self.commit_account(id, account).map(|_| ())?;
+            let commit_key = self.commit_account(id, account)?;
             self.log_event(events::EventInfo::AccountDisable { account: *id });
 
             if !self.blockchain {
                 self.persistent_store
                     .commit(&[])
-                    .expect("Could not commit to store.");
+                    .map_err(ManyError::unknown)?;
+                //.expect("Could not commit to store.");
             }
 
-            Ok(())
+            Ok(vec![account_key, commit_key])
         } else {
             Err(account::errors::unknown_account(*id))
         }

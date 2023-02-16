@@ -225,6 +225,7 @@ pub fn given_account_id_owner<T: LedgerWorld + AccountWorld>(w: &mut T, id: Some
             account,
             roles: BTreeMap::from_iter([(id, BTreeSet::from([Role::Owner]))]),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     )
     .expect("Unable to add role to account");
 
@@ -237,6 +238,7 @@ pub fn given_account_id_owner<T: LedgerWorld + AccountWorld>(w: &mut T, id: Some
                 account,
                 roles: BTreeMap::from_iter([(sender, BTreeSet::from([Role::Owner]))]),
             },
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .expect("Unable to remove myself as account owner");
     }
@@ -257,6 +259,7 @@ pub fn given_account_part_of_can_create<T: LedgerWorld + AccountWorld>(
             account,
             roles: BTreeMap::from([(id, BTreeSet::from_iter([permission.as_role()]))]),
         },
+        (RequestMessage::default(), unbounded().0).into(),
     )
     .expect("Unable to add role to account");
 }

@@ -75,6 +75,7 @@ fn load() {
                 account: id,
                 identities: vec![identity(1)].into(),
             },
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .unwrap()
         .roles;
@@ -170,6 +171,7 @@ fn load_symbol_meta() {
                 account: id,
                 identities: vec![identity(1)].into(),
             },
+            (RequestMessage::default(), unbounded().0).into(),
         )
         .unwrap()
         .roles;
