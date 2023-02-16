@@ -303,7 +303,7 @@ container_image(
 )
 
 container_push(
-    name = "many-abci-docker",
+    name = "many-abci-push-docker",
     format = "Docker",
     image = "//src/many-abci:many-abci-image",
     registry = "index.docker.io",
@@ -313,7 +313,7 @@ container_push(
 )
 
 container_push(
-    name = "many-ledger-docker",
+    name = "many-ledger-push-docker",
     format = "Docker",
     image = "//src/many-ledger:many-ledger-image",
     registry = "index.docker.io",
@@ -323,13 +323,40 @@ container_push(
 )
 
 container_push(
-    name = "many-kvstore-docker",
+    name = "many-kvstore-push-docker",
     format = "Docker",
     image = "//src/many-kvstore:many-kvstore-image",
     registry = "index.docker.io",
     repository = "lifted/many-kvstore",
     tag = "nightly",
     tags = ["manual"],
+)
+
+load("@rules_multirun//:defs.bzl", "command", "multirun")
+
+command(
+    name = "_many-abci-push-docker",
+    command = ":many-abci-push-docker",
+)
+
+command(
+    name = "_many-kvstore-push-docker",
+    command = ":many-kvstore-push-docker",
+)
+
+command(
+    name = "_many-ledger-push-docker",
+    command = ":many-ledger-push-docker",
+)
+
+multirun(
+    name = "many-push-all-docker",
+    commands = [
+        ":_many-abci-push-docker",
+        ":_many-kvstore-push-docker",
+        ":_many-ledger-push-docker",
+    ],
+    jobs = 0,  # Set to 0 to run in parallel, defaults to sequential
 )
 
 ## END BATS SECTION ##
