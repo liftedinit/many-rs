@@ -81,7 +81,10 @@ load(
 download_pkgs(
     name = "ubuntu_download",
     image_tar = "@ubuntu_base//image",
-    packages = ["libssl3"],
+    packages = [
+        "libssl3",
+        "libusb-1.0-0",
+    ],
     tags = ["manual"],
 )
 
