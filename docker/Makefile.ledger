@@ -16,6 +16,11 @@ clean:
 	fi
 	rm -rf genfiles-ledger
 
+genfiles-ledger/many-ledger-docker:
+	@mkdir -p genfiles-ledger
+	docker load < ../src/many-ledger/many-ledger-image.tar
+	touch $@
+
 genfiles-ledger/generate-allow-addrs-config:
 	I=0; while [[ $$I -lt ${NB_NODES} ]]; do \
 		echo $$I genfiles-ledger/node$$I; \
@@ -25,7 +30,7 @@ genfiles-ledger/generate-allow-addrs-config:
 	done
 	mkdir -p $(dir $@) && touch $@
 
-genfiles-ledger/docker-compose.json: docker-compose-ledger.jsonnet
+genfiles-ledger/docker-compose.json: genfiles-common/jsonnet-docker docker-compose-ledger.jsonnet
 	# One is unable to mount a symlink in a docker container; create a real copy
 	cp -Lr docker-compose-ledger.jsonnet copy-docker-compose-ledger.jsonnet
 	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-ledger:/genfiles-ledger" bazel:jsonnet_image \
@@ -46,7 +51,7 @@ genfiles-ledger/generate-tendermint-e2e-config:
 	bash update_config.sh -c "genfiles-ledger/node%/tendermint/config" -i tendermint-% $(NB_NODES)
 	mkdir -p $(dir $@) && touch $@
 
-genfiles-ledger/node%:
+genfiles-ledger/node%: genfiles-common/tendermint-docker genfiles-common/openssl-docker
 	mkdir -p "$@/tendermint"
 	rm -f "$@/migrations.json"
 ifdef MIGRATIONS
@@ -59,19 +64,19 @@ endif
 	cp "$(STATE)" $@/ledger_state.json5
 
 .PHONY: start-nodes
-start-nodes: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json
+start-nodes: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up
 
 .PHONY: start-abci-%
-start-abci-%: genfiles-ledger/docker-compose.json
+start-abci-%: genfiles-ledger/docker-compose.json genfiles-common/many-abci-docker
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up abci-$*
 
 .PHONY: start-ledger-%
-start-ledger-%: genfiles-ledger/docker-compose.json genfiles-ledger/generate-tendermint-e2e-config
+start-ledger-%: genfiles-ledger/docker-compose.json genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/many-ledger-docker
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up ledger-$*
 
 .PHONY: start-tendermint-%
-start-tendermint-%: genfiles-ledger/docker-compose.json genfiles-ledger/generate-tendermint-e2e-config
+start-tendermint-%: genfiles-ledger/docker-compose.json genfiles-ledger/generate-tendermint-e2e-config genfiles-common/tendermint-docker
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up tendermint-$*
 
 .PHONY: down-nodes
@@ -117,11 +122,11 @@ stop-tendermint-%: genfiles-ledger/docker-compose.json
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop tendermint-$*
 
 .PHONY: start-nodes-dettached
-start-nodes-dettached: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json
+start-nodes-dettached: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-common/tendermint-docker genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up --detach
 
 .PHONY: start-single-node-dettached-%
-start-single-node-dettached-%: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json
+start-single-node-dettached-%: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-common/tendermint-docker genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up abci-$* --detach
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up ledger-$* --detach
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up tendermint-$* --detach
