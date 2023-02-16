@@ -80,7 +80,9 @@ jobs:
             equal: [ "macos", << parameters.os >> ]
           steps:
             - rust/install
-      - prepare_bats
+      - run:
+          name: install cbor-diag
+          command: cargo install --force cbor-diag-cli
       - run:
           name: running tests
           command: |
@@ -182,38 +184,39 @@ jobs:
   publish_nightly_docker:
     executor: linux2204_machine
     steps:
-#      - docker/check
+      - docker/check
       - checkout
       - run:
           name: build docker images
           command: |
-              bazel build --jobs=$(nproc) \
-                --config=remote-cache \
-                //src/many-kvstore:many-kvstore-image.tar \
-                //src/many-abci:many-abci-image.tar
-              docker load < $(bazel cquery //src/many-kvstore:many-kvstore-image.tar --output=files)
-              docker load < $(bazel cquery //src/many-abci:many-abci-image.tar --output=files)
-            
-              bazel build --jobs=$(nproc) \
-                --config=remote-cache \
-                --balance_testing \
-                --migration_testing \
-                //src/many-ledger:many-ledger-image.tar
-              docker load < $(bazel cquery \
-                --balance_testing \
-                --migration_testing \
-                //src/many-ledger:many-ledger-image.tar \
-                --output=files)
-            
-      - run:
-          name: tag docker images
-          command: |
-            docker tag bazel/src/many-abci:many-abci-image lifted/many-abci:nightly
-            docker tag bazel/src/many-abci:many-abci-image lifted/many-abci:$CIRCLE_SHA1
-            docker tag bazel/src/many-ledger:many-ledger-image lifted/many-ledger:nightly
-            docker tag bazel/src/many-ledger:many-ledger-image lifted/many-ledger:$CIRCLE_SHA1
-            docker tag bazel/src/many-kvstore:many-kvstore-image lifted/many-kvstore:nightly
-            docker tag bazel/src/many-kvstore:many-kvstore-image lifted/many-kvstore:$CIRCLE_SHA1
+              bazel build --jobs=$(nproc) --config=remote-cache //:many-abci-docker //:many-kvstore-docker //:many-ledger-docker
+#              bazel build --jobs=$(nproc) \
+#                --config=remote-cache \
+#                //src/many-kvstore:many-kvstore-image.tar \
+#                //src/many-abci:many-abci-image.tar
+#              docker load < $(bazel cquery //src/many-kvstore:many-kvstore-image.tar --output=files)
+#              docker load < $(bazel cquery //src/many-abci:many-abci-image.tar --output=files)
+#
+#              bazel build --jobs=$(nproc) \
+#                --config=remote-cache \
+#                --balance_testing \
+#                --migration_testing \
+#                //src/many-ledger:many-ledger-image.tar
+#              docker load < $(bazel cquery \
+#                --balance_testing \
+#                --migration_testing \
+#                //src/many-ledger:many-ledger-image.tar \
+#                --output=files)
+#
+#      - run:
+#          name: tag docker images
+#          command: |
+#            docker tag bazel/src/many-abci:many-abci-image lifted/many-abci:nightly
+#            docker tag bazel/src/many-abci:many-abci-image lifted/many-abci:$CIRCLE_SHA1
+#            docker tag bazel/src/many-ledger:many-ledger-image lifted/many-ledger:nightly
+#            docker tag bazel/src/many-ledger:many-ledger-image lifted/many-ledger:$CIRCLE_SHA1
+#            docker tag bazel/src/many-kvstore:many-kvstore-image lifted/many-kvstore:nightly
+#            docker tag bazel/src/many-kvstore:many-kvstore-image lifted/many-kvstore:$CIRCLE_SHA1
 #      - docker/push:
 #          image: many-abci
 #          registry: lifted
@@ -231,18 +234,21 @@ jobs:
 #          step-name: "docker push lifted/many-kvstore"
 
   # Perform resiliency testing
-  resiliency_tests:
+  kvstore_resiliency_tests:
     executor: linux2204_machine
     steps:
       - checkout
-      - rust/install
-      - prepare_bats
       - run:
           name: running tests
-          command: |
-              # Run the resiliency tests
-              bazel run --config=ledger-resiliency //:bats-resiliency-ledger
-              bazel run --config=kvstore-resiliency //:bats-resiliency-kvstore
+          command: bazel run --config=kvstore-resiliency //:bats-resiliency-kvstore
+
+  ledger_resiliency_tests:
+    executor: linux2204_machine
+    steps:
+      - checkout
+      - run:
+          name: running tests
+          command: bazel run --config=ledger-resiliency //:bats-resiliency-ledger
 
   # Push a tag to GitHub
   tag:
@@ -327,15 +333,6 @@ commands:
       - run:
           name: creating release shasum
           command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
-
-  # Install bats-core and dependencies used in bats tests.
-  prepare_bats:
-    description: prepare environment for bats testing
-    steps:
-      # TODO: We should create a binary release of cbor-diag-cli instead of installing Rust and building it every time
-      - run:
-          name: install cbor-diag
-          command: cargo install --force cbor-diag-cli
 
 workflows:
 #  ci:
@@ -455,7 +452,7 @@ workflows:
 #            branches:
 #              only:
 #                - main
-      - resiliency_tests:
+      - kvstore_resiliency_tests:
           pre-steps:
             - install-deps:
                 os: linux2204_machine
@@ -463,8 +460,16 @@ workflows:
 #            branches:
 #              only:
 #                - main
-          requires:
-            - publish_nightly_docker
+
+      - ledger_resiliency_tests:
+          pre-steps:
+            - install-deps:
+                os: linux2204_machine
+  #          filters:
+  #            branches:
+  #              only:
+  #                - main
+
   nightly_macos:
     when:
       and:
