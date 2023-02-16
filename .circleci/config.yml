@@ -433,6 +433,9 @@ workflows:
             parameters:
               os: [macos]
       - bats:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
           name: bats-v<< matrix.os >>
           matrix:
             parameters:
