@@ -70,7 +70,7 @@ Below are some examples of how to use the different CLI.
 
 ## Requirements
 1. Install `tendermint`
-    1. Download `tendermint` **v0.35.4** from https://github.com/tendermint/tendermint/releases/tag/v0.35.4
+    1. Download `tendermint` **v0.34.24** from https://github.com/tendermint/tendermint/releases/tag/v0.34.24
     2. Extract the archive
     3. Put the path to the `tendermint` executable in your `$PATH`
 

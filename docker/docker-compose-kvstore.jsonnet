@@ -42,10 +42,9 @@ local kvstore(i, user) = {
 local tendermint(i, user) = {
     image: "bazel/docker:tendermint_image",
     command: [
-        "--log-level", "info",
         "start",
         "--rpc.laddr", "tcp://0.0.0.0:26657",
-        "--proxy-app", "tcp://abci-" + i + ":26658",
+        "--proxy_app", "tcp://abci-" + i + ":26658",
     ],
     user: "" + user,
     volumes: [

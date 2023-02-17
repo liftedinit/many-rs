@@ -43,7 +43,7 @@ genfiles-kvstore/generate-tendermint-e2e-config:
 		make -f Makefile.kvstore genfiles-kvstore/node$$I; \
 		(( I = I + 1 )); \
 	done
-	bash update_config.sh -c "genfiles-kvstore/node%/tendermint/config" -i tendermint-% $(NB_NODES)
+	bash update_config.sh -c "genfiles-kvstore/node%/tendermint/config" -r "$$PWD/genfiles-kvstore/node%/tendermint" -i tendermint-% $(NB_NODES)
 	mkdir -p $(dir $@) && touch $@
 
 genfiles-kvstore/node%: genfiles-common/tendermint-docker genfiles-common/openssl-docker

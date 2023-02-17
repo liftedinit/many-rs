@@ -54,6 +54,7 @@ crates_repository(
         "//src/ledger-db:Cargo.toml",
         "//src/ledger:Cargo.toml",
         "//src/many-abci:Cargo.toml",
+        "//src/many-cli-helpers:Cargo.toml",
         "//src/many-client-macros:Cargo.toml",
         "//src/many-client:Cargo.toml",
         "//src/many-error:Cargo.toml",
@@ -177,7 +178,7 @@ container_pull(
     name = "tendermint",
     registry = "index.docker.io",
     repository = "tendermint/tendermint",
-    tag = "v0.35.8",
+    tag = "v0.34.24",
 )
 
 # TODO: LL should have it's own openssl image

@@ -1,5 +1,5 @@
 {
-  "checksum": "c52609bf9f0467f1bf2af3adeaf572c1280cd7473fb5772d2b16a58104f6f7b7",
+  "checksum": "eda807de67c0a598482de26b6035e09740c29a109ad637b9af3fc6574ff24207",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -12630,13 +12630,7 @@
       "repository": {
         "Http": {
           "url": "https://crates.io/api/v1/crates/libudev-sys/0.1.4/download",
-          "sha256": "3c8469b4a23b962c1396b9b451dda50ef5b283e8dd309d69033475fa9b334324",
-          "patch_args": [
-            "-p1"
-          ],
-          "patches": [
-            "@//third_party/cargo/patches:libudev-sys-0.1.4.patch"
-          ]
+          "sha256": "3c8469b4a23b962c1396b9b451dda50ef5b283e8dd309d69033475fa9b334324"
         }
       },
       "targets": [
