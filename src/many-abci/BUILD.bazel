@@ -5,6 +5,7 @@ load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
 
 package(default_visibility = [
     "//:__pkg__",
+    "//docker:__pkg__",
     "//tests/resiliency:__subpackages__",
 ])
 
