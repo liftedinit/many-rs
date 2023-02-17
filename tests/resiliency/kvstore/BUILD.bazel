@@ -1,0 +1,28 @@
+load("@bazel_bats//:rules.bzl", "bats_test")
+
+bats_test(
+    name = "bats-resiliency-kvstore",
+    srcs = [
+        "abci-allow-addrs.bats",
+        "catch-up.bats",
+        "persistent_store.bats",
+        "up-down.bats",
+    ],
+    data = [
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-kvstore:many-kvstore-image.tar",
+    ],
+    tags = ["manual"],
+    uses_bats_assert = True,
+    deps = [
+        "//docker:docker-kvstore-deps",
+        "//src/kvstore",
+        "//src/many",
+        "//src/many-abci",
+        "//src/many-kvstore",
+        "//tests:bats-helpers",
+    ],
+)

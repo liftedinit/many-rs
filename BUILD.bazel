@@ -8,10 +8,6 @@ package(default_visibility = [
     "//src/many-ledger:__pkg__",
 ])
 
-exports_files(["staging/kvstore_state.json5"])
-
-exports_files(["staging/ledger_state.json5"])
-
 # Required for Vergen
 exports_files([".git"])
 
@@ -44,37 +40,14 @@ pkg_tar(
     package_variables = ":package-naming",
     tags = ["manual"],
 )
-## END PACKAGE CONFIGURATION ##
-
-## DOCKER BASE IMAGE CONFIGURATION ##
-filegroup(
-    name = "docker-images",
-    srcs = [
-        "//src/many-abci:many-abci-image",
-        "//src/many-kvstore:many-kvstore-image",
-        "//src/many-ledger:many-ledger-image",
-    ],
-    tags = ["manual"],
-)
-
-filegroup(
-    name = "bins",
-    srcs = [
-        "//src/http_proxy",
-        "//src/idstore-export",
-        "//src/kvstore",
-        "//src/ledger",
-        "//src/ledger-db",
-        "//src/many",
-        "//src/many-abci",
-        "//src/many-kvstore",
-        "//src/many-ledger",
-    ],
-)
 
 load(
     "@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl",
     "download_pkgs",
+)
+load(
+    "@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl",
+    "install_pkgs",
 )
 
 # Install openssl3 in the base image
@@ -89,11 +62,6 @@ download_pkgs(
     tags = ["manual"],
 )
 
-load(
-    "@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl",
-    "install_pkgs",
-)
-
 install_pkgs(
     name = "ubuntu_image",
     image_tar = "@ubuntu_base//image",
@@ -102,236 +70,6 @@ install_pkgs(
     output_image_name = "many_docker_ubuntu_image",
     tags = ["manual"],
 )
-## END DOCKER BASE IMAGE CONFIGURATION ##
-
-## BATS SECTION ##
-load("@bazel_bats//:rules.bzl", "bats_test")
-
-sh_library(
-    name = "bats-helpers",
-    srcs = [
-        "tests/test_helper/account.bash",
-        "tests/test_helper/bats-utils",
-        "tests/test_helper/kvstore.bash",
-        "tests/test_helper/ledger.bash",
-        "tests/test_helper/load.bash",
-        "tests/test_helper/many.bash",
-        "tests/test_helper/token.bash",
-    ],
-    tags = ["manual"],
-)
-
-filegroup(
-    name = "kvstore-staging",
-    srcs = ["staging/kvstore_state.json5"],
-)
-
-filegroup(
-    name = "ledger-staging",
-    srcs = ["staging/ledger_state.json5"],
-)
-
-filegroup(
-    name = "webauthn-state",
-    srcs = ["tests/e2e/ledger/webauthn_state.json"],
-)
-
-filegroup(
-    name = "ledger-migrations",
-    srcs = ["tests/ledger_migrations.json"],
-)
-
-bats_test(
-    name = "bats-e2e-kvstore",
-    srcs = [
-        "tests/e2e/kvstore/allow_addrs.bats",
-        "tests/e2e/kvstore/kvstore.bats",
-    ],
-    tags = ["manual"],
-    uses_bats_assert = True,
-    deps = [
-        ":bats-helpers",
-        ":bins",
-        ":kvstore-staging",
-    ],
-)
-
-bats_test(
-    name = "bats-e2e-ledger",
-    srcs = [
-        "tests/e2e/ledger/allow_addrs.bats",
-        "tests/e2e/ledger/ledger.bats",
-        "tests/e2e/ledger/migrations.bats",
-        "tests/e2e/ledger/mintburn.bats",
-        "tests/e2e/ledger/multisig.bats",
-        "tests/e2e/ledger/staging.bats",
-        "tests/e2e/ledger/tokens_no_migration.bats",
-        "tests/e2e/ledger/webauthn.bats",
-    ],
-    tags = ["manual"],
-    uses_bats_assert = True,
-    deps = [
-        ":bats-helpers",
-        ":bins",
-        ":ledger-migrations",
-        ":ledger-staging",
-        ":webauthn-state",
-    ],
-)
-
-bats_test(
-    name = "bats-e2e-ledger-tokens",
-    srcs = [
-        "tests/e2e/ledger/tokens.bats",
-    ],
-    tags = ["manual"],
-    uses_bats_assert = True,
-    deps = [
-        ":bats-helpers",
-        ":bins",
-        ":ledger-migrations",
-        ":ledger-staging",
-    ],
-)
-
-filegroup(
-    name = "docker-kvstore-deps",
-    srcs = [
-        "docker/Makefile",
-        "docker/Makefile.common",
-        "docker/Makefile.kvstore",
-        "docker/docker-compose-kvstore.jsonnet",
-        "docker/generate-allow-addrs.sh",
-        "docker/update_config.sh",
-        "staging/kvstore_state.json5",
-    ],
-)
-
-filegroup(
-    name = "docker-ledger-deps",
-    srcs = [
-        "docker/Makefile",
-        "docker/Makefile.common",
-        "docker/Makefile.ledger",
-        "docker/docker-compose-ledger.jsonnet",
-        "docker/generate-allow-addrs.sh",
-        "docker/update_config.sh",
-        "staging/ledger_state.json5",
-        "tests/ledger_migrations.json",
-    ],
-)
-
-bats_test(
-    name = "bats-resiliency-kvstore",
-    srcs = [
-        "tests/resiliency/kvstore/abci-allow-addrs.bats",
-        "tests/resiliency/kvstore/catch-up.bats",
-        "tests/resiliency/kvstore/persistent_store.bats",
-        "tests/resiliency/kvstore/up-down.bats",
-    ],
-    data = [
-        ":jsonnet_image.tar",
-        ":openssl_image.tar",
-        ":tendermint_image.tar",
-        "//src/many-abci:many-abci-image.tar",
-        "//src/many-kvstore:many-kvstore-image.tar",
-    ],
-    tags = ["manual"],
-    uses_bats_assert = True,
-    deps = [
-        ":bats-helpers",
-        ":docker-kvstore-deps",
-        "//src/kvstore",
-        "//src/many",
-        "//src/many-abci",
-        "//src/many-kvstore",
-    ],
-)
-
-bats_test(
-    name = "bats-resiliency-ledger",
-    srcs = [
-        "tests/resiliency/ledger/abci-allow-addrs.bats",
-        "tests/resiliency/ledger/account_count_migration.bats",
-        "tests/resiliency/ledger/catch-up.bats",
-        "tests/resiliency/ledger/dummy_migration.bats",
-        "tests/resiliency/ledger/memo_migration.bats",
-        "tests/resiliency/ledger/persistent_store.bats",
-        "tests/resiliency/ledger/token_migration.bats",
-        "tests/resiliency/ledger/token_subresource.bats",
-        "tests/resiliency/ledger/up-down.bats",
-    ],
-    data = [
-        ":jsonnet_image.tar",
-        ":openssl_image.tar",
-        ":tendermint_image.tar",
-        "//src/many-abci:many-abci-image.tar",
-        "//src/many-ledger:many-ledger-image.tar",
-    ],
-    tags = ["manual"],
-    uses_bats_assert = True,
-    deps = [
-        ":bats-helpers",
-        ":docker-ledger-deps",
-        "//src/ledger",
-        "//src/many",
-        "//src/many-abci",
-        "//src/many-ledger",
-    ],
-)
-
-load("@io_bazel_rules_docker//container:image.bzl", "container_image")
-load("@io_bazel_rules_docker//container:container.bzl", "container_push")
-
-container_image(
-    name = "tendermint_image",
-    base = "@tendermint//image",
-    tags = ["manual"],
-)
-
-container_image(
-    name = "openssl_image",
-    base = "@openssl//image",
-    tags = ["manual"],
-)
-
-container_image(
-    name = "jsonnet_image",
-    base = "@jsonnet//image",
-    tags = ["manual"],
-)
-
-container_push(
-    name = "many-abci-push-docker",
-    format = "Docker",
-    image = "//src/many-abci:many-abci-image",
-    registry = "index.docker.io",
-    repository = "lifted/many-abci",
-    tag = "nightly",
-    tags = ["manual"],
-)
-
-container_push(
-    name = "many-ledger-push-docker",
-    format = "Docker",
-    image = "//src/many-ledger:many-ledger-image",
-    registry = "index.docker.io",
-    repository = "lifted/many-ledger",
-    tag = "nightly",
-    tags = ["manual"],
-)
-
-container_push(
-    name = "many-kvstore-push-docker",
-    format = "Docker",
-    image = "//src/many-kvstore:many-kvstore-image",
-    registry = "index.docker.io",
-    repository = "lifted/many-kvstore",
-    tag = "nightly",
-    tags = ["manual"],
-)
-
-## END BATS SECTION ##
 
 load(":rules.bzl", "run_make")
 
@@ -340,13 +78,14 @@ run_make(
     src = "Makefile",
     cmd = "start-ledger-cluster",
     data = [
-        ":docker-ledger-deps",
-        ":jsonnet_image.tar",
-        ":openssl_image.tar",
-        ":tendermint_image.tar",
+        "//docker:docker-ledger-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
         "//src/many-abci:many-abci-image.tar",
         "//src/many-ledger:many-ledger-image.tar",
     ],
+    tags = ["manual"],
 )
 
 run_make(
@@ -354,13 +93,14 @@ run_make(
     src = "Makefile",
     cmd = "start-ledger-cluster-dettached",
     data = [
-        ":docker-ledger-deps",
-        ":jsonnet_image.tar",
-        ":openssl_image.tar",
-        ":tendermint_image.tar",
+        "//docker:docker-ledger-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
         "//src/many-abci:many-abci-image.tar",
         "//src/many-ledger:many-ledger-image.tar",
     ],
+    tags = ["manual"],
 )
 
 run_make(
@@ -368,11 +108,12 @@ run_make(
     src = "Makefile",
     cmd = "stop-ledger-cluster",
     data = [
-        ":docker-ledger-deps",
-        ":jsonnet_image.tar",
-        ":openssl_image.tar",
-        ":tendermint_image.tar",
+        "//docker:docker-ledger-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
     ],
+    tags = ["manual"],
 )
 
 run_make(
@@ -380,13 +121,14 @@ run_make(
     src = "Makefile",
     cmd = "start-kvstore-cluster",
     data = [
-        ":docker-kvstore-deps",
-        ":jsonnet_image.tar",
-        ":openssl_image.tar",
-        ":tendermint_image.tar",
+        "//docker:docker-kvstore-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
         "//src/many-abci:many-abci-image.tar",
         "//src/many-kvstore:many-kvstore-image.tar",
     ],
+    tags = ["manual"],
 )
 
 run_make(
@@ -394,13 +136,14 @@ run_make(
     src = "Makefile",
     cmd = "start-kvstore-cluster-dettached",
     data = [
-        ":docker-kvstore-deps",
-        ":jsonnet_image.tar",
-        ":openssl_image.tar",
-        ":tendermint_image.tar",
+        "//docker:docker-kvstore-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
         "//src/many-abci:many-abci-image.tar",
         "//src/many-kvstore:many-kvstore-image.tar",
     ],
+    tags = ["manual"],
 )
 
 run_make(
@@ -408,22 +151,24 @@ run_make(
     src = "Makefile",
     cmd = "stop-kvstore-cluster",
     data = [
-        ":docker-kvstore-deps",
-        ":jsonnet_image.tar",
-        ":openssl_image.tar",
-        ":tendermint_image.tar",
+        "//docker:docker-kvstore-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
     ],
+    tags = ["manual"],
 )
 
 run_make(
-    name = "clean",
+    name = "clean-cluster",
     src = "Makefile",
     cmd = "clean",
     data = [
-        ":docker-kvstore-deps",
-        ":docker-ledger-deps",
-        ":jsonnet_image.tar",
-        ":openssl_image.tar",
-        ":tendermint_image.tar",
+        "//docker:docker-kvstore-deps",
+        "//docker:docker-ledger-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
     ],
+    tags = ["manual"],
 )

@@ -1,0 +1,24 @@
+package(default_visibility = [
+    "//docker:__pkg__",
+    "//tests/e2e:__subpackages__",
+    "//tests/resiliency:__subpackages__",
+])
+
+sh_library(
+    name = "bats-helpers",
+    srcs = [
+        "test_helper/account.bash",
+        "test_helper/bats-utils",
+        "test_helper/kvstore.bash",
+        "test_helper/ledger.bash",
+        "test_helper/load.bash",
+        "test_helper/many.bash",
+        "test_helper/token.bash",
+    ],
+    tags = ["manual"],
+)
+
+filegroup(
+    name = "ledger-migrations",
+    srcs = ["ledger_migrations.json"],
+)

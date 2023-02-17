@@ -86,11 +86,11 @@ jobs:
       - run:
           name: running tests
           command: |
-              bazel run --config=all-features --config=remote-cache //:bats-e2e-kvstore
-              bazel run --config=all-features --config=remote-cache //:bats-e2e-ledger
+              bazel run --config=all-features --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
+              bazel run --config=all-features --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
             
               # --disable_token_sender_check needs to be disabled for the token tests
-              bazel run --balance_testing --migration_testing --config=remote-cache //:bats-e2e-ledger-tokens
+              bazel run --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
 
   # Compute code coverage and push the results to CodeCov.
   coverage:
@@ -191,9 +191,9 @@ jobs:
       - run:
           name: publish nightly docker images
           command: |
-              bazel run --jobs=$(nproc) --config=remote-cache //:many-abci-push-docker 
-              bazel run --jobs=$(nproc) --config=remote-cache //:many-kvstore-push-docker
-              bazel run --jobs=$(nproc) --config=remote-cache //:many-ledger-push-docker
+              bazel run --jobs=$(nproc) --config=remote-cache //docker:many-abci-push-docker 
+              bazel run --jobs=$(nproc) --config=remote-cache //docker:many-kvstore-push-docker
+              bazel run --jobs=$(nproc) --config=remote-cache //docker:many-ledger-push-docker
 
   # Perform resiliency testing
   kvstore_resiliency_tests:
@@ -202,7 +202,7 @@ jobs:
       - checkout
       - run:
           name: running tests
-          command: bazel run --config=remote-cache //:bats-resiliency-kvstore
+          command: bazel run --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore
 
   ledger_resiliency_tests:
     executor: linux2204_machine
@@ -210,7 +210,7 @@ jobs:
       - checkout
       - run:
           name: running tests
-          command: bazel run --config=remote-cache --config=ledger-resiliency //:bats-resiliency-ledger
+          command: bazel run --config=remote-cache --config=ledger-resiliency //tests/resiliency/ledger:bats-resiliency-ledger
 
   # Push a tag to GitHub
   tag:
@@ -297,49 +297,49 @@ commands:
           command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
 
 workflows:
-  ci:
-    when:
-      not:
-        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-    jobs:
-      - lint-test-build:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: lint-test-build-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-      - bats:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: bats-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
-      - coverage:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: coverage-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
-      - dev_release:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: dev_release-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
+#  ci:
+#    when:
+#      not:
+#        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+#    jobs:
+#      - lint-test-build:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: lint-test-build-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#      - bats:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: bats-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
+#      - coverage:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: coverage-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
+#      - dev_release:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: dev_release-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [linux2204]
+#          requires:
+#            - lint-test-build-v<< matrix.os >>
   release:
     when:
       not:
@@ -398,10 +398,10 @@ workflows:
     jobs:
       - audit
   nightly_docker_and_resiliency_tests:
-    when:
-      and:
-        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
+#    when:
+#      and:
+#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+#        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
     jobs:
       - publish_nightly_docker:
           pre-steps:
@@ -419,10 +419,10 @@ workflows:
                 os: linux2204_machine
 
   nightly_macos:
-    when:
-      and:
-        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
+#    when:
+#      and:
+#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+#        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
     jobs:
       - lint-test-build:
           pre-steps:

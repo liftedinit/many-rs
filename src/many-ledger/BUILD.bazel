@@ -8,6 +8,8 @@ load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
 package(default_visibility = [
     "//:__pkg__",
     "//src/many-ledger/test-utils:__pkg__",
+    "//tests/e2e/ledger:__pkg__",
+    "//tests/resiliency/ledger:__pkg__",
 ])
 
 bool_flag(

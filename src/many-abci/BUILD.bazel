@@ -3,7 +3,10 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test", "
 load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
 load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
 
-package(default_visibility = ["//:__pkg__"])
+package(default_visibility = [
+    "//:__pkg__",
+    "//tests/resiliency:__subpackages__",
+])
 
 cargo_build_script(
     name = "build_script",
