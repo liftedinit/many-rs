@@ -202,8 +202,8 @@ filegroup(
         "docker/Makefile.kvstore",
         "docker/docker-compose-kvstore.jsonnet",
         "docker/generate-allow-addrs.sh",
-        "docker/kvstore_state.json",
         "docker/update_config.sh",
+        "staging/kvstore_state.json5",
     ],
 )
 
@@ -215,7 +215,6 @@ filegroup(
         "docker/Makefile.ledger",
         "docker/docker-compose-ledger.jsonnet",
         "docker/generate-allow-addrs.sh",
-        "docker/ledger_state.json",
         "docker/update_config.sh",
         "staging/ledger_state.json5",
         "tests/ledger_migrations.json",
@@ -333,3 +332,98 @@ container_push(
 )
 
 ## END BATS SECTION ##
+
+load(":rules.bzl", "run_make")
+
+run_make(
+    name = "start-ledger-cluster",
+    src = "Makefile",
+    cmd = "start-ledger-cluster",
+    data = [
+        ":docker-ledger-deps",
+        ":jsonnet_image.tar",
+        ":openssl_image.tar",
+        ":tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-ledger:many-ledger-image.tar",
+    ],
+)
+
+run_make(
+    name = "start-ledger-cluster-dettached",
+    src = "Makefile",
+    cmd = "start-ledger-cluster-dettached",
+    data = [
+        ":docker-ledger-deps",
+        ":jsonnet_image.tar",
+        ":openssl_image.tar",
+        ":tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-ledger:many-ledger-image.tar",
+    ],
+)
+
+run_make(
+    name = "stop-ledger-cluster",
+    src = "Makefile",
+    cmd = "stop-ledger-cluster",
+    data = [
+        ":docker-ledger-deps",
+        ":jsonnet_image.tar",
+        ":openssl_image.tar",
+        ":tendermint_image.tar",
+    ],
+)
+
+run_make(
+    name = "start-kvstore-cluster",
+    src = "Makefile",
+    cmd = "start-kvstore-cluster",
+    data = [
+        ":docker-kvstore-deps",
+        ":jsonnet_image.tar",
+        ":openssl_image.tar",
+        ":tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-kvstore:many-kvstore-image.tar",
+    ],
+)
+
+run_make(
+    name = "start-kvstore-cluster-dettached",
+    src = "Makefile",
+    cmd = "start-kvstore-cluster-dettached",
+    data = [
+        ":docker-kvstore-deps",
+        ":jsonnet_image.tar",
+        ":openssl_image.tar",
+        ":tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-kvstore:many-kvstore-image.tar",
+    ],
+)
+
+run_make(
+    name = "stop-kvstore-cluster",
+    src = "Makefile",
+    cmd = "stop-kvstore-cluster",
+    data = [
+        ":docker-kvstore-deps",
+        ":jsonnet_image.tar",
+        ":openssl_image.tar",
+        ":tendermint_image.tar",
+    ],
+)
+
+run_make(
+    name = "clean",
+    src = "Makefile",
+    cmd = "clean",
+    data = [
+        ":docker-kvstore-deps",
+        ":docker-ledger-deps",
+        ":jsonnet_image.tar",
+        ":openssl_image.tar",
+        ":tendermint_image.tar",
+    ],
+)

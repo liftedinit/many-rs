@@ -48,11 +48,21 @@ Features
     ```shell
     $ git clone https://github.com/liftedinit/many-rs.git
     $ cd many-rs
-    $ bazel build //...
+    $ bazel build --config=remote-cache //...
     ```
 4. Run tests
     ```shell
-    $ bazel test //...
+    # Unit/integration tests
+    $ bazel test --config=remote-cache --config=all-features //...
+   
+    # e2e tests
+    $ bazel run --config=all-features --config=remote-cache //:bats-e2e-kvstore
+    $ bazel run --config=all-features --config=remote-cache //:bats-e2e-ledger
+    $ bazel run --balance_testing --migration_testing --config=remote-cache //:bats-e2e-ledger-tokens
+   
+    # Resiliency tests (requires Docker)
+    $ bazel run --config=remote-cache //:bats-resiliency-kvstore
+    $ bazel run --config=remote-cache --config=ledger-resiliency //:bats-resiliency-ledger
     ```
 
 # Usage example

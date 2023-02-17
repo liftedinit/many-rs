@@ -137,13 +137,11 @@ load(
     "container_pull",
 )
 
-# Use Ubuntu Kinetic (22.10) as the base image
 container_pull(
     name = "ubuntu_base",
-    # 'tag' is also supported, but digest is encouraged for reproducibility.
-    digest = "sha256:f0a63f53b736b9211a5313a7219f6cc012b7cf4194c7ce2248fac8162b56dceb",
     registry = "index.docker.io",
     repository = "ubuntu",
+    tag = "jammy",
 )
 
 container_pull(

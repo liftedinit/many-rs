@@ -1,6 +1,5 @@
 MIGRATIONS ?=
 ALLOW_ADDRS ?= false
-STATE ?= "ledger_state.json"
 
 ENABLE_MIGRATIONS := false
 ifdef MIGRATIONS
@@ -31,6 +30,8 @@ genfiles-ledger/generate-allow-addrs-config:
 	mkdir -p $(dir $@) && touch $@
 
 genfiles-ledger/docker-compose.json: genfiles-common/jsonnet-docker docker-compose-ledger.jsonnet
+	@mkdir -p genfiles-ledger
+
 	# One is unable to mount a symlink in a docker container; create a real copy
 	cp -Lr docker-compose-ledger.jsonnet copy-docker-compose-ledger.jsonnet
 	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-ledger:/genfiles-ledger" bazel:jsonnet_image \
@@ -61,7 +62,7 @@ endif
 	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel:openssl_image genpkey -algorithm Ed25519 -out /export/ledger.pem
 	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel:openssl_image genpkey -algorithm Ed25519 -out /export/abci.pem
 	mkdir -p "$@/persistent-ledger"
-	cp "$(STATE)" $@/ledger_state.json5
+	cp ../staging/ledger_state.json5 $@/ledger_state.json5
 
 .PHONY: start-nodes
 start-nodes: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker

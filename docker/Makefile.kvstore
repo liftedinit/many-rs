@@ -25,6 +25,8 @@ genfiles-kvstore/generate-allow-addrs-config:
 	mkdir -p $(dir $@) && touch $@
 
 genfiles-kvstore/docker-compose.json: genfiles-common/jsonnet-docker docker-compose-kvstore.jsonnet
+	@mkdir -p genfiles-kvstore
+
 	# One is unable to mount a symlink in a docker container; create a real copy
 	cp -Lr docker-compose-kvstore.jsonnet copy-docker-compose-kvstore.jsonnet
 	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-kvstore:/genfiles-kvstore" bazel:jsonnet_image \
@@ -49,7 +51,7 @@ genfiles-kvstore/node%: genfiles-common/tendermint-docker genfiles-common/openss
 	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel:openssl_image genpkey -algorithm Ed25519 -out /export/kvstore.pem
 	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel:openssl_image genpkey -algorithm Ed25519 -out /export/abci.pem
 	mkdir -p "$@/persistent-kvstore"
-	cp kvstore_state.json $@/kvstore_state.json5
+	cp ../staging/kvstore_state.json5 $@/kvstore_state.json5
 
 .PHONY: start-nodes
 start-nodes: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json genfiles-kvstore/many-kvstore-docker genfiles-common/many-abci-docker
