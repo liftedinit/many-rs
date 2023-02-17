@@ -96,7 +96,7 @@ for node in $(seq 0 "$NB_NODES"); do
 
   peer_ids=$(seq 0 "$NB_NODES" | grep -v "$node")
   peers=$(for peer in $peer_ids; do
-    node_id=$(docker run -u $(id -u):$(id -g) -i --rm -v "${tm_root//%/$peer}:/tendermint" tendermint/tendermint:v0.34.24 show_node_id | tail -n +2 | tr -d '\n')
+    node_id=$(docker run -u $(id -u):$(id -g) -i --rm -v "${tm_root//%/$peer}:/tendermint" bazel/docker:tendermint_image show_node_id | tail -n +2 | tr -d '\n')
     ip_address=${ip_range//%/$peer}
 
     printf '%s' "$node_id@$ip_address:$port,"
