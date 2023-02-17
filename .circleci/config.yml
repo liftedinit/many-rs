@@ -398,10 +398,10 @@ workflows:
     jobs:
       - audit
   nightly_docker_and_resiliency_tests:
-#    when:
-#      and:
-#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-#        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
+    when:
+      and:
+        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
     jobs:
       - publish_nightly_docker:
           pre-steps:
@@ -419,10 +419,10 @@ workflows:
                 os: linux2204_machine
 
   nightly_macos:
-#    when:
-#      and:
-#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-#        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
+    when:
+      and:
+        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
     jobs:
       - lint-test-build:
           pre-steps:
