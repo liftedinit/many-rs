@@ -64,7 +64,7 @@ rust_test_suite(
     name = "many-kvstore-test-suite",
     srcs = glob(include = ["tests/*.rs"]),
     compile_data = ["tests/common/mod.rs"],
-    data = ["//:staging/kvstore_state.json5"],
+    data = ["//staging:kvstore-staging"],
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
         proc_macro_dev = True,

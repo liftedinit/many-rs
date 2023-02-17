@@ -112,7 +112,7 @@ rust_library(
 rust_test(
     name = "many-ledger-test",
     crate = ":many-ledger-lib-for-test",
-    data = ["//:staging/ledger_state.json5"],
+    data = ["//staging:ledger-staging"],
 )
 
 rust_test_suite(
@@ -128,7 +128,7 @@ rust_test_suite(
         "tests/migration_/memo.rs",
     ],
     crate_features = ["balance_testing"],
-    data = ["//:staging/ledger_state.json5"],
+    data = ["//staging:ledger-staging"],
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
         proc_macro_dev = True,
@@ -157,7 +157,7 @@ rust_test_suite(
     ),
     crate_features = ["balance_testing"],
     data = [
-        "//:staging/ledger_state.json5",
+        "//staging:ledger-staging",
     ] + glob(include = ["tests/features/**/*.feature"]),
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
