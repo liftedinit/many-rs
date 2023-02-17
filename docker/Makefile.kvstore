@@ -29,7 +29,7 @@ genfiles-kvstore/docker-compose.json: genfiles-common/jsonnet-docker docker-comp
 
 	# One is unable to mount a symlink in a docker container; create a real copy
 	cp -Lr docker-compose-kvstore.jsonnet copy-docker-compose-kvstore.jsonnet
-	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-kvstore:/genfiles-kvstore" bazel:jsonnet_image \
+	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-kvstore:/genfiles-kvstore" bazel/docker:jsonnet_image \
 		/volume/copy-docker-compose-kvstore.jsonnet \
 		--tla-code nb_nodes=$(NB_NODES) \
 		--tla-code user=$$(id -u) \
@@ -47,9 +47,9 @@ genfiles-kvstore/generate-tendermint-e2e-config:
 
 genfiles-kvstore/node%: genfiles-common/tendermint-docker genfiles-common/openssl-docker
 	mkdir -p "$@/tendermint"
-	docker run --user $$(id -u) --rm -v "${PWD}/$@/tendermint:/tendermint" bazel:tendermint_image init validator
-	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel:openssl_image genpkey -algorithm Ed25519 -out /export/kvstore.pem
-	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel:openssl_image genpkey -algorithm Ed25519 -out /export/abci.pem
+	docker run --user $$(id -u) --rm -v "${PWD}/$@/tendermint:/tendermint" bazel/docker:tendermint_image init validator
+	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel/docker:openssl_image genpkey -algorithm Ed25519 -out /export/kvstore.pem
+	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel/docker:openssl_image genpkey -algorithm Ed25519 -out /export/abci.pem
 	mkdir -p "$@/persistent-kvstore"
 	cp ../staging/kvstore_state.json5 $@/kvstore_state.json5
 

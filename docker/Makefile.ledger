@@ -34,7 +34,7 @@ genfiles-ledger/docker-compose.json: genfiles-common/jsonnet-docker docker-compo
 
 	# One is unable to mount a symlink in a docker container; create a real copy
 	cp -Lr docker-compose-ledger.jsonnet copy-docker-compose-ledger.jsonnet
-	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-ledger:/genfiles-ledger" bazel:jsonnet_image \
+	docker run --user $$(id -u):$$(id -g) --rm -v "${PWD}:/volume:ro" -v "${PWD}/genfiles-ledger:/genfiles-ledger" bazel/docker:jsonnet_image \
 		/volume/copy-docker-compose-ledger.jsonnet \
 		--tla-code nb_nodes=$(NB_NODES) \
 		--tla-code user=$$(id -u) \
@@ -58,9 +58,9 @@ genfiles-ledger/node%: genfiles-common/tendermint-docker genfiles-common/openssl
 ifdef MIGRATIONS
 	cp "$(MIGRATIONS)" "$@/migrations.json"
 endif
-	docker run --user $$(id -u) --rm -v "${PWD}/$@/tendermint:/tendermint" bazel:tendermint_image init validator
-	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel:openssl_image genpkey -algorithm Ed25519 -out /export/ledger.pem
-	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel:openssl_image genpkey -algorithm Ed25519 -out /export/abci.pem
+	docker run --user $$(id -u) --rm -v "${PWD}/$@/tendermint:/tendermint" bazel/docker:tendermint_image init validator
+	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel/docker:openssl_image genpkey -algorithm Ed25519 -out /export/ledger.pem
+	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel/docker:openssl_image genpkey -algorithm Ed25519 -out /export/abci.pem
 	mkdir -p "$@/persistent-ledger"
 	cp ../staging/ledger_state.json5 $@/ledger_state.json5
 
