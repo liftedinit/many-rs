@@ -30,23 +30,23 @@ function many_message() {
        esac
      done
 
-    call_many message "$pem_arg" --server http://localhost:8000 "$@"
+    many message "$pem_arg" --server http://localhost:8000 "$@"
 }
 
 function identity() {
-    call_many id "$(pem "$1")"
+    many id "$(pem "$1")"
 }
 
 function subresource() {
-    call_many id "$(pem "$1")" "$2"
+    many id "$(pem "$1")" "$2"
 }
 
 function identity_hex() {
-    call_many id $(call_many id "$(pem "$1")")
+    many id $(many id "$(pem "$1")")
 }
 
 function account() {
-    call_many id mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow "$1"
+    many id mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow "$1"
 }
 
 function wait_for_block() {
@@ -55,15 +55,11 @@ function wait_for_block() {
     block=$1
     # Using [0-9] instead of \d for grep 3.8
     # https://salsa.debian.org/debian/grep/-/blob/debian/master/NEWS
-    current=$(call_many message --server http://localhost:8000/ blockchain.info | grep -oE '1: [0-9]+' | colrm 1 3)
+    current=$(many message --server http://localhost:8000/ blockchain.info | grep -oE '1: [0-9]+' | colrm 1 3)
     while [ "$current" -lt "$block" ]; do
       sleep 0.5
-      current=$(call_many message --server http://localhost:8000/ blockchain.info | grep -oE '1: [0-9]+' | colrm 1 3)
+      current=$(many message --server http://localhost:8000/ blockchain.info | grep -oE '1: [0-9]+' | colrm 1 3)
     done >/dev/null
-}
-
-function call_many() {
-    command many "$@"
 }
 
 function probe_server() {
@@ -79,5 +75,4 @@ function wait_for_server() {
     timeout 60s bash -c probe_server "$@"
 }
 
-export -f call_many
 export -f probe_server

@@ -59,8 +59,8 @@ function teardown() {
     assert_output --partial "[0, [2, 0]]: [[0, []], \"accountTotalCount\"]"
     assert_output --partial "[0, [2, 1]]: [[0, []], \"nonZeroAccountTotalCount\"]"
     run many_message --pem=0 data.query "[[[0, [2, 0]], [0, [2, 1]]]]"
-    assert_output --partial "[0, [2, 0]]: [0, [3]],"
-    assert_output --partial "[0, [2, 1]]: [0, [3]],"
+    assert_output --partial "[0, [2, 0]]: [0, [4]],"
+    assert_output --partial "[0, [2, 1]]: [0, [4]],"
 
     # Check if the chain is still consistent
     check_consistency --pem=1 --balance=999000 --id="$(identity 1)" 8000 8001 8002 8003
@@ -70,6 +70,6 @@ function teardown() {
     check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
     check_consistency --pem=2 --balance=0 --id="$(identity 2)" 8000 8001 8002 8003
     run many_message --pem=0 data.query "[[[0, [2, 0]], [0, [2, 1]]]]"
-    assert_output --partial "[0, [2, 0]]: [0, [3]],"
-    assert_output --partial "[0, [2, 1]]: [0, [2]],"
+    assert_output --partial "[0, [2, 0]]: [0, [4]],"
+    assert_output --partial "[0, [2, 1]]: [0, [3]],"
 }

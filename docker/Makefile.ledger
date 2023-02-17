@@ -1,5 +1,6 @@
 MIGRATIONS ?=
 ALLOW_ADDRS ?= false
+STATE ?= "../staging/ledger_state.json5"
 
 ENABLE_MIGRATIONS := false
 ifdef MIGRATIONS
@@ -62,7 +63,7 @@ endif
 	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel/docker:openssl_image genpkey -algorithm Ed25519 -out /export/ledger.pem
 	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel/docker:openssl_image genpkey -algorithm Ed25519 -out /export/abci.pem
 	mkdir -p "$@/persistent-ledger"
-	cp ../staging/ledger_state.json5 $@/ledger_state.json5
+	cp "$(STATE)" $@/ledger_state.json5
 
 .PHONY: start-nodes
 start-nodes: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker

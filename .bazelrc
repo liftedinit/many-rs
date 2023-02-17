@@ -9,7 +9,7 @@ build --flag_alias=disable_token_sender_check=//src/many-ledger:disable_token_se
 
 build:all-features --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check
 
-run:ledger-resiliency --balance_testing --migration_testing
+run:bats-resiliency-ledger --balance_testing --migration_testing
 
 # Enable rustfmt for all targets in the workspace
 build:rustfmt --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect

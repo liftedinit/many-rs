@@ -210,7 +210,7 @@ jobs:
       - checkout
       - run:
           name: running tests
-          command: bazel run --config=remote-cache --config=ledger-resiliency //tests/resiliency/ledger:bats-resiliency-ledger
+          command: bazel run --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
 
   # Push a tag to GitHub
   tag:

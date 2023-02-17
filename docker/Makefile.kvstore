@@ -1,5 +1,6 @@
 ALLOW_ADDRS ?= false
 FEATURES ?= --config=all-features
+STATE ?= "../staging/kvstore_state.json5"
 
 include Makefile.common
 
@@ -51,7 +52,7 @@ genfiles-kvstore/node%: genfiles-common/tendermint-docker genfiles-common/openss
 	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel/docker:openssl_image genpkey -algorithm Ed25519 -out /export/kvstore.pem
 	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel/docker:openssl_image genpkey -algorithm Ed25519 -out /export/abci.pem
 	mkdir -p "$@/persistent-kvstore"
-	cp ../staging/kvstore_state.json5 $@/kvstore_state.json5
+	cp "$(STATE)" $@/kvstore_state.json5
 
 .PHONY: start-nodes
 start-nodes: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json genfiles-kvstore/many-kvstore-docker genfiles-common/many-abci-docker
