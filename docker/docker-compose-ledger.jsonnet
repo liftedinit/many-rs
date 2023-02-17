@@ -61,7 +61,7 @@ local ledger(i, user, id_with_balances, enable_migrations) = {
 };
 
 local tendermint(i, user) = {
-    image: "bazel:tendermint_image",
+    image: "bazel/docker:tendermint_image",
     command: [
         "--log-level", "info",
         "start",
