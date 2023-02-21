@@ -99,7 +99,7 @@ pub struct Block {
     #[n(1)]
     pub parent: BlockIdentifier,
 
-    #[n(2)]
+    #[cbor(n(2), with = "minicbor::bytes")]
     pub app_hash: Option<Vec<u8>>,
 
     #[n(3)]

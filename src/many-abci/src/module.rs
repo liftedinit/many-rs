@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose, Engine as _};
 use clap::__macro_refs::once_cell;
 use coset::CborSerializable;
 use itertools::Itertools;
@@ -49,7 +50,7 @@ fn _many_block_from_tendermint_block(block: tendermint::Block) -> Block {
         } else {
             BlockIdentifier::new(block.header.last_block_id.unwrap().hash.into(), height - 1)
         },
-        app_hash: Some(block.header.app_hash.value()),
+        app_hash: Some(block.header.app_hash.as_bytes().to_vec()),
         timestamp: Timestamp::new(
             block
                 .header
@@ -125,17 +126,18 @@ impl<C: Client + Send + Sync> r#async::AsyncModuleBackend for AbciBlockchainModu
 
         if let Ok(hash) = TryInto::<[u8; 32]>::try_into(hash) {
             block_on(async {
-                match self
-                    .client
-                    .tx(tendermint_rpc::abci::transaction::Hash::new(hash), false)
-                    .await
-                {
+                match self.client.tx(tendermint::Hash::Sha256(hash), false).await {
                     Ok(tx) => {
-                        tracing::warn!("result: {}", hex::encode(tx.tx_result.data.value()));
+                        // Bse64 decode is required because of an issue in `tendermint-rs` 0.28.0
+                        // TODO: Remove when https://github.com/informalsystems/tendermint-rs/issues/1251 is fixed
+                        let cbor_tx_result_data = general_purpose::STANDARD
+                            .decode(&tx.tx_result.data)
+                            .map_err(ManyError::deserialization_error)?;
+                        tracing::warn!("result: {}", hex::encode(&cbor_tx_result_data));
                         Ok(StatusReturn::Done {
                             response: Box::new(
                                 encode_cose_sign1_from_response(
-                                    ResponseMessage::from_bytes(tx.tx_result.data.value())
+                                    ResponseMessage::from_bytes(&cbor_tx_result_data)
                                         .map_err(abci_frontend::abci_transport_error)?,
                                     &AnonymousIdentity,
                                 )
@@ -165,7 +167,7 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
                 hash: status.sync_info.latest_block_hash.as_bytes().to_vec(),
                 height: status.sync_info.latest_block_height.value(),
             },
-            app_hash: Some(status.sync_info.latest_app_hash.value().to_vec()),
+            app_hash: Some(status.sync_info.latest_app_hash.as_bytes().to_vec()),
             retained_height: None,
         })
     }
@@ -179,7 +181,7 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
                 SingleTransactionQuery::Hash(hash) => {
                     if let Ok(hash) = TryInto::<[u8; 32]>::try_into(hash) {
                         self.client
-                            .tx(tendermint_rpc::abci::transaction::Hash::new(hash), true)
+                            .tx(tendermint::Hash::Sha256(hash), true)
                             .await
                             .map_err(|e| {
                                 tracing::error!("abci transport: {}", e.to_string());
@@ -302,7 +304,7 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
                 SingleTransactionQuery::Hash(hash) => {
                     if let Ok(hash) = TryInto::<[u8; 32]>::try_into(hash) {
                         self.client
-                            .tx(tendermint_rpc::abci::transaction::Hash::new(hash), true)
+                            .tx(tendermint::Hash::Sha256(hash), true)
                             .await
                             .map_err(|e| {
                                 tracing::error!("abci transport: {}", e.to_string());
@@ -315,11 +317,9 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
             }
         })?;
 
-        tracing::debug!("blockchain.request: {}", hex::encode(tx.tx.as_bytes()));
+        tracing::debug!("blockchain.request: {}", hex::encode(&tx.tx));
 
-        Ok(blockchain::RequestReturns {
-            request: tx.tx.as_bytes().to_vec(),
-        })
+        Ok(blockchain::RequestReturns { request: tx.tx })
     }
 
     fn response(
@@ -331,7 +331,7 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
                 SingleTransactionQuery::Hash(hash) => {
                     if let Ok(hash) = TryInto::<[u8; 32]>::try_into(hash) {
                         self.client
-                            .tx(tendermint_rpc::abci::transaction::Hash::new(hash), true)
+                            .tx(tendermint::Hash::Sha256(hash), true)
                             .await
                             .map_err(|e| {
                                 tracing::error!("abci transport: {}", e.to_string());
@@ -344,12 +344,9 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
             }
         })?;
 
-        tracing::debug!(
-            "blockchain.response: {}",
-            hex::encode(tx.tx_result.data.value())
-        );
-        let response: ResponseMessage = minicbor::decode(tx.tx_result.data.value())
-            .map_err(ManyError::deserialization_error)?;
+        tracing::debug!("blockchain.response: {}", hex::encode(&tx.tx_result.data));
+        let response: ResponseMessage =
+            minicbor::decode(&tx.tx_result.data).map_err(ManyError::deserialization_error)?;
         Ok(blockchain::ResponseReturns {
             response: encode_cose_sign1_from_response(response, &AnonymousIdentity)?
                 .to_vec()

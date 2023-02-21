@@ -18,6 +18,7 @@ doc = false
 
 [dependencies]
 async-trait = "0.1.51"
+base64 = "0.21.0"
 ciborium = "0.2.0"
 clap = { version = "3.0.0", features = ["derive"] }
 coset = "0.3"
@@ -41,10 +42,10 @@ reqwest = "0.11.11"
 sha2 = "0.10.1"
 signal-hook = "0.3.13"
 smol = "1.2.5"
-tendermint = "0.24.0-pre.2"
-tendermint-abci = "0.24.0-pre.2"
-tendermint-rpc = { version = "0.24.0-pre.2", features = [ "http-client" ] }
-tendermint-proto = "0.24.0-pre.2"
+tendermint = "0.28.0"
+tendermint-abci = "0.28.0"
+tendermint-rpc = { version = "0.28.0", features = [ "http-client" ] }
+tendermint-proto = "0.28.0"
 tokio = { version = "1.24.1", features = [ "full" ] }
 tracing = "0.1.28"
 

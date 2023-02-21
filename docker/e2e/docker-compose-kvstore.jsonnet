@@ -44,10 +44,9 @@ local kvstore(i, user, kvstore_tag) = {
 local tendermint(i, user, tendermint_tag) = {
     image: "tendermint/tendermint:v" + tendermint_tag,
     command: [
-        "--log-level", "info",
         "start",
         "--rpc.laddr", "tcp://0.0.0.0:26657",
-        "--proxy-app", "tcp://abci-" + i + ":26658",
+        "--proxy_app", "tcp://abci-" + i + ":26658",
     ],
     user: "" + user,
     volumes: [
@@ -56,7 +55,7 @@ local tendermint(i, user, tendermint_tag) = {
     ports: [ "" + (26600 + i) + ":26600" ],
 };
 
-function(nb_nodes=4, user=1000, tendermint_tag="0.35.4", abci_tag="latest", kvstore_tag="latest", allow_addrs=false) {
+function(nb_nodes=4, user=1000, tendermint_tag="0.34.24", abci_tag="latest", kvstore_tag="latest", allow_addrs=false) {
     version: '3',
     services: {
         ["abci-" + i]: abci(i, user, abci_tag, allow_addrs) for i in std.range(0, nb_nodes - 1)
