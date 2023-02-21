@@ -7,7 +7,6 @@ use many_identity::Address;
 use many_modules::events::EventInfo;
 use many_modules::ledger;
 use many_modules::ledger::{TokenBurnArgs, TokenBurnReturns, TokenMintArgs, TokenMintReturns};
-use many_protocol::context::Context;
 use many_types::ledger::Symbol;
 use std::collections::BTreeSet;
 
@@ -25,7 +24,6 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: TokenMintArgs,
-        context: Context,
     ) -> Result<TokenMintReturns, ManyError> {
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.mint"));
@@ -47,8 +45,7 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
         check_symbol_exists(&symbol, self.storage.get_symbols()?)?;
 
         // Mint into storage
-        let keys = self.storage.mint_token(symbol, &distribution)?;
-        self.storage.prove_state(context, keys)?;
+        let _ = self.storage.mint_token(symbol, &distribution)?;
 
         // Log event
         self.storage
@@ -64,7 +61,6 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: TokenBurnArgs,
-        context: Context,
     ) -> Result<TokenBurnReturns, ManyError> {
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.burn"));
@@ -94,9 +90,7 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
         }
 
         // Burn from storage
-        let keys = self.storage.burn_token(symbol, &distribution)?;
-
-        self.storage.prove_state(context, keys)?;
+        let _ = self.storage.burn_token(symbol, &distribution)?;
 
         // Log event
         self.storage
