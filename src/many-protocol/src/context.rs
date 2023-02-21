@@ -23,14 +23,10 @@ impl IntoIterator for ProofResult {
     fn into_iter(self) -> Self::IntoIter {
         match self {
             Self::Error(_) | Self::ProofNotRequested => vec![].into_iter(),
-            Self::Proof(proof) => vec![minicbor::to_vec(Proof::from(proof))
-                .map_err(|error| ManyError::unknown(error.to_string()))
-                .and_then(|bytes| {
-                    minicbor::decode::<CborAny>(bytes.as_slice())
-                        .map_err(|error| ManyError::unknown(error.to_string()))
-                })
-                .map(|any| PROOF.with_argument(any))]
-            .into_iter(),
+            Self::Proof(proof) => {
+                vec![CborAny::try_from(Proof::from(proof)).map(|any| PROOF.with_argument(any))]
+                    .into_iter()
+            }
         }
     }
 }

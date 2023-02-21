@@ -1,6 +1,7 @@
 use {
-    crate::attributes::Attribute,
+    crate::{attributes::Attribute, cbor::CborAny},
     derive_more::{From, Into},
+    many_error::ManyError,
     minicbor::{
         decode,
         encode::{Error, Write},
@@ -21,6 +22,17 @@ pub struct Value(Vec<u8>);
 pub struct Proof {
     #[n(0)]
     pub operations: Vec<ProofOperation>,
+}
+
+impl TryFrom<Proof> for CborAny {
+    type Error = ManyError;
+    fn try_from(proof: Proof) -> Result<Self, Self::Error> {
+        minicbor::to_vec(proof)
+            .map_err(ManyError::unknown)
+            .and_then(|bytes| {
+                minicbor::decode::<CborAny>(bytes.as_slice()).map_err(ManyError::unknown)
+            })
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
