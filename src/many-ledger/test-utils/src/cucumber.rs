@@ -1,4 +1,3 @@
-use async_channel::unbounded;
 use cucumber::Parameter;
 use many_error::{ManyError, ManyErrorCode};
 use many_identity::testing::identity;
@@ -13,7 +12,6 @@ use many_modules::account::{
 };
 use many_modules::ledger::extended_info::TokenExtendedInfo;
 use many_modules::ledger::{LedgerTokensModuleBackend, TokenInfoArgs};
-use many_protocol::RequestMessage;
 use many_types::cbor::CborNull;
 use many_types::ledger::{TokenAmount, TokenInfo, TokenMaybeOwner};
 use std::collections::{BTreeMap, BTreeSet};
@@ -208,7 +206,6 @@ pub fn given_token_account<T: LedgerWorld + AccountWorld>(w: &mut T) {
                 account::features::tokens::TokenAccountLedger.as_feature()
             ]),
         },
-        (RequestMessage::default(), unbounded().0).into(),
     )
     .expect("Unable to create account");
     *w.account_mut() = account.id
@@ -225,7 +222,6 @@ pub fn given_account_id_owner<T: LedgerWorld + AccountWorld>(w: &mut T, id: Some
             account,
             roles: BTreeMap::from_iter([(id, BTreeSet::from([Role::Owner]))]),
         },
-        (RequestMessage::default(), unbounded().0).into(),
     )
     .expect("Unable to add role to account");
 
@@ -238,7 +234,6 @@ pub fn given_account_id_owner<T: LedgerWorld + AccountWorld>(w: &mut T, id: Some
                 account,
                 roles: BTreeMap::from_iter([(sender, BTreeSet::from([Role::Owner]))]),
             },
-            (RequestMessage::default(), unbounded().0).into(),
         )
         .expect("Unable to remove myself as account owner");
     }
@@ -259,7 +254,6 @@ pub fn given_account_part_of_can_create<T: LedgerWorld + AccountWorld>(
             account,
             roles: BTreeMap::from([(id, BTreeSet::from_iter([permission.as_role()]))]),
         },
-        (RequestMessage::default(), unbounded().0).into(),
     )
     .expect("Unable to add role to account");
 }

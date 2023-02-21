@@ -120,7 +120,6 @@ impl AccountModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: account::CreateArgs,
-        context: Context,
     ) -> Result<account::CreateReturn, ManyError> {
         if args.features.is_empty() {
             return Err(account::errors::empty_feature());
@@ -129,20 +128,16 @@ impl AccountModuleBackend for LedgerModuleImpl {
 
         validate_account(&account)?;
 
-        let (id, keys) = self.storage.add_account(account)?;
-        self.storage
-            .prove_state(context, keys)
-            .map(|_| account::CreateReturn { id })
+        let (id, _) = self.storage.add_account(account)?;
+        Ok(account::CreateReturn { id })
     }
 
     fn set_description(
         &mut self,
         sender: &Address,
         args: account::SetDescriptionArgs,
-        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, keys) = self.storage.get_account(&args.account)?;
-        let mut keys: Vec<_> = keys.into_iter().collect();
+        let (account, _) = self.storage.get_account(&args.account)?;
 
         if !account.has_role(sender, account::Role::Owner) {
             return Err(account::errors::user_needs_role("owner"));
@@ -150,10 +145,6 @@ impl AccountModuleBackend for LedgerModuleImpl {
 
         self.storage
             .set_description(account, args)
-            .and_then(|description_key| {
-                keys.push(description_key);
-                self.storage.prove_state(context, keys)
-            })
             .map(|_| EmptyReturn)
     }
 
@@ -199,22 +190,13 @@ impl AccountModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: account::AddRolesArgs,
-        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, account_keys) = self.storage.get_account(&args.account)?;
+        let (account, _) = self.storage.get_account(&args.account)?;
 
         if !account.has_role(sender, account::Role::Owner) {
             Err(account::errors::user_needs_role("owner"))
         } else {
-            self.storage.add_roles(account, args).and_then(|role_key| {
-                self.storage
-                    .prove_state(context, {
-                        let mut keys = account_keys.into_iter().collect::<Vec<_>>();
-                        keys.push(role_key);
-                        keys
-                    })
-                    .map(|_| EmptyReturn)
-            })
+            self.storage.add_roles(account, args).map(|_| EmptyReturn)
         }
     }
 
@@ -222,24 +204,15 @@ impl AccountModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: account::RemoveRolesArgs,
-        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, account_keys) = self.storage.get_account(&args.account)?;
+        let (account, _) = self.storage.get_account(&args.account)?;
 
         if !account.has_role(sender, account::Role::Owner) {
             Err(account::errors::user_needs_role(account::Role::Owner))
         } else {
             self.storage
                 .remove_roles(account, args)
-                .and_then(|role_key| {
-                    self.storage
-                        .prove_state(context, {
-                            let mut keys = account_keys.into_iter().collect::<Vec<_>>();
-                            keys.push(role_key);
-                            keys
-                        })
-                        .map(|_| EmptyReturn)
-                })
+                .map(|_| EmptyReturn)
         }
     }
 
@@ -277,24 +250,15 @@ impl AccountModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: account::DisableArgs,
-        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, keys) = self.storage.get_account(&args.account)?;
-        let mut keys = keys.into_iter().collect::<Vec<_>>();
+        let (account, _) = self.storage.get_account(&args.account)?;
 
         if !account.has_role(sender, account::Role::Owner) {
             Err(account::errors::user_needs_role(account::Role::Owner))
         } else {
             self.storage
                 .disable_account(&args.account)
-                .and_then(|disable_keys| {
-                    self.storage
-                        .prove_state(context, {
-                            keys.extend(disable_keys);
-                            keys
-                        })
-                        .map(|_| EmptyReturn)
-                })
+                .map(|_| EmptyReturn)
         }
     }
 
@@ -302,25 +266,16 @@ impl AccountModuleBackend for LedgerModuleImpl {
         &mut self,
         sender: &Address,
         args: account::AddFeaturesArgs,
-        context: Context,
     ) -> Result<account::AddFeaturesReturn, ManyError> {
         if args.features.is_empty() {
             Err(account::errors::empty_feature())
         } else {
-            let (account, keys) = self.storage.get_account(&args.account)?;
+            let (account, _) = self.storage.get_account(&args.account)?;
 
             account.needs_role(sender, [account::Role::Owner])?;
             self.storage
                 .add_features(account, args)
-                .and_then(|features_key| {
-                    let mut keys = keys.into_iter().collect::<Vec<_>>();
-                    self.storage
-                        .prove_state(context, {
-                            keys.push(features_key);
-                            keys
-                        })
-                        .map(|_| EmptyReturn)
-                })
+                .map(|_| EmptyReturn)
         }
     }
 }

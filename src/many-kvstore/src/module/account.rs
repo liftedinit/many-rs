@@ -121,7 +121,6 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         &mut self,
         sender: &Address,
         args: account::CreateArgs,
-        context: Context,
     ) -> Result<account::CreateReturn, ManyError> {
         if args.features.is_empty() {
             return Err(account::errors::empty_feature());
@@ -130,19 +129,16 @@ impl AccountModuleBackend for KvStoreModuleImpl {
 
         validate_account(&account)?;
 
-        let (id, keys) = self.storage.add_account(account)?;
-        self.storage
-            .prove_state(context, keys)
-            .map(|_| account::CreateReturn { id })
+        let (id, _) = self.storage.add_account(account)?;
+        Ok(account::CreateReturn { id })
     }
 
     fn set_description(
         &mut self,
         sender: &Address,
         args: account::SetDescriptionArgs,
-        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, account_key) = self.storage.get_account(&args.account);
+        let (account, _) = self.storage.get_account(&args.account);
         let account = account.ok_or_else(|| account::errors::unknown_account(args.account))?;
 
         if !account.has_role(sender, account::Role::Owner) {
@@ -151,11 +147,7 @@ impl AccountModuleBackend for KvStoreModuleImpl {
 
         self.storage
             .set_description(account, args)
-            .and_then(|description_key| {
-                self.storage
-                    .prove_state(context, vec![account_key, description_key])
-                    .map(|_| EmptyReturn)
-            })
+            .map(|_| EmptyReturn)
     }
 
     fn list_roles(
@@ -202,19 +194,14 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         &mut self,
         sender: &Address,
         args: account::AddRolesArgs,
-        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, account_key) = self.storage.get_account(&args.account);
+        let (account, _) = self.storage.get_account(&args.account);
         let account = account.ok_or_else(|| account::errors::unknown_account(args.account))?;
 
         if !account.has_role(sender, account::Role::Owner) {
             Err(account::errors::user_needs_role("owner"))
         } else {
-            self.storage.add_roles(account, args).and_then(|role_key| {
-                self.storage
-                    .prove_state(context, vec![account_key, role_key])
-                    .map(|_| EmptyReturn)
-            })
+            self.storage.add_roles(account, args).map(|_| EmptyReturn)
         }
     }
 
@@ -222,9 +209,8 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         &mut self,
         sender: &Address,
         args: account::RemoveRolesArgs,
-        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, account_key) = self.storage.get_account(&args.account);
+        let (account, _) = self.storage.get_account(&args.account);
         let account = account.ok_or_else(|| account::errors::unknown_account(args.account))?;
 
         if !account.has_role(sender, account::Role::Owner) {
@@ -232,11 +218,7 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         } else {
             self.storage
                 .remove_roles(account, args)
-                .and_then(|role_key| {
-                    self.storage
-                        .prove_state(context, vec![account_key, role_key])
-                        .map(|_| EmptyReturn)
-                })
+                .map(|_| EmptyReturn)
         }
     }
 
@@ -272,9 +254,8 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         &mut self,
         sender: &Address,
         args: account::DisableArgs,
-        context: Context,
     ) -> Result<EmptyReturn, ManyError> {
-        let (account, account_key) = self.storage.get_account(&args.account);
+        let (account, _) = self.storage.get_account(&args.account);
         let account = account.ok_or_else(|| account::errors::unknown_account(args.account))?;
 
         if !account.has_role(sender, Role::Owner) {
@@ -282,15 +263,7 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         } else {
             self.storage
                 .disable_account(&args.account)
-                .and_then(|keys| {
-                    let mut keys = keys.into_iter().collect::<Vec<_>>();
-                    self.storage
-                        .prove_state(context, {
-                            keys.push(account_key);
-                            keys
-                        })
-                        .map(|_| EmptyReturn)
-                })
+                .map(|_| EmptyReturn)
         }
     }
 
@@ -298,22 +271,17 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         &mut self,
         sender: &Address,
         args: account::AddFeaturesArgs,
-        context: Context,
     ) -> Result<account::AddFeaturesReturn, ManyError> {
         if args.features.is_empty() {
             Err(account::errors::empty_feature())
         } else {
-            let (account, account_key) = self.storage.get_account(&args.account);
+            let (account, _) = self.storage.get_account(&args.account);
             let account = account.ok_or_else(|| account::errors::unknown_account(args.account))?;
 
             account.needs_role(sender, [Role::Owner])?;
             self.storage
                 .add_features(account, args)
-                .and_then(|features_key| {
-                    self.storage
-                        .prove_state(context, vec![account_key, features_key])
-                        .map(|_| EmptyReturn)
-                })
+                .map(|_| EmptyReturn)
         }
     }
 }

@@ -1,4 +1,3 @@
-use async_channel::unbounded;
 use many_error::{ManyError, Reason};
 use many_identity::testing::identity;
 use many_identity::{Address, Identity};
@@ -12,7 +11,6 @@ use many_modules::kvstore::{
     DisableArgs, DisableReturn, GetArgs, GetReturns, KvStoreCommandsModuleBackend,
     KvStoreModuleBackend, PutArgs, QueryArgs, QueryReturns,
 };
-use many_protocol::RequestMessage;
 use once_cell::sync::Lazy;
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::BTreeMap;
@@ -270,11 +268,7 @@ pub fn setup_with_account(account_type: AccountType) -> SetupWithAccount {
         .inner
         .borrow_mut()
         .module_impl
-        .create(
-            &id,
-            setup.args,
-            (RequestMessage::default(), unbounded().0).into(),
-        )
+        .create(&id, setup.args)
         .unwrap();
     SetupWithAccount {
         inner: setup.inner,

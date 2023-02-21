@@ -465,14 +465,13 @@ pub type AddFeaturesReturn = EmptyReturn;
 #[cfg_attr(test, mockall::automock)]
 pub trait AccountModuleBackend: Send {
     /// Create an account.
-    fn create(&mut self, sender: &Address, args: CreateArgs, context: Context) -> Result<CreateReturn, ManyError>;
+    fn create(&mut self, sender: &Address, args: CreateArgs) -> Result<CreateReturn, ManyError>;
 
     /// Set the description of an account.
     fn set_description(
         &mut self,
         sender: &Address,
-        args: SetDescriptionArgs,
-        context: Context
+        args: SetDescriptionArgs
     ) -> Result<SetDescriptionReturn, ManyError>;
 
     /// List all the roles supported by an account.
@@ -491,7 +490,6 @@ pub trait AccountModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: AddRolesArgs,
-        context: Context
     ) -> Result<AddRolesReturn, ManyError>;
 
     /// Remove roles from an identity for an account.
@@ -499,21 +497,19 @@ pub trait AccountModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: RemoveRolesArgs,
-        context: Context
     ) -> Result<RemoveRolesReturn, ManyError>;
 
     /// Returns the information related to an account.
     fn info(&self, sender: &Address, args: InfoArgs, context: Context) -> Result<InfoReturn, ManyError>;
 
     /// Disable or delete an account.
-    fn disable(&mut self, sender: &Address, args: DisableArgs, context: Context) -> Result<DisableReturn, ManyError>;
+    fn disable(&mut self, sender: &Address, args: DisableArgs) -> Result<DisableReturn, ManyError>;
 
     /// Add additional features to an account.
     fn add_features(
         &mut self,
         sender: &Address,
         args: AddFeaturesArgs,
-        context: Context
     ) -> Result<AddFeaturesReturn, ManyError>;
 }
 
@@ -532,7 +528,7 @@ mod module_tests {
 
         mock.expect_create().returning({
             let account_map = Arc::clone(&account_map);
-            move |sender, args, _| {
+            move |sender, args| {
                 let mut account_map = account_map.write().unwrap();
                 let (id, _) = account_map.insert(Account::create(sender, args))?;
                 Ok(CreateReturn { id })
@@ -540,7 +536,7 @@ mod module_tests {
         });
         mock.expect_set_description().returning({
             let account_map = Arc::clone(&account_map);
-            move |_, args, _| {
+            move |_, args| {
                 let mut account_map = account_map.write().unwrap();
                 let mut account = account_map
                     .get_mut(&args.account)
@@ -581,7 +577,7 @@ mod module_tests {
         });
         mock.expect_disable().returning({
             let account_map = Arc::clone(&account_map);
-            move |sender, args, _| {
+            move |sender, args| {
                 let mut account_map = account_map.write().unwrap();
                 account_map.needs_role(&args.account, sender, [Role::Owner])?;
                 account_map.remove(&args.account).map_or_else(
