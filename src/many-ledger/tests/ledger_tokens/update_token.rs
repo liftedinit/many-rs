@@ -1,4 +1,3 @@
-use async_channel::unbounded;
 use many_ledger_test_macros::*;
 use many_ledger_test_utils::cucumber::{
     verify_error_code, verify_error_role, verify_error_ticker, AccountWorld, LedgerWorld,
@@ -14,7 +13,6 @@ use many_ledger::module::LedgerModuleImpl;
 use many_modules::events::{EventFilter, EventKind, EventsModuleBackend, ListArgs};
 use many_modules::ledger::extended_info::TokenExtendedInfo;
 use many_modules::ledger::{LedgerTokensModuleBackend, TokenInfoArgs, TokenUpdateArgs};
-use many_protocol::RequestMessage;
 use many_types::cbor::CborNull;
 use many_types::ledger::{TokenInfo, TokenMaybeOwner};
 use many_types::Memo;
@@ -42,13 +40,8 @@ impl UpdateWorld {
 
 fn fail_update_token(w: &mut UpdateWorld, sender: &Address) {
     w.error = Some(
-        LedgerTokensModuleBackend::update(
-            &mut w.setup.module_impl,
-            sender,
-            w.args.clone(),
-            (RequestMessage::default(), unbounded().0).into(),
-        )
-        .expect_err("Token update was supposed to fail, it succeeded instead."),
+        LedgerTokensModuleBackend::update(&mut w.setup.module_impl, sender, w.args.clone())
+            .expect_err("Token update was supposed to fail, it succeeded instead."),
     );
 }
 
@@ -108,11 +101,7 @@ fn when_update_ticker(w: &mut UpdateWorld, id: SomeId) {
     let id = id.as_address(w);
     w.setup
         .module_impl
-        .update(
-            &id,
-            w.args.clone(),
-            (RequestMessage::default(), unbounded().0).into(),
-        )
+        .update(&id, w.args.clone())
         .expect("Unable to update token ticker");
 
     let res = LedgerTokensModuleBackend::info(

@@ -2,7 +2,6 @@ use crate::EmptyReturn;
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
-use many_protocol::context::Context;
 use many_types::{cbor_type_decl, ledger, AttributeRelatedIndex, Memo};
 use minicbor::{Decode, Encode};
 
@@ -66,7 +65,6 @@ pub trait LedgerTokensModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: TokenCreateArgs,
-        context: Context
     ) -> Result<TokenCreateReturns, ManyError>;
 
     fn info(&self, sender: &Address, args: TokenInfoArgs) -> Result<TokenInfoReturns, ManyError>;
@@ -76,7 +74,6 @@ pub trait LedgerTokensModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: TokenUpdateArgs,
-        context: Context
     ) -> Result<TokenUpdateReturns, ManyError>;
 
     #[many(deny_anonymous)]
@@ -84,7 +81,6 @@ pub trait LedgerTokensModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: TokenAddExtendedInfoArgs,
-        context: Context
     ) -> Result<TokenAddExtendedInfoReturns, ManyError>;
 
     #[many(deny_anonymous)]
@@ -92,7 +88,6 @@ pub trait LedgerTokensModuleBackend: Send {
         &mut self,
         sender: &Address,
         args: TokenRemoveExtendedInfoArgs,
-        context: Context
     ) -> Result<TokenRemoveExtendedInfoReturns, ManyError>;
 }
 
@@ -103,7 +98,7 @@ mod tests {
     use crate::testutils::call_module_cbor;
     use many_identity::testing::identity;
     use many_types::ledger::{TokenInfo, TokenInfoSummary, TokenInfoSupply};
-    use mockall::predicate::{always, eq};
+    use mockall::predicate::eq;
     use std::sync::{Arc, Mutex};
 
     #[test]
@@ -133,7 +128,7 @@ mod tests {
             owner: None,
         };
         mock.expect_create()
-            .with(eq(identity(1)), eq(data.clone()), always())
+            .with(eq(identity(1)), eq(data.clone()))
             .times(1)
             .return_const(Ok(TokenCreateReturns { info: info.clone() }));
         let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
@@ -159,9 +154,9 @@ mod tests {
             memo: None,
         };
         mock.expect_update()
-            .with(eq(identity(1)), eq(data.clone()), always())
+            .with(eq(identity(1)), eq(data.clone()))
             .times(1)
-            .returning(|_, _, _| Ok(TokenUpdateReturns {}));
+            .returning(|_, _| Ok(TokenUpdateReturns {}));
         let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
 
         let update_returns: TokenUpdateReturns = minicbor::decode(
@@ -185,9 +180,9 @@ mod tests {
             memo: None,
         };
         mock.expect_add_extended_info()
-            .with(eq(identity(1)), eq(data.clone()), always())
+            .with(eq(identity(1)), eq(data.clone()))
             .times(1)
-            .returning(|_, _, _| Ok(TokenAddExtendedInfoReturns {}));
+            .returning(|_, _| Ok(TokenAddExtendedInfoReturns {}));
         let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
 
         let add_ext_info_returns: TokenAddExtendedInfoReturns = minicbor::decode(
@@ -213,9 +208,9 @@ mod tests {
             memo: None,
         };
         mock.expect_remove_extended_info()
-            .with(eq(identity(1)), eq(data.clone()), always())
+            .with(eq(identity(1)), eq(data.clone()))
             .times(1)
-            .returning(|_, _, _| Ok(TokenRemoveExtendedInfoReturns {}));
+            .returning(|_, _| Ok(TokenRemoveExtendedInfoReturns {}));
         let module = super::LedgerTokensModule::new(Arc::new(Mutex::new(mock)));
 
         let rm_ext_info_returns: TokenRemoveExtendedInfoReturns = minicbor::decode(

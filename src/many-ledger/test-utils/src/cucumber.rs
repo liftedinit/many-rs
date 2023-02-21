@@ -278,7 +278,6 @@ fn _create_default_token<T: TokenWorld + LedgerWorld + AccountWorld>(
         w.module_impl_mut(),
         &id,
         crate::default_token_create_args(Some(owner), max_supply),
-        (RequestMessage::default(), unbounded().0).into(),
     )
     .expect("Unable to create default token");
     *w.info_mut() = result.info;
