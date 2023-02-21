@@ -23,7 +23,7 @@ use many_modules::ledger::{
     BalanceArgs, LedgerCommandsModuleBackend, LedgerModuleBackend, TokenCreateArgs,
 };
 use many_modules::{account, events, ledger};
-use many_protocol::{RequestMessage, ResponseMessage};
+use many_protocol::{context::Context, RequestMessage, ResponseMessage};
 use many_types::ledger::{
     LedgerTokensAddressMap, Symbol, TokenAmount, TokenInfoSummary, TokenMaybeOwner,
 };
@@ -250,7 +250,7 @@ impl Setup {
                     account: None,
                     symbols: Some(vec![symbol].into()),
                 },
-                (RequestMessage::default(), unbounded().0).into(),
+                Context::new(RequestMessage::default(), unbounded().0),
             )?
             .balances
             .get(&symbol)
@@ -759,7 +759,7 @@ pub fn verify_balance(
             account: Some(id),
             symbols: Some(vec![symbol].into()),
         },
-        (RequestMessage::default(), unbounded().0).into(),
+        Context::new(RequestMessage::default(), unbounded().0),
     );
     assert!(result.is_ok());
     let balances = result.unwrap();

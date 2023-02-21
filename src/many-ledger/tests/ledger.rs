@@ -3,7 +3,7 @@ use many_identity::Address;
 use many_ledger_test_utils::*;
 use many_modules::ledger;
 use many_modules::ledger::{LedgerCommandsModuleBackend, LedgerModuleBackend, SendArgs};
-use many_protocol::RequestMessage;
+use many_protocol::{context::Context, RequestMessage};
 use many_types::ledger::TokenAmount;
 use proptest::prelude::*;
 
@@ -15,7 +15,7 @@ fn info() {
     let result = module_impl.info(
         &id,
         ledger::InfoArgs {},
-        (RequestMessage::default(), unbounded().0).into(),
+        Context::new(RequestMessage::default(), unbounded().0),
     );
     assert!(result.is_ok());
 }

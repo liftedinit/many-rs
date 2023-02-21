@@ -533,7 +533,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
 
             let data = message.data.as_slice();
             let (transmitter, receiver) = unbounded();
-            let ctx: Context = (message.clone(), transmitter).into();
+            let ctx = Context::new(message.clone(), transmitter);
             let result = match message.method.as_str() {
                 #( #execute_endpoint_pat )*
 

@@ -10,7 +10,7 @@ use many_modules::{
     data::{DataGetInfoArgs, DataModuleBackend, DataQueryArgs},
     EmptyArg,
 };
-use many_protocol::RequestMessage;
+use many_protocol::{context::Context, RequestMessage};
 use many_types::{ledger::TokenAmount, VecOrSingle};
 use num_bigint::BigInt;
 
@@ -21,7 +21,7 @@ fn assert_metrics(harness: &Setup, expected_total: u32, expected_non_zero: u32) 
             .info(
                 &harness.id,
                 EmptyArg,
-                (RequestMessage::default(), unbounded().0).into()
+                Context::new(RequestMessage::default(), unbounded().0)
             )
             .unwrap()
             .indices
@@ -39,7 +39,7 @@ fn assert_metrics(harness: &Setup, expected_total: u32, expected_non_zero: u32) 
                         NON_ZERO_ACCOUNT_TOTAL_COUNT_INDEX
                     ])
                 },
-                (RequestMessage::default(), unbounded().0).into()
+                Context::new(RequestMessage::default(), unbounded().0)
             )
             .unwrap()
             .len(),
@@ -55,7 +55,7 @@ fn assert_metrics(harness: &Setup, expected_total: u32, expected_non_zero: u32) 
                     NON_ZERO_ACCOUNT_TOTAL_COUNT_INDEX,
                 ]),
             },
-            (RequestMessage::default(), unbounded().0).into(),
+            Context::new(RequestMessage::default(), unbounded().0),
         )
         .unwrap();
     let total: BigInt = query[&ACCOUNT_TOTAL_COUNT_INDEX]
@@ -92,7 +92,7 @@ fn migration() {
             .info(
                 &harness.id,
                 EmptyArg,
-                (RequestMessage::default(), unbounded().0).into()
+                Context::new(RequestMessage::default(), unbounded().0)
             )
             .unwrap()
             .indices

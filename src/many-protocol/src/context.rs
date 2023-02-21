@@ -32,6 +32,13 @@ impl IntoIterator for ProofResult {
 }
 
 impl Context {
+    pub fn new(request: RequestMessage, transmitter: Sender<ProofResult>) -> Self {
+        Self {
+            request,
+            transmitter,
+        }
+    }
+
     pub fn prove<
         P: IntoIterator<Item = ProofOperation>,
         Prover: FnOnce() -> Result<P, ManyError>,
@@ -56,15 +63,6 @@ impl Context {
 
     pub fn proof_requested(&self) -> bool {
         self.request.attributes.contains(&PROOF)
-    }
-}
-
-impl From<(RequestMessage, Sender<ProofResult>)> for Context {
-    fn from((request, transmitter): (RequestMessage, Sender<ProofResult>)) -> Self {
-        Self {
-            request,
-            transmitter,
-        }
     }
 }
 

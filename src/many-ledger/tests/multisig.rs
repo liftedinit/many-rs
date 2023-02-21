@@ -8,7 +8,7 @@ use {
     many_modules::account::features::multisig::AccountMultisigModuleBackend,
     many_modules::account::features::{multisig, TryCreateFeature},
     many_modules::{account, events, ledger},
-    many_protocol::RequestMessage,
+    many_protocol::{context::Context, RequestMessage},
     many_types::ledger::TokenAmount,
     proptest::prelude::*,
     proptest::test_runner::Config,
@@ -27,7 +27,7 @@ fn account_info(
         account::InfoArgs {
             account: account_id,
         },
-        (RequestMessage::default(), unbounded().0).into(),
+        Context::new(RequestMessage::default(), unbounded().0),
     )
     .unwrap()
 }
