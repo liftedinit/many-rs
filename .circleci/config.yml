@@ -276,10 +276,7 @@ commands:
           steps:
             - run:
                 name: installing bazelisk
-                command: |
-                  curl -L -O https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-darwin-amd64 
-                  chmod +x bazelisk-darwin-amd64 
-                  sudo mv bazelisk-darwin-amd64 /usr/local/bin/bazel
+                command: brew install bazelisk
 
   # Build a release package and compute its shasum.
   build_release:
@@ -419,10 +416,10 @@ workflows:
                 os: linux2204_machine
 
   nightly_macos:
-    when:
-      and:
-        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
+#    when:
+#      and:
+#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+#        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
     jobs:
       - lint-test-build:
           pre-steps:
