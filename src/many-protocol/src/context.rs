@@ -3,7 +3,6 @@ use {
     async_channel::Sender,
     many_error::ManyError,
     many_types::{attributes::Attribute, cbor::CborAny, proof::Proof, ProofOperation, PROOF},
-    std::borrow::Cow,
 };
 
 #[derive(Clone, Debug)]
@@ -76,17 +75,5 @@ impl From<(RequestMessage, Sender<ProofResult>)> for Context {
 impl AsRef<Context> for Context {
     fn as_ref(&self) -> &Self {
         self
-    }
-}
-
-impl From<Context> for Cow<'_, Context> {
-    fn from(context: Context) -> Self {
-        Self::Owned(context)
-    }
-}
-
-impl<'a> From<&'a Context> for Cow<'a, Context> {
-    fn from(context: &'a Context) -> Self {
-        Self::Borrowed(context)
     }
 }

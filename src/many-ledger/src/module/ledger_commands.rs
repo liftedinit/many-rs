@@ -6,15 +6,9 @@ use many_identity::Address;
 use many_modules::account::features::TryCreateFeature;
 use many_modules::account::Role;
 use many_modules::{account, ledger, EmptyReturn};
-use many_protocol::context::Context;
 
 impl ledger::LedgerCommandsModuleBackend for LedgerModuleImpl {
-    fn send(
-        &mut self,
-        sender: &Address,
-        args: ledger::SendArgs,
-        context: Context,
-    ) -> Result<EmptyReturn, ManyError> {
+    fn send(&mut self, sender: &Address, args: ledger::SendArgs) -> Result<EmptyReturn, ManyError> {
         let ledger::SendArgs {
             from,
             to,
@@ -47,12 +41,6 @@ impl ledger::LedgerCommandsModuleBackend for LedgerModuleImpl {
 
         self.storage
             .send(from, &to, &symbol, amount, memo)
-            .and_then(|keys| {
-                self.storage.prove_state(context, {
-                    keys_to_prove.extend(keys);
-                    keys_to_prove
-                })
-            })
             .map(|_| EmptyReturn)
     }
 }

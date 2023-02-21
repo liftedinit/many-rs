@@ -1,4 +1,3 @@
-use async_channel::unbounded;
 use many_identity::testing::identity;
 use many_identity::Address;
 use many_ledger::module::LedgerModuleImpl;
@@ -11,7 +10,6 @@ use many_modules::events::{
 };
 use many_modules::ledger;
 use many_modules::ledger::LedgerCommandsModuleBackend;
-use many_protocol::RequestMessage;
 use many_types::{CborRange, Memo, Timestamp};
 use proptest::prelude::*;
 use proptest::test_runner::Config;
@@ -35,7 +33,6 @@ fn send_(module_impl: &mut LedgerModuleImpl, from: Address, to: Address) {
             symbol: *MFX_SYMBOL,
             memo: None,
         },
-        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_ok());
 }

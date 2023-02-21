@@ -290,7 +290,6 @@ impl Setup {
                     symbol,
                     memo: None,
                 },
-                (RequestMessage::default(), unbounded().0).into(),
             )
             .map(|_| ())
     }

@@ -1,8 +1,6 @@
 use {
-    async_channel::unbounded, many_identity::testing::identity, many_ledger::error,
-    many_ledger_test_utils::*, many_modules::ledger,
-    many_modules::ledger::LedgerCommandsModuleBackend, many_protocol::RequestMessage,
-    proptest::prelude::*,
+    many_identity::testing::identity, many_ledger::error, many_ledger_test_utils::*,
+    many_modules::ledger, many_modules::ledger::LedgerCommandsModuleBackend, proptest::prelude::*,
 };
 
 proptest! {
@@ -21,7 +19,7 @@ proptest! {
             amount: half.into(),
             symbol: *MFX_SYMBOL,
             memo: None,
-        }, (RequestMessage::default(), unbounded().0).into());
+        });
         assert!(result.is_ok());
         verify_balance(&module_impl, id, *MFX_SYMBOL, (amount - half).into());
         verify_balance(&module_impl, identity(1), *MFX_SYMBOL, half.into());
@@ -42,7 +40,7 @@ proptest! {
             amount: half.into(),
             symbol: *MFX_SYMBOL,
             memo: None,
-        }, (RequestMessage::default(), unbounded().0).into());
+        });
         assert!(result.is_ok());
         verify_balance(&module_impl, account_id, *MFX_SYMBOL, (amount - half).into());
         verify_balance(&module_impl, identity(1), *MFX_SYMBOL, half.into());
@@ -65,7 +63,6 @@ fn send_account_missing_feature() {
             symbol: *MFX_SYMBOL,
             memo: None,
         },
-        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().code(), error::unauthorized().code());
@@ -87,7 +84,6 @@ fn send_invalid_account() {
             symbol: *MFX_SYMBOL,
             memo: None,
         },
-        (RequestMessage::default(), unbounded().0).into(),
     );
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().code(), error::unauthorized().code());

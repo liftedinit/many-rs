@@ -9,10 +9,10 @@ use many_types::{
 };
 use merk::{
     proofs::{
+        query::QueryItem,
         Decoder,
         Node::{Hash, KVHash, KV},
         Op::{Child, Parent, Push},
-        Query,
     },
     BatchEntry, Op,
 };
@@ -122,11 +122,12 @@ impl LedgerStorage {
     ) -> Result<(), ManyError> {
         context.as_ref().prove(|| {
             self.persistent_store
-                .prove({
-                    let mut query = Query::new();
-                    keys.into_iter().for_each(|key| query.insert_key(key));
-                    query
-                })
+                .prove(
+                    keys.into_iter()
+                        .map(QueryItem::Key)
+                        .collect::<Vec<_>>()
+                        .into(),
+                )
                 .and_then(|proof| {
                     Decoder::new(proof.as_slice())
                         .map(|fallible_operation| {

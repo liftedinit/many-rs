@@ -54,7 +54,6 @@ fn illegal_address() {
                 symbol: *MFX_SYMBOL,
                 memo: None,
             },
-            (RequestMessage::default(), unbounded().0).into(),
         )
         .unwrap();
 
@@ -77,7 +76,6 @@ fn illegal_address() {
                 symbol: *MFX_SYMBOL,
                 memo: None,
             },
-            (RequestMessage::default(), unbounded().0).into()
         )
         .is_err());
     // Balances shouldn't change.
