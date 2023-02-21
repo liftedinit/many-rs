@@ -1,9 +1,8 @@
 use crate::error;
 use crate::storage::{key_for_account_balance, LedgerStorage, IDENTITY_ROOT, SYMBOLS_ROOT};
-use async_channel::TrySendError;
 use many_error::ManyError;
 use many_identity::Address;
-use many_protocol::context::{Context, ProofResult};
+use many_protocol::context::Context;
 use many_types::{
     ledger::{Symbol, TokenAmount},
     ProofOperation,
@@ -120,7 +119,7 @@ impl LedgerStorage {
         &self,
         context: impl AsRef<Context>,
         keys: impl IntoIterator<Item = Vec<u8>>,
-    ) -> Option<TrySendError<ProofResult>> {
+    ) -> Result<(), ManyError> {
         context.as_ref().prove(|| {
             self.persistent_store
                 .prove({

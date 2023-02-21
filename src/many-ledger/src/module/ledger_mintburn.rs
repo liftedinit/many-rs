@@ -48,20 +48,16 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
 
         // Mint into storage
         let keys = self.storage.mint_token(symbol, &distribution)?;
-        self.storage
-            .prove_state(context, keys)
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))?;
+        self.storage.prove_state(context, keys)?;
 
         // Log event
-        self.storage.log_event(EventInfo::TokenMint {
-            symbol,
-            distribution,
-            memo,
-        })?;
-
-        Ok(TokenMintReturns {})
+        self.storage
+            .log_event(EventInfo::TokenMint {
+                symbol,
+                distribution,
+                memo,
+            })
+            .map(|_| TokenMintReturns {})
     }
 
     fn burn(
@@ -100,19 +96,15 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
         // Burn from storage
         let keys = self.storage.burn_token(symbol, &distribution)?;
 
-        self.storage
-            .prove_state(context, keys)
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))?;
+        self.storage.prove_state(context, keys)?;
 
         // Log event
-        self.storage.log_event(EventInfo::TokenBurn {
-            symbol,
-            distribution: distribution.clone(),
-            memo,
-        })?;
-
-        Ok(TokenBurnReturns { distribution })
+        self.storage
+            .log_event(EventInfo::TokenBurn {
+                symbol,
+                distribution: distribution.clone(),
+                memo,
+            })
+            .map(|_| TokenBurnReturns { distribution })
     }
 }

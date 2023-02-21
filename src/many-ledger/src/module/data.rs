@@ -14,14 +14,10 @@ impl DataModuleBackend for LedgerModuleImpl {
         _: DataInfoArgs,
         context: Context,
     ) -> Result<DataInfoReturns, ManyError> {
-        self.storage
-            .prove_state(
-                context,
-                vec![crate::storage::data::DATA_ATTRIBUTES_KEY.into()],
-            )
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))?;
+        self.storage.prove_state(
+            context,
+            vec![crate::storage::data::DATA_ATTRIBUTES_KEY.into()],
+        )?;
         Ok(DataInfoReturns {
             indices: self
                 .storage
@@ -47,9 +43,6 @@ impl DataModuleBackend for LedgerModuleImpl {
             .collect();
         self.storage
             .prove_state(context, vec![crate::storage::data::DATA_INFO_KEY.into()])
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))
             .map(|_| filtered)
     }
 
@@ -71,9 +64,6 @@ impl DataModuleBackend for LedgerModuleImpl {
                 context,
                 vec![crate::storage::data::DATA_ATTRIBUTES_KEY.into()],
             )
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))
             .map(|_| filtered)
     }
 }

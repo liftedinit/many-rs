@@ -200,7 +200,7 @@ struct MessageOpt {
     data: Option<String>,
 
     #[clap(long)]
-    attribute: Option<u32>,
+    proof: Option<bool>,
 }
 
 #[derive(Parser)]
@@ -315,7 +315,7 @@ async fn message(
     data: Vec<u8>,
     timestamp: Option<SystemTime>,
     r#async: bool,
-    attribute: Option<u32>,
+    proof: Option<bool>,
 ) -> Result<(), anyhow::Error> {
     let address = key.address();
     let client = ManyClient::new(s, to, key).unwrap();
@@ -333,8 +333,10 @@ async fn message(
         .nonce(nonce.to_vec())
         .attributes({
             let mut set = AttributeSet::new();
-            attribute.into_iter().for_each(|attr| {
-                set.insert(Attribute::id(attr));
+            proof.into_iter().for_each(|proof| {
+                if proof {
+                    set.insert(Attribute::id(3));
+                }
             });
             set
         });
@@ -563,7 +565,7 @@ async fn main() {
                         data,
                         timestamp,
                         o.r#async,
-                        o.attribute,
+                        o.proof,
                     )
                     .await
                 };
@@ -590,8 +592,10 @@ async fn main() {
                     .data(data)
                     .attributes({
                         let mut set = AttributeSet::new();
-                        o.attribute.into_iter().for_each(|attr| {
-                            set.insert(Attribute::id(attr));
+                        o.proof.into_iter().for_each(|proof| {
+                            if proof {
+                                set.insert(Attribute::id(3));
+                            }
                         });
                         set
                     })

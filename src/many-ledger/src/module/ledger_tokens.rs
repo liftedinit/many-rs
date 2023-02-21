@@ -80,12 +80,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         }
         let (result, token_creation_keys) = self.storage.create_token(sender, args)?;
         keys.extend(token_creation_keys);
-        self.storage
-            .prove_state(context, keys)
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))
-            .map(|_| result)
+        self.storage.prove_state(context, keys).map(|_| result)
     }
 
     fn info(&self, _sender: &Address, args: TokenInfoArgs) -> Result<TokenInfoReturns, ManyError> {
@@ -149,12 +144,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
 
         let (result, update_keys) = self.storage.update_token(sender, args)?;
         keys.extend(update_keys);
-        self.storage
-            .prove_state(context, keys)
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))
-            .map(|_| result)
+        self.storage.prove_state(context, keys).map(|_| result)
     }
 
     fn add_extended_info(
@@ -188,12 +178,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
 
         let (result, info_key) = self.storage.add_extended_info(args)?;
         keys.push(info_key);
-        self.storage
-            .prove_state(context, keys)
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))
-            .map(|_| result)
+        self.storage.prove_state(context, keys).map(|_| result)
     }
 
     fn remove_extended_info(
@@ -227,11 +212,6 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
 
         let (result, info_key) = self.storage.remove_extended_info(args)?;
         keys.push(info_key);
-        self.storage
-            .prove_state(context, keys)
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))
-            .map(|_| result)
+        self.storage.prove_state(context, keys).map(|_| result)
     }
 }

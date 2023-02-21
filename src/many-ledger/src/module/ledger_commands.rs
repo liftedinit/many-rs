@@ -48,14 +48,10 @@ impl ledger::LedgerCommandsModuleBackend for LedgerModuleImpl {
         self.storage
             .send(from, &to, &symbol, amount, memo)
             .and_then(|keys| {
-                self.storage
-                    .prove_state(context, {
-                        keys_to_prove.extend(keys);
-                        keys_to_prove
-                    })
-                    .map(|error| ManyError::unknown(error.to_string()))
-                    .map(Err)
-                    .unwrap_or(Ok(()))
+                self.storage.prove_state(context, {
+                    keys_to_prove.extend(keys);
+                    keys_to_prove
+                })
             })
             .map(|_| EmptyReturn)
     }

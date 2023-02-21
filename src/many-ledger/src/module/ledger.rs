@@ -19,14 +19,10 @@ impl ledger::LedgerModuleBackend for LedgerModuleImpl {
         let hash = storage.hash();
         let symbols = storage.get_symbols_and_tickers()?;
 
-        storage
-            .prove_state(
-                context,
-                vec![hash.clone(), SYMBOLS_ROOT.as_bytes().to_vec()],
-            )
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))?;
+        storage.prove_state(
+            context,
+            vec![hash.clone(), SYMBOLS_ROOT.as_bytes().to_vec()],
+        )?;
 
         info!(
             "info(): hash={} symbols={:?}",
@@ -55,11 +51,7 @@ impl ledger::LedgerModuleBackend for LedgerModuleImpl {
 
         let (balances, keys) = storage
             .get_multiple_balances(identity, &BTreeSet::from_iter(symbols.clone().into_iter()))?;
-        storage
-            .prove_state(context, keys)
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))?;
+        storage.prove_state(context, keys)?;
         info!("balance({}, {:?}): {:?}", identity, &symbols, &balances);
         Ok(ledger::BalanceReturns { balances })
     }

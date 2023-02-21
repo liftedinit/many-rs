@@ -1,6 +1,6 @@
 use {
     crate::RequestMessage,
-    async_channel::{Sender, TrySendError},
+    async_channel::Sender,
     many_error::ManyError,
     many_types::{attributes::Attribute, cbor::CborAny, proof::Proof, ProofOperation, PROOF},
     std::borrow::Cow,
@@ -43,7 +43,7 @@ impl Context {
     >(
         &self,
         prover: Prover,
-    ) -> Option<TrySendError<ProofResult>> {
+    ) -> Result<(), ManyError> {
         use ProofResult::{Error, Proof, ProofNotRequested};
         let result = if self.proof_requested() {
             prover()
@@ -56,8 +56,7 @@ impl Context {
         };
         self.transmitter
             .try_send(result)
-            .map(|_| None)
-            .unwrap_or_else(Some)
+            .map_err(ManyError::unknown)
     }
 
     pub fn proof_requested(&self) -> bool {

@@ -132,9 +132,6 @@ impl AccountModuleBackend for LedgerModuleImpl {
         let (id, keys) = self.storage.add_account(account)?;
         self.storage
             .prove_state(context, keys)
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))
             .map(|_| account::CreateReturn { id })
     }
 
@@ -155,11 +152,7 @@ impl AccountModuleBackend for LedgerModuleImpl {
             .set_description(account, args)
             .and_then(|description_key| {
                 keys.push(description_key);
-                self.storage
-                    .prove_state(context, keys)
-                    .map(|error| ManyError::unknown(error.to_string()))
-                    .map(Err)
-                    .unwrap_or(Ok(()))
+                self.storage.prove_state(context, keys)
             })
             .map(|_| EmptyReturn)
     }
@@ -175,9 +168,6 @@ impl AccountModuleBackend for LedgerModuleImpl {
             .and_then(|(account, keys)| {
                 self.storage
                     .prove_state(context, keys)
-                    .map(|error| ManyError::unknown(error.to_string()))
-                    .map(Err)
-                    .unwrap_or(Ok(()))
                     .map(|_| account::ListRolesReturn {
                         roles: get_roles_for_account(&account),
                     })
@@ -195,9 +185,6 @@ impl AccountModuleBackend for LedgerModuleImpl {
             .and_then(|(account, keys)| {
                 self.storage
                     .prove_state(context, keys)
-                    .map(|error| ManyError::unknown(error.to_string()))
-                    .map(Err)
-                    .unwrap_or(Ok(()))
                     .map(|_| account::GetRolesReturn {
                         roles: args
                             .identities
@@ -226,9 +213,6 @@ impl AccountModuleBackend for LedgerModuleImpl {
                         keys.push(role_key);
                         keys
                     })
-                    .map(|error| ManyError::unknown(error.to_string()))
-                    .map(Err)
-                    .unwrap_or(Ok(()))
                     .map(|_| EmptyReturn)
             })
         }
@@ -254,9 +238,6 @@ impl AccountModuleBackend for LedgerModuleImpl {
                             keys.push(role_key);
                             keys
                         })
-                        .map(|error| ManyError::unknown(error.to_string()))
-                        .map(Err)
-                        .unwrap_or(Ok(()))
                         .map(|_| EmptyReturn)
                 })
         }
@@ -282,9 +263,6 @@ impl AccountModuleBackend for LedgerModuleImpl {
                 )| {
                     self.storage
                         .prove_state(context, keys)
-                        .map(|error| ManyError::unknown(error.to_string()))
-                        .map(Err)
-                        .unwrap_or(Ok(()))
                         .map(|_| account::InfoReturn {
                             description,
                             roles,
@@ -315,9 +293,6 @@ impl AccountModuleBackend for LedgerModuleImpl {
                             keys.extend(disable_keys);
                             keys
                         })
-                        .map(|error| ManyError::unknown(error.to_string()))
-                        .map(Err)
-                        .unwrap_or(Ok(()))
                         .map(|_| EmptyReturn)
                 })
         }
@@ -344,9 +319,6 @@ impl AccountModuleBackend for LedgerModuleImpl {
                             keys.push(features_key);
                             keys
                         })
-                        .map(|error| ManyError::unknown(error.to_string()))
-                        .map(Err)
-                        .unwrap_or(Ok(()))
                         .map(|_| EmptyReturn)
                 })
         }

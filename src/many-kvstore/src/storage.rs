@@ -338,7 +338,7 @@ impl KvStoreStorage {
         &self,
         context: impl AsRef<many_protocol::context::Context>,
         keys: impl IntoIterator<Item = Vec<u8>>,
-    ) -> Option<async_channel::TrySendError<many_protocol::context::ProofResult>> {
+    ) -> Result<(), ManyError> {
         use merk::proofs::Op;
         context.as_ref().prove(|| {
             self.persistent_store

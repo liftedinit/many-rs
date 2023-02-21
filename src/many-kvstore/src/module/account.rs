@@ -133,9 +133,6 @@ impl AccountModuleBackend for KvStoreModuleImpl {
         let (id, keys) = self.storage.add_account(account)?;
         self.storage
             .prove_state(context, keys)
-            .map(|error| ManyError::unknown(error.to_string()))
-            .map(Err)
-            .unwrap_or(Ok(()))
             .map(|_| account::CreateReturn { id })
     }
 
@@ -157,9 +154,6 @@ impl AccountModuleBackend for KvStoreModuleImpl {
             .and_then(|description_key| {
                 self.storage
                     .prove_state(context, vec![account_key, description_key])
-                    .map(|error| ManyError::unknown(error.to_string()))
-                    .map(Err)
-                    .unwrap_or(Ok(()))
                     .map(|_| EmptyReturn)
             })
     }
@@ -176,9 +170,6 @@ impl AccountModuleBackend for KvStoreModuleImpl {
             .and_then(|account| {
                 self.storage
                     .prove_state(context, vec![key])
-                    .map(|error| ManyError::unknown(error.to_string()))
-                    .map(Err)
-                    .unwrap_or(Ok(()))
                     .map(|_| account::ListRolesReturn {
                         roles: get_roles_for_account(&account),
                     })
@@ -197,9 +188,6 @@ impl AccountModuleBackend for KvStoreModuleImpl {
             .and_then(|account| {
                 self.storage
                     .prove_state(context, vec![key])
-                    .map(|error| ManyError::unknown(error.to_string()))
-                    .map(Err)
-                    .unwrap_or(Ok(()))
                     .map(|_| account::GetRolesReturn {
                         roles: args
                             .identities
@@ -225,9 +213,6 @@ impl AccountModuleBackend for KvStoreModuleImpl {
             self.storage.add_roles(account, args).and_then(|role_key| {
                 self.storage
                     .prove_state(context, vec![account_key, role_key])
-                    .map(|error| ManyError::unknown(error.to_string()))
-                    .map(Err)
-                    .unwrap_or(Ok(()))
                     .map(|_| EmptyReturn)
             })
         }
@@ -250,9 +235,6 @@ impl AccountModuleBackend for KvStoreModuleImpl {
                 .and_then(|role_key| {
                     self.storage
                         .prove_state(context, vec![account_key, role_key])
-                        .map(|error| ManyError::unknown(error.to_string()))
-                        .map(Err)
-                        .unwrap_or(Ok(()))
                         .map(|_| EmptyReturn)
                 })
         }
@@ -276,9 +258,6 @@ impl AccountModuleBackend for KvStoreModuleImpl {
                  }| {
                     self.storage
                         .prove_state(context, vec![account_key])
-                        .map(|error| ManyError::unknown(error.to_string()))
-                        .map(Err)
-                        .unwrap_or(Ok(()))
                         .map(|_| account::InfoReturn {
                             description,
                             roles,
@@ -310,9 +289,6 @@ impl AccountModuleBackend for KvStoreModuleImpl {
                             keys.push(account_key);
                             keys
                         })
-                        .map(|error| ManyError::unknown(error.to_string()))
-                        .map(Err)
-                        .unwrap_or(Ok(()))
                         .map(|_| EmptyReturn)
                 })
         }
@@ -336,9 +312,6 @@ impl AccountModuleBackend for KvStoreModuleImpl {
                 .and_then(|features_key| {
                     self.storage
                         .prove_state(context, vec![account_key, features_key])
-                        .map(|error| ManyError::unknown(error.to_string()))
-                        .map(Err)
-                        .unwrap_or(Ok(()))
                         .map(|_| EmptyReturn)
                 })
         }
