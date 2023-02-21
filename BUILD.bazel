@@ -16,6 +16,7 @@ exports_files([".git"])
 VERSION = "0.1.0"
 
 # Exposes the value of the compilation mode to the package naming.
+# Used below for the `package_file_name` in the `pkg_tar` rule.
 basic_naming(
     name = "package-naming",
     product_name = "many-rs",
@@ -89,9 +90,9 @@ run_make(
 )
 
 run_make(
-    name = "start-ledger-cluster-dettached",
+    name = "start-ledger-cluster-detached",
     src = "Makefile",
-    cmd = "start-ledger-cluster-dettached",
+    cmd = "start-ledger-cluster-detached",
     data = [
         "//docker:docker-ledger-deps",
         "//docker:jsonnet_image.tar",
@@ -132,9 +133,9 @@ run_make(
 )
 
 run_make(
-    name = "start-kvstore-cluster-dettached",
+    name = "start-kvstore-cluster-detached",
     src = "Makefile",
-    cmd = "start-kvstore-cluster-dettached",
+    cmd = "start-kvstore-cluster-detached",
     data = [
         "//docker:docker-kvstore-deps",
         "//docker:jsonnet_image.tar",

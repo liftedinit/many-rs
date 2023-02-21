@@ -13,7 +13,7 @@ function setup() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE start-nodes-dettached || {
+      make -f $MAKEFILE start-nodes-detached || {
         echo '# Could not start nodes...' >&3
         exit 1
       }
@@ -51,7 +51,7 @@ function teardown() {
     sleep 10
 
     # Bring it back
-    make -f $MAKEFILE start-single-node-dettached-3 || {
+    make -f $MAKEFILE start-single-node-detached-3 || {
         echo '# Could not start nodes...' >&3
         exit 1
     }
@@ -79,7 +79,7 @@ function teardown() {
     call_kvstore --pem=1 --port=8000 put foo6 bar6
 
     # Bring it back.
-    make -f $MAKEFILE start-single-node-dettached-3 || {
+    make -f $MAKEFILE start-single-node-detached-3 || {
         echo '# Could not start nodes...' >&3
         exit 1
     }

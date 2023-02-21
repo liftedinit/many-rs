@@ -13,7 +13,7 @@ function setup() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE start-nodes-dettached || {
+      make -f $MAKEFILE start-nodes-detached || {
         echo '# Could not start nodes...' >&3
         exit 1
       }
@@ -79,7 +79,7 @@ function teardown() {
     check_consistency --pem=1 --key=foobar --value=barfoo 8000 8001 8002
 
     # Bring it back.
-    make -f $MAKEFILE start-single-node-dettached-3 || {
+    make -f $MAKEFILE start-single-node-detached-3 || {
         echo '# Could not start nodes...' >&3
         exit 1
     }

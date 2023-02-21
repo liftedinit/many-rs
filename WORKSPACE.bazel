@@ -169,6 +169,7 @@ load(
 
 container_pull(
     name = "ubuntu_base",
+    digest = "sha256:c985bc3f77946b8e92c9a3648c6f31751a7dd972e06604785e47303f4ad47c4c",  # amd64
     registry = "index.docker.io",
     repository = "ubuntu",
     tag = "jammy",
@@ -176,6 +177,7 @@ container_pull(
 
 container_pull(
     name = "tendermint",
+    digest = "sha256:66a31574012e080fcad37bb94cb088109dc898fe21432059793388a47962b3cd",  # amd64
     registry = "index.docker.io",
     repository = "tendermint/tendermint",
     tag = "v0.34.24",
@@ -185,6 +187,7 @@ container_pull(
 #       This image is not official nor tagged
 container_pull(
     name = "openssl",
+    digest = "sha256:cf89651f07a33d2faf4499f72e6f8b0ee2542cd40735d51c7e75b8965c17af0e",  # amd64
     registry = "index.docker.io",
     repository = "alpine/openssl",
     tag = "latest",
@@ -192,6 +195,7 @@ container_pull(
 
 container_pull(
     name = "jsonnet",
+    digest = "sha256:a255e35fb249e23c07c54bccbb6482744597973957a4ccb654ed681e23a4f8b4",  # amd64
     registry = "index.docker.io",
     repository = "bitnami/jsonnet",
     tag = "0.19.1",

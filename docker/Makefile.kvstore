@@ -112,12 +112,12 @@ start-kvstore-%: genfiles-kvstore/docker-compose.json
 stop-tendermint-%: genfiles-kvstore/docker-compose.json
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop tendermint-$*
 
-.PHONY: start-nodes-dettached
-start-nodes-dettached: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json genfiles-common/tendermint-docker genfiles-kvstore/many-kvstore-docker genfiles-common/many-abci-docker
+.PHONY: start-nodes-detached
+start-nodes-detached: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json genfiles-common/tendermint-docker genfiles-kvstore/many-kvstore-docker genfiles-common/many-abci-docker
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up --detach
 
-.PHONY: start-single-node-dettached-%
-start-single-node-dettached-%: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json genfiles-common/tendermint-docker genfiles-kvstore/many-kvstore-docker genfiles-common/many-abci-docker
+.PHONY: start-single-node-detached-%
+start-single-node-detached-%: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json genfiles-common/tendermint-docker genfiles-kvstore/many-kvstore-docker genfiles-common/many-abci-docker
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up abci-$* --detach
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up kvstore-$* --detach
 	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up tendermint-$* --detach

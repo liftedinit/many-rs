@@ -15,7 +15,7 @@ function setup() {
       make -f $MAKEFILE clean
       for i in {0..2}
       do
-          make -f $MAKEFILE start-single-node-dettached-${i} || {
+          make -f $MAKEFILE start-single-node-detached-${i} || {
             echo '# Could not start nodes...' >&3
             exit 1
           }
@@ -54,7 +54,7 @@ function teardown() {
     sleep 300
 
     # At this point, start the 4th node and check it can catch up
-    make -f $MAKEFILE start-single-node-dettached-3 || {
+    make -f $MAKEFILE start-single-node-detached-3 || {
       echo '# Could not start nodes...' >&3
       exit 1
     }

@@ -21,7 +21,7 @@ function setup() {
       # Generate the `allow addrs` config file using the PEM files from $PEM_ROOT
       make -f $MAKEFILE genfiles-kvstore/generate-allow-addrs-config PEM_ROOT=$PEM_ROOT
       # Start the nodes, enabling MANY address filtering using the `allow addrs` config file
-      make -f $MAKEFILE start-nodes-dettached ALLOW_ADDRS=true || {
+      make -f $MAKEFILE start-nodes-detached ALLOW_ADDRS=true || {
             echo '# Could not start nodes...' >&3
             exit 1
           }

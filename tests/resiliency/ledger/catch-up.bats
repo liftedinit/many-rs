@@ -16,7 +16,7 @@ function setup() {
       make -f $MAKEFILE clean
       for i in {0..2}
       do
-          make -f $MAKEFILE start-single-node-dettached-${i} ID_WITH_BALANCES="$(identity 1):1000000:$MFX_ADDRESS" || {
+          make -f $MAKEFILE start-single-node-detached-${i} ID_WITH_BALANCES="$(identity 1):1000000:$MFX_ADDRESS" || {
             echo '# Could not start nodes...' >&3
             exit 1
           }
@@ -67,7 +67,7 @@ function teardown() {
     sleep 300
 
     # At this point, start the 4th node and check it can catch up
-    make -f $MAKEFILE start-single-node-dettached-3 ID_WITH_BALANCES="$(identity 1):1000000" || {
+    make -f $MAKEFILE start-single-node-detached-3 ID_WITH_BALANCES="$(identity 1):1000000" || {
       echo '# Could not start nodes...' >&3
       exit 1
     }

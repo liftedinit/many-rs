@@ -13,7 +13,7 @@ function setup() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE start-nodes-dettached \
+      make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000" || {
         echo '# Could not start nodes...' >&3
         exit 1
@@ -54,7 +54,7 @@ function teardown() {
     sleep 10
 
     # Bring it back
-    make -f $MAKEFILE start-single-node-dettached-3 || {
+    make -f $MAKEFILE start-single-node-detached-3 || {
         echo '# Could not start nodes...' >&3
         exit 1
     }
@@ -82,7 +82,7 @@ function teardown() {
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000 MFX
 
     # Bring it back.
-    make -f $MAKEFILE start-single-node-dettached-3 || {
+    make -f $MAKEFILE start-single-node-detached-3 || {
         echo '# Could not start nodes...' >&3
         exit 1
     }

@@ -18,7 +18,7 @@ function setup() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE start-nodes-dettached \
+      make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
         echo '# Could not start nodes...' >&3

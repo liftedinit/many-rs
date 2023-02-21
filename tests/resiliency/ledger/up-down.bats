@@ -13,7 +13,7 @@ function setup() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE start-nodes-dettached ID_WITH_BALANCES="$(identity 1):1000000" || {
+      make -f $MAKEFILE start-nodes-detached ID_WITH_BALANCES="$(identity 1):1000000" || {
         echo Could not start nodes... >&3
         exit 1
       }
@@ -81,7 +81,7 @@ function teardown() {
     check_consistency --pem=2 --balance=6000 --id="$(identity 2)" 8000 8001 8002
 
     # Bring it back.
-    make -f $MAKEFILE start-single-node-dettached-3 || {
+    make -f $MAKEFILE start-single-node-detached-3 || {
         echo '# Could not start nodes...' >&3
         exit 1
     }

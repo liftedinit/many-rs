@@ -123,12 +123,12 @@ start-ledger-%: genfiles-ledger/docker-compose.json
 stop-tendermint-%: genfiles-ledger/docker-compose.json
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop tendermint-$*
 
-.PHONY: start-nodes-dettached
-start-nodes-dettached: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-common/tendermint-docker genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker
+.PHONY: start-nodes-detached
+start-nodes-detached: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-common/tendermint-docker genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up --detach
 
-.PHONY: start-single-node-dettached-%
-start-single-node-dettached-%: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-common/tendermint-docker genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker
+.PHONY: start-single-node-detached-%
+start-single-node-detached-%: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-common/tendermint-docker genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up abci-$* --detach
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up ledger-$* --detach
 	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up tendermint-$* --detach

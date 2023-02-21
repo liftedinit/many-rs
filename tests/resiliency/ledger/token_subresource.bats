@@ -56,7 +56,7 @@ function teardown() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE start-nodes-dettached \
+      make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000:$(subresource 1 2147483647)" \
           STATE="$BATS_TEST_ROOTDIR/ledger_state.json5" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
@@ -105,7 +105,7 @@ function teardown() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE start-nodes-dettached \
+      make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000:$(subresource 1 2147483647)" \
           STATE="$BATS_TEST_ROOTDIR/ledger_state.json5" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {

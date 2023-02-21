@@ -14,9 +14,9 @@ start-ledger-cluster:
 stop-ledger-cluster:
 	make -f Makefile.ledger stop-nodes
 
-.PHONY: start-ledger-cluster-dettached
-start-ledger-cluster-dettached:
-	make -f Makefile.ledger start-nodes-dettached
+.PHONY: start-ledger-cluster-detached
+start-ledger-cluster-detached:
+	make -f Makefile.ledger start-nodes-detached
 
 .PHONY: start-kvstore-cluster
 start-kvstore-cluster:
@@ -26,9 +26,9 @@ start-kvstore-cluster:
 stop-kvstore-cluster:
 	make -f Makefile.kvstore stop-nodes
 
-.PHONY: start-kvstore-cluster-dettached
-start-kvstore-cluster-dettached:
-	make -f Makefile.kvstore start-nodes-dettached
+.PHONY: start-kvstore-cluster-detached
+start-kvstore-cluster-detached:
+	make -f Makefile.kvstore start-nodes-detached
 
 .PHONY: clean
 clean:
