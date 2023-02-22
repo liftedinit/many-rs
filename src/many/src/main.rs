@@ -591,7 +591,7 @@ async fn main() {
                     .data(data)
                     .attributes(match o.proof {
                         Some(false) | None => AttributeSet::new(),
-                        Some(true) => AttributeSet::from_iter(vec![Attribute::id(3)]),
+                        Some(true) => vec![Attribute::id(3)].into_iter().collect(),
                     })
                     .build()
                     .unwrap();
