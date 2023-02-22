@@ -199,8 +199,11 @@ struct MessageOpt {
     /// The content of the message itself (its payload).
     data: Option<String>,
 
-    #[clap(long)]
-    proof: Option<bool>,
+    /// Request a proof of the value. This may cause an error if the server
+    /// does not support proofs, and might not work on all endpoints. Consult
+    /// the specification for more information.
+    #[clap(long, default_value = "false")]
+    proof: bool,
 }
 
 #[derive(Parser)]
@@ -561,7 +564,7 @@ async fn main() {
                         data,
                         timestamp,
                         o.r#async,
-                        o.proof.unwrap_or_default(),
+                        o.proof,
                     )
                     .await
                 };
@@ -586,11 +589,11 @@ async fn main() {
                     .to(to_identity)
                     .method(o.method.expect("--method is required"))
                     .data(data)
-                    .attributes(
-                        o.proof
-                            .map(|_| AttributeSet::from_iter(vec![Attribute::id(3)]))
-                            .unwrap_or_else(AttributeSet::new),
-                    )
+                    .attributes(if o.proof {
+                        AttributeSet::from_iter(vec![Attribute::id(3)])
+                    } else {
+                        AttributeSet::new()
+                    })
                     .build()
                     .unwrap();
 
