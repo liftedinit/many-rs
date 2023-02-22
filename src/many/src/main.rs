@@ -588,8 +588,8 @@ async fn main() {
                     .data(data)
                     .attributes(
                         o.proof
-                            .map(|_| AttributeSet::from_iter(vec![Attribute::id(3)].into_iter()))
-                            .unwrap_or_else(|| AttributeSet::new()),
+                            .map(|_| AttributeSet::from_iter(vec![Attribute::id(3)]))
+                            .unwrap_or_else(AttributeSet::new),
                     )
                     .build()
                     .unwrap();
