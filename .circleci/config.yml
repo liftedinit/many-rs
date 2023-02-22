@@ -421,7 +421,7 @@ workflows:
     when:
       or:
         - equal: [ webhook, << pipeline.trigger_source >> ]
-        - equal: [ api, << pipeline.trigger_source >> ]
+#        - equal: [ api, << pipeline.trigger_source >> ]
     jobs:
       - kvstore_resiliency_tests:
           pre-steps:
