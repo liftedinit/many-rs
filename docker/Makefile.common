@@ -1,0 +1,26 @@
+# Options
+NB_NODES ?= 4
+ID_WITH_BALANCES ?=
+
+# Constants
+SHELL = bash
+
+genfiles-common/tendermint-docker:
+	@mkdir -p genfiles-common
+	docker load < tendermint_image.tar
+	touch $@
+
+genfiles-common/openssl-docker:
+	@mkdir -p genfiles-common
+	docker load < openssl_image.tar
+	touch $@
+
+genfiles-common/jsonnet-docker:
+	@mkdir -p genfiles-common
+	docker load < jsonnet_image.tar
+	touch $@
+
+genfiles-common/many-abci-docker:
+	@mkdir -p genfiles-common
+	docker load < ../src/many-abci/many-abci-image.tar
+	touch $@

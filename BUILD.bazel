@@ -1,6 +1,175 @@
-exports_files(["staging/kvstore_state.json5"])
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load(":rules.bzl", "basic_naming")
 
-exports_files(["staging/ledger_state.json5"])
+# Visibility for Docker image
+package(default_visibility = [
+    "//src/many-abci:__pkg__",
+    "//src/many-kvstore:__pkg__",
+    "//src/many-ledger:__pkg__",
+])
 
 # Required for Vergen
 exports_files([".git"])
+
+## PACKAGE CONFIGURATION ##
+# TODO: Get the version from the Cargo manifest
+VERSION = "0.1.0"
+
+# Exposes the value of the compilation mode to the package naming.
+# Used below for the `package_file_name` in the `pkg_tar` rule.
+basic_naming(
+    name = "package-naming",
+    product_name = "many-rs",
+    version = VERSION,
+)
+
+pkg_tar(
+    name = "many-rs-tar",
+    srcs = [
+        "//src/http_proxy",
+        "//src/idstore-export",
+        "//src/kvstore",
+        "//src/ledger",
+        "//src/ledger-db",
+        "//src/many",
+        "//src/many-abci",
+        "//src/many-kvstore",
+        "//src/many-ledger",
+    ],
+    extension = ".tar.gz",
+    package_file_name = "{product_name}-{version}-{compilation_mode}.tar.gz",
+    package_variables = ":package-naming",
+    tags = ["manual"],
+)
+
+load(
+    "@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl",
+    "download_pkgs",
+)
+load(
+    "@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl",
+    "install_pkgs",
+)
+
+# Install openssl3 in the base image
+download_pkgs(
+    name = "ubuntu_download",
+    image_tar = "@ubuntu_base//image",
+    packages = [
+        "libssl3",
+        "libudev1",
+        "libusb-1.0-0",
+    ],
+    tags = ["manual"],
+)
+
+install_pkgs(
+    name = "ubuntu_image",
+    image_tar = "@ubuntu_base//image",
+    installables_tar = ":ubuntu_download.tar",
+    installation_cleanup_commands = "rm -rf /var/lib/apt/lists/*",
+    output_image_name = "many_docker_ubuntu_image",
+    tags = ["manual"],
+)
+
+load(":rules.bzl", "run_make")
+
+run_make(
+    name = "start-ledger-cluster",
+    src = "Makefile",
+    cmd = "start-ledger-cluster",
+    data = [
+        "//docker:docker-ledger-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-ledger:many-ledger-image.tar",
+    ],
+    tags = ["manual"],
+)
+
+run_make(
+    name = "start-ledger-cluster-detached",
+    src = "Makefile",
+    cmd = "start-ledger-cluster-detached",
+    data = [
+        "//docker:docker-ledger-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-ledger:many-ledger-image.tar",
+    ],
+    tags = ["manual"],
+)
+
+run_make(
+    name = "stop-ledger-cluster",
+    src = "Makefile",
+    cmd = "stop-ledger-cluster",
+    data = [
+        "//docker:docker-ledger-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+    ],
+    tags = ["manual"],
+)
+
+run_make(
+    name = "start-kvstore-cluster",
+    src = "Makefile",
+    cmd = "start-kvstore-cluster",
+    data = [
+        "//docker:docker-kvstore-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-kvstore:many-kvstore-image.tar",
+    ],
+    tags = ["manual"],
+)
+
+run_make(
+    name = "start-kvstore-cluster-detached",
+    src = "Makefile",
+    cmd = "start-kvstore-cluster-detached",
+    data = [
+        "//docker:docker-kvstore-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-kvstore:many-kvstore-image.tar",
+    ],
+    tags = ["manual"],
+)
+
+run_make(
+    name = "stop-kvstore-cluster",
+    src = "Makefile",
+    cmd = "stop-kvstore-cluster",
+    data = [
+        "//docker:docker-kvstore-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+    ],
+    tags = ["manual"],
+)
+
+run_make(
+    name = "clean-cluster",
+    src = "Makefile",
+    cmd = "clean",
+    data = [
+        "//docker:docker-kvstore-deps",
+        "//docker:docker-ledger-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+    ],
+    tags = ["manual"],
+)

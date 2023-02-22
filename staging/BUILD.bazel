@@ -1,0 +1,13 @@
+package(default_visibility = [
+    "//visibility:public",
+])
+
+filegroup(
+    name = "kvstore-staging",
+    srcs = [":kvstore_state.json5"],
+)
+
+filegroup(
+    name = "ledger-staging",
+    srcs = [":ledger_state.json5"],
+)

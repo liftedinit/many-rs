@@ -1,0 +1,18 @@
+load("@bazel_bats//:rules.bzl", "bats_test")
+
+bats_test(
+    name = "bats-e2e-kvstore",
+    srcs = [
+        "allow_addrs.bats",
+        "kvstore.bats",
+    ],
+    tags = ["manual"],
+    uses_bats_assert = True,
+    deps = [
+        "//src/kvstore",
+        "//src/many",
+        "//src/many-kvstore",
+        "//staging:kvstore-staging",
+        "//tests:bats-helpers",
+    ],
+)

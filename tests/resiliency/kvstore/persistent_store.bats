@@ -5,31 +5,27 @@ load '../../test_helper/load'
 load '../../test_helper/kvstore'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit
+      cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE $(ciopt start-nodes-dettached) \
-          ABCI_TAG=$(img_tag) \
-          KVSTORE_TAG=$(img_tag) || {
-        echo Could not start nodes... >&3
+      make -f $MAKEFILE start-nodes-detached || {
+        echo '# Could not start nodes...' >&3
         exit 1
       }
     ) > /dev/null
 
     # Give time to the servers to start.
-    sleep 30
-    timeout 30s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
-      sleep 1
-    done >/dev/null
-EOT
+    wait_for_server 8000 8001 8002 8003
 }
 
 function teardown() {
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit 1
+      cd "$GIT_ROOT/docker/" || exit 1
       make -f $MAKEFILE stop-nodes
     ) 2> /dev/null
 
@@ -39,7 +35,7 @@ function teardown() {
 
 # Relates https://github.com/liftedinit/many-framework/issues/290
 @test "$SUITE: Application hash is consistent with 1 node down" {
-    cd "$GIT_ROOT/docker/e2e/" || exit 1
+    cd "$GIT_ROOT/docker/" || exit 1
 
     # Create transactions before bringing the node down
     call_kvstore --pem=1 --port=8000 put foo bar
@@ -55,28 +51,21 @@ function teardown() {
     sleep 10
 
     # Bring it back
-    make -f $MAKEFILE $(ciopt start-single-node-dettached)-3 \
-      ABCI_TAG=$(img_tag) \
-      KVSTORE_TAG=$(img_tag) || {
-        echo Could not start nodes... >&3
+    make -f $MAKEFILE start-single-node-detached-3 || {
+        echo '# Could not start nodes...' >&3
         exit 1
     }
 
     # At this point, node 3 should catch up and the global application hash should be valid
 
     # Give time to the servers to start.
-    timeout 60s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8003 status; do
-      sleep 1
-    done >/dev/null
-EOT
-
+    wait_for_server 8003
     sleep 10
 }
 
 # Relates https://github.com/liftedinit/many-framework/issues/289
 @test "$SUITE: First block after load has a transaction" {
-    cd "$GIT_ROOT/docker/e2e" || exit 1
+    cd "$GIT_ROOT/docker/" || exit 1
 
     call_kvstore --pem=1 --port=8000 put foo1 bar1
     call_kvstore --pem=1 --port=8000 put foo2 bar2
@@ -90,19 +79,13 @@ EOT
     call_kvstore --pem=1 --port=8000 put foo6 bar6
 
     # Bring it back.
-    make -f $MAKEFILE $(ciopt start-single-node-dettached)-3 \
-      ABCI_TAG=$(img_tag) \
-      KVSTORE_TAG=$(img_tag) || {
-        echo Could not start nodes... >&3
+    make -f $MAKEFILE start-single-node-detached-3 || {
+        echo '# Could not start nodes...' >&3
         exit 1
     }
 
     # Give time to the servers to start.
-    timeout 60s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8003 status; do
-      sleep 1
-    done >/dev/null
-EOT
+    wait_for_server 8003
     sleep 10
 
     check_consistency --pem=1 --key=foo1 --value=bar1 8000 8001 8002 8003

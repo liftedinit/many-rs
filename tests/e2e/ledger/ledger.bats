@@ -6,14 +6,12 @@ load '../../test_helper/load'
 load '../../test_helper/ledger'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     skip_if_missing_background_utilities
-
-    (
-      cd "$GIT_ROOT"
-      cargo build --all-features
-    )
 
     start_ledger --pem "$(pem 0)" \
           "--balance-only-for-testing=$(identity 1):$START_BALANCE:$MFX_ADDRESS" \

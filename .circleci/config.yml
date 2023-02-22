@@ -3,190 +3,147 @@
 version: 2.1
 
 orbs:
-  codecov: codecov/codecov@3.2.3
-  rust: circleci/rust@1.6.0
+  codecov: codecov/codecov@3.2.4
   detect: circleci/os-detect@0.3.0
-  bats: circleci/bats@1.0.0
-  docker: circleci/docker@2.1.3
-
-MANY_RUST_VERSION: &many_rust_version nightly-2023-01-03
+  docker: circleci/docker@2.2.0
+  rust: circleci/rust@1.6.0
 
 executors:
   linux2204:
+    docker:
+      - image: cimg/rust:1.67
+    resource_class: xlarge # 8 cores, 16Gb
+  linux2204_machine:
     machine:
       image: ubuntu-2204:current
-    resource_class: large
+    resource_class: large # 4 cores, 15Gb
   macos:
     macos:
       xcode: 13.4.1
-    resource_class: medium
+    resource_class: medium # 4 cores, 8Gb
+
+MANY_HSM_CONFIG: &many_hsm_config
+  - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
+  - SOFTHSM2_CONF: /tmp/softhsm2.conf
 
 jobs:
+  # Perform lint and tests. Push the compiled binaries to the next step.
   lint-test-build:
     parameters:
       os:
         type: string
-      many_rust_version:
-        type: string
     executor: << parameters.os >>
     environment:
-      - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
-      - SOFTHSM2_CONF: /tmp/softhsm2.conf
+      *many_hsm_config
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
-      - rust/install:
-          version: << parameters.many_rust_version >>
-      - rust/format:
-          with_cache: false
-      - rust/clippy:
-          flags: --all-targets --all-features -- -D clippy::all
-          with_cache: false
       - when:
           condition:
             equal: [ "linux2204", << parameters.os >> ]
           steps:
-            - rust/test:
-                package: --all-targets --all-features
-                with_cache: false
+            - run:
+                name: rustfmt, clippy, build and tests and doc tests (linux)
+                command: |
+                  bazel test \
+                    --jobs=8 \
+                    --config=remote-cache \
+                    --config=all-features \
+                    --config=clippy \
+                    --config=rustfmt \
+                    --test_env=PKCS11_SOFTHSM2_MODULE \
+                    --test_env=SOFTHSM2_CONF \
+                    -- //...
       - when:
           condition:
             equal: [ "macos", << parameters.os >> ]
           steps:
-            - rust/test:
+            - run:
+                name: tests and doc tests (macos)
                 # Exclude HSM tests as we are not configured in MacOS for them.
-                package: --workspace --all-targets --all-features --exclude many-identity-hsm
-                with_cache: false
-      - rust/test:
-          package: --all-features --doc
-          with_cache: false
-      - rust/build:
-          crate: --all-features
-          with_cache: false
-      - save_cache:
-          key: cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
-          paths:
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-            - target/
+                command: |
+                  bazel test \
+                    --jobs=4 \
+                    --config=remote-cache \
+                    --config=all-features \
+                    -- //... -//src/many-identity-hsm:many-identity-hsm-test
+
+  # Run e2e bats tests using the binaries build from the previous step.
   bats:
     parameters:
       os:
         type: string
-      many_rust_version:
-        type: string
     executor: << parameters.os >>
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - cargo-build-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
-      - rust/install:
-          version: << parameters.many_rust_version >>
+      - when:
+          condition:
+            equal: [ "macos", << parameters.os >> ]
+          steps:
+            - rust/install
       - run:
           name: install cbor-diag
           command: cargo install --force cbor-diag-cli
-      - bats/install
       - run:
-          name: running BATs tests
-          no_output_timeout: 20m
-          command: bats *
-          working_directory: ./tests/e2e/
-  dev_release_artifact:
-    parameters:
-      os:
-        type: string
-      many_rust_version:
-        type: string
-    executor: << parameters.os >>
-    steps:
-      - checkout
-      - detect/init
-      - rust/install:
-          version: << parameters.many_rust_version >>
-      - rust/build:
-          release: true
-          with_cache: false
-      - run: mkdir -p artifacts
-      - run:
-          name: creating release archive
-          command: file target/release/* | grep 'executable\|shared object' | cut -d ':' -f 1 | xargs tar czvf artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
-      - run:
-          name: creating release shasum
-          command: shasum artifacts/many-rs_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_PR_${CIRCLE_PR_NUMBER}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
-      - store_artifacts:
-          path: artifacts
+          name: running tests
+          command: |
+              bazel run --config=all-features --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
+              bazel run --config=all-features --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
+            
+              # --disable_token_sender_check needs to be disabled for the token tests
+              bazel run --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
+
+  # Compute code coverage and push the results to CodeCov.
   coverage:
     parameters:
       os:
         type: string
-      many_rust_version:
-        type: string
     executor: << parameters.os >>
-    working_directory: ~/project/repo
     environment:
-      - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
-      - SOFTHSM2_CONF: /tmp/softhsm2.conf
+      *many_hsm_config
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - cargo-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
-      - rust/install:
-          version: << parameters.many_rust_version >>
       - run:
-          name: install llvm-tools-preview
-          command: rustup component add llvm-tools-preview
-      - run:
-          name: generate test coverage
-          command: cargo test --all-targets --all-features
-          environment:
-            RUSTFLAGS: "-C instrument-coverage"
-            LLVM_PROFILE_FILE: "coverage/lcov-%p-%m.profraw"
-      - run:
-          name: generate coverage report
-          command: grcov src -b target/debug/ -s . --keep-only 'src/**' --prefix-dir $PWD -t lcov --branch --ignore-not-existing -o coverage/report.lcov
+          name: coverage
+          command: |
+            bazel coverage \
+              --jobs=8 \
+              --config=remote-cache \
+              --config=all-features \
+              --test_env=PKCS11_SOFTHSM2_MODULE \
+              --test_env=SOFTHSM2_CONF \
+              --combined_report=lcov \
+              -- //...
       - codecov/upload:
-          file: coverage/report.lcov
-      - save_cache:
-          key: cargo-coverage-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "Cargo.lock" }}
-          paths:
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-            - target/
+          file: $(bazel info output_path)/_coverage/_coverage_report.dat
+
+  # Create a developer's release build. Useful to test PRs on development networks.
+  dev_release:
+    parameters:
+      os:
+        type: string
+    executor: << parameters.os >>
+    steps:
+      - checkout
+      - build_release
+      - store_artifacts:
+          path: artifacts
+
+  # Create a release build
   create:
     parameters:
       os:
         type: string
-      many_rust_version:
-        type: string
     executor: << parameters.os >>
     steps:
       - checkout
-      - detect/init
-      - rust/install:
-          version: << parameters.many_rust_version >>
-      - rust/build:
-          release: true
-          with_cache: false
-      - run: mkdir -p artifacts
-      - run:
-          name: creating release archive
-          command: file target/release/* | grep 'executable\|shared object' | cut -d ':' -f 1 | xargs tar czvf artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
-      - run:
-          name: creating release shasum
-          command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
+      - build_release
       - persist_to_workspace:
           root: artifacts
           paths:
             - "*.tar.gz"
             - "*.txt"
+
+  # Push a (pre-)release build to GitHub
   publish:
     parameters:
       pre-release:
@@ -194,7 +151,7 @@ jobs:
         default: false
     docker:
       - image: cibuilds/github:0.10
-    resource_class: large
+    resource_class: medium
     steps:
       - attach_workspace:
           at: ~/project/artifacts
@@ -211,9 +168,10 @@ jobs:
             - run:
                 name: publish pre-release
                 command: ghr -prerelease -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} ${CIRCLE_TAG} ~/project/artifacts
+
+  # Security audit
   audit:
-    docker:
-      - image: rust:latest
+    executor: linux2204
     resource_class: small
     steps:
       - checkout
@@ -223,86 +181,38 @@ jobs:
       - run:
           name: cargo audit
           command: cargo audit
+
+  # Publish nightly Docker images. Used in resiliency tests.
   publish_nightly_docker:
-    executor: linux2204
-    parameters:
-      many_rust_version:
-        type: string
-    resource_class: large
+    executor: linux2204_machine
     steps:
       - docker/check
-      - checkout:
-          path: many-rs
-      - restore_cache:
-          keys:
-            - nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "many-rs/Cargo.lock" }}
+      - checkout
       - run:
-          name: restoring `nix-store`
+          name: publish nightly docker images
           command: |
-            if [[ -f "backup.tar" ]]; then
-              docker run --rm -v nix-store:/nix -v $(pwd):/backup ubuntu tar xf /backup/backup.tar -C /
-            else
-              echo "nix-store backup unavailable; skipping."
-            fi
-      - rust/install:
-          version: << parameters.many_rust_version >>
-      - run:
-          name: build docker images
-          command: |
-            cd many-rs/docker/e2e
-            make Cargo.nix many/many-abci many/many-ledger many/many-kvstore
-            docker tag lifted/many-ledger:latest lifted/many-ledger:nightly
-            docker tag lifted/many-abci:latest lifted/many-abci:nightly
-            docker tag lifted/many-kvstore:latest lifted/many-kvstore:nightly
-            docker tag lifted/many-ledger:latest lifted/many-ledger:$CIRCLE_SHA1
-            docker tag lifted/many-abci:latest lifted/many-abci:$CIRCLE_SHA1
-            docker tag lifted/many-kvstore:latest lifted/many-kvstore:$CIRCLE_SHA1
-      - docker/push:
-          image: many-abci
-          registry: lifted
-          tag: "nightly,$CIRCLE_SHA1"
-          step-name: "docker push lifted/many-abci"
-      - docker/push:
-          image: many-ledger
-          registry: lifted
-          tag: "nightly,$CIRCLE_SHA1"
-          step-name: "docker push lifted/many-ledger"
-      - docker/push:
-          image: many-kvstore
-          registry: lifted
-          tag: "nightly,$CIRCLE_SHA1"
-          step-name: "docker push lifted/many-kvstore"
-      - run:
-          name: exporting `nix-store` docker volume
-          command: |
-            docker run --rm -v nix-store:/nix -v $(pwd):/backup ubuntu tar cf /backup/backup.tar /nix
-      - save_cache:
-          key: nightly-docker-{{ .Environment.MANY_RS_CACHE_VERSION }}-{{ arch }}-{{ checksum "many-rs/Cargo.lock" }}
-          paths:
-            - backup.tar
-  resiliency_tests:
-    executor: linux2204
-    parameters:
-      many_rust_version:
-        type: string
-    resource_class: large
+              bazel run --jobs=$(nproc) --config=remote-cache //docker:many-abci-push-docker 
+              bazel run --jobs=$(nproc) --config=remote-cache //docker:many-kvstore-push-docker
+              bazel run --jobs=$(nproc) --config=remote-cache //docker:many-ledger-push-docker
+
+  # Perform resiliency testing
+  kvstore_resiliency_tests:
+    executor: linux2204_machine
     steps:
       - checkout
-      - rust/install:
-          version: << parameters.many_rust_version >>
-      - rust/build:
-          crate: --all-features
-          with_cache: false
-      - bats/install
-      - docker/pull:
-          images: "lifted/many-ledger:nightly,lifted/many-kvstore:nightly,lifted/many-abci:nightly"
       - run:
-          name: running BATs tests
-          # https://support.circleci.com/hc/en-us/articles/360046544433-Makefile-Command-Inconsistencies
-          shell: /bin/bash
-          no_output_timeout: 20m
-          command: bats *
-          working_directory: ./tests/resiliency
+          name: running tests
+          command: bazel run --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore
+
+  ledger_resiliency_tests:
+    executor: linux2204_machine
+    steps:
+      - checkout
+      - run:
+          name: running tests
+          command: bazel run --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
+
+  # Push a tag to GitHub
   tag:
     parameters:
       tag:
@@ -327,6 +237,7 @@ jobs:
 
 # Re-usable commands
 commands:
+  # Install executor's dependencies
   install-deps:
     description: install << parameters.os >> dependencies
     parameters:
@@ -341,12 +252,49 @@ commands:
                 name: installing << parameters.os >> dependencies
                 command: |
                   sudo DEBIAN_FRONTEND=noninteractive apt -y update
-                  sudo DEBIAN_FRONTEND=noninteractive apt -y install build-essential pkg-config clang libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install clang libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev bsdextrautils
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
             - run:
-                name: installing grcov
-                command: wget https://github.com/mozilla/grcov/releases/download/v0.8.11/grcov-x86_64-unknown-linux-gnu.tar.bz2 -O - | sudo tar -xj -C /usr/local/bin
+                name: installing Bazel build dependencies
+                command: |
+                  # GCC 12 is needed to build `librocksdb-sys` with the `-Wno-error=coverage-invalid-line-number` CXXFLAGS (Bazel)
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install gcc-12 g++-12
+                  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 11
+                  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 11
+                  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
+                  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
+            - run:
+                name: installing bazelisk
+                command: |
+                  wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64
+                  chmod +x bazelisk-linux-amd64 
+                  sudo mv bazelisk-linux-amd64 /usr/local/bin/bazel
+      - when:
+          condition:
+            equal: [ "macos", << parameters.os >> ]
+          steps:
+            - run:
+                name: installing bazelisk
+                command: |
+                  curl -L -O https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-darwin-amd64 
+                  chmod +x bazelisk-darwin-amd64 
+                  sudo mv bazelisk-darwin-amd64 /usr/local/bin/bazel
+
+  # Build a release package and compute its shasum.
+  build_release:
+    description: build release
+    steps:
+      - detect/init
+      - run: mkdir -p artifacts
+      - run:
+          name: build release
+          command: |
+            bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
+            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
+      - run:
+          name: creating release shasum
+          command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
 
 workflows:
   ci:
@@ -359,23 +307,17 @@ workflows:
             - install-deps:
                 os: << matrix.os >>
           name: lint-test-build-v<< matrix.os >>
-          context:
-            - CACHE
           matrix:
             parameters:
               os: [linux2204]
-              many_rust_version: [*many_rust_version]
       - bats:
           pre-steps:
             - install-deps:
                 os: << matrix.os >>
           name: bats-v<< matrix.os >>
-          context:
-            - CACHE
           matrix:
             parameters:
               os: [linux2204]
-              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
       - coverage:
@@ -383,30 +325,21 @@ workflows:
             - install-deps:
                 os: << matrix.os >>
           name: coverage-v<< matrix.os >>
-          context:
-            - CACHE
           matrix:
             parameters:
               os: [linux2204]
-              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
-      - dev_release_artifact:
+      - dev_release:
           pre-steps:
             - install-deps:
                 os: << matrix.os >>
-          name: dev_release_artifact-v<< matrix.os >>
+          name: dev_release-v<< matrix.os >>
           matrix:
             parameters:
               os: [linux2204]
-              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
-            - bats-v<< matrix.os >>
-          filters:
-            branches:
-              ignore: main
-              only: /^pull\/[0-9]+$/
   release:
     when:
       not:
@@ -420,7 +353,6 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
-              many_rust_version: [*many_rust_version]
           filters:
             branches:
               ignore: /.*/
@@ -474,26 +406,18 @@ workflows:
       - publish_nightly_docker:
           pre-steps:
             - install-deps:
-                os: linux2204
+                os: linux2204_machine
           context:
             - DOCKER_CREDS
-            - CACHE
-          filters:
-            branches:
-              only:
-                - main
-          many_rust_version: *many_rust_version
-      - resiliency_tests:
+      - kvstore_resiliency_tests:
           pre-steps:
             - install-deps:
-                os: linux2204
-          filters:
-            branches:
-              only:
-                - main
-          many_rust_version: *many_rust_version
-          requires:
-            - publish_nightly_docker
+                os: linux2204_machine
+      - ledger_resiliency_tests:
+          pre-steps:
+            - install-deps:
+                os: linux2204_machine
+
   nightly_macos:
     when:
       and:
@@ -501,21 +425,21 @@ workflows:
         - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
     jobs:
       - lint-test-build:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
           name: lint-test-build-v<< matrix.os >>
-          context:
-            - CACHE
           matrix:
             parameters:
               os: [macos]
-              many_rust_version: [*many_rust_version]
       - bats:
+          pre-steps:
+            - install-deps:
+                os: << matrix.os >>
           name: bats-v<< matrix.os >>
-          context:
-            - CACHE
           matrix:
             parameters:
               os: [macos]
-              many_rust_version: [*many_rust_version]
           requires:
             - lint-test-build-v<< matrix.os >>
       - tag:

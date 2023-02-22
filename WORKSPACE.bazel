@@ -1,9 +1,10 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+## RUST SECTION ##
 http_archive(
     name = "rules_rust",
-    sha256 = "aaaa4b9591a5dad8d8907ae2dbe6e0eb49e6314946ce4c7149241648e56a1277",
-    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.16.1/rules_rust-v0.16.1.tar.gz"],
+    sha256 = "d125fb75432dc3b20e9b5a19347b45ec607fabe75f98c6c4ba9badaab9c193ce",
+    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.17.0/rules_rust-v0.17.0.tar.gz"],
 )
 
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
@@ -32,11 +33,17 @@ crates_repository(
     name = "crate_index",
     # The following annotations are needed to prevent Bazel passing incompatible C/CXX flags when coverage is enabled
     # https://github.com/bazelbuild/rules_rust/issues/1550
-    annotations = {"librocksdb-sys": [crate.annotation(
-        build_script_env = {
-            "CXXFLAGS": "-Wno-error=coverage-invalid-line-number",
-        },
-    )]},
+    annotations = {
+        "librocksdb-sys": [crate.annotation(
+            build_script_env = {
+                "CXXFLAGS": "-Wno-error=coverage-invalid-line-number",
+            },
+        )],
+        "libudev-sys": [crate.annotation(
+            patch_args = ["-p1"],
+            patches = ["@//third_party/cargo/patches:libudev-sys-0.1.4.patch"],
+        )],
+    },
     cargo_lockfile = "//:Cargo.Bazel.lock",
     lockfile = "//:cargo-bazel-lock.json",
     manifests = [
@@ -74,3 +81,164 @@ crates_repository(
 load("@crate_index//:defs.bzl", "crate_repositories")
 
 crate_repositories()
+## END RUST SECTION ##
+
+## PACKAGE SECTION ##
+http_archive(
+    name = "rules_pkg",
+    sha256 = "eea0f59c28a9241156a47d7a8e32db9122f3d50b505fae0f33de6ce4d9b61834",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.8.0/rules_pkg-0.8.0.tar.gz",
+        "https://github.com/bazelbuild/rules_pkg/releases/download/0.8.0/rules_pkg-0.8.0.tar.gz",
+    ],
+)
+
+load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
+
+rules_pkg_dependencies()
+## END PACKAGE SECTION ##
+
+## GO PACKAGE SECTION ##
+# Go (necessary to avoid Docker building issue on macOS described in https://github.com/bazelbuild/rules_docker/issues/2036)
+# https://github.com/bazelbuild/bazel/issues/10134#issuecomment-1193395705
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "dd926a88a564a9246713a9c00b35315f54cbd46b31a26d5d8fb264c07045f05d",
+    urls = [
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.38.1/rules_go-v0.38.1.zip",
+    ],
+)
+
+http_archive(
+    name = "bazel_gazelle",
+    sha256 = "ecba0f04f96b4960a5b250c8e8eeec42281035970aa8852dda73098274d14a1d",
+    urls = [
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.29.0/bazel-gazelle-v0.29.0.tar.gz",
+    ],
+)
+
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+
+go_rules_dependencies()
+
+go_register_toolchains(version = "1.19.5")
+
+gazelle_dependencies(go_repository_default_config = "//:WORKSPACE.bazel")
+## END GO PACKAGE SECTION ##
+
+## DOCKER SECTION ##
+http_archive(
+    name = "io_bazel_rules_docker",
+    sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
+)
+
+load("@rules_rust//rust:repositories.bzl", "rust_repositories")
+
+rust_repositories()
+
+load(
+    "@io_bazel_rules_docker//toolchains/docker:toolchain.bzl",
+    docker_toolchain_configure = "toolchain_configure",
+)
+
+# Force Docker toolchain to use 'which' to find Docker binary.
+docker_toolchain_configure(
+    name = "docker_config",
+)
+
+load(
+    "@io_bazel_rules_docker//repositories:repositories.bzl",
+    container_repositories = "repositories",
+)
+
+container_repositories()
+
+load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
+
+container_deps(
+    # https://github.com/bazelbuild/rules_docker/issues/1902
+    go_repository_default_config = "@//:WORKSPACE.bazel",
+)
+
+load(
+    "@io_bazel_rules_docker//container:container.bzl",
+    "container_pull",
+)
+
+container_pull(
+    name = "ubuntu_base",
+    digest = "sha256:c985bc3f77946b8e92c9a3648c6f31751a7dd972e06604785e47303f4ad47c4c",  # amd64
+    registry = "index.docker.io",
+    repository = "ubuntu",
+    tag = "jammy",
+)
+
+container_pull(
+    name = "tendermint",
+    digest = "sha256:66a31574012e080fcad37bb94cb088109dc898fe21432059793388a47962b3cd",  # amd64
+    registry = "index.docker.io",
+    repository = "tendermint/tendermint",
+    tag = "v0.34.24",
+)
+
+# TODO: LL should have it's own openssl image
+#       This image is not official nor tagged
+container_pull(
+    name = "openssl",
+    digest = "sha256:cf89651f07a33d2faf4499f72e6f8b0ee2542cd40735d51c7e75b8965c17af0e",  # amd64
+    registry = "index.docker.io",
+    repository = "alpine/openssl",
+    tag = "latest",
+)
+
+container_pull(
+    name = "jsonnet",
+    digest = "sha256:a255e35fb249e23c07c54bccbb6482744597973957a4ccb654ed681e23a4f8b4",  # amd64
+    registry = "index.docker.io",
+    repository = "bitnami/jsonnet",
+    tag = "0.19.1",
+)
+
+### END DOCKER SECTION ##
+
+### BATS SECTION ###
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+BAZEL_BATS_VERSION = "0.31.0"
+
+BAZEL_BATS_SHA256 = "d4666a1d2c37ef38bace5b66fc787108c37ac8c8e8def0fdb5ba13f45e52711f"
+
+http_archive(
+    name = "bazel_bats",
+    sha256 = BAZEL_BATS_SHA256,
+    strip_prefix = "bazel-bats-%s" % BAZEL_BATS_VERSION,
+    urls = [
+        "https://github.com/filmil/bazel-bats/archive/refs/tags/v%s.tar.gz" % BAZEL_BATS_VERSION,
+    ],
+)
+
+load("@bazel_bats//:deps.bzl", "bazel_bats_dependencies")
+
+BATS_ASSERT_VERSION = "2.0.0"
+
+BATS_ASSERT_SHA256 = "15dbf1abb98db785323b9327c86ee2b3114541fe5aa150c410a1632ec06d9903"
+
+BATS_CORE_VERSION = "1.7.0"
+
+BATS_CORE_SHA256 = "ac70c2a153f108b1ac549c2eaa4154dea4a7c1cc421e3352f0ce6ea49435454e"
+
+BATS_SUPPORT_VERSION = "0.3.0"
+
+BATS_SUPPORT_SHA256 = "7815237aafeb42ddcc1b8c698fc5808026d33317d8701d5ec2396e9634e2918f"
+
+bazel_bats_dependencies(
+    bats_assert_sha256 = BATS_ASSERT_SHA256,
+    bats_assert_version = BATS_ASSERT_VERSION,
+    bats_support_sha256 = BATS_SUPPORT_SHA256,
+    bats_support_version = BATS_SUPPORT_VERSION,
+    sha256 = BATS_CORE_SHA256,
+    version = BATS_CORE_VERSION,
+)
+### END BATS SECTION ###
