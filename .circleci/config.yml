@@ -419,7 +419,7 @@ workflows:
                 os: linux2204_machine
   resiliency_tests:
     when:
-      - or:
+      or:
         - equal: [ webhook, << pipeline.trigger_source >> ]
         - equal: [ api, << pipeline.trigger_source >> ]
     jobs:
