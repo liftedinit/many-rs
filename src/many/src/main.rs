@@ -315,7 +315,7 @@ async fn message(
     data: Vec<u8>,
     timestamp: Option<SystemTime>,
     r#async: bool,
-    proof: Option<bool>,
+    proof: bool,
 ) -> Result<(), anyhow::Error> {
     let address = key.address();
     let client = ManyClient::new(s, to, key).unwrap();
@@ -331,14 +331,10 @@ async fn message(
         .method(method)
         .data(data)
         .nonce(nonce.to_vec())
-        .attributes({
-            let mut set = AttributeSet::new();
-            proof.into_iter().for_each(|proof| {
-                if proof {
-                    set.insert(Attribute::id(3));
-                }
-            });
-            set
+        .attributes(if proof {
+            AttributeSet::from_iter(vec![Attribute::id(3)].into_iter())
+        } else {
+            AttributeSet::new()
         });
 
     if let Some(ts) = timestamp {
@@ -565,7 +561,7 @@ async fn main() {
                         data,
                         timestamp,
                         o.r#async,
-                        o.proof,
+                        o.proof.unwrap_or_default(),
                     )
                     .await
                 };
@@ -590,15 +586,11 @@ async fn main() {
                     .to(to_identity)
                     .method(o.method.expect("--method is required"))
                     .data(data)
-                    .attributes({
-                        let mut set = AttributeSet::new();
-                        o.proof.into_iter().for_each(|proof| {
-                            if proof {
-                                set.insert(Attribute::id(3));
-                            }
-                        });
-                        set
-                    })
+                    .attributes(
+                        o.proof
+                            .map(|_| AttributeSet::from_iter(vec![Attribute::id(3)].into_iter()))
+                            .unwrap_or_else(|| AttributeSet::new()),
+                    )
                     .build()
                     .unwrap();
 

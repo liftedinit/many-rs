@@ -278,10 +278,11 @@ impl AccountModuleBackend for KvStoreModuleImpl {
             let (account, _) = self.storage.get_account(&args.account);
             let account = account.ok_or_else(|| account::errors::unknown_account(args.account))?;
 
-            account.needs_role(sender, [Role::Owner])?;
-            self.storage
-                .add_features(account, args)
-                .map(|_| EmptyReturn)
+            account.needs_role(sender, [Role::Owner]).and_then(|_| {
+                self.storage
+                    .add_features(account, args)
+                    .map(|_| EmptyReturn)
+            })
         }
     }
 }
