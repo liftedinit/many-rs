@@ -5,32 +5,28 @@ load '../../test_helper/load'
 load '../../test_helper/ledger'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit
+      cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE $(ciopt start-nodes-dettached) \
-          ABCI_TAG=$(img_tag) \
-          LEDGER_TAG=$(img_tag) \
+      make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000" || {
-        echo Could not start nodes... >&3
+        echo '# Could not start nodes...' >&3
         exit 1
       }
     ) > /dev/null
 
     # Give time to the servers to start.
-    sleep 30
-    timeout 30s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
-      sleep 1
-    done >/dev/null
-EOT
+    wait_for_server 8000 8001 8002 8003
 }
 
 function teardown() {
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit 1
+      cd "$GIT_ROOT/docker/" || exit 1
       make -f $MAKEFILE stop-nodes
     ) 2> /dev/null
 
@@ -40,7 +36,7 @@ function teardown() {
 
 # Tests https://github.com/liftedinit/many-framework/issues/290
 @test "$SUITE: Application hash is consistent with 1 node down" {
-    cd "$GIT_ROOT/docker/e2e/" || exit 1
+    cd "$GIT_ROOT/docker/" || exit 1
 
     # Create transactions before bringing the node down
     check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
@@ -55,32 +51,24 @@ function teardown() {
 
     # Bring down node 3.
     make -f $MAKEFILE stop-single-node-3
-
     sleep 10
 
     # Bring it back
-    make -f $MAKEFILE $(ciopt start-single-node-dettached)-3 \
-      ABCI_TAG=$(img_tag) \
-      LEDGER_TAG=$(img_tag) || {
-        echo Could not start nodes... >&3
+    make -f $MAKEFILE start-single-node-detached-3 || {
+        echo '# Could not start nodes...' >&3
         exit 1
     }
 
     # At this point, node 3 should catch up and the global application hash should be valid
 
     # Give time to the servers to start.
-    timeout 60s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8003 status; do
-      sleep 1
-    done >/dev/null
-EOT
-
+    wait_for_server 8003
     sleep 10
 }
 
 # Tests https://github.com/liftedinit/many-framework/issues/289
 @test "$SUITE: First block after load has a transaction" {
-    cd "$GIT_ROOT/docker/e2e" || exit 1
+    cd "$GIT_ROOT/docker/" || exit 1
 
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000 MFX
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000 MFX
@@ -94,16 +82,14 @@ EOT
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000 MFX
 
     # Bring it back.
-    make -f $MAKEFILE $(ciopt start-single-node-dettached)-3 \
-      ABCI_TAG=$(img_tag) \
-      LEDGER_TAG=$(img_tag) || {
-        echo Could not start nodes... >&3
+    make -f $MAKEFILE start-single-node-detached-3 || {
+        echo '# Could not start nodes...' >&3
         exit 1
     }
 
     # Give time to the servers to start.
     timeout 60s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8003 status; do
+    while ! many message --server http://localhost:8003 status; do
       sleep 1
     done >/dev/null
 EOT

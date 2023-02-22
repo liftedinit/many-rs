@@ -26,13 +26,12 @@ local generate_allow_addrs_flag(allow_addrs) =
     else
         [];
 
-local abci(i, user, abci_tag, allow_addrs) = {
-    image: "lifted/many-abci:" + abci_tag,
+local abci(i, user, allow_addrs) = {
+    image: "bazel/src/many-abci:many-abci-image",
     ports: [ (8000 + i) + ":8000" ],
     volumes: [ "./node" + i + ":/genfiles:ro" ],
     user: "" + user,
     command: [
-        "many-abci",
         "--verbose", "--verbose",
         "--many", "0.0.0.0:8000",
         "--many-app", "http://ledger-" + i + ":8000",
@@ -43,15 +42,14 @@ local abci(i, user, abci_tag, allow_addrs) = {
     depends_on: [ "ledger-" + i ],
 };
 
-local ledger(i, user, id_with_balances, ledger_tag, enable_migrations) = {
-    image: "lifted/many-ledger:" + ledger_tag,
+local ledger(i, user, id_with_balances, enable_migrations) = {
+    image: "bazel/src/many-ledger:many-ledger-image",
     user: "" + user,
     volumes: [
         "./node" + i + "/persistent-ledger:/persistent",
         "./node" + i + ":/genfiles:ro",
     ],
     command: [
-        "many-ledger",
         "--verbose", "--verbose",
         "--abci",
         "--state=/genfiles/ledger_state.json5",
@@ -62,8 +60,8 @@ local ledger(i, user, id_with_balances, ledger_tag, enable_migrations) = {
       + generate_balance_flags(id_with_balances)
 };
 
-local tendermint(i, user, tendermint_tag) = {
-    image: "tendermint/tendermint:v" + tendermint_tag,
+local tendermint(i, user) = {
+    image: "bazel/docker:tendermint_image",
     command: [
         "start",
         "--rpc.laddr", "tcp://0.0.0.0:26657",
@@ -76,13 +74,13 @@ local tendermint(i, user, tendermint_tag) = {
     ports: [ "" + (26600 + i) + ":26600" ],
 };
 
-function(nb_nodes=4, user=1000, id_with_balances="", tendermint_tag="0.34.24", abci_tag="latest", ledger_tag="latest", allow_addrs=false, enable_migrations=false) {
+function(nb_nodes=4, user=1000, id_with_balances="", allow_addrs=false, enable_migrations=false) {
     version: '3',
     services: {
-        ["abci-" + i]: abci(i, user, abci_tag, allow_addrs) for i in std.range(0, nb_nodes - 1)
+        ["abci-" + i]: abci(i, user, allow_addrs) for i in std.range(0, nb_nodes - 1)
     } + {
-        ["ledger-" + i]: ledger(i, user, id_with_balances, ledger_tag, enable_migrations) for i in std.range(0, nb_nodes - 1)
+        ["ledger-" + i]: ledger(i, user, id_with_balances, enable_migrations) for i in std.range(0, nb_nodes - 1)
     } + {
-        ["tendermint-" + i]: tendermint(i, user, tendermint_tag) for i in std.range(0, nb_nodes - 1)
+        ["tendermint-" + i]: tendermint(i, user) for i in std.range(0, nb_nodes - 1)
     },
 }

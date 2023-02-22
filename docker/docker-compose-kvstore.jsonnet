@@ -6,13 +6,12 @@ local generate_allow_addrs_flag(allow_addrs) =
     else
         [];
 
-local abci(i, user, abci_tag, allow_addrs) = {
-    image: "lifted/many-abci:" + abci_tag,
+local abci(i, user, allow_addrs) = {
+    image: "bazel/src/many-abci:many-abci-image",
     ports: [ (8000 + i) + ":8000" ],
     volumes: [ "./node" + i + ":/genfiles:ro" ],
     user: "" + user,
     command: [
-        "many-abci",
         "--verbose", "--verbose",
         "--many", "0.0.0.0:8000",
         "--many-app", "http://kvstore-" + i + ":8000",
@@ -23,15 +22,14 @@ local abci(i, user, abci_tag, allow_addrs) = {
     depends_on: [ "kvstore-" + i ],
 };
 
-local kvstore(i, user, kvstore_tag) = {
-    image: "lifted/many-kvstore:" + kvstore_tag,
+local kvstore(i, user) = {
+    image: "bazel/src/many-kvstore:many-kvstore-image",
     user: "" + user,
     volumes: [
         "./node" + i + "/persistent-kvstore:/persistent",
         "./node" + i + ":/genfiles:ro",
     ],
     command: [
-        "many-kvstore",
         "--verbose", "--verbose",
         "--abci",
         "--state=/genfiles/kvstore_state.json5",
@@ -41,8 +39,8 @@ local kvstore(i, user, kvstore_tag) = {
     ],
 };
 
-local tendermint(i, user, tendermint_tag) = {
-    image: "tendermint/tendermint:v" + tendermint_tag,
+local tendermint(i, user) = {
+    image: "bazel/docker:tendermint_image",
     command: [
         "start",
         "--rpc.laddr", "tcp://0.0.0.0:26657",
@@ -55,13 +53,13 @@ local tendermint(i, user, tendermint_tag) = {
     ports: [ "" + (26600 + i) + ":26600" ],
 };
 
-function(nb_nodes=4, user=1000, tendermint_tag="0.34.24", abci_tag="latest", kvstore_tag="latest", allow_addrs=false) {
+function(nb_nodes=4, user=1000, allow_addrs=false) {
     version: '3',
     services: {
-        ["abci-" + i]: abci(i, user, abci_tag, allow_addrs) for i in std.range(0, nb_nodes - 1)
+        ["abci-" + i]: abci(i, user, allow_addrs) for i in std.range(0, nb_nodes - 1)
     } + {
-        ["kvstore-" + i]: kvstore(i, user, kvstore_tag) for i in std.range(0, nb_nodes - 1)
+        ["kvstore-" + i]: kvstore(i, user) for i in std.range(0, nb_nodes - 1)
     } + {
-        ["tendermint-" + i]: tendermint(i, user, tendermint_tag) for i in std.range(0, nb_nodes - 1)
+        ["tendermint-" + i]: tendermint(i, user) for i in std.range(0, nb_nodes - 1)
     },
 }

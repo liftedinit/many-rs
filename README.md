@@ -31,30 +31,14 @@ Features
     # Ubuntu
     $ sudo apt update
     
-    # CentOS
-    $ sudo yum update
-    
-    # Archlinux
-    $ sudo pacman -Syu
-    
     # macOS
     $ brew update
-    ```
-1. Install Rust using [rustup](https://rustup.rs/)
-    ```shell
-    $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-    $ source $HOME/.cargo/env
     ```
 2. Install build dependencies
     ```shell
     # Ubuntu
-    $ sudo apt install build-essential pkg-config clang libssl-dev libsofthsm2 tmux
-    
-    # CentOS
-    $ sudo yum install clang gcc softhsm git pkgconf tmux
-    
-    # Archlinux
-    $ sudo pacman -S clang gcc softhsm git pkgconf tmux
+    $ sudo apt install build-essential clang libssl-dev libsofthsm2 libudev-dev \
+        libusb-1.0-0-dev bsdextrautils tmux 
     
     # macOS
     $ git # and follow the instructions
@@ -62,13 +46,23 @@ Features
     ```
 3. Build
     ```shell
-    $ git clone https://github.com/liftedinit/many-framework.git
-    $ cd many-framework
-    $ cargo build
+    $ git clone https://github.com/liftedinit/many-rs.git
+    $ cd many-rs
+    $ bazel build --config=remote-cache //...
     ```
 4. Run tests
     ```shell
-    $ cargo test
+    # Unit/integration tests
+    $ bazel test --config=remote-cache //...
+   
+    # e2e tests
+    $ bazel run --config=all-features --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
+    $ bazel run --config=all-features --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
+    $ bazel run --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
+   
+    # Resiliency tests (requires Docker)
+    $ bazel run --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore 
+    $ bazel run --config=remote-cache --config=ledger-resiliency //tests/resiliency/ledger:bats-resiliency-ledger
     ```
 
 # Usage example
@@ -79,19 +73,14 @@ Below are some examples of how to use the different CLI.
     1. Download `tendermint` **v0.34.24** from https://github.com/tendermint/tendermint/releases/tag/v0.34.24
     2. Extract the archive
     3. Put the path to the `tendermint` executable in your `$PATH`
-2. Install the `many` CLI
 
-```shell 
-$ cargo install --git https://github.com/liftedinit/many-rs many-cli
-```
-
-3. Generate a new key and get its MANY ID
+2. Generate a new key and get its MANY ID
 ```shell
 # Generate a new Ed25519 key
 $ ssh-keygen -a 100 -q -P "" -m pkcs8 -t ecdsa -f id1.pem
 
 # Get the MANY ID of the key
-$ many id id1.pem
+$ bazel run many -- id id1.pem
 maeguvtgcrgXXXXXXXXXXXXXXXXXXXXXXXXwqg6ibizbmflicz
 ```
 

@@ -1,0 +1,33 @@
+load("@bazel_bats//:rules.bzl", "bats_test")
+
+bats_test(
+    name = "bats-resiliency-ledger",
+    srcs = [
+        "abci-allow-addrs.bats",
+        "account_count_migration.bats",
+        "catch-up.bats",
+        "dummy_migration.bats",
+        "memo_migration.bats",
+        "persistent_store.bats",
+        "token_migration.bats",
+        "token_subresource.bats",
+        "up-down.bats",
+    ],
+    data = [
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-ledger:many-ledger-image.tar",
+    ],
+    tags = ["manual"],
+    uses_bats_assert = True,
+    deps = [
+        "//docker:docker-ledger-deps",
+        "//src/ledger",
+        "//src/many",
+        "//src/many-abci",
+        "//src/many-ledger",
+        "//tests:bats-helpers",
+    ],
+)

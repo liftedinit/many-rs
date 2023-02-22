@@ -6,6 +6,9 @@ load '../../test_helper/load'
 load '../../test_helper/ledger'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     jq '(.migrations[] | select(.name == "Account Count Data Attribute")).block_height |= 20 |
@@ -13,30 +16,23 @@ function setup() {
         "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit
+      cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE $(ciopt start-nodes-dettached) \
-          ABCI_TAG=$(img_tag) \
-          LEDGER_TAG=$(img_tag) \
+      make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
-        echo Could not start nodes... >&3
+        echo '# Could not start nodes...' >&3
         exit 1
       }
     ) > /dev/null
 
     # Give time to the servers to start.
-    sleep 30
-    timeout 30s bash <<EOT
-    while ! "$GIT_ROOT/target/debug/many" message --server http://localhost:8000 status; do
-      sleep 1
-    done >/dev/null
-EOT
+    wait_for_server 8000 8001 8002 8003
 }
 
 function teardown() {
     (
-      cd "$GIT_ROOT/docker/e2e/" || exit 1
+      cd "$GIT_ROOT/docker/" || exit 1
       make -f $MAKEFILE stop-nodes
     ) 2> /dev/null
 
@@ -63,8 +59,8 @@ function teardown() {
     assert_output --partial "[0, [2, 0]]: [[0, []], \"accountTotalCount\"]"
     assert_output --partial "[0, [2, 1]]: [[0, []], \"nonZeroAccountTotalCount\"]"
     run many_message --pem=0 data.query "[[[0, [2, 0]], [0, [2, 1]]]]"
-    assert_output --partial "[0, [2, 0]]: [0, [3]],"
-    assert_output --partial "[0, [2, 1]]: [0, [3]],"
+    assert_output --partial "[0, [2, 0]]: [0, [4]],"
+    assert_output --partial "[0, [2, 1]]: [0, [4]],"
 
     # Check if the chain is still consistent
     check_consistency --pem=1 --balance=999000 --id="$(identity 1)" 8000 8001 8002 8003
@@ -74,6 +70,6 @@ function teardown() {
     check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
     check_consistency --pem=2 --balance=0 --id="$(identity 2)" 8000 8001 8002 8003
     run many_message --pem=0 data.query "[[[0, [2, 0]], [0, [2, 1]]]]"
-    assert_output --partial "[0, [2, 0]]: [0, [3]],"
-    assert_output --partial "[0, [2, 1]]: [0, [2]],"
+    assert_output --partial "[0, [2, 0]]: [0, [4]],"
+    assert_output --partial "[0, [2, 1]]: [0, [3]],"
 }

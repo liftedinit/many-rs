@@ -9,14 +9,13 @@ load '../../test_helper/load'
 load '../../test_helper/ledger'
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     skip_if_missing_background_utilities
 
-    (
-      cd "$GIT_ROOT"
-      cargo build --all-features
-    )
     jq '(.migrations[] | select(.name == "Token Migration")).block_height |= 0 |
         (.migrations[] | select(.name == "Token Migration")).disabled |= empty' \
         "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"

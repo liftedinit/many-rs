@@ -1,0 +1,51 @@
+load("@bazel_bats//:rules.bzl", "bats_test")
+
+filegroup(
+    name = "webauthn-state",
+    srcs = [":webauthn_state.json"],
+)
+
+bats_test(
+    name = "bats-e2e-ledger",
+    srcs = [
+        "allow_addrs.bats",
+        "ledger.bats",
+        "migrations.bats",
+        "mintburn.bats",
+        "multisig.bats",
+        "staging.bats",
+        "tokens_no_migration.bats",
+        "webauthn.bats",
+    ],
+    tags = ["manual"],
+    uses_bats_assert = True,
+    deps = [
+        ":webauthn-state",
+        "//src/idstore-export",
+        "//src/ledger",
+        "//src/many",
+        "//src/many-ledger",
+        "//staging:ledger-staging",
+        "//tests:bats-helpers",
+        "//tests:ledger-migrations",
+    ],
+)
+
+# TODO: Transition.
+# Can't run with --disable_token_sender_check
+bats_test(
+    name = "bats-e2e-ledger-tokens",
+    srcs = [
+        "tokens.bats",
+    ],
+    tags = ["manual"],
+    uses_bats_assert = True,
+    deps = [
+        "//src/ledger",
+        "//src/many",
+        "//src/many-ledger",
+        "//staging:ledger-staging",
+        "//tests:bats-helpers",
+        "//tests:ledger-migrations",
+    ],
+)

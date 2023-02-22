@@ -20,14 +20,12 @@ function assert_idstore() {
 }
 
 function setup() {
+    load "test_helper/bats-assert/load"
+    load "test_helper/bats-support/load"
+
     mkdir "$BATS_TEST_ROOTDIR"
 
     skip_if_missing_background_utilities
-
-    (
-      cd "$GIT_ROOT"
-      cargo build --all-features
-    )
 }
 
 function teardown() {
@@ -86,7 +84,7 @@ function teardown() {
     # Export to a temp file.
     local export_file
     export_file="$(mktemp)"
-    "$GIT_ROOT/target/debug/idstore-export" "$ledger_db" > "$export_file"
+    idstore-export "$ledger_db" > "$export_file"
     local import_file
     import_file="$(mktemp)"
     jq -s '.[0] * .[1]' "$state" "$export_file" > "$import_file"
