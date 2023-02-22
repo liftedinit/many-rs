@@ -589,17 +589,10 @@ async fn main() {
                     .to(to_identity)
                     .method(o.method.expect("--method is required"))
                     .data(data)
-                    .attributes(
-                        o.proof
-                            .map(|proof| {
-                                if proof {
-                                    AttributeSet::from_iter(vec![Attribute::id(3)])
-                                } else {
-                                    AttributeSet::new()
-                                }
-                            })
-                            .unwrap_or_else(AttributeSet::new),
-                    )
+                    .attributes(match o.proof {
+                        Some(false) | None => AttributeSet::new(),
+                        Some(true) => AttributeSet::from_iter(vec![Attribute::id(3)]),
+                    })
                     .build()
                     .unwrap();
 
