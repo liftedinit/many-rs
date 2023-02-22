@@ -1,3 +1,4 @@
+use async_channel::unbounded;
 use cucumber::{given, then, when, World};
 use many_error::ManyError;
 use many_identity::Address;
@@ -14,6 +15,7 @@ use many_modules::ledger::extended_info::TokenExtendedInfo;
 use many_modules::ledger::{
     BalanceArgs, LedgerMintBurnModuleBackend, LedgerModuleBackend, TokenMintArgs,
 };
+use many_protocol::{context::Context, RequestMessage};
 use many_types::ledger::{TokenAmount, TokenInfo};
 use many_types::Memo;
 use std::path::Path;
@@ -85,6 +87,7 @@ fn id_has_tokens(w: &mut MintWorld, id: SomeId, amount: u64) {
             account: Some(addr),
             symbols: Some(vec![w.info.symbol].into()),
         },
+        Context::new(RequestMessage::default(), unbounded().0)
     )
     .unwrap_or_else(|_| panic!("Unable to fetch balance for {addr}"));
     let amount: TokenAmount = amount.into();

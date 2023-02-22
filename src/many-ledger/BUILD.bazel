@@ -145,6 +145,7 @@ rust_test_suite(
         "//src/many-identity:many-identity-for-test",
         "//src/many-migration:many-migration-for-test",
         "//src/many-modules:many-modules-for-test",
+        "//src/many-protocol:many-protocol-for-test",
         "//src/many-types:many-types-for-test",
     ],
 )
