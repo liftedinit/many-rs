@@ -335,7 +335,7 @@ async fn message(
         .data(data)
         .nonce(nonce.to_vec())
         .attributes(if proof {
-            AttributeSet::from_iter(vec![Attribute::id(3)].into_iter())
+            vec![Attribute::id(3)].into_iter().collect()
         } else {
             AttributeSet::new()
         });
