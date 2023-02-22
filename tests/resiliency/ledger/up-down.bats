@@ -70,6 +70,13 @@ function teardown() {
     check_consistency --pem=1 --balance=999000 --id="$(identity 1)" 8000 8001 8002
     check_consistency --pem=2 --balance=1000 --id="$(identity 2)" 8000 8001 8002
 
+    # Add an error (insufficient funds) to the transactions.
+    check_consistency --pem=1 --balance=999000 --id="$(identity 1)" 8000 8001 8002
+    call_ledger --pem=1 --port=8000 send "$(identity 2)" 99999999 MFX  # Over the balance.
+    sleep 10  # One consensus round.
+    check_consistency --pem=1 --balance=999000 --id="$(identity 1)" 8000 8001 8002
+    check_consistency --pem=2 --balance=1000 --id="$(identity 2)" 8000 8001 8002
+
     call_ledger --pem=1 --port=8001 send "$(identity 2)" 2000 MFX
     sleep 10  # One consensus round.
     check_consistency --pem=1 --balance=997000 --id="$(identity 1)" 8000 8001 8002
