@@ -200,7 +200,6 @@ impl KvStoreStorage {
                 self.persistent_store
                     .commit(&[])
                     .map_err(ManyError::unknown)?;
-                //.expect("Could not commit to store.");
             }
 
             Ok(vec![account_key, commit_key])
