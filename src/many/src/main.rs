@@ -18,10 +18,7 @@ use many_protocol::{
 };
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
-use many_types::{
-    attributes::{Attribute, AttributeSet},
-    Timestamp,
-};
+use many_types::{attributes::Attribute, Timestamp};
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -334,11 +331,15 @@ async fn message(
         .method(method)
         .data(data)
         .nonce(nonce.to_vec())
-        .attributes(if proof {
-            vec![Attribute::id(3)].into_iter().collect()
-        } else {
-            AttributeSet::new()
-        });
+        .attributes(
+            if proof {
+                vec![Attribute::id(3)]
+            } else {
+                vec![]
+            }
+            .into_iter()
+            .collect(),
+        );
 
     if let Some(ts) = timestamp {
         builder.timestamp(Timestamp::from_system_time(ts)?);
@@ -589,10 +590,14 @@ async fn main() {
                     .to(to_identity)
                     .method(o.method.expect("--method is required"))
                     .data(data)
-                    .attributes(match o.proof {
-                        Some(false) | None => AttributeSet::new(),
-                        Some(true) => vec![Attribute::id(3)].into_iter().collect(),
-                    })
+                    .attributes(
+                        match o.proof {
+                            Some(false) | None => vec![],
+                            Some(true) => vec![Attribute::id(3)],
+                        }
+                        .into_iter()
+                        .collect(),
+                    )
                     .build()
                     .unwrap();
 
