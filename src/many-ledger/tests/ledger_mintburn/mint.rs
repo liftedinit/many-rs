@@ -87,7 +87,7 @@ fn id_has_tokens(w: &mut MintWorld, id: SomeId, amount: u64) {
             account: Some(addr),
             symbols: Some(vec![w.info.symbol].into()),
         },
-        Context::new(RequestMessage::default(), unbounded().0)
+        Context::new(RequestMessage::default(), unbounded().0),
     )
     .unwrap_or_else(|_| panic!("Unable to fetch balance for {addr}"));
     let amount: TokenAmount = amount.into();

@@ -17,14 +17,24 @@ use mockall::{automock, predicate::*};
 #[many_module(name = DataModule, id = 5, namespace = data, many_modules_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait DataModuleBackend: Send {
-    fn info(&self, sender: &Address, args: DataInfoArgs, context: Context) -> Result<DataInfoReturns, ManyError>;
+    fn info(
+        &self,
+        sender: &Address,
+        args: DataInfoArgs,
+        context: Context,
+    ) -> Result<DataInfoReturns, ManyError>;
     fn get_info(
         &self,
         sender: &Address,
         args: DataGetInfoArgs,
-        context: Context
+        context: Context,
     ) -> Result<DataGetInfoReturns, ManyError>;
-    fn query(&self, sender: &Address, args: DataQueryArgs, context: Context) -> Result<DataQueryReturns, ManyError>;
+    fn query(
+        &self,
+        sender: &Address,
+        args: DataQueryArgs,
+        context: Context,
+    ) -> Result<DataQueryReturns, ManyError>;
 }
 
 #[cfg(test)]

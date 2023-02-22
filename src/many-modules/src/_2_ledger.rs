@@ -1,6 +1,6 @@
 use many_error::{define_attribute_many_error, ManyError};
-use many_protocol::context::Context;
 use many_macros::many_module;
+use many_protocol::context::Context;
 
 #[cfg(test)]
 use mockall::{automock, predicate::*};
@@ -26,8 +26,18 @@ define_attribute_many_error!(
 #[many_module(name = LedgerModule, id = 2, namespace = ledger, many_modules_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait LedgerModuleBackend: Send {
-    fn info(&self, sender: &Address, args: InfoArgs, context: Context) -> Result<InfoReturns, ManyError>;
-    fn balance(&self, sender: &Address, args: BalanceArgs, context: Context) -> Result<BalanceReturns, ManyError>;
+    fn info(
+        &self,
+        sender: &Address,
+        args: InfoArgs,
+        context: Context,
+    ) -> Result<InfoReturns, ManyError>;
+    fn balance(
+        &self,
+        sender: &Address,
+        args: BalanceArgs,
+        context: Context,
+    ) -> Result<BalanceReturns, ManyError>;
 }
 
 #[cfg(test)]
@@ -56,7 +66,11 @@ mod tests {
     fn info() {
         let mut mock = MockLedgerModuleBackend::new();
         mock.expect_info()
-            .with(predicate::eq(identity(1)), predicate::eq(InfoArgs {}), predicate::always())
+            .with(
+                predicate::eq(identity(1)),
+                predicate::eq(InfoArgs {}),
+                predicate::always(),
+            )
             .times(1)
             .return_const(Ok(InfoReturns {
                 symbols: vec![*SYMBOL],
@@ -85,7 +99,11 @@ mod tests {
         };
         let mut mock = MockLedgerModuleBackend::new();
         mock.expect_balance()
-            .with(predicate::eq(identity(1)), predicate::eq(data.clone()), predicate::always())
+            .with(
+                predicate::eq(identity(1)),
+                predicate::eq(data.clone()),
+                predicate::always(),
+            )
             .times(1)
             .returning(|_, args, _| {
                 Ok(BalanceReturns {

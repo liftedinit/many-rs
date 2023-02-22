@@ -471,7 +471,7 @@ pub trait AccountModuleBackend: Send {
     fn set_description(
         &mut self,
         sender: &Address,
-        args: SetDescriptionArgs
+        args: SetDescriptionArgs,
     ) -> Result<SetDescriptionReturn, ManyError>;
 
     /// List all the roles supported by an account.
@@ -479,11 +479,16 @@ pub trait AccountModuleBackend: Send {
         &self,
         sender: &Address,
         args: ListRolesArgs,
-        context: Context
+        context: Context,
     ) -> Result<ListRolesReturn, ManyError>;
 
     /// Get roles associated with an identity for an account.
-    fn get_roles(&self, sender: &Address, args: GetRolesArgs, context: Context) -> Result<GetRolesReturn, ManyError>;
+    fn get_roles(
+        &self,
+        sender: &Address,
+        args: GetRolesArgs,
+        context: Context,
+    ) -> Result<GetRolesReturn, ManyError>;
 
     /// Add roles to identities for an account.
     fn add_roles(
@@ -500,7 +505,12 @@ pub trait AccountModuleBackend: Send {
     ) -> Result<RemoveRolesReturn, ManyError>;
 
     /// Returns the information related to an account.
-    fn info(&self, sender: &Address, args: InfoArgs, context: Context) -> Result<InfoReturn, ManyError>;
+    fn info(
+        &self,
+        sender: &Address,
+        args: InfoArgs,
+        context: Context,
+    ) -> Result<InfoReturn, ManyError>;
 
     /// Disable or delete an account.
     fn disable(&mut self, sender: &Address, args: DisableArgs) -> Result<DisableReturn, ManyError>;
