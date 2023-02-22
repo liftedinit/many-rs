@@ -3,6 +3,7 @@ use crate::EmptyReturn;
 use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
+use many_protocol::context::Context;
 use many_types::{Either, VecOrSingle};
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
@@ -478,10 +479,16 @@ pub trait AccountModuleBackend: Send {
         &self,
         sender: &Address,
         args: ListRolesArgs,
+        context: Context,
     ) -> Result<ListRolesReturn, ManyError>;
 
     /// Get roles associated with an identity for an account.
-    fn get_roles(&self, sender: &Address, args: GetRolesArgs) -> Result<GetRolesReturn, ManyError>;
+    fn get_roles(
+        &self,
+        sender: &Address,
+        args: GetRolesArgs,
+        context: Context,
+    ) -> Result<GetRolesReturn, ManyError>;
 
     /// Add roles to identities for an account.
     fn add_roles(
@@ -498,7 +505,12 @@ pub trait AccountModuleBackend: Send {
     ) -> Result<RemoveRolesReturn, ManyError>;
 
     /// Returns the information related to an account.
-    fn info(&self, sender: &Address, args: InfoArgs) -> Result<InfoReturn, ManyError>;
+    fn info(
+        &self,
+        sender: &Address,
+        args: InfoArgs,
+        context: Context,
+    ) -> Result<InfoReturn, ManyError>;
 
     /// Disable or delete an account.
     fn disable(&mut self, sender: &Address, args: DisableArgs) -> Result<DisableReturn, ManyError>;
@@ -545,7 +557,7 @@ mod module_tests {
         });
         mock.expect_info().returning({
             let account_map = Arc::clone(&account_map);
-            move |_, args| {
+            move |_, args, _| {
                 let account_map = account_map.write().unwrap();
                 let account = account_map
                     .get(&args.account)
@@ -560,7 +572,7 @@ mod module_tests {
         });
         mock.expect_list_roles().returning({
             let account_map = Arc::clone(&account_map);
-            move |_, args| {
+            move |_, args, _| {
                 let account_map = account_map.write().unwrap();
                 let _ = account_map
                     .get(&args.account)

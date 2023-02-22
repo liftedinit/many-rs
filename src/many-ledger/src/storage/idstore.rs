@@ -87,9 +87,7 @@ impl LedgerStorage {
             )])
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-
-        Ok(idstore_seed)
+        self.maybe_commit().map(|_| idstore_seed)
     }
 
     pub fn store(
@@ -98,7 +96,7 @@ impl LedgerStorage {
         address: &Address,
         cred_id: idstore::CredentialId,
         public_key: idstore::PublicKey,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<Vec<u8>>, ManyError> {
         let recall_phrase_cbor =
             minicbor::to_vec(recall_phrase).map_err(ManyError::serialization_error)?;
         if self
@@ -141,33 +139,49 @@ impl LedgerStorage {
             .apply(&batch)
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit().map(|_| {
+            vec![
+                recall_phrase_cbor.clone(),
+                vec![
+                    IDSTORE_ROOT,
+                    IdStoreRootSeparator::RecallPhrase.value(),
+                    &recall_phrase_cbor,
+                ]
+                .concat(),
+                vec![
+                    IDSTORE_ROOT,
+                    IdStoreRootSeparator::Address.value(),
+                    &address.to_vec(),
+                ]
+                .concat(),
+            ]
+        })
     }
 
     fn get_from_storage(
         &self,
         key: &Vec<u8>,
         sep: IdStoreRootSeparator,
-    ) -> Result<Option<Vec<u8>>, ManyError> {
+    ) -> Result<(Option<Vec<u8>>, Vec<u8>), ManyError> {
+        let key = vec![IDSTORE_ROOT, sep.value(), key].concat();
         self.persistent_store
-            .get(&vec![IDSTORE_ROOT, sep.value(), key].concat())
+            .get(&key)
             .map_err(error::storage_get_failed)
+            .map(|value| (value, key))
     }
 
     pub fn get_from_recall_phrase(
         &self,
         recall_phrase: &idstore::RecallPhrase,
-    ) -> Result<(idstore::CredentialId, idstore::PublicKey), ManyError> {
+    ) -> Result<(idstore::CredentialId, idstore::PublicKey, Vec<u8>), ManyError> {
         let recall_phrase_cbor =
             minicbor::to_vec(recall_phrase).map_err(ManyError::serialization_error)?;
-        if let Some(value) =
+        if let (Some(value), storage_key) =
             self.get_from_storage(&recall_phrase_cbor, IdStoreRootSeparator::RecallPhrase)?
         {
             let value: CredentialStorage =
                 minicbor::decode(&value).map_err(ManyError::deserialization_error)?;
-            Ok((value.cred_id, value.public_key))
+            Ok((value.cred_id, value.public_key, storage_key))
         } else {
             Err(idstore::entry_not_found(recall_phrase.join(" ")))
         }
@@ -176,13 +190,13 @@ impl LedgerStorage {
     pub fn get_from_address(
         &self,
         address: &Address,
-    ) -> Result<(idstore::CredentialId, idstore::PublicKey), ManyError> {
-        if let Some(value) =
+    ) -> Result<(idstore::CredentialId, idstore::PublicKey, Vec<u8>), ManyError> {
+        if let (Some(value), storage_key) =
             self.get_from_storage(&address.to_vec(), IdStoreRootSeparator::Address)?
         {
             let value: CredentialStorage =
                 minicbor::decode(&value).map_err(ManyError::deserialization_error)?;
-            Ok((value.cred_id, value.public_key))
+            Ok((value.cred_id, value.public_key, storage_key))
         } else {
             Err(idstore::entry_not_found(address.to_string()))
         }

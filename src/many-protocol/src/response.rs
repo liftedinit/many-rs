@@ -109,6 +109,11 @@ impl ResponseMessage {
         }
     }
 
+    pub fn with_attributes<T: IntoIterator<Item = Attribute>>(mut self, set: T) -> Self {
+        self.attributes.extend(set);
+        self
+    }
+
     pub fn with_attribute(mut self, attr: Attribute) -> Self {
         self.attributes.insert(attr);
         self

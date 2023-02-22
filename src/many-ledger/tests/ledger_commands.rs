@@ -1,9 +1,7 @@
-use many_identity::testing::identity;
-use many_ledger::error;
-use many_ledger_test_utils::*;
-use many_modules::ledger;
-use many_modules::ledger::LedgerCommandsModuleBackend;
-use proptest::prelude::*;
+use {
+    many_identity::testing::identity, many_ledger::error, many_ledger_test_utils::*,
+    many_modules::ledger, many_modules::ledger::LedgerCommandsModuleBackend, proptest::prelude::*,
+};
 
 proptest! {
     #[test]

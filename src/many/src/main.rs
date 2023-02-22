@@ -18,7 +18,7 @@ use many_protocol::{
 };
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
-use many_types::Timestamp;
+use many_types::{attributes::Attribute, Timestamp};
 use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -195,6 +195,12 @@ struct MessageOpt {
 
     /// The content of the message itself (its payload).
     data: Option<String>,
+
+    /// Request a proof of the value. This may cause an error if the server
+    /// does not support proofs, and might not work on all endpoints. Consult
+    /// the specification for more information.
+    #[clap(long)]
+    proof: Option<bool>,
 }
 
 #[derive(Parser)]
@@ -300,6 +306,7 @@ async fn show_response<'a>(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn message(
     s: Url,
     to: Address,
@@ -308,6 +315,7 @@ async fn message(
     data: Vec<u8>,
     timestamp: Option<SystemTime>,
     r#async: bool,
+    proof: bool,
 ) -> Result<(), anyhow::Error> {
     let address = key.address();
     let client = ManyClient::new(s, to, key).unwrap();
@@ -322,7 +330,16 @@ async fn message(
         .to(to)
         .method(method)
         .data(data)
-        .nonce(nonce.to_vec());
+        .nonce(nonce.to_vec())
+        .attributes(
+            if proof {
+                vec![Attribute::id(3)]
+            } else {
+                vec![]
+            }
+            .into_iter()
+            .collect(),
+        );
 
     if let Some(ts) = timestamp {
         builder.timestamp(Timestamp::from_system_time(ts)?);
@@ -548,6 +565,7 @@ async fn main() {
                         data,
                         timestamp,
                         o.r#async,
+                        o.proof.unwrap_or_default(),
                     )
                     .await
                 };
@@ -572,6 +590,14 @@ async fn main() {
                     .to(to_identity)
                     .method(o.method.expect("--method is required"))
                     .data(data)
+                    .attributes(
+                        match o.proof {
+                            Some(false) | None => vec![],
+                            Some(true) => vec![Attribute::id(3)],
+                        }
+                        .into_iter()
+                        .collect(),
+                    )
                     .build()
                     .unwrap();
 

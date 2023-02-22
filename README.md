@@ -50,7 +50,11 @@ Features
     $ cd many-rs
     $ bazel build --config=remote-cache //...
     ```
-4. Run tests
+4. Apply format changes
+    ```shell
+    $ bazel run @rules_rust//:rustfmt
+    ```
+5. Run tests
     ```shell
     # Unit/integration tests
     $ bazel test --config=remote-cache //...

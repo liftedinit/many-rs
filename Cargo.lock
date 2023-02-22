@@ -885,6 +885,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
+name = "convert_case"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
+
+[[package]]
 name = "core-foundation"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1341,8 +1347,10 @@ version = "0.99.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fb810d30a7c1953f91334de7244731fc3f3c10d7fe163338a35b9f640960321"
 dependencies = [
+ "convert_case",
  "proc-macro2",
  "quote",
+ "rustc_version",
  "syn",
 ]
 
@@ -2857,6 +2865,7 @@ dependencies = [
 name = "many-kvstore"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "async-trait",
  "clap 3.2.23",
  "coset",
@@ -2892,6 +2901,7 @@ dependencies = [
 name = "many-ledger"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "async-trait",
  "base64 0.20.0",
  "bip39-dict",
@@ -2951,6 +2961,7 @@ dependencies = [
 name = "many-ledger-test-utils"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "coset",
  "cucumber 0.17.0",
  "itertools",
@@ -2976,6 +2987,7 @@ dependencies = [
 name = "many-macros"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "inflections",
  "proc-macro2",
  "quote",
@@ -3026,6 +3038,7 @@ dependencies = [
 name = "many-modules"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "async-trait",
  "cbor-diag",
  "coset",
@@ -3052,6 +3065,7 @@ dependencies = [
 name = "many-protocol"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "base64 0.13.1",
  "coset",
  "derive_builder 0.10.2",
@@ -3135,6 +3149,7 @@ dependencies = [
  "base64 0.20.0",
  "cbor-diag",
  "coset",
+ "derive_more",
  "fixed",
  "hex",
  "many-error",

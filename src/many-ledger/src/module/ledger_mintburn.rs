@@ -13,9 +13,10 @@ use std::collections::BTreeSet;
 /// Check if a symbol exists in the storage
 fn check_symbol_exists(symbol: &Symbol, symbols: BTreeSet<Symbol>) -> Result<(), ManyError> {
     if !symbols.contains(symbol) {
-        return Err(error::symbol_not_found(symbol.to_string()));
+        Err(error::symbol_not_found(symbol.to_string()))
+    } else {
+        Ok(())
     }
-    Ok(())
 }
 
 impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
@@ -44,16 +45,16 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
         check_symbol_exists(&symbol, self.storage.get_symbols()?)?;
 
         // Mint into storage
-        self.storage.mint_token(symbol, &distribution)?;
+        let _ = self.storage.mint_token(symbol, &distribution)?;
 
         // Log event
-        self.storage.log_event(EventInfo::TokenMint {
-            symbol,
-            distribution,
-            memo,
-        })?;
-
-        Ok(TokenMintReturns {})
+        self.storage
+            .log_event(EventInfo::TokenMint {
+                symbol,
+                distribution,
+                memo,
+            })
+            .map(|_| TokenMintReturns {})
     }
 
     fn burn(
@@ -89,15 +90,15 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
         }
 
         // Burn from storage
-        self.storage.burn_token(symbol, &distribution)?;
+        let _ = self.storage.burn_token(symbol, &distribution)?;
 
         // Log event
-        self.storage.log_event(EventInfo::TokenBurn {
-            symbol,
-            distribution: distribution.clone(),
-            memo,
-        })?;
-
-        Ok(TokenBurnReturns { distribution })
+        self.storage
+            .log_event(EventInfo::TokenBurn {
+                symbol,
+                distribution: distribution.clone(),
+                memo,
+            })
+            .map(|_| TokenBurnReturns { distribution })
     }
 }

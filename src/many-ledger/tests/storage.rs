@@ -1,3 +1,4 @@
+use async_channel::unbounded;
 use many_identity::testing::identity;
 use many_identity::Address;
 use many_ledger::migration::tokens::TOKEN_MIGRATION;
@@ -8,6 +9,7 @@ use many_modules::account::features::FeatureInfo;
 use many_modules::account::AccountModuleBackend;
 use many_modules::ledger::{LedgerModuleBackend, LedgerTokensModuleBackend, TokenInfoArgs};
 use many_modules::{account, ledger};
+use many_protocol::{context::Context, RequestMessage};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Verify persistent storage can be re-loaded
@@ -57,6 +59,7 @@ fn load() {
                 account: Some(identity(5)),
                 symbols: Some(vec![identity(1000)].into()),
             },
+            Context::new(RequestMessage::default(), unbounded().0),
         )
         .unwrap();
     assert_eq!(
@@ -71,6 +74,7 @@ fn load() {
                 account: id,
                 identities: vec![identity(1)].into(),
             },
+            Context::new(RequestMessage::default(), unbounded().0),
         )
         .unwrap()
         .roles;
@@ -150,6 +154,7 @@ fn load_symbol_meta() {
                 account: Some(identity(5)),
                 symbols: Some(vec![identity(1000)].into()),
             },
+            Context::new(RequestMessage::default(), unbounded().0),
         )
         .unwrap();
     assert_eq!(
@@ -164,6 +169,7 @@ fn load_symbol_meta() {
                 account: id,
                 identities: vec![identity(1)].into(),
             },
+            Context::new(RequestMessage::default(), unbounded().0),
         )
         .unwrap()
         .roles;

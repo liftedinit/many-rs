@@ -28,6 +28,8 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         sender: &Address,
         args: TokenCreateArgs,
     ) -> Result<TokenCreateReturns, ManyError> {
+        #[cfg(not(feature = "disable_token_sender_check"))]
+        use crate::storage::{ledger_tokens::TOKEN_IDENTITY_ROOT, IDENTITY_ROOT};
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.create"));
         }
@@ -36,8 +38,8 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         crate::storage::ledger_tokens::verify_tokens_sender(
             sender,
             self.storage
-                .get_identity(crate::storage::ledger_tokens::TOKEN_IDENTITY_ROOT)
-                .or_else(|_| self.storage.get_identity(crate::storage::IDENTITY_ROOT))?,
+                .get_identity(TOKEN_IDENTITY_ROOT)
+                .or_else(|_| self.storage.get_identity(IDENTITY_ROOT))?,
         )?;
 
         if let Some(Either::Left(addr)) = &args.owner {
@@ -63,7 +65,8 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
                 "The ticker {ticker} already exists on this network"
             )));
         }
-        self.storage.create_token(sender, args)
+        let (result, _) = self.storage.create_token(sender, args)?;
+        Ok(result)
     }
 
     fn info(&self, _sender: &Address, args: TokenInfoArgs) -> Result<TokenInfoReturns, ManyError> {
@@ -91,10 +94,10 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         }
 
         // Get the current owner and check if we're allowed to update this token
-        let current_owner = self.storage.get_owner(&args.symbol)?;
+        let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
-                verify_acl(
+                let _ = verify_acl(
                     &self.storage,
                     sender,
                     &addr,
@@ -121,7 +124,8 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             check_ticker_length(ticker)?;
         }
 
-        self.storage.update_token(sender, args)
+        let (result, _) = self.storage.update_token(sender, args)?;
+        Ok(result)
     }
 
     fn add_extended_info(
@@ -133,7 +137,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             return Err(ManyError::invalid_method_name("tokens.addExtendedInfo"));
         }
 
-        let current_owner = self.storage.get_owner(&args.symbol)?;
+        let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
                 verify_acl(
@@ -151,7 +155,8 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             }
         }
 
-        self.storage.add_extended_info(args)
+        let (result, _) = self.storage.add_extended_info(args)?;
+        Ok(result)
     }
 
     fn remove_extended_info(
@@ -163,7 +168,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             return Err(ManyError::invalid_method_name("tokens.removeExtendedInfo"));
         }
 
-        let current_owner = self.storage.get_owner(&args.symbol)?;
+        let (current_owner, _) = self.storage.get_owner(&args.symbol)?;
         match current_owner {
             Some(addr) => {
                 verify_acl(
@@ -181,6 +186,7 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
             }
         }
 
-        self.storage.remove_extended_info(args)
+        let (result, _) = self.storage.remove_extended_info(args)?;
+        Ok(result)
     }
 }

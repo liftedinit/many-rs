@@ -17,7 +17,7 @@ mod abci;
 pub mod account;
 pub mod data;
 pub mod event;
-mod idstore;
+pub(crate) mod idstore;
 pub mod iterator;
 mod ledger;
 mod ledger_commands;
@@ -113,17 +113,17 @@ impl LedgerStorage {
     #[inline]
     fn maybe_commit(&mut self) -> Result<(), ManyError> {
         if !self.blockchain {
-            self.commit_storage()?;
+            self.commit_storage()
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 
     #[inline]
     fn commit_storage(&mut self) -> Result<(), ManyError> {
         self.persistent_store
             .commit(&[])
-            .map_err(error::storage_commit_failed)?;
-        Ok(())
+            .map_err(error::storage_commit_failed)
     }
 
     pub fn load<P: AsRef<Path>>(
@@ -184,8 +184,8 @@ impl LedgerStorage {
     pub fn build(mut self) -> Result<Self, ManyError> {
         self.persistent_store
             .commit(&[])
-            .map_err(error::storage_commit_failed)?;
-        Ok(self)
+            .map_err(error::storage_commit_failed)
+            .map(|_| self)
     }
 
     /// Kept for backward compatibility
@@ -258,7 +258,7 @@ impl LedgerStorage {
     pub(crate) fn get_next_subresource(
         &mut self,
         identity_root: &str,
-    ) -> Result<Address, ManyError> {
+    ) -> Result<(Address, impl IntoIterator<Item = Vec<u8>>), ManyError> {
         let subresource_identity = self
             .persistent_store
             .get(identity_root.as_bytes())
@@ -284,23 +284,34 @@ impl LedgerStorage {
             next_subresource = subresource_identity.with_subresource_id(current_id)?;
         }
 
+        let key_for_subresource = key_for_subresource_counter(
+            &subresource_identity,
+            self.migrations.is_active(&TOKEN_MIGRATION),
+        );
+
         self.persistent_store
             .apply(&[(
-                key_for_subresource_counter(
-                    &subresource_identity,
-                    self.migrations.is_active(&TOKEN_MIGRATION),
-                ),
+                key_for_subresource.clone(),
                 Op::Put((current_id + 1).to_be_bytes().to_vec()),
             )])
             .map_err(error::storage_apply_failed)?;
+        let mut keys = vec![key_for_subresource];
 
         self.persistent_store
-            .get(identity_root.as_bytes())
+            .get((*identity_root).as_bytes())
             .map_err(error::storage_get_failed)?
-            .map_or(self.get_identity(IDENTITY_ROOT), |bytes| {
-                Address::from_bytes(&bytes)
-            })?
+            .map_or(
+                {
+                    keys.push(IDENTITY_ROOT.into());
+                    self.get_identity(IDENTITY_ROOT)
+                },
+                |bytes| {
+                    keys.push(identity_root.as_bytes().to_vec());
+                    Address::from_bytes(&bytes)
+                },
+            )?
             .with_subresource_id(current_id)
+            .map(|address| (address, keys))
     }
 
     /// Get the subresource counter from the given DB key.

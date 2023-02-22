@@ -24,20 +24,23 @@ impl ledger::LedgerCommandsModuleBackend for LedgerModuleImpl {
         if from.is_illegal() {
             return Err(error::unauthorized());
         }
+        let mut keys_to_prove = vec![];
         if from != sender {
-            if let Some(account) = self.storage.get_account(from)? {
-                verify_account_role(
-                    &account,
-                    sender,
-                    account::features::ledger::AccountLedger::ID,
-                    [Role::CanLedgerTransact],
-                )?;
-            } else {
-                return Err(error::unauthorized());
-            }
+            let (account, keys) = self
+                .storage
+                .get_account(from)
+                .map_err(|_| error::unauthorized())?;
+            verify_account_role(
+                &account,
+                sender,
+                account::features::ledger::AccountLedger::ID,
+                [Role::CanLedgerTransact],
+            )?;
+            keys_to_prove.extend(keys);
         }
 
-        self.storage.send(from, &to, &symbol, amount, memo)?;
-        Ok(EmptyReturn)
+        self.storage
+            .send(from, &to, &symbol, amount, memo)
+            .map(|_| EmptyReturn)
     }
 }

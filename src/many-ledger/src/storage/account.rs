@@ -38,15 +38,15 @@ pub fn verify_acl(
     addr: &Address,
     roles: impl IntoIterator<Item = Role>,
     feature_id: FeatureId,
-) -> Result<(), ManyError> {
+) -> Result<Vec<Vec<u8>>, ManyError> {
     if addr != sender {
-        if let Some(account) = storage.get_account(addr)? {
-            verify_account_role(&account, sender, feature_id, roles)?;
-        } else {
-            return Err(error::unauthorized());
-        }
+        let (account, keys) = storage
+            .get_account(addr)
+            .map_err(|_| error::unauthorized())?;
+        verify_account_role(&account, sender, feature_id, roles).map(|_| keys.into_iter().collect())
+    } else {
+        Ok(Vec::<Vec<u8>>::new())
     }
-    Ok(())
 }
 
 impl LedgerStorage {
@@ -68,7 +68,7 @@ impl LedgerStorage {
 
         if let Some(accounts) = accounts {
             for account in accounts {
-                let id = self._add_account(
+                let (id, _) = self._add_account(
                     account::Account {
                         description: account.description.clone(),
                         roles: account.roles,
@@ -101,8 +101,9 @@ impl LedgerStorage {
         &mut self,
         mut account: account::Account,
         add_event: bool,
-    ) -> Result<Address, ManyError> {
-        let id = self.get_next_subresource(ACCOUNT_IDENTITY_ROOT)?;
+    ) -> Result<(Address, impl IntoIterator<Item = Vec<u8>>), ManyError> {
+        let (id, resource_keys) = self.get_next_subresource(ACCOUNT_IDENTITY_ROOT)?;
+        let mut keys: Vec<_> = resource_keys.into_iter().collect();
 
         // The account MUST own itself.
         account.add_role(&id, account::Role::Owner);
@@ -154,28 +155,33 @@ impl LedgerStorage {
             })?;
         }
 
-        self.commit_account(&id, account)?;
-        Ok(id)
+        self.commit_account(&id, account).map(|key| {
+            keys.push(key);
+            (id, keys)
+        })
     }
 
-    pub fn add_account(&mut self, account: account::Account) -> Result<Address, ManyError> {
-        let id = self._add_account(account, true)?;
-        Ok(id)
+    pub fn add_account(
+        &mut self,
+        account: account::Account,
+    ) -> Result<(Address, impl IntoIterator<Item = Vec<u8>>), ManyError> {
+        self._add_account(account, true)
     }
 
-    pub fn disable_account(&mut self, id: &Address) -> Result<(), ManyError> {
-        let mut account = self
-            .get_account_even_disabled(id)?
-            .ok_or_else(|| account::errors::unknown_account(*id))?;
+    pub fn disable_account(
+        &mut self,
+        id: &Address,
+    ) -> Result<impl IntoIterator<Item = Vec<u8>>, ManyError> {
+        let (mut account, keys) = self.get_account_even_disabled(id)?;
+        let mut keys = keys.into_iter().collect::<Vec<_>>();
 
         if account.disabled.is_none() || account.disabled == Some(Either::Left(false)) {
             account.disabled = Some(Either::Left(true));
-            self.commit_account(id, account)?;
+            let key = self.commit_account(id, account)?;
+            keys.push(key);
             self.log_event(events::EventInfo::AccountDisable { account: *id })?;
 
-            self.maybe_commit()?;
-
-            Ok(())
+            self.maybe_commit().map(|_| keys)
         } else {
             Err(account::errors::unknown_account(*id))
         }
@@ -185,21 +191,20 @@ impl LedgerStorage {
         &mut self,
         mut account: account::Account,
         args: account::SetDescriptionArgs,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         account.set_description(Some(args.clone().description));
         self.log_event(events::EventInfo::AccountSetDescription {
             account: args.account,
             description: args.description,
-        })?;
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        })
+        .and_then(|_| self.commit_account(&args.account, account))
     }
 
     pub fn add_roles(
         &mut self,
         mut account: account::Account,
         args: account::AddRolesArgs,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         for (id, roles) in &args.roles {
             for r in roles {
                 account.add_role(id, *r);
@@ -209,16 +214,15 @@ impl LedgerStorage {
         self.log_event(events::EventInfo::AccountAddRoles {
             account: args.account,
             roles: args.clone().roles,
-        })?;
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        })
+        .and_then(|_| self.commit_account(&args.account, account))
     }
 
     pub fn remove_roles(
         &mut self,
         mut account: account::Account,
         args: account::RemoveRolesArgs,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         // We should not be able to remove the Owner role from the account itself
         if args.roles.contains_key(&args.account)
             && args
@@ -239,16 +243,15 @@ impl LedgerStorage {
         self.log_event(events::EventInfo::AccountRemoveRoles {
             account: args.account,
             roles: args.clone().roles,
-        })?;
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        })
+        .and_then(|_| self.commit_account(&args.account, account))
     }
 
     pub fn add_features(
         &mut self,
         mut account: account::Account,
         args: account::AddFeaturesArgs,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         for new_f in args.features.iter() {
             if account.features.insert(new_f.clone()) {
                 return Err(ManyError::unknown("Feature already part of the account."));
@@ -268,58 +271,54 @@ impl LedgerStorage {
             account: args.account,
             roles: args.clone().roles.unwrap_or_default(), // TODO: Verify this
             features: args.clone().features,
-        })?;
-        self.commit_account(&args.account, account)?;
-        Ok(())
+        })
+        .and_then(|_| self.commit_account(&args.account, account))
     }
 
-    pub fn get_account(&self, id: &Address) -> Result<Option<account::Account>, ManyError> {
-        Ok(self.get_account_even_disabled(id)?.and_then(|x| {
-            if x.disabled.is_none() || x.disabled == Some(Either::Left(false)) {
-                Some(x)
-            } else {
-                None
-            }
-        }))
+    pub fn get_account(
+        &self,
+        id: &Address,
+    ) -> Result<(account::Account, impl IntoIterator<Item = Vec<u8>>), ManyError> {
+        let (account, keys) = self.get_account_even_disabled(id)?;
+        if account.disabled.is_none() || account.disabled == Some(Either::Left(false)) {
+            Ok((account, keys))
+        } else {
+            Err(account::errors::unknown_account(id))
+        }
     }
 
     pub fn get_account_even_disabled(
         &self,
         id: &Address,
-    ) -> Result<Option<account::Account>, ManyError> {
+    ) -> Result<(account::Account, impl IntoIterator<Item = Vec<u8>>), ManyError> {
         // TODO: Refactor
-        Ok(
-            if let Some(bytes) = self
-                .persistent_store
-                .get(&key_for_account(id))
-                .unwrap_or_default()
-            {
-                Some(
-                    minicbor::decode::<account::Account>(&bytes)
-                        .map_err(ManyError::deserialization_error)?,
-                )
-            } else {
-                None
-            },
-        )
+        let key = key_for_account(id);
+        self.persistent_store
+            .get(&key)
+            .unwrap_or_default()
+            .map(|bytes| {
+                minicbor::decode::<account::Account>(&bytes)
+                    .map_err(ManyError::deserialization_error)
+                    .map(|account| (account, vec![key]))
+            })
+            .unwrap_or_else(|| Err(account::errors::unknown_account(id)))
     }
 
     pub fn commit_account(
         &mut self,
         id: &Address,
         account: account::Account,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<u8>, ManyError> {
         tracing::debug!("commit({:?})", account);
+        let key = key_for_account(id);
 
         self.persistent_store
             .apply(&[(
-                key_for_account(id),
+                key.clone(),
                 Op::Put(minicbor::to_vec(account).map_err(ManyError::serialization_error)?),
             )])
             .map_err(|e| ManyError::unknown(e.to_string()))?;
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit().map(|_| key)
     }
 }

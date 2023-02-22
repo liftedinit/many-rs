@@ -70,8 +70,7 @@ impl LedgerStorage {
             ])
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-        Ok(())
+        self.maybe_commit()
     }
 
     pub fn iter_multisig(&self, order: SortOrder) -> LedgerIterator {

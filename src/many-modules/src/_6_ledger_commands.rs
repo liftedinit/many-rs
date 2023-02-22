@@ -42,7 +42,7 @@ mod tests {
         mock.expect_send()
             .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
             .times(1)
-            .returning(|_sender, _args| Ok(SendReturns {}));
+            .returning(|_, _| Ok(SendReturns {}));
         let module = super::LedgerCommandsModule::new(Arc::new(Mutex::new(mock)));
 
         let _: SendReturns = minicbor::decode(

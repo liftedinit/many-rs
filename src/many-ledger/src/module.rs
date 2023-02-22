@@ -94,7 +94,6 @@ impl LedgerModuleImpl {
         symbol: many_types::ledger::Symbol,
     ) -> Result<(), ManyError> {
         self.storage
-            .set_balance_only_for_testing(account, balance, symbol)?;
-        Ok(())
+            .set_balance_only_for_testing(account, balance, symbol)
     }
 }

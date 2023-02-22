@@ -10,6 +10,7 @@ repository = "https://github.com/liftedinit/many-framework"
 publish = false
 
 [dependencies]
+async-channel = "1.8"
 coset = "0.3"
 cucumber = { version = "0.17.0", features = ["libtest"] }
 itertools = "0.10.3"

@@ -17,6 +17,7 @@ name = "many-ledger"
 doc = false
 
 [dependencies]
+async-channel = "1.8"
 async-trait = "0.1.51"
 base64 = "0.20.0-alpha.1"
 bip39-dict = "0.1"

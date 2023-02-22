@@ -1,5 +1,5 @@
 {
-  "checksum": "8a98a0c4da92940c90ffb506ac7c724d22cabbaea078c4875f49db409ed0de92",
+  "checksum": "29c477db0ddbd26efaf43fc17fd1ad938aaabe8ef562107771b50dfda940092f",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -4491,6 +4491,36 @@
       },
       "license": "CC0-1.0"
     },
+    "convert_case 0.4.0": {
+      "name": "convert_case",
+      "version": "0.4.0",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/convert_case/0.4.0/download",
+          "sha256": "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "convert_case",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "convert_case",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2018",
+        "version": "0.4.0"
+      },
+      "license": "MIT"
+    },
     "core-foundation 0.9.3": {
       "name": "core-foundation",
       "version": "0.9.3",
@@ -6714,16 +6744,39 @@
           "**"
         ],
         "crate_features": [
+          "add",
+          "add_assign",
+          "as_mut",
           "as_ref",
+          "constructor",
+          "convert_case",
+          "default",
           "deref",
           "deref_mut",
           "display",
           "error",
           "from",
-          "into"
+          "from_str",
+          "index",
+          "index_mut",
+          "into",
+          "into_iterator",
+          "is_variant",
+          "iterator",
+          "mul",
+          "mul_assign",
+          "not",
+          "rustc_version",
+          "sum",
+          "try_into",
+          "unwrap"
         ],
         "deps": {
           "common": [
+            {
+              "id": "convert_case 0.4.0",
+              "target": "convert_case"
+            },
             {
               "id": "proc-macro2 1.0.51",
               "target": "proc_macro2"
@@ -14100,6 +14153,10 @@
         "deps_dev": {
           "common": [
             {
+              "id": "async-channel 1.8.0",
+              "target": "async_channel"
+            },
+            {
               "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
@@ -14174,6 +14231,10 @@
         ],
         "deps": {
           "common": [
+            {
+              "id": "async-channel 1.8.0",
+              "target": "async_channel"
+            },
             {
               "id": "base64 0.20.0",
               "target": "base64"
@@ -14391,6 +14452,10 @@
         "deps": {
           "common": [
             {
+              "id": "async-channel 1.8.0",
+              "target": "async_channel"
+            },
+            {
               "id": "coset 0.3.4",
               "target": "coset"
             },
@@ -14460,6 +14525,10 @@
         ],
         "deps": {
           "common": [
+            {
+              "id": "async-channel 1.8.0",
+              "target": "async_channel"
+            },
             {
               "id": "inflections 1.1.1",
               "target": "inflections"
@@ -14661,6 +14730,10 @@
         "deps": {
           "common": [
             {
+              "id": "async-channel 1.8.0",
+              "target": "async_channel"
+            },
+            {
               "id": "coset 0.3.4",
               "target": "coset"
             },
@@ -14756,6 +14829,10 @@
         ],
         "deps": {
           "common": [
+            {
+              "id": "async-channel 1.8.0",
+              "target": "async_channel"
+            },
             {
               "id": "base64 0.13.1",
               "target": "base64"
@@ -15119,6 +15196,10 @@
         "edition": "2021",
         "proc_macro_deps": {
           "common": [
+            {
+              "id": "derive_more 0.99.17",
+              "target": "derive_more"
+            },
             {
               "id": "num-derive 0.3.3",
               "target": "num_derive"

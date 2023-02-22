@@ -22,10 +22,11 @@ impl LedgerStorage {
         &mut self,
         symbol: Symbol,
         distribution: &LedgerTokensAddressMap,
-    ) -> Result<(), ManyError> {
+    ) -> Result<impl IntoIterator<Item = Vec<u8>>, ManyError> {
         let mut batch: Vec<BatchEntry> = Vec::new();
         let mut circulating = TokenAmount::zero();
         let current_supply = self.get_token_supply(&symbol)?;
+        let mut keys: Vec<Vec<u8>> = Vec::new();
 
         for (address, amount) in distribution.iter() {
             if amount.is_zero() {
@@ -43,11 +44,12 @@ impl LedgerStorage {
             }
 
             // Store the new balance to the DB
-            let new_balance = self
-                .get_multiple_balances(address, &BTreeSet::from([symbol]))?
-                .get(&symbol)
-                .map_or(amount.clone(), |b| b + amount);
+            let (balances, balance_keys) =
+                self.get_multiple_balances(address, &BTreeSet::from([symbol]))?;
+            keys.extend(balance_keys);
+            let new_balance = balances.get(&symbol).map_or(amount.clone(), |b| b + amount);
             let key = key_for_account_balance(address, &symbol);
+            keys.push(key.clone());
             batch.push((key, Op::Put(new_balance.to_vec())));
         }
 
@@ -60,9 +62,10 @@ impl LedgerStorage {
             .info;
         info.supply.circulating += &circulating;
         info.supply.total += circulating;
-
+        let symbol_key = key_for_symbol(&symbol);
+        keys.push(symbol_key.clone().into_bytes());
         batch.push((
-            key_for_symbol(&symbol).into(),
+            symbol_key.into(),
             Op::Put(minicbor::to_vec(&info).map_err(ManyError::serialization_error)?),
         ));
 
@@ -74,18 +77,17 @@ impl LedgerStorage {
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit().map(|_| keys)
     }
 
     pub fn burn_token(
         &mut self,
         symbol: Symbol,
         distribution: &LedgerTokensAddressMap,
-    ) -> Result<(), ManyError> {
+    ) -> Result<impl IntoIterator<Item = Vec<u8>>, ManyError> {
         let mut batch: Vec<BatchEntry> = Vec::new();
         let mut circulating = TokenAmount::zero();
+        let mut keys: Vec<Vec<u8>> = Vec::new();
 
         for (address, amount) in distribution.iter() {
             if amount.is_zero() {
@@ -93,10 +95,10 @@ impl LedgerStorage {
             }
 
             // Check if we have enough funds
-            let balance_amount = match self
-                .get_multiple_balances(address, &BTreeSet::from_iter([symbol]))?
-                .get(&symbol)
-            {
+            let (balances, balance_keys) =
+                self.get_multiple_balances(address, &BTreeSet::from_iter([symbol]))?;
+            keys.extend(balance_keys);
+            let balance_amount = match balances.get(&symbol) {
                 Some(x) if x < amount => Err(error::missing_funds(symbol, amount, x)),
                 Some(x) => Ok(x.clone()),
                 None => Err(error::missing_funds(symbol, amount, TokenAmount::zero())),
@@ -105,6 +107,7 @@ impl LedgerStorage {
             // Store new balance in DB
             let new_balance = &balance_amount - amount;
             let key = key_for_account_balance(address, &symbol);
+            keys.push(key.clone());
             batch.push((key, Op::Put(new_balance.to_vec())));
             circulating += amount;
         }
@@ -119,8 +122,11 @@ impl LedgerStorage {
         info.supply.circulating -= &circulating;
         info.supply.total -= circulating;
 
+        let symbol_key = key_for_symbol(&symbol);
+        keys.push(symbol_key.clone().into_bytes());
+
         batch.push((
-            key_for_symbol(&symbol).into(),
+            symbol_key.into(),
             Op::Put(minicbor::to_vec(&info).map_err(ManyError::serialization_error)?),
         ));
 
@@ -132,8 +138,6 @@ impl LedgerStorage {
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit().map(|_| keys)
     }
 }

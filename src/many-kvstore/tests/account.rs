@@ -2,12 +2,14 @@ pub mod common;
 
 use crate::common::*;
 
+use async_channel::unbounded;
 use many_identity::testing::identity;
 use many_identity::Address;
 use many_kvstore::module::KvStoreModuleImpl;
 use many_modules::account;
 use many_modules::account::features::{FeatureInfo, TryCreateFeature};
 use many_modules::account::AccountModuleBackend;
+use many_protocol::{context::Context, RequestMessage};
 use many_types::{Either, VecOrSingle};
 use std::collections::{BTreeMap, BTreeSet};
 use std::ops::{Deref, DerefMut};
@@ -23,6 +25,7 @@ fn account_info(
         account::InfoArgs {
             account: *account_id,
         },
+        Context::new(RequestMessage::default(), unbounded().0),
     );
     assert!(result.is_ok());
     result.unwrap()
@@ -119,6 +122,7 @@ fn list_roles() {
         account::ListRolesArgs {
             account: account_id,
         },
+        Context::new(RequestMessage::default(), unbounded().0),
     );
     assert!(result.is_ok());
     let mut roles = BTreeSet::<account::Role>::new();
@@ -145,6 +149,7 @@ fn get_roles() {
             account: account_id,
             identities: VecOrSingle::from(identities.clone()),
         },
+        Context::new(RequestMessage::default(), unbounded().0),
     );
     assert!(result.is_ok());
     assert_eq!(
@@ -234,6 +239,7 @@ fn remove_roles() {
             account: account_id,
             identities: VecOrSingle::from(vec![identity(2)]),
         },
+        Context::new(RequestMessage::default(), unbounded().0),
     );
     assert!(result.is_ok());
     assert_eq!(
@@ -303,6 +309,7 @@ fn disable() {
         account::InfoArgs {
             account: account_id,
         },
+        Context::new(RequestMessage::default(), unbounded().0),
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().disabled.unwrap(), Either::Left(true));
@@ -340,6 +347,7 @@ fn add_feature() {
         account::InfoArgs {
             account: account_id,
         },
+        Context::new(RequestMessage::default(), unbounded().0),
     )
     .expect("Could not get info");
 
@@ -368,6 +376,7 @@ fn add_feature() {
         account::InfoArgs {
             account: account_id,
         },
+        Context::new(RequestMessage::default(), unbounded().0),
     )
     .expect("Could not get info");
 

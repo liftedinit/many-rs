@@ -3,8 +3,15 @@ use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::AbciCommitInfo;
 use many_modules::events::EventInfo;
-use many_types::{Either, Timestamp};
-use merk::{BatchEntry, Op};
+use many_types::{Either, ProofOperation, Timestamp};
+use merk::{
+    proofs::{
+        Decoder,
+        Node::{Hash, KVHash, KV},
+        Query,
+    },
+    BatchEntry, Op,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -58,17 +65,20 @@ impl KvStoreStorage {
         self.current_time.unwrap_or_else(Timestamp::now)
     }
 
-    pub fn new_subresource_id(&mut self) -> Result<Address, ManyError> {
+    pub fn new_subresource_id(&mut self) -> Result<(Address, Vec<u8>), ManyError> {
         let current_id = self.next_subresource;
         self.next_subresource += 1;
+        let key = b"/config/subresource_id".to_vec();
         self.persistent_store
             .apply(&[(
-                b"/config/subresource_id".to_vec(),
+                key.clone(),
                 Op::Put(self.next_subresource.to_be_bytes().to_vec()),
             )])
             .map_err(error::storage_apply_failed)?;
 
-        self.root_identity.with_subresource_id(current_id)
+        self.root_identity
+            .with_subresource_id(current_id)
+            .map(|address| (address, key))
     }
 
     pub fn load<P: AsRef<Path>>(persistent_path: P, blockchain: bool) -> Result<Self, String> {
@@ -322,5 +332,39 @@ impl KvStoreStorage {
             self.persistent_store.commit(&[]).unwrap();
         }
         Ok(())
+    }
+
+    pub fn prove_state(
+        &self,
+        context: impl AsRef<many_protocol::context::Context>,
+        keys: impl IntoIterator<Item = Vec<u8>>,
+    ) -> Result<(), ManyError> {
+        use merk::proofs::Op;
+        context.as_ref().prove(|| {
+            self.persistent_store
+                .prove({
+                    let mut query = Query::new();
+                    keys.into_iter().for_each(|key| query.insert_key(key));
+                    query
+                })
+                .and_then(|proof| {
+                    Decoder::new(proof.as_slice())
+                        .map(|fallible_operation| {
+                            fallible_operation.map(|operation| match operation {
+                                Op::Child => ProofOperation::Child,
+                                Op::Parent => ProofOperation::Parent,
+                                Op::Push(Hash(hash)) => ProofOperation::NodeHash(hash.to_vec()),
+                                Op::Push(KV(key, value)) => {
+                                    ProofOperation::KeyValuePair(key.into(), value.into())
+                                }
+                                Op::Push(KVHash(hash)) => {
+                                    ProofOperation::KeyValueHash(hash.to_vec())
+                                }
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .map_err(|error| ManyError::unknown(error.to_string()))
+        })
     }
 }

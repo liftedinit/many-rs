@@ -2,8 +2,20 @@ use crate::error;
 use crate::storage::{key_for_account_balance, LedgerStorage, IDENTITY_ROOT, SYMBOLS_ROOT};
 use many_error::ManyError;
 use many_identity::Address;
-use many_types::ledger::{Symbol, TokenAmount};
-use merk::{BatchEntry, Op};
+use many_protocol::context::Context;
+use many_types::{
+    ledger::{Symbol, TokenAmount},
+    ProofOperation,
+};
+use merk::{
+    proofs::{
+        query::QueryItem,
+        Decoder,
+        Node::{Hash, KVHash, KV},
+        Op::{Child, Parent, Push},
+    },
+    BatchEntry, Op,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 impl LedgerStorage {
@@ -46,42 +58,92 @@ impl LedgerStorage {
     fn get_all_balances(
         &self,
         identity: &Address,
-    ) -> Result<BTreeMap<Symbol, TokenAmount>, ManyError> {
-        if identity.is_anonymous() {
+    ) -> Result<
+        (
+            BTreeMap<Symbol, TokenAmount>,
+            impl IntoIterator<Item = Vec<u8>>,
+        ),
+        ManyError,
+    > {
+        Ok(if identity.is_anonymous() {
             // Anonymous cannot hold funds.
-            Ok(BTreeMap::new())
+            (BTreeMap::new(), vec![])
         } else {
             let mut result = BTreeMap::new();
             for symbol in self.get_symbols()? {
-                match self
-                    .persistent_store
+                self.persistent_store
                     .get(&key_for_account_balance(identity, &symbol))
                     .map_err(error::storage_get_failed)?
-                {
-                    None => {}
-                    Some(value) => {
-                        result.insert(symbol, TokenAmount::from(value));
-                    }
-                }
+                    .map(|value| result.insert(symbol, TokenAmount::from(value)))
+                    .map(|_| ())
+                    .unwrap_or_default()
             }
 
-            Ok(result)
-        }
+            (
+                result,
+                self.get_symbols()?
+                    .into_iter()
+                    .map(|symbol| key_for_account_balance(identity, &symbol))
+                    .collect(),
+            )
+        })
     }
 
     pub fn get_multiple_balances(
         &self,
         identity: &Address,
         symbols: &BTreeSet<Symbol>,
-    ) -> Result<BTreeMap<Symbol, TokenAmount>, ManyError> {
-        if symbols.is_empty() {
-            Ok(self.get_all_balances(identity)?)
-        } else {
-            Ok(self
-                .get_all_balances(identity)?
-                .into_iter()
-                .filter(|(k, _v)| symbols.contains(k))
-                .collect())
-        }
+    ) -> Result<
+        (
+            BTreeMap<Symbol, TokenAmount>,
+            impl IntoIterator<Item = Vec<u8>>,
+        ),
+        ManyError,
+    > {
+        self.get_all_balances(identity).map(|(balances, keys)| {
+            (
+                if symbols.is_empty() {
+                    balances
+                } else {
+                    balances
+                        .into_iter()
+                        .filter(|(k, _v)| symbols.contains(k))
+                        .collect()
+                },
+                keys,
+            )
+        })
+    }
+
+    pub fn prove_state(
+        &self,
+        context: impl AsRef<Context>,
+        keys: impl IntoIterator<Item = Vec<u8>>,
+    ) -> Result<(), ManyError> {
+        context.as_ref().prove(|| {
+            self.persistent_store
+                .prove(
+                    keys.into_iter()
+                        .map(QueryItem::Key)
+                        .collect::<Vec<_>>()
+                        .into(),
+                )
+                .and_then(|proof| {
+                    Decoder::new(proof.as_slice())
+                        .map(|fallible_operation| {
+                            fallible_operation.map(|operation| match operation {
+                                Child => ProofOperation::Child,
+                                Parent => ProofOperation::Parent,
+                                Push(Hash(hash)) => ProofOperation::NodeHash(hash.to_vec()),
+                                Push(KV(key, value)) => {
+                                    ProofOperation::KeyValuePair(key.into(), value.into())
+                                }
+                                Push(KVHash(hash)) => ProofOperation::KeyValueHash(hash.to_vec()),
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .map_err(|error| ManyError::unknown(error.to_string()))
+        })
     }
 }

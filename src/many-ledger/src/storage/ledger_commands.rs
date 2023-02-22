@@ -39,7 +39,7 @@ impl LedgerStorage {
         symbol: &Symbol,
         amount: TokenAmount,
         memo: Option<Memo>,
-    ) -> Result<(), ManyError> {
+    ) -> Result<impl IntoIterator<Item = Vec<u8>>, ManyError> {
         if from == to {
             return Err(error::destination_is_source());
         }
@@ -69,12 +69,12 @@ impl LedgerStorage {
 
         let batch: Vec<BatchEntry> = match key_from.cmp(&key_to) {
             Ordering::Less | Ordering::Equal => vec![
-                (key_from, Op::Put(amount_from.to_vec())),
-                (key_to, Op::Put(amount_to.to_vec())),
+                (key_from.clone(), Op::Put(amount_from.to_vec())),
+                (key_to.clone(), Op::Put(amount_to.to_vec())),
             ],
             _ => vec![
-                (key_to, Op::Put(amount_to.to_vec())),
-                (key_from, Op::Put(amount_from.to_vec())),
+                (key_to.clone(), Op::Put(amount_to.to_vec())),
+                (key_from.clone(), Op::Put(amount_from.to_vec())),
             ],
         };
 
@@ -92,8 +92,6 @@ impl LedgerStorage {
             memo,
         })?;
 
-        self.maybe_commit()?;
-
-        Ok(())
+        self.maybe_commit().map(|_| vec![key_from, key_to])
     }
 }

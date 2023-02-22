@@ -1,15 +1,19 @@
-use many_error::ManyError;
-use many_identity::testing::identity;
-use many_identity::Address;
-use many_ledger::module::LedgerModuleImpl;
-use many_ledger_test_utils::*;
-use many_modules::account::features::multisig::AccountMultisigModuleBackend;
-use many_modules::account::features::{multisig, TryCreateFeature};
-use many_modules::{account, events, ledger};
-use many_types::ledger::TokenAmount;
-use proptest::prelude::*;
-use proptest::test_runner::Config;
-use std::collections::{BTreeMap, BTreeSet};
+use {
+    async_channel::unbounded,
+    many_error::ManyError,
+    many_identity::testing::identity,
+    many_identity::Address,
+    many_ledger::module::LedgerModuleImpl,
+    many_ledger_test_utils::*,
+    many_modules::account::features::multisig::AccountMultisigModuleBackend,
+    many_modules::account::features::{multisig, TryCreateFeature},
+    many_modules::{account, events, ledger},
+    many_protocol::{context::Context, RequestMessage},
+    many_types::ledger::TokenAmount,
+    proptest::prelude::*,
+    proptest::test_runner::Config,
+    std::collections::{BTreeMap, BTreeSet},
+};
 
 /// Returns informations about the given account
 fn account_info(
@@ -23,6 +27,7 @@ fn account_info(
         account::InfoArgs {
             account: account_id,
         },
+        Context::new(RequestMessage::default(), unbounded().0),
     )
     .unwrap()
 }
