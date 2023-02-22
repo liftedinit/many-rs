@@ -296,11 +296,15 @@ commands:
           name: creating release shasum
           command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
 
+parameters:
+  run_resiliency:
+    type: boolean
+    default: false
+
 workflows:
   ci:
     when:
-      not:
-        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+      equal: [ webhook, << pipeline.trigger_source >> ]
     jobs:
       - lint-test-build:
           pre-steps:
@@ -419,7 +423,9 @@ workflows:
                 os: linux2204_machine
   resiliency_tests:
     when:
-      equal: [ api, << pipeline.trigger_source >> ]
+      and:
+        - equal: [ api, << pipeline.trigger_source >> ]
+        - equal: [ true, << pipeline.parameters.run_resiliency >> ]
     jobs:
       - kvstore_resiliency_tests:
           pre-steps:
