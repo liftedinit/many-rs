@@ -114,7 +114,7 @@ jobs:
               --combined_report=lcov \
               -- //...
       - codecov/upload:
-          file: $(bazel info output_path)/_coverage/_coverage_report.dat
+          file: bazel-out/_coverage/_coverage_report.dat
 
   # Create a developer's release build. Useful to test PRs on development networks.
   dev_release:
