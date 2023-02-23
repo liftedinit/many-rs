@@ -124,7 +124,8 @@ jobs:
     executor: << parameters.os >>
     steps:
       - checkout
-      - build_release
+      - build_release:
+          release_id: ${CIRCLE_PR_NUMBER}
       - store_artifacts:
           path: artifacts
 
@@ -136,7 +137,8 @@ jobs:
     executor: << parameters.os >>
     steps:
       - checkout
-      - build_release
+      - build_release:
+          release_id: ${CIRCLE_TAG}
       - persist_to_workspace:
           root: artifacts
           paths:
@@ -284,6 +286,10 @@ commands:
   # Build a release package and compute its shasum.
   build_release:
     description: build release
+    parameters:
+      release_id:
+        type: string
+        default: dev
     steps:
       - detect/init
       - run: mkdir -p artifacts
@@ -291,7 +297,7 @@ commands:
           name: build release
           command: |
             bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
-            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
+            bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_<< parameters.release_id >>_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
       - run:
           name: creating release shasum
           command: shasum artifacts/many-rs_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_${CIRCLE_TAG}_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
