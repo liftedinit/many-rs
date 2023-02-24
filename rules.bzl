@@ -1,5 +1,6 @@
 load("@rules_pkg//pkg:providers.bzl", "PackageVariablesInfo")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
+load("@bazel_bats//:rules.bzl", "bats_test")
 
 # Taken from Bazel repository
 def _basic_naming_impl(ctx):
@@ -105,4 +106,32 @@ run_make = rule(
     executable = True,
     implementation = _run_make_impl,
 )
+
 ### END RUN MAKE RULE ###
+
+### BATS TEST SUITE ###
+# TODO: Remove when https://github.com/filmil/bazel-bats/pull/18 is merged and a new `bazel-bats` release is out
+def bats_test_suite(name, srcs, **kwargs):
+    tests = []
+
+    for src in srcs:
+        if not src.endswith(".bats"):
+            fail("srcs should have `.bats` extensions")
+
+        # Prefixed with `name` to allow parameterization with macros
+        # The test name should not end with `.bats`
+        test_name = name + "_" + src[:-5]
+        bats_test(
+            name = test_name,
+            srcs = [src],
+            **kwargs
+        )
+        tests.append(test_name)
+
+    native.test_suite(
+        name = name,
+        tests = tests,
+        tags = kwargs.get("tags", None),
+    )
+
+### END BATS TEST SUITE ###
