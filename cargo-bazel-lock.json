@@ -1,5 +1,5 @@
 {
-  "checksum": "29c477db0ddbd26efaf43fc17fd1ad938aaabe8ef562107771b50dfda940092f",
+  "checksum": "e1ed718f3f667cf5cd664fecc1b44bf02b8340db603012dcecdddebeb17f962f",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -13148,6 +13148,10 @@
               "target": "coset"
             },
             {
+              "id": "either 1.8.1",
+              "target": "either"
+            },
+            {
               "id": "hex 0.4.3",
               "target": "hex"
             },
@@ -13260,6 +13264,10 @@
               "target": "lazy_static"
             },
             {
+              "id": "linkme 0.3.7",
+              "target": "linkme"
+            },
+            {
               "id": "many-abci 0.1.0",
               "target": "build_script_build"
             },
@@ -13274,6 +13282,10 @@
             {
               "id": "reqwest 0.11.14",
               "target": "reqwest"
+            },
+            {
+              "id": "serde_json 1.0.93",
+              "target": "serde_json"
             },
             {
               "id": "sha2 0.10.6",
