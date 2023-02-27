@@ -147,11 +147,11 @@ impl Application for AbciApp {
     fn begin_block(&self, request: RequestBeginBlock) -> ResponseBeginBlock {
         let (time, height) = request
             .header
-            .and_then(|x| {
+            .map(|x| {
                 let time = x.time.map(|x| x.seconds as u64);
                 let height = Some(if x.height > 0 { x.height as u64 } else { 0 });
 
-                Some((time, height))
+                (time, height)
             })
             .unwrap_or((None, None));
 
@@ -159,7 +159,7 @@ impl Application for AbciApp {
             if let Ok(mut m) = self.migrations.write() {
                 // Since it's impossible to truly handle error here, and
                 // we don't actually want to panic, just ignore any errors.
-                let _ = m.update_at_height(&mut (), height as u64);
+                let _ = m.update_at_height(&mut (), height);
             }
         }
 
