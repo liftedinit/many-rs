@@ -276,6 +276,10 @@ impl ManyError {
         Self(Reason::new(code, message, arguments))
     }
 
+    pub fn with_code(self, code: ManyErrorCode) -> Self {
+        Self(self.0.with_code(code))
+    }
+
     #[inline]
     pub const fn attribute_specific(
         code: i32,

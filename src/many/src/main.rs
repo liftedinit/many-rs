@@ -20,6 +20,7 @@ use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
 use many_types::{attributes::Attribute, Timestamp};
 use std::convert::TryFrom;
+use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
@@ -233,12 +234,60 @@ struct GetTokenIdOpt {
     symbol: String,
 }
 
+/// An error that happened during communication with the server.
+pub enum Error {
+    /// The server returned an error.
+    Server(ManyError),
+
+    /// An error happened on the client, either before or after the request/
+    /// response were sent/received. Could be deserialization or configuration
+    /// or transport error.
+    Client(anyhow::Error),
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Server(err) => f.write_fmt(format_args!(
+                "Error returned by server:\nCode: {} ({:?})\nMessage:\n|  {}\n",
+                Into::<i64>::into(err.code()),
+                err.code().to_string(),
+                err.to_string()
+                    .split('\n')
+                    .collect::<Vec<&str>>()
+                    .join("\n|  ")
+            )),
+            Error::Client(err) => {
+                f.write_fmt(format_args!("An error happened on the client:\n{err}"))
+            }
+        }
+    }
+}
+
+impl From<ManyError> for Error {
+    fn from(value: ManyError) -> Self {
+        Self::Server(value)
+    }
+}
+
+impl From<anyhow::Error> for Error {
+    fn from(value: anyhow::Error) -> Self {
+        Self::Client(value)
+    }
+}
+
+impl From<minicbor::decode::Error> for Error {
+    fn from(value: minicbor::decode::Error) -> Self {
+        Self::Client(anyhow::Error::from(value))
+    }
+}
+
 #[async_recursion(?Send)]
 async fn show_response<'a>(
     response: &'a ResponseMessage,
     client: ManyClient<impl Identity + 'a>,
     r#async: bool,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), Error> {
     let ResponseMessage {
         data, attributes, ..
     } = response;
@@ -316,7 +365,7 @@ async fn message(
     timestamp: Option<SystemTime>,
     r#async: bool,
     proof: bool,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), Error> {
     let address = key.address();
     let client = ManyClient::new(s, to, key).unwrap();
 
@@ -347,9 +396,9 @@ async fn message(
 
     let message: RequestMessage = builder
         .build()
-        .map_err(|_| ManyError::internal_server_error())?;
+        .map_err(|e| anyhow!("Could not build request: {e}"))?;
 
-    let response = client.send_message(message).await?;
+    let response = client.send_message(message).await.map_err(|e| anyhow!(e))?;
 
     show_response(&response, client, r#async).await
 }
@@ -360,16 +409,15 @@ async fn message_from_hex(
     key: impl Identity,
     hex: String,
     r#async: bool,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), Error> {
     let client = ManyClient::new(s.clone(), to, key).unwrap();
 
-    let data = hex::decode(hex)?;
+    let data = hex::decode(hex).map_err(|e| anyhow!(e))?;
     let envelope = CoseSign1::from_slice(&data).map_err(|e| anyhow!(e))?;
 
     let cose_sign1 = many_client::client::send_envelope(s, envelope).await?;
     let response =
-        ResponseMessage::decode_and_verify(&cose_sign1, &(AnonymousVerifier, CoseKeyVerifier))
-            .map_err(|e| anyhow!(e))?;
+        ResponseMessage::decode_and_verify(&cose_sign1, &(AnonymousVerifier, CoseKeyVerifier))?;
 
     show_response(&response, client, r#async).await
 }
@@ -573,13 +621,7 @@ async fn main() {
                 match result {
                     Ok(()) => {}
                     Err(err) => {
-                        error!(
-                            "Error returned by server:\n|  {}\n",
-                            err.to_string()
-                                .split('\n')
-                                .collect::<Vec<&str>>()
-                                .join("\n|  ")
-                        );
+                        error!("{err}");
                         std::process::exit(1);
                     }
                 }

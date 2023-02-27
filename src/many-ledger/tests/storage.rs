@@ -94,6 +94,7 @@ fn load_symbol_meta() {
         &TOKEN_MIGRATION,
         Metadata {
             block_height: 0,
+            upper_bound: None,
             disabled: false,
             issue: None,
             extra: Default::default(),

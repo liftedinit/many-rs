@@ -20,6 +20,12 @@ local load_migrations(enable_migrations) =
     else
         [];
 
+local load_abci_migrations(enable_migrations) =
+    if enable_migrations then
+        ["--migrations-config=/genfiles/abci_migrations.json"]
+    else
+        [];
+
 local generate_allow_addrs_flag(allow_addrs) =
     if allow_addrs then
         ["--allow-addrs=/genfiles/allow_addrs.json5"]
@@ -38,7 +44,8 @@ local abci(i, user, allow_addrs) = {
         "--many-pem", "/genfiles/abci.pem",
         "--abci", "0.0.0.0:26658",
         "--tendermint", "http://tendermint-" + i + ":26657/"
-    ] + generate_allow_addrs_flag(allow_addrs),
+    ] + load_abci_migrations(enable_migrations)
+      + generate_allow_addrs_flag(allow_addrs),
     depends_on: [ "ledger-" + i ],
 };
 

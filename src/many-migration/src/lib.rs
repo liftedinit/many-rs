@@ -18,6 +18,10 @@ pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
 pub struct Metadata {
     pub block_height: u64,
 
+    /// Only useful for trigger migrations.
+    /// TODO: use this in other migrations type too, maybe.
+    pub upper_bound: Option<u64>,
+
     #[serde(default)]
     pub disabled: bool,
 
@@ -31,6 +35,7 @@ impl Metadata {
     pub fn enabled(block_height: u64) -> Self {
         Self {
             block_height,
+            upper_bound: None,
             disabled: false,
             issue: None,
             extra: Default::default(),
@@ -40,6 +45,7 @@ impl Metadata {
     pub fn disabled(block_height: u64) -> Self {
         Self {
             block_height,
+            upper_bound: None,
             disabled: true,
             issue: None,
             extra: Default::default(),
@@ -52,13 +58,14 @@ impl Metadata {
 pub enum MigrationType<T, E> {
     Regular(RegularMigration<T, E>),
     Hotfix(HotfixMigration),
+    Trigger(TriggerMigration),
 
     #[non_exhaustive]
     _Unreachable,
 }
 
 impl<T, E> fmt::Debug for MigrationType<T, E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         formatter.write_str(&format!("{self}"))
     }
 }
@@ -72,6 +79,15 @@ pub struct RegularMigration<T, E> {
 #[derive(Copy, Clone)]
 pub struct HotfixMigration {
     hotfix_fn: FnByte,
+}
+
+/// A trigger migration is simply a migration that is active in a range of
+/// blocks, but has no other behaviour associated. There is no storage
+/// associated with this migration.
+#[derive(Copy, Clone)]
+pub struct TriggerMigration {
+    /// If this migration is disabled, is it active by default?
+    active_by_default: bool,
 }
 
 #[derive(Copy, Clone)]
@@ -94,7 +110,7 @@ impl<T, E> fmt::Debug for InnerMigration<T, E> {
 }
 
 impl<T, E> fmt::Display for InnerMigration<T, E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         formatter.write_fmt(format_args!(
             "Type: \"{}\", Name: \"{}\", Description: \"{}\"",
             self.r#type, self.name, self.description
@@ -167,6 +183,18 @@ impl<T, E> InnerMigration<T, E> {
         }
     }
 
+    pub const fn new_trigger(
+        active_by_default: bool,
+        name: &'static str,
+        description: &'static str,
+    ) -> Self {
+        Self {
+            r#type: MigrationType::Trigger(TriggerMigration { active_by_default }),
+            name,
+            description,
+        }
+    }
+
     #[inline]
     pub const fn name(&self) -> &str {
         self.name
@@ -180,6 +208,11 @@ impl<T, E> InnerMigration<T, E> {
     #[inline]
     pub const fn r#type(&self) -> &'_ MigrationType<T, E> {
         &self.r#type
+    }
+
+    #[inline]
+    pub const fn is_trigger(&self) -> bool {
+        matches!(self.r#type, MigrationType::Trigger(_))
     }
 
     /// This function gets executed when the storage block height == the migration block height
@@ -246,7 +279,7 @@ impl<'a, T, E> fmt::Debug for Migration<'a, T, E> {
 }
 
 impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         formatter.write_fmt(format_args!(
             "{}, Metadata: \"{:?}\", Status: \"{}\"",
             self.migration,
@@ -274,7 +307,15 @@ impl<'a, T, E> Migration<'a, T, E> {
         block_height: u64,
     ) -> Result<(), E> {
         if self.is_enabled() {
-            if block_height == self.metadata.block_height && !self.active {
+            if self.migration.is_trigger() {
+                if (self.metadata.block_height..self.metadata.upper_bound.unwrap_or(u64::MAX))
+                    .contains(&block_height)
+                {
+                    self.active = true;
+                } else {
+                    self.active = false;
+                }
+            } else if block_height == self.metadata.block_height && !self.active {
                 self.active = true;
                 self.migration.initialize(storage, &self.metadata.extra)?;
             } else if block_height > self.metadata.block_height {
@@ -353,7 +394,16 @@ impl<'a, T, E> Migration<'a, T, E> {
 
     #[inline]
     pub fn is_active(&self) -> bool {
-        self.active
+        if self.active {
+            true
+        } else if let MigrationType::Trigger(m) = self.migration.r#type {
+            // For triggers, there can be an active flag by default if the migration
+            // is disabled. If it's enabled then we have to rely on the active
+            // flag (which is tested above).
+            !self.is_enabled() && m.active_by_default
+        } else {
+            false
+        }
     }
 }
 
