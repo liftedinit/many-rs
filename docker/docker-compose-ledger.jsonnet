@@ -20,8 +20,8 @@ local load_migrations(enable_migrations) =
     else
         [];
 
-local load_abci_migrations(enable_migrations) =
-    if enable_migrations then
+local load_abci_migrations(abci_migrations) =
+    if abci_migrations then
         ["--migrations-config=/genfiles/abci_migrations.json"]
     else
         [];
@@ -32,7 +32,7 @@ local generate_allow_addrs_flag(allow_addrs) =
     else
         [];
 
-local abci(i, user, allow_addrs, enable_migrations) = {
+local abci(i, user, allow_addrs, abci_migrations) = {
     image: "bazel/src/many-abci:many-abci-image",
     ports: [ (8000 + i) + ":8000" ],
     volumes: [ "./node" + i + ":/genfiles:ro" ],
@@ -44,7 +44,7 @@ local abci(i, user, allow_addrs, enable_migrations) = {
         "--many-pem", "/genfiles/abci.pem",
         "--abci", "0.0.0.0:26658",
         "--tendermint", "http://tendermint-" + i + ":26657/"
-    ] + load_abci_migrations(enable_migrations)
+    ] + load_abci_migrations(abci_migrations)
       + generate_allow_addrs_flag(allow_addrs),
     depends_on: [ "ledger-" + i ],
 };

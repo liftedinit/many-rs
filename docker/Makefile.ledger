@@ -7,9 +7,9 @@ ENABLE_MIGRATIONS := false
 ifdef MIGRATIONS
 	ENABLE_MIGRATIONS := true
 endif
-ABCI_MIGRATIONS := false
+ENABLE_ABCI_MIGRATIONS := false
 ifdef ABCI_MIGRATIONS
-	ABCI_MIGRATIONS := true
+	ENABLE_ABCI_MIGRATIONS := true
 endif
 
 include Makefile.common
@@ -46,7 +46,7 @@ genfiles-ledger/docker-compose.json: genfiles-common/jsonnet-docker docker-compo
 		--tla-code user=$$(id -u) \
 		--tla-code id_with_balances=\"$(ID_WITH_BALANCES)\" \
 		--tla-code enable_migrations=$(ENABLE_MIGRATIONS) \
-		--tla-code abci_migrations=$(ABCI_MIGRATIONS) \
+		--tla-code abci_migrations=$(ENABLE_ABCI_MIGRATIONS) \
 		--tla-code allow_addrs=$(ALLOW_ADDRS) \
 		-o /$@
 
@@ -67,7 +67,7 @@ ifdef MIGRATIONS
 	cp "$(MIGRATIONS)" "$@/migrations.json"
 endif
 ifdef ABCI_MIGRATIONS
-	cp "$(MIGRATIONS)" "$@/abci_migrations.json"
+	cp "$(ABCI_MIGRATIONS)" "$@/abci_migrations.json"
 endif
 	docker run --user $$(id -u) --rm -v "${PWD}/$@/tendermint:/tendermint" bazel/docker:tendermint_image init validator
 	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel/docker:openssl_image genpkey -algorithm Ed25519 -out /export/ledger.pem

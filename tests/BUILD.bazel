@@ -22,3 +22,8 @@ filegroup(
     name = "ledger-migrations",
     srcs = ["ledger_migrations.json"],
 )
+
+filegroup(
+    name = "abci-ledger-migrations",
+    srcs = ["abci_migrations.json"],
+)

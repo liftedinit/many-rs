@@ -1,5 +1,6 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
-MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
+#MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
+ABCI_MIGRATION_ROOT="$GIT_ROOT/tests/abci_migrations.json"
 MAKEFILE="Makefile.ledger"
 
 load '../../test_helper/load'
@@ -11,16 +12,13 @@ function setup() {
 
     mkdir "$BATS_TEST_ROOTDIR"
 
-    jq '(.migrations[] | select(.name == "Memo Migration")).block_height |= 30 |
-        (.migrations[] | select(.name == "Memo Migration")).disabled |= empty' \
-        "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
+    cp "$ABCI_MIGRATION_ROOT" "$BATS_TEST_ROOTDIR/abci_migrations.json"
 
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
       make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000" \
-          MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" \
           ABCI_MIGRATIONS="$BATS_TEST_ROOTDIR/abci_migrations.json" || {
         echo '# Could not start nodes...' >&3
         exit 1

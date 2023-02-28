@@ -4,6 +4,7 @@ bats_test(
     name = "bats-resiliency-ledger",
     srcs = [
         "abci-allow-addrs.bats",
+        "abci_migration.bats",
         "account_count_migration.bats",
         "catch-up.bats",
         "dummy_migration.bats",
