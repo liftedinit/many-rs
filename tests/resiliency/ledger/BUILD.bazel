@@ -1,19 +1,15 @@
-load("@bazel_bats//:rules.bzl", "bats_test")
+load("//:rules.bzl", "bats_test_suite")
 
-bats_test(
+# Run the entire test suite with
+#   $ bazel test //tests/resiliency/ledger:bats-resiliency-ledger
+# or a single test with
+#   $ bazel test //tests/resiliency/ledger:bats-resiliency-ledger_FILE_NAME_MINUS_EXT
+# E.g.
+#   $ bazel test //tests/resiliency/ledger:bats-resiliency-ledger_abci-allow-addrs
+bats_test_suite(
     name = "bats-resiliency-ledger",
-    srcs = [
-        "abci-allow-addrs.bats",
-        "abci_migration.bats",
-        "account_count_migration.bats",
-        "catch-up.bats",
-        "dummy_migration.bats",
-        "memo_migration.bats",
-        "persistent_store.bats",
-        "token_migration.bats",
-        "token_subresource.bats",
-        "up-down.bats",
-    ],
+    timeout = "long",
+    srcs = glob(include = ["*.bats"]),
     data = [
         "//docker:jsonnet_image.tar",
         "//docker:openssl_image.tar",
@@ -21,7 +17,10 @@ bats_test(
         "//src/many-abci:many-abci-image.tar",
         "//src/many-ledger:many-ledger-image.tar",
     ],
-    tags = ["manual"],
+    tags = [
+        "exclusive",
+        "manual",
+    ],
     uses_bats_assert = True,
     deps = [
         "//docker:docker-ledger-deps",

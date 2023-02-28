@@ -204,7 +204,7 @@ jobs:
       - checkout
       - run:
           name: running tests
-          command: bazel run --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore
+          command: bazel test --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore
 
   ledger_resiliency_tests:
     executor: linux2204_machine
@@ -212,7 +212,7 @@ jobs:
       - checkout
       - run:
           name: running tests
-          command: bazel run --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
+          command: bazel test --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
 
   # Push a tag to GitHub
   tag:
