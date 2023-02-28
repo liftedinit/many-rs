@@ -20,7 +20,7 @@ pub struct Metadata {
 
     /// Only useful for trigger migrations.
     /// TODO: use this in other migrations type too, maybe.
-    pub upper_bound: Option<u64>,
+    pub upper_block_height: Option<u64>,
 
     #[serde(default)]
     pub disabled: bool,
@@ -35,7 +35,7 @@ impl Metadata {
     pub fn enabled(block_height: u64) -> Self {
         Self {
             block_height,
-            upper_bound: None,
+            upper_block_height: None,
             disabled: false,
             issue: None,
             extra: Default::default(),
@@ -45,7 +45,7 @@ impl Metadata {
     pub fn disabled(block_height: u64) -> Self {
         Self {
             block_height,
-            upper_bound: None,
+            upper_block_height: None,
             disabled: true,
             issue: None,
             extra: Default::default(),
@@ -308,7 +308,8 @@ impl<'a, T, E> Migration<'a, T, E> {
     ) -> Result<(), E> {
         if self.is_enabled() {
             if self.migration.is_trigger() {
-                if (self.metadata.block_height..self.metadata.upper_bound.unwrap_or(u64::MAX))
+                if (self.metadata.block_height
+                    ..self.metadata.upper_block_height.unwrap_or(u64::MAX))
                     .contains(&block_height)
                 {
                     self.active = true;
