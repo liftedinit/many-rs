@@ -197,22 +197,50 @@ jobs:
               bazel run --jobs=$(nproc) --config=remote-cache //docker:many-kvstore-push-docker
               bazel run --jobs=$(nproc) --config=remote-cache //docker:many-ledger-push-docker
 
-  # Perform resiliency testing
+  # Perform kvstore resiliency testing
   kvstore_resiliency_tests:
     executor: linux2204_machine
+    parameters:
+      test_name:
+        type: string
+        default: ""
     steps:
       - checkout
-      - run:
-          name: running tests
-          command: bazel test --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore
+      - when:
+          condition: << parameters.test_name >>
+          steps:
+            run:
+                name: running single tests
+                command: bazel test --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
+      - unless:
+          condition: << parameters.test_name >>
+          steps:
+            run:
+              name: running all tests
+              command: bazel test --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore
 
+
+  # Perform ledger resiliency testing
   ledger_resiliency_tests:
     executor: linux2204_machine
+    parameters:
+      test_name:
+        type: string
+        default: ""
     steps:
       - checkout
-      - run:
-          name: running tests
-          command: bazel test --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
+      - when:
+          condition: << parameters.test_name >>
+          steps:
+            run:
+              name: running single tests
+              command: bazel test --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
+      - unless:
+          condition: << parameters.test_name >>
+          steps:
+            run:
+              name: running all tests
+              command: bazel test --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
 
   # Push a tag to GitHub
   tag:
@@ -306,6 +334,18 @@ parameters:
   run_resiliency:
     type: boolean
     default: false
+
+  run_ledger_resiliency:
+    type: boolean
+    default: false
+
+  run_kvstore_resiliency:
+    type: boolean
+    default: false
+
+  test_name:
+    type: string
+    default: ""
 
 workflows:
   ci:
@@ -427,20 +467,32 @@ workflows:
           pre-steps:
             - install-deps:
                 os: linux2204_machine
-  resiliency_tests:
+  kvstore_resiliency_tests:
     when:
       and:
         - equal: [ api, << pipeline.trigger_source >> ]
-        - equal: [ true, << pipeline.parameters.run_resiliency >> ]
+        - or:
+          - equal: [ true, << pipeline.parameters.run_kvstore_resiliency >> ]
+          - equal: [ true, << pipeline.parameters.run_resiliency >> ]
     jobs:
       - kvstore_resiliency_tests:
           pre-steps:
             - install-deps:
                 os: linux2204_machine
+          test_name: << pipeline.parameters.test_name >>
+  ledger_resiliency_tests:
+    when:
+      and:
+        - equal: [ api, << pipeline.trigger_source >> ]
+        - or:
+          - equal: [ true, << pipeline.parameters.run_ledger_resiliency >> ]
+          - equal: [ true, << pipeline.parameters.run_resiliency >> ]
+    jobs:
       - ledger_resiliency_tests:
           pre-steps:
             - install-deps:
                 os: linux2204_machine
+          test_name: << pipeline.parameters.test_name >>
 
   nightly_macos:
     when:
