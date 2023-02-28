@@ -54,7 +54,7 @@ function teardown() {
     jq '(.migrations[] | select(.name == "Block 9400")).block_height |= 40 |
         (.migrations[] | select(.name == "Block 9400")).disabled |= true' \
         "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
-    start_ledger --background_output="block_height: 40, disabled: true" \
+    start_ledger --background_output="Running accept thread" \
         --pem "$(pem 0)" \
         "--migrations-config=$BATS_TEST_ROOTDIR/migrations.json"
 }
