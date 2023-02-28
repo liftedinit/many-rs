@@ -46,12 +46,12 @@ function teardown() {
     run call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000 MFX
     check_consistency --pem=1 --balance=999000 --id="$(identity 1)" 8000 8001 8002 8003
 
-    wait_for_block 5
+    wait_for_block 6
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000000 MFX
     assert_output --regexp "Code: -1"
     assert_output --regexp "Insufficient funds."
 
-    wait_for_block 10
+    wait_for_block 11
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000000 MFX
     assert_output --regexp "Code: -20003"
     assert_output --regexp "Insufficient funds."
