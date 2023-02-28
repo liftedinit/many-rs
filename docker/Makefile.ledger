@@ -7,8 +7,9 @@ ENABLE_MIGRATIONS := false
 ifdef MIGRATIONS
 	ENABLE_MIGRATIONS := true
 endif
+ABCI_MIGRATIONS := false
 ifdef ABCI_MIGRATIONS
-	ENABLE_MIGRATIONS := true
+	ABCI_MIGRATIONS := true
 endif
 
 include Makefile.common
@@ -45,6 +46,7 @@ genfiles-ledger/docker-compose.json: genfiles-common/jsonnet-docker docker-compo
 		--tla-code user=$$(id -u) \
 		--tla-code id_with_balances=\"$(ID_WITH_BALANCES)\" \
 		--tla-code enable_migrations=$(ENABLE_MIGRATIONS) \
+		--tla-code abci_migrations=$(ABCI_MIGRATIONS) \
 		--tla-code allow_addrs=$(ALLOW_ADDRS) \
 		-o /$@
 

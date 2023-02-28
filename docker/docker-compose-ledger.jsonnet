@@ -32,7 +32,7 @@ local generate_allow_addrs_flag(allow_addrs) =
     else
         [];
 
-local abci(i, user, allow_addrs) = {
+local abci(i, user, allow_addrs, enable_migrations) = {
     image: "bazel/src/many-abci:many-abci-image",
     ports: [ (8000 + i) + ":8000" ],
     volumes: [ "./node" + i + ":/genfiles:ro" ],
@@ -81,10 +81,10 @@ local tendermint(i, user) = {
     ports: [ "" + (26600 + i) + ":26600" ],
 };
 
-function(nb_nodes=4, user=1000, id_with_balances="", allow_addrs=false, enable_migrations=false) {
+function(nb_nodes=4, user=1000, id_with_balances="", allow_addrs=false, enable_migrations=false, abci_migrations=false) {
     version: '3',
     services: {
-        ["abci-" + i]: abci(i, user, allow_addrs) for i in std.range(0, nb_nodes - 1)
+        ["abci-" + i]: abci(i, user, allow_addrs, abci_migrations) for i in std.range(0, nb_nodes - 1)
     } + {
         ["ledger-" + i]: ledger(i, user, id_with_balances, enable_migrations) for i in std.range(0, nb_nodes - 1)
     } + {
