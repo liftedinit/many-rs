@@ -2,8 +2,8 @@ use anyhow::anyhow;
 use async_recursion::async_recursion;
 use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
+use many_cli_helpers::error::ClientServerError;
 use many_client::ManyClient;
-use many_error::ManyError;
 use many_identity::verifiers::AnonymousVerifier;
 use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
@@ -20,7 +20,6 @@ use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
 use many_types::{attributes::Attribute, Timestamp};
 use std::convert::TryFrom;
-use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
@@ -234,60 +233,12 @@ struct GetTokenIdOpt {
     symbol: String,
 }
 
-/// An error that happened during communication with the server.
-pub enum Error {
-    /// The server returned an error.
-    Server(ManyError),
-
-    /// An error happened on the client, either before or after the request/
-    /// response were sent/received. Could be deserialization or configuration
-    /// or transport error.
-    Client(anyhow::Error),
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::Server(err) => f.write_fmt(format_args!(
-                "Error returned by server:\nCode: {} ({:?})\nMessage:\n|  {}\n",
-                Into::<i64>::into(err.code()),
-                err.code().to_string(),
-                err.to_string()
-                    .split('\n')
-                    .collect::<Vec<&str>>()
-                    .join("\n|  ")
-            )),
-            Error::Client(err) => {
-                f.write_fmt(format_args!("An error happened on the client:\n{err}"))
-            }
-        }
-    }
-}
-
-impl From<ManyError> for Error {
-    fn from(value: ManyError) -> Self {
-        Self::Server(value)
-    }
-}
-
-impl From<anyhow::Error> for Error {
-    fn from(value: anyhow::Error) -> Self {
-        Self::Client(value)
-    }
-}
-
-impl From<minicbor::decode::Error> for Error {
-    fn from(value: minicbor::decode::Error) -> Self {
-        Self::Client(anyhow::Error::from(value))
-    }
-}
-
 #[async_recursion(?Send)]
 async fn show_response<'a>(
     response: &'a ResponseMessage,
     client: ManyClient<impl Identity + 'a>,
     r#async: bool,
-) -> Result<(), Error> {
+) -> Result<(), ClientServerError> {
     let ResponseMessage {
         data, attributes, ..
     } = response;
@@ -365,7 +316,7 @@ async fn message(
     timestamp: Option<SystemTime>,
     r#async: bool,
     proof: bool,
-) -> Result<(), Error> {
+) -> Result<(), ClientServerError> {
     let address = key.address();
     let client = ManyClient::new(s, to, key).unwrap();
 
@@ -409,7 +360,7 @@ async fn message_from_hex(
     key: impl Identity,
     hex: String,
     r#async: bool,
-) -> Result<(), Error> {
+) -> Result<(), ClientServerError> {
     let client = ManyClient::new(s.clone(), to, key).unwrap();
 
     let data = hex::decode(hex).map_err(|e| anyhow!(e))?;

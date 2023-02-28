@@ -308,14 +308,9 @@ impl<'a, T, E> Migration<'a, T, E> {
     ) -> Result<(), E> {
         if self.is_enabled() {
             if self.migration.is_trigger() {
-                if (self.metadata.block_height
+                self.active = (self.metadata.block_height
                     ..self.metadata.upper_block_height.unwrap_or(u64::MAX))
-                    .contains(&block_height)
-                {
-                    self.active = true;
-                } else {
-                    self.active = false;
-                }
+                    .contains(&block_height);
             } else if block_height == self.metadata.block_height && !self.active {
                 self.active = true;
                 self.migration.initialize(storage, &self.metadata.extra)?;

@@ -2434,6 +2434,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 name = "ledger"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap 3.2.23",
  "crc-any",
  "hex",
@@ -2443,7 +2444,6 @@ dependencies = [
  "lazy_static",
  "many-cli-helpers",
  "many-client",
- "many-error",
  "many-identity",
  "many-identity-dsa",
  "many-identity-hsm",
@@ -2693,8 +2693,11 @@ dependencies = [
 name = "many-cli-helpers"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap 3.2.23",
  "log-panics",
+ "many-error",
+ "minicbor",
  "syslog-tracing",
  "tracing",
  "tracing-subscriber",
