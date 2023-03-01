@@ -3,7 +3,7 @@
     {
       "name": "LegacyErrorCode",
       "block_height": 5,
-      "upper_block_height": 10,
+      "upper_block_height": 10
     }
   ]
 }
