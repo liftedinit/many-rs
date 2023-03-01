@@ -86,11 +86,11 @@ jobs:
       - run:
           name: running tests
           command: |
-              bazel run --config=all-features --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
-              bazel run --config=all-features --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
+              bazel test --config=all-features --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
+              bazel test --config=all-features --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
             
               # --disable_token_sender_check needs to be disabled for the token tests
-              bazel run --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
+              bazel test --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
 
   # Compute code coverage and push the results to CodeCov.
   coverage:
