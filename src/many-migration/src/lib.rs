@@ -219,8 +219,7 @@ impl<T, E> InnerMigration<T, E> {
     fn initialize(&self, storage: &mut T, extra: &HashMap<String, Value>) -> Result<(), E> {
         match &self.r#type {
             MigrationType::Regular(migration) => (migration.initialize_fn)(storage, extra),
-            MigrationType::Hotfix(_) => Ok(()),
-            MigrationType::Trigger(_) => Ok(()),
+            MigrationType::Hotfix(_) | MigrationType::Trigger(_) => Ok(()),
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
                 Ok(())
@@ -232,8 +231,7 @@ impl<T, E> InnerMigration<T, E> {
     fn update(&self, storage: &mut T, extra: &HashMap<String, Value>) -> Result<(), E> {
         match &self.r#type {
             MigrationType::Regular(migration) => (migration.update_fn)(storage, extra),
-            MigrationType::Hotfix(_) => Ok(()),
-            MigrationType::Trigger(_) => Ok(()),
+            MigrationType::Hotfix(_) | MigrationType::Trigger(_) => Ok(()),
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
                 Ok(())
@@ -244,15 +242,20 @@ impl<T, E> InnerMigration<T, E> {
     /// This function gets executed when the storage block height == the migration block height
     fn hotfix<'b>(&'b self, b: &'b [u8]) -> Option<Vec<u8>> {
         match &self.r#type {
-            MigrationType::Regular(_) => None,
             MigrationType::Hotfix(migration) => (migration.hotfix_fn)(b),
-            MigrationType::Trigger(_) => None,
+            MigrationType::Regular(_) | MigrationType::Trigger(_) => None,
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
                 None
             }
         }
     }
+}
+
+pub enum Activated {
+    Initialize,
+    Update,
+    None,
 }
 
 pub struct Migration<'a, T, E> {
@@ -303,21 +306,23 @@ impl<'a, T, E> Migration<'a, T, E> {
         }
     }
 
-    pub fn activate_at_height(&mut self, height: u64) -> (bool, bool) {
+    /// Activate this migration at a certain height, returning whether
+    /// initialize, update or no follow-up step should be taken.
+    fn activate_at_height(&mut self, height: u64) -> Activated {
         if self.migration.is_trigger() {
             self.active = (self.metadata.block_height
                 ..self.metadata.upper_block_height.unwrap_or(u64::MAX))
                 .contains(&height);
             trace!("... Trigger at height {height} is {}", self.active);
-            (false, false)
+            Activated::None
         } else if height == self.metadata.block_height && !self.active {
             trace!("... Activating at height {height}");
             self.active = true;
-            (true, false)
+            Activated::Initialize
         } else if height > self.metadata.block_height {
-            (false, true)
+            Activated::Update
         } else {
-            (false, false)
+            Activated::None
         }
     }
 
@@ -328,13 +333,12 @@ impl<'a, T, E> Migration<'a, T, E> {
         block_height: u64,
     ) -> Result<(), E> {
         if self.is_enabled() {
-            let (initialize, update) = self.activate_at_height(block_height);
-
-            if initialize {
-                self.migration.initialize(storage, &self.metadata.extra)?;
-            }
-            if update {
-                self.migration.update(storage, &self.metadata.extra)?;
+            match self.activate_at_height(block_height) {
+                Activated::Initialize => {
+                    self.migration.initialize(storage, &self.metadata.extra)?
+                }
+                Activated::Update => self.migration.update(storage, &self.metadata.extra)?,
+                Activated::None => {}
             }
         }
 
@@ -494,7 +498,7 @@ impl<'a, T, E: fmt::Debug> fmt::Debug for MigrationSet<'a, T, E> {
     }
 }
 
-impl<'a, T, E: std::fmt::Debug> MigrationSet<'a, T, E> {
+impl<'a, T, E> MigrationSet<'a, T, E> {
     pub fn empty() -> Result<Self, String> {
         Ok(Self {
             inner: Default::default(),

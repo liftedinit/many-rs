@@ -1,5 +1,4 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
-#MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
 ABCI_MIGRATION_ROOT="$GIT_ROOT/tests/abci_migrations.json"
 MAKEFILE="Makefile.ledger"
 

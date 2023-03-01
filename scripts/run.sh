@@ -168,7 +168,7 @@ main() {
     tmux new-window -t "$tmux_name" -n tendermint-kvstore -e SHELL=bash "TMHOME=\"$root_dir/kvstore\" tendermint start 2>&1 | tee \"$root_dir/tendermint-kvstore.log\""
 
     tmux new-window -t "$tmux_name" -n ledger -e SHELL=bash "./target/debug/many-ledger -v -v --abci --addr 127.0.0.1:8001 --pem \"$pem_root/id1.pem\" --state ./staging/ledger_state.json5 --persistent \"$root_dir/ledger.db\" 2>&1 | tee \"$root_dir/many-ledger.log\""
-    tmux new-window -t "$tmux_name" -n ledger-abci "./target/debug/many-abci -v -v --many 127.0.0.1:8000 --many-app http://localhost:8001 --many-pem \"$pem_root/id2.pem\" --abci 127.0.0.1:26658 --tendermint http://127.0.0.1:26657/ --migrations-config=\"./tests/abci_migrations.json\" 2>&1 | tee \"$root_dir/many-abci-ledger.log\""
+    tmux new-window -t "$tmux_name" -n ledger-abci "./target/debug/many-abci -v -v --many 127.0.0.1:8000 --many-app http://localhost:8001 --many-pem \"$pem_root/id2.pem\" --abci 127.0.0.1:26658 --tendermint http://127.0.0.1:26657/ 2>&1 | tee \"$root_dir/many-abci-ledger.log\""
 
     tmux new-window -t "$tmux_name" -n kvstore "./target/debug/many-kvstore -v -v --abci --addr 127.0.0.1:8010 --pem \"$pem_root/id3.pem\" --state ./staging/kvstore_state.json5 2>&1 --persistent \"$root_dir/kvstore.db\" | tee \"$root_dir/many-kvstore.log\""
     tmux new-window -t "$tmux_name" -n kvstore-abci "./target/debug/many-abci -v -v --many 127.0.0.1:8011 --many-app http://127.0.0.1:8010 --many-pem \"$pem_root/id4.pem\" --abci 127.0.0.1:16658 --tendermint http://127.0.0.1:16657/ 2>&1 | tee \"$root_dir/many-abci-kvstore.log\""
