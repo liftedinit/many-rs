@@ -50,17 +50,17 @@ function teardown() {
     assert_output --regexp "Code: -20003"
     assert_output --regexp "Insufficient funds."
 
-    wait_for_block 5
+    wait_for_block 20
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000002 MFX
     assert_output --regexp "Code: -1"
     assert_output --regexp "Insufficient funds."
 
-    wait_for_block 7
+    wait_for_block 30
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000003 MFX
     assert_output --regexp "Code: -1"
     assert_output --regexp "Insufficient funds."
 
-    wait_for_block 10
+    wait_for_block 40
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000004 MFX
     assert_output --regexp "Code: -20003"
     assert_output --regexp "Insufficient funds."
