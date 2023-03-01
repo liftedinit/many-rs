@@ -1,12 +1,12 @@
-load("@bazel_bats//:rules.bzl", "bats_test")
+load("@bazel_bats//:rules.bzl", "bats_test_suite")
 
-bats_test(
+bats_test_suite(
     name = "bats-e2e-kvstore",
-    srcs = [
-        "allow_addrs.bats",
-        "kvstore.bats",
+    srcs = glob(include = ["*.bats"]),
+    tags = [
+        "exclusive",
+        "manual",
     ],
-    tags = ["manual"],
     uses_bats_assert = True,
     deps = [
         "//src/kvstore",
