@@ -108,27 +108,3 @@ run_make = rule(
 )
 
 ### END RUN MAKE RULE ###
-
-### BATS TEST SUITE ###
-# TODO: Remove when https://github.com/filmil/bazel-bats/pull/18 is merged and a new `bazel-bats` release is out
-def bats_test_suite(name, srcs, **kwargs):
-    tests = []
-
-    for src in srcs:
-        # Prefixed with `name` to allow parameterization with macros
-        # The test name should not end with `.bats`
-        test_name = name + "_" + src[:-5]
-        bats_test(
-            name = test_name,
-            srcs = [src],
-            **kwargs
-        )
-        tests.append(test_name)
-
-    native.test_suite(
-        name = name,
-        tests = tests,
-        tags = kwargs.get("tags", None),
-    )
-
-### END BATS TEST SUITE ###
