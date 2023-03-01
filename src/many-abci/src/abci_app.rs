@@ -11,7 +11,7 @@ use reqwest::{IntoUrl, Url};
 use std::sync::{Arc, RwLock};
 use tendermint_abci::Application;
 use tendermint_proto::abci::*;
-use tracing::debug;
+use tracing::{debug, error};
 
 lazy_static::lazy_static!(
     static ref EPOCH: many_types::Timestamp = many_types::Timestamp::new(0).unwrap();
@@ -60,11 +60,13 @@ impl AbciApp {
             let AbciInfo { height, .. } = get_abci_info_(&many_client)
                 .map_err(|e| format!("Unable to call abci.info: {e}"))?;
 
-            migration_config
+            let migrations = migration_config
                 .map_or_else(AbciAppMigrations::empty, |config| {
                     AbciAppMigrations::load(&MIGRATIONS, config, height)
                 })
-                .map_err(|e| format!("Unable to load migrations: {e}"))?
+                .map_err(|e| format!("Unable to load migrations: {e}"))?;
+            debug!("Final migrations: {:?}", migrations);
+            migrations
         });
 
         Ok(Self {
@@ -160,6 +162,8 @@ impl Application for AbciApp {
                 // Since it's impossible to truly handle error here, and
                 // we don't actually want to panic, just ignore any errors.
                 let _ = m.update_at_height(&mut (), height);
+            } else {
+                error!("Migration: Could not acquire migration lock...");
             }
         }
 

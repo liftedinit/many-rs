@@ -220,6 +220,7 @@ impl<T, E> InnerMigration<T, E> {
         match &self.r#type {
             MigrationType::Regular(migration) => (migration.initialize_fn)(storage, extra),
             MigrationType::Hotfix(_) => Ok(()),
+            MigrationType::Trigger(_) => Ok(()),
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
                 Ok(())
@@ -232,6 +233,7 @@ impl<T, E> InnerMigration<T, E> {
         match &self.r#type {
             MigrationType::Regular(migration) => (migration.update_fn)(storage, extra),
             MigrationType::Hotfix(_) => Ok(()),
+            MigrationType::Trigger(_) => Ok(()),
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
                 Ok(())
@@ -244,6 +246,7 @@ impl<T, E> InnerMigration<T, E> {
         match &self.r#type {
             MigrationType::Regular(_) => None,
             MigrationType::Hotfix(migration) => (migration.hotfix_fn)(b),
+            MigrationType::Trigger(_) => None,
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
                 None
@@ -300,6 +303,24 @@ impl<'a, T, E> Migration<'a, T, E> {
         }
     }
 
+    pub fn activate_at_height(&mut self, height: u64) -> (bool, bool) {
+        if self.migration.is_trigger() {
+            self.active = (self.metadata.block_height
+                ..self.metadata.upper_block_height.unwrap_or(u64::MAX))
+                .contains(&height);
+            trace!("... Trigger at height {height} is {}", self.active);
+            (false, false)
+        } else if height == self.metadata.block_height && !self.active {
+            trace!("... Activating at height {height}");
+            self.active = true;
+            (true, false)
+        } else if height > self.metadata.block_height {
+            (false, true)
+        } else {
+            (false, false)
+        }
+    }
+
     /// Check the height and call the inner migration's methods.
     pub fn maybe_initialize_update_at_height(
         &mut self,
@@ -307,14 +328,12 @@ impl<'a, T, E> Migration<'a, T, E> {
         block_height: u64,
     ) -> Result<(), E> {
         if self.is_enabled() {
-            if self.migration.is_trigger() {
-                self.active = (self.metadata.block_height
-                    ..self.metadata.upper_block_height.unwrap_or(u64::MAX))
-                    .contains(&block_height);
-            } else if block_height == self.metadata.block_height && !self.active {
-                self.active = true;
+            let (initialize, update) = self.activate_at_height(block_height);
+
+            if initialize {
                 self.migration.initialize(storage, &self.metadata.extra)?;
-            } else if block_height > self.metadata.block_height {
+            }
+            if update {
                 self.migration.update(storage, &self.metadata.extra)?;
             }
         }
@@ -475,7 +494,7 @@ impl<'a, T, E: fmt::Debug> fmt::Debug for MigrationSet<'a, T, E> {
     }
 }
 
-impl<'a, T, E> MigrationSet<'a, T, E> {
+impl<'a, T, E: std::fmt::Debug> MigrationSet<'a, T, E> {
     pub fn empty() -> Result<Self, String> {
         Ok(Self {
             inner: Default::default(),
@@ -529,9 +548,7 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
 
         // Activate all already active migrations. Do not call initialize though.
         for v in inner.values_mut().filter(|m| m.is_enabled()) {
-            if height >= v.metadata.block_height {
-                v.active = true;
-            }
+            let _ = v.activate_at_height(height);
         }
 
         Ok(Self { inner })
@@ -539,8 +556,14 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
 
     #[inline]
     pub fn update_at_height(&mut self, storage: &mut T, block_height: u64) -> Result<(), E> {
-        for migration in self.inner.values_mut().filter(|m| m.is_regular()) {
+        for migration in self.inner.values_mut() {
             migration.maybe_initialize_update_at_height(storage, block_height)?;
+
+            trace!(
+                "Migration {} updated at height {block_height}: active? {}",
+                migration.name(),
+                migration.is_active()
+            );
         }
         Ok(())
     }
