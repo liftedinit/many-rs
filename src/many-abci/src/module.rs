@@ -1,4 +1,3 @@
-use base64::{engine::general_purpose, Engine as _};
 use clap::__macro_refs::once_cell;
 use coset::CborSerializable;
 use itertools::Itertools;
@@ -52,7 +51,7 @@ fn _many_block_from_tendermint_block(block: tendermint::Block) -> Block {
         } else {
             BlockIdentifier::new(block.header.last_block_id.unwrap().hash.into(), height - 1)
         },
-        app_hash: Some(block.header.app_hash.as_bytes().to_vec()),
+        app_hash: Some(block.header.app_hash.value()),
         timestamp: Timestamp::new(
             block
                 .header
@@ -131,7 +130,7 @@ impl<C: Client + Sync> AbciBlockchainModuleImpl<C> {
                         tx: tx_request,
                         tx_result,
                         ..
-                    } = match self.client.tx(tendermint::Hash::Sha256(hash), true).await {
+                    } = match self.client.tx(tendermint_rpc::abci::transaction::Hash::new(hash), true).await {
                         Ok(response) => response,
                         // Cannot get more details than response error when the hash is not found.
                         Err(Error(ErrorDetail::Response(_), _tracer)) => return Ok(None),
@@ -143,11 +142,11 @@ impl<C: Client + Sync> AbciBlockchainModuleImpl<C> {
 
                     // Base64 decode is required because of an issue in `tendermint-rs` 0.28.0
                     // TODO: Remove when https://github.com/informalsystems/tendermint-rs/issues/1251 is fixed
-                    let result_tx = general_purpose::STANDARD
-                        .decode(&tx_result.data)
-                        .map_err(abci_frontend::abci_transport_error)?;
+                    // let result_tx = general_purpose::STANDARD
+                    //    .decode(&tx_result.data)
+                    //    .map_err(abci_frontend::abci_transport_error)?;
 
-                    Ok(Some((tx_request, result_tx)))
+                    Ok(Some((tx_request.into(), tx_result.data.value().to_vec())))
                 } else {
                     Err(ManyError::unknown(format!(
                         "Invalid transaction hash x'{}'.",
@@ -202,7 +201,7 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
                 hash: status.sync_info.latest_block_hash.as_bytes().to_vec(),
                 height: status.sync_info.latest_block_height.value(),
             },
-            app_hash: Some(status.sync_info.latest_app_hash.as_bytes().to_vec()),
+            app_hash: Some(status.sync_info.latest_app_hash.value().to_vec()),
             retained_height: None,
         })
     }
@@ -216,7 +215,7 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
                 SingleTransactionQuery::Hash(hash) => {
                     if let Ok(hash) = TryInto::<[u8; 32]>::try_into(hash) {
                         self.client
-                            .tx(tendermint::Hash::Sha256(hash), true)
+                            .tx(tendermint_rpc::abci::transaction::Hash::new(hash), true)
                             .await
                             .map_err(|e| {
                                 tracing::error!("abci transport: {}", e.to_string());
