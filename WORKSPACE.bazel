@@ -177,10 +177,10 @@ container_pull(
 
 container_pull(
     name = "tendermint",
-    digest = "sha256:66a31574012e080fcad37bb94cb088109dc898fe21432059793388a47962b3cd",  # amd64
+    digest = "sha256:c203d223c640ceb61f1e1b15370342150d681655f282ff3b20a8d7e2984abff8",
     registry = "index.docker.io",
     repository = "tendermint/tendermint",
-    tag = "v0.34.24",
+    tag = "v0.35.8",
 )
 
 # TODO: LL should have it's own openssl image
