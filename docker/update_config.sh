@@ -96,18 +96,18 @@ for node in $(seq 0 "$NB_NODES"); do
 
   peer_ids=$(seq 0 "$NB_NODES" | grep -v "$node")
   peers=$(for peer in $peer_ids; do
-    node_id=$(docker run -u $(id -u):$(id -g) --rm -v "${tm_root//%/$peer}:/tendermint" bazel/docker:tendermint_image show_node_id | tail -n +2 | tr -d '\n')
+    node_id=$(docker run -u $(id -u):$(id -g) --rm -v "${tm_root//%/$peer}:/tendermint" bazel/docker:tendermint_image show-node-id)
     ip_address=${ip_range//%/$peer}
 
     printf '%s' "$node_id@$ip_address:$port,"
   done | sed 's/,$//')
 
-  update_toml_key "$config_toml_path" '' proxy_app "\"tcp:\\/\\/abci-${node}:26658\\/\""
+  update_toml_key "$config_toml_path" '' proxy-app "\"tcp:\\/\\/abci-${node}:26658\\/\""
   update_toml_key "$config_toml_path" '' moniker "\"many-tendermint-${node}\""
-  update_toml_key "$config_toml_path" p2p persistent_peers "\"$peers\""
-  update_toml_key "$config_toml_path" consensus timeout_commit "\"2s\""
-  update_toml_key "$config_toml_path" consensus timeout_precommit "\"2s\""
-  update_toml_key "$config_toml_path" p2p max_packet_msg_payload_size "1400"
+  update_toml_key "$config_toml_path" p2p persistent-peers "\"$peers\""
+  update_toml_key "$config_toml_path" consensus timeout-commit "\"2s\""
+  update_toml_key "$config_toml_path" consensus timeout-precommit "\"2s\""
+  # update_toml_key "$config_toml_path" p2p max_packet_msg_payload_size "1400"
 
   # update_toml_key "$config_toml_path" p2p bootstrap-peers "\"$peers\""
 done

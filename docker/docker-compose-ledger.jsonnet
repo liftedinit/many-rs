@@ -78,7 +78,7 @@ local tendermint(i, user) = {
     command: [
         "start",
         "--rpc.laddr", "tcp://0.0.0.0:26657",
-        "--proxy_app", "tcp://abci-" + i + ":26658",
+        "--proxy-app", "tcp://abci-" + i + ":26658",
     ],
     user: "" + user,
     volumes: [
