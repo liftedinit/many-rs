@@ -1,0 +1,9 @@
+{
+  "migrations": [
+    {
+      "name": "LegacyErrorCode",
+      "block_height": 20,
+      "upper_block_height": 40
+    }
+  ]
+}

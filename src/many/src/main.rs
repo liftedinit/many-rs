@@ -2,8 +2,8 @@ use anyhow::anyhow;
 use async_recursion::async_recursion;
 use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
+use many_cli_helpers::error::ClientServerError;
 use many_client::ManyClient;
-use many_error::ManyError;
 use many_identity::verifiers::AnonymousVerifier;
 use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
@@ -238,7 +238,7 @@ async fn show_response<'a>(
     response: &'a ResponseMessage,
     client: ManyClient<impl Identity + 'a>,
     r#async: bool,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), ClientServerError> {
     let ResponseMessage {
         data, attributes, ..
     } = response;
@@ -316,7 +316,7 @@ async fn message(
     timestamp: Option<SystemTime>,
     r#async: bool,
     proof: bool,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), ClientServerError> {
     let address = key.address();
     let client = ManyClient::new(s, to, key).unwrap();
 
@@ -347,9 +347,9 @@ async fn message(
 
     let message: RequestMessage = builder
         .build()
-        .map_err(|_| ManyError::internal_server_error())?;
+        .map_err(|e| anyhow!("Could not build request: {e}"))?;
 
-    let response = client.send_message(message).await?;
+    let response = client.send_message(message).await.map_err(|e| anyhow!(e))?;
 
     show_response(&response, client, r#async).await
 }
@@ -360,16 +360,15 @@ async fn message_from_hex(
     key: impl Identity,
     hex: String,
     r#async: bool,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), ClientServerError> {
     let client = ManyClient::new(s.clone(), to, key).unwrap();
 
-    let data = hex::decode(hex)?;
+    let data = hex::decode(hex).map_err(|e| anyhow!(e))?;
     let envelope = CoseSign1::from_slice(&data).map_err(|e| anyhow!(e))?;
 
     let cose_sign1 = many_client::client::send_envelope(s, envelope).await?;
     let response =
-        ResponseMessage::decode_and_verify(&cose_sign1, &(AnonymousVerifier, CoseKeyVerifier))
-            .map_err(|e| anyhow!(e))?;
+        ResponseMessage::decode_and_verify(&cose_sign1, &(AnonymousVerifier, CoseKeyVerifier))?;
 
     show_response(&response, client, r#async).await
 }
@@ -573,13 +572,7 @@ async fn main() {
                 match result {
                     Ok(()) => {}
                     Err(err) => {
-                        error!(
-                            "Error returned by server:\n|  {}\n",
-                            err.to_string()
-                                .split('\n')
-                                .collect::<Vec<&str>>()
-                                .join("\n|  ")
-                        );
+                        error!("{err}");
                         std::process::exit(1);
                     }
                 }

@@ -1,10 +1,15 @@
 MIGRATIONS ?=
+ABCI_MIGRATIONS ?=
 ALLOW_ADDRS ?= false
 STATE ?= "../staging/ledger_state.json5"
 
 ENABLE_MIGRATIONS := false
 ifdef MIGRATIONS
 	ENABLE_MIGRATIONS := true
+endif
+ENABLE_ABCI_MIGRATIONS := false
+ifdef ABCI_MIGRATIONS
+	ENABLE_ABCI_MIGRATIONS := true
 endif
 
 include Makefile.common
@@ -41,6 +46,7 @@ genfiles-ledger/docker-compose.json: genfiles-common/jsonnet-docker docker-compo
 		--tla-code user=$$(id -u) \
 		--tla-code id_with_balances=\"$(ID_WITH_BALANCES)\" \
 		--tla-code enable_migrations=$(ENABLE_MIGRATIONS) \
+		--tla-code abci_migrations=$(ENABLE_ABCI_MIGRATIONS) \
 		--tla-code allow_addrs=$(ALLOW_ADDRS) \
 		-o /$@
 
@@ -56,8 +62,12 @@ genfiles-ledger/generate-tendermint-e2e-config:
 genfiles-ledger/node%: genfiles-common/tendermint-docker genfiles-common/openssl-docker
 	mkdir -p "$@/tendermint"
 	rm -f "$@/migrations.json"
+	rm -f "$@/abci_migrations.json"
 ifdef MIGRATIONS
 	cp "$(MIGRATIONS)" "$@/migrations.json"
+endif
+ifdef ABCI_MIGRATIONS
+	cp "$(ABCI_MIGRATIONS)" "$@/abci_migrations.json"
 endif
 	docker run --user $$(id -u) --rm -v "${PWD}/$@/tendermint:/tendermint" bazel/docker:tendermint_image init validator
 	docker run --user $$(id -u) --rm -v ${PWD}/$@/:/export bazel/docker:openssl_image genpkey -algorithm Ed25519 -out /export/ledger.pem

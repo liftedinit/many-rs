@@ -2,6 +2,8 @@ use std::os::unix::ffi::OsStrExt;
 use tracing::metadata::LevelFilter;
 use tracing_subscriber::fmt::Subscriber;
 
+pub mod error;
+
 #[derive(clap::ArgEnum, Clone, Debug)]
 enum LogStrategy {
     Terminal,

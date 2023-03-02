@@ -1,7 +1,7 @@
 use crate::TargetCommandOpt;
 use clap::Parser;
+use many_cli_helpers::error::ClientServerError;
 use many_client::client::blocking::ManyClient;
-use many_error::ManyError;
 use many_identity::{Address, Identity};
 use many_modules::account::features::multisig;
 use many_modules::{events, ledger};
@@ -109,7 +109,7 @@ fn submit_send(
     opts: TargetCommandOpt,
     memo: Option<String>,
     legacy_memo: Option<String>,
-) -> Result<(), ManyError> {
+) -> Result<(), ClientServerError> {
     let TargetCommandOpt {
         account: from,
         identity,
@@ -143,8 +143,7 @@ fn submit_send(
     let response = client.call("account.multisigSubmitTransaction", arguments)?;
 
     let payload = crate::wait_response(client, response)?;
-    let result: multisig::SubmitTransactionReturn =
-        minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
+    let result: multisig::SubmitTransactionReturn = minicbor::decode(&payload)?;
 
     info!(
         "Transaction Token: {}",
@@ -159,7 +158,7 @@ fn submit_set_defaults(
     multisig_arg: MultisigArgOpt,
     target: Address,
     opts: MultisigArgOpt,
-) -> Result<(), ManyError> {
+) -> Result<(), ClientServerError> {
     let MultisigArgOpt {
         threshold,
         timeout,
@@ -186,8 +185,7 @@ fn submit_set_defaults(
     let response = client.call("account.multisigSubmitTransaction", arguments)?;
 
     let payload = crate::wait_response(client, response)?;
-    let result: multisig::SubmitTransactionReturn =
-        minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
+    let result: multisig::SubmitTransactionReturn = minicbor::decode(&payload)?;
 
     info!(
         "Transaction Token: {}",
@@ -203,7 +201,7 @@ fn submit(
     opts: SubmitOpt,
     memo: Option<String>,
     legacy_memo: Option<String>,
-) -> Result<(), ManyError> {
+) -> Result<(), ClientServerError> {
     match opts {
         SubmitOpt::Send(target) => {
             submit_send(client, account, multisig_arg, target, memo, legacy_memo)
@@ -215,52 +213,57 @@ fn submit(
     }
 }
 
-fn approve(client: ManyClient<impl Identity>, opts: TransactionOpt) -> Result<(), ManyError> {
+fn approve(
+    client: ManyClient<impl Identity>,
+    opts: TransactionOpt,
+) -> Result<(), ClientServerError> {
     let arguments = multisig::ApproveArgs { token: opts.token };
     let response = client.call("account.multisigApprove", arguments)?;
 
     let payload = crate::wait_response(client, response)?;
-    let _result: multisig::ApproveReturn =
-        minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
+    let _result: multisig::ApproveReturn = minicbor::decode(&payload)?;
 
     info!("Approved.");
 
     Ok(())
 }
 
-fn revoke(client: ManyClient<impl Identity>, opts: TransactionOpt) -> Result<(), ManyError> {
+fn revoke(
+    client: ManyClient<impl Identity>,
+    opts: TransactionOpt,
+) -> Result<(), ClientServerError> {
     let arguments = multisig::RevokeArgs { token: opts.token };
     let response = client.call("account.multisigRevoke", arguments)?;
 
     let payload = crate::wait_response(client, response)?;
-    let _result: multisig::RevokeReturn =
-        minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
+    let _result: multisig::RevokeReturn = minicbor::decode(&payload)?;
 
     info!("Revoked.");
 
     Ok(())
 }
 
-fn execute(client: ManyClient<impl Identity>, opts: TransactionOpt) -> Result<(), ManyError> {
+fn execute(
+    client: ManyClient<impl Identity>,
+    opts: TransactionOpt,
+) -> Result<(), ClientServerError> {
     let arguments = multisig::ExecuteArgs { token: opts.token };
     let response = client.call("account.multisigExecute", arguments)?;
 
     let payload = crate::wait_response(client, response)?;
-    let result: ResponseMessage =
-        minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
+    let result: ResponseMessage = minicbor::decode(&payload)?;
 
     info!("Executed:");
     println!("{}", minicbor::display(&result.data?));
     Ok(())
 }
 
-fn info(client: ManyClient<impl Identity>, opts: TransactionOpt) -> Result<(), ManyError> {
+fn info(client: ManyClient<impl Identity>, opts: TransactionOpt) -> Result<(), ClientServerError> {
     let arguments = multisig::InfoArgs { token: opts.token };
     let response = client.call("account.multisigInfo", arguments)?;
 
     let payload = crate::wait_response(client, response)?;
-    let result: multisig::InfoReturn =
-        minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
+    let result: multisig::InfoReturn = minicbor::decode(&payload)?;
 
     println!("{result:#?}");
     Ok(())
@@ -270,7 +273,7 @@ fn set_defaults(
     client: ManyClient<impl Identity>,
     account: Address,
     opts: MultisigArgOpt,
-) -> Result<(), ManyError> {
+) -> Result<(), ClientServerError> {
     let arguments = multisig::SetDefaultsArgs {
         account,
         threshold: opts.threshold,
@@ -280,14 +283,16 @@ fn set_defaults(
     let response = client.call("account.multisigSetDefaults", arguments)?;
 
     let payload = crate::wait_response(client, response)?;
-    let _result: multisig::SetDefaultsReturn =
-        minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
+    let _result: multisig::SetDefaultsReturn = minicbor::decode(&payload)?;
 
     info!("Defaults set.");
     Ok(())
 }
 
-pub fn multisig(client: ManyClient<impl Identity>, opts: CommandOpt) -> Result<(), ManyError> {
+pub fn multisig(
+    client: ManyClient<impl Identity>,
+    opts: CommandOpt,
+) -> Result<(), ClientServerError> {
     match opts.subcommand {
         SubcommandOpt::Submit {
             account,

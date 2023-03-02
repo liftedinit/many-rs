@@ -1,5 +1,5 @@
 {
-  "checksum": "29c477db0ddbd26efaf43fc17fd1ad938aaabe8ef562107771b50dfda940092f",
+  "checksum": "4a8ec3192d1cce70eedb9f5b134da9a16bedce9424f0a77c724b58f803cfb799",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -12146,6 +12146,10 @@
         "deps": {
           "common": [
             {
+              "id": "anyhow 1.0.69",
+              "target": "anyhow"
+            },
+            {
               "id": "clap 3.2.23",
               "target": "clap"
             },
@@ -13148,6 +13152,10 @@
               "target": "coset"
             },
             {
+              "id": "either 1.8.1",
+              "target": "either"
+            },
+            {
               "id": "hex 0.4.3",
               "target": "hex"
             },
@@ -13260,6 +13268,10 @@
               "target": "lazy_static"
             },
             {
+              "id": "linkme 0.3.7",
+              "target": "linkme"
+            },
+            {
               "id": "many-abci 0.1.0",
               "target": "build_script_build"
             },
@@ -13274,6 +13286,10 @@
             {
               "id": "reqwest 0.11.14",
               "target": "reqwest"
+            },
+            {
+              "id": "serde_json 1.0.93",
+              "target": "serde_json"
             },
             {
               "id": "sha2 0.10.6",
@@ -13365,12 +13381,20 @@
         "deps": {
           "common": [
             {
+              "id": "anyhow 1.0.69",
+              "target": "anyhow"
+            },
+            {
               "id": "clap 3.2.23",
               "target": "clap"
             },
             {
               "id": "log-panics 2.1.0",
               "target": "log_panics"
+            },
+            {
+              "id": "minicbor 0.18.0",
+              "target": "minicbor"
             },
             {
               "id": "syslog-tracing 0.1.0",

@@ -19,7 +19,6 @@ rust_binary(
     ) + [
         "//src/many-cli-helpers",
         "//src/many-client",
-        "//src/many-error",
         "//src/many-identity",
         "//src/many-identity-dsa",
         "//src/many-identity-hsm",
