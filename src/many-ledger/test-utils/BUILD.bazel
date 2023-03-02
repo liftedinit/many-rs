@@ -12,7 +12,7 @@ rust_library(
     crate_name = "many_ledger_test_utils",
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
-    ) + ["//src/many-ledger/test-macros:many-ledger-test-macros-lib"],
+    ),
     deps = all_crate_deps(
         normal = True,
     ) + [

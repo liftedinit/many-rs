@@ -19,7 +19,6 @@ rust_library(
         "//src/many-error",
         "//src/many-identity",
         "//src/many-identity-dsa",
-        "//src/many-protocol",
     ],
 )
 
@@ -39,7 +38,6 @@ rust_library(
         "//src/many-error",
         "//src/many-identity:many-identity-for-test",
         "//src/many-identity-dsa:many-identity-dsa-for-test",
-        "//src/many-protocol:many-protocol-for-test",
     ],
 )
 

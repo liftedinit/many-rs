@@ -388,7 +388,7 @@ mod tests {
         session::SessionState,
     };
     use sha2::Digest;
-    use signature::{Signature, Verifier};
+    use p256::ecdsa::signature::Verifier;
 
     use super::*;
 
@@ -629,7 +629,7 @@ mod tests {
         let points =
             p256::EncodedPoint::from_bytes(ec_points).expect("Unable to create p256::EncodedPoint");
         let verify_key = p256::ecdsa::VerifyingKey::from_encoded_point(&points).unwrap();
-        let p256_signature = p256::ecdsa::Signature::from_bytes(&hsm_signature).unwrap();
+        let p256_signature = p256::ecdsa::Signature::try_from(hsm_signature.as_slice()).unwrap();
         verify_key
             .verify(MSG.as_bytes(), &p256_signature)
             .expect("Unable to verify signature");
