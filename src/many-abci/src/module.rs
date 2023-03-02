@@ -198,8 +198,8 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
         Ok(blockchain::TransactionReturns {
             txn: Transaction {
                 id: TransactionIdentifier { hash: tx_hash },
-                request: None,
-                response: None,
+                request: Some(block.tx),
+                response: Some(block.tx_result.data.into()),
             },
         })
     }
