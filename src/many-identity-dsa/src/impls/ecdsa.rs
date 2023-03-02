@@ -5,9 +5,9 @@ use coset::{CoseKey, CoseSign1, CoseSign1Builder, Label};
 use many_error::ManyError;
 use many_identity::cose::add_keyset_header;
 use many_identity::{cose, Address, Identity, Verifier};
-use p256::pkcs8::{DecodePrivateKey, PrivateKeyInfo};
-use p256::ecdsa::{Signature};
 use p256::ecdsa::signature::{Signer, Verifier as _};
+use p256::ecdsa::Signature;
+use p256::pkcs8::{DecodePrivateKey, PrivateKeyInfo};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Build an ECDSA CoseKey
@@ -112,8 +112,7 @@ impl EcDsaIdentityInner {
     }
 
     pub(crate) fn try_sign(&self, bytes: &[u8]) -> Result<Vec<u8>, ManyError> {
-        let signature : Signature = self.sk
-            .try_sign(bytes).map_err(ManyError::unknown)?;
+        let signature: Signature = self.sk.try_sign(bytes).map_err(ManyError::unknown)?;
         Ok(signature.to_vec())
     }
 }
@@ -160,7 +159,7 @@ impl EcDsaIdentity {
 
     pub fn from_pem<P: AsRef<str>>(pem: P) -> Result<Self, ManyError> {
         let (_, doc) = p256::pkcs8::Document::from_pem(pem.as_ref()).map_err(ManyError::unknown)?;
-        let pk : PrivateKeyInfo = doc.decode_msg().map_err(ManyError::unknown)?;
+        let pk: PrivateKeyInfo = doc.decode_msg().map_err(ManyError::unknown)?;
 
         // EcDSA P256 OID
         if pk.algorithm.oid != "1.2.840.10045.2.1".parse().unwrap() {
@@ -239,7 +238,8 @@ impl EcDsaVerifier {
         let signature = Signature::from_der(signature)
             .or_else(|_| Signature::try_from(signature))
             .map_err(ManyError::could_not_verify_signature)?;
-        self.pk.verify( data, &signature)
+        self.pk
+            .verify(data, &signature)
             .map_err(ManyError::could_not_verify_signature)
     }
 }

@@ -2,9 +2,9 @@ use crate::impls::check_key;
 use coset::cbor::value::Value;
 use coset::iana::{EnumI64, OkpKeyParameter};
 use coset::{CoseKey, CoseSign1, CoseSign1Builder, Label};
-use ed25519_dalek::Keypair;
-use ed25519_dalek::ed25519::signature::{Signature, Signer, Verifier as _};
 use ed25519::pkcs8::PrivateKeyInfo;
+use ed25519_dalek::ed25519::signature::{Signature, Signer, Verifier as _};
+use ed25519_dalek::Keypair;
 use many_error::ManyError;
 use many_identity::{cose, Address, Identity, Verifier};
 use std::collections::BTreeSet;
@@ -183,8 +183,9 @@ impl Ed25519Identity {
     }
 
     pub fn from_pem<P: AsRef<str>>(pem: P) -> Result<Self, ManyError> {
-        let (_, doc) = ed25519::pkcs8::Document::from_pem(pem.as_ref()).map_err(ManyError::unknown)?;
-        let pk : PrivateKeyInfo = doc.decode_msg().map_err(ManyError::unknown)?;
+        let (_, doc) =
+            ed25519::pkcs8::Document::from_pem(pem.as_ref()).map_err(ManyError::unknown)?;
+        let pk: PrivateKeyInfo = doc.decode_msg().map_err(ManyError::unknown)?;
 
         // Ed25519 OID
         if pk.algorithm.oid != "1.3.101.112".parse().unwrap() {
@@ -245,7 +246,8 @@ impl Ed25519Verifier {
     pub fn verify_signature(&self, signature: &[u8], data: &[u8]) -> Result<(), ManyError> {
         let sig = ed25519_dalek::Signature::try_from(signature)
             .map_err(ManyError::could_not_verify_signature)?;
-        self.public_key.verify(data, &sig)
+        self.public_key
+            .verify(data, &sig)
             .map_err(ManyError::could_not_verify_signature)
     }
 

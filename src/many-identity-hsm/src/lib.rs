@@ -387,8 +387,8 @@ mod tests {
         object::{KeyType, ObjectHandle},
         session::SessionState,
     };
-    use sha2::Digest;
     use p256::ecdsa::signature::Verifier;
+    use sha2::Digest;
 
     use super::*;
 
