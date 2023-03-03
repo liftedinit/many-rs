@@ -22,7 +22,6 @@ clap = { version = "3.0.0", features = ["derive"] }
 coset = "0.3"
 merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
 hex = { version = "0.4.3", features = ["serde"] }
-itertools = "0.10.3"
 json5 = "0.4.1"
 lazy_static = "1.4.0"
 num-bigint = "0.4.3"
@@ -36,10 +35,8 @@ many-protocol = { path = "../many-protocol", version = "0.1.0" }
 many-server = { path = "../many-server", version = "0.1.0" }
 many-types = { path = "../many-types", version = "0.1.0" }
 serde = "1.0.130"
-serde_json = "1.0.72"
 sha3 = "0.10.4"
 signal-hook = "0.3.13"
-simple_asn1 = "0.6.2"
 strum = "0.24.1"
 tokio = { version = "1.24.1", features = [ "full" ] }
 tracing = "0.1.28"

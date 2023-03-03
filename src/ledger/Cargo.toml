@@ -22,7 +22,6 @@ crc-any = "2.4.0"
 hex = "0.4.3"
 humantime = "2.1.0"
 indicatif = "0.16.2"
-itertools = "0.10.5"
 lazy_static = "1.4.0"
 mime_guess = "2.0.4"
 minicbor = { version = "0.18.0", features = ["derive", "std"] }
@@ -36,7 +35,6 @@ many-modules = { path = "../many-modules", version = "0.1.0" }
 many-protocol = { path = "../many-protocol", version = "0.1.0" }
 many-types = { path = "../many-types", version = "0.1.0" }
 regex = "1.5.4"
-ring = "0.16.20"
 rpassword = "6.0"
 serde_json = "1.0.91"
 tracing = "0.1.29"
