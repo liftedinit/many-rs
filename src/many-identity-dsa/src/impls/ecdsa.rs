@@ -101,7 +101,7 @@ impl EcDsaIdentityInner {
             .ok_or_else(|| ManyError::unknown("Could not convert the D parameter to bytes"))?
             .as_slice();
 
-        let sk = p256::SecretKey::from_be_bytes(d)
+        let sk = p256::SecretKey::from_bytes(d.into())
             .map_err(|e| ManyError::unknown(format!("Invalid EcDSA keypair from bytes: {e}")))?;
 
         Ok(Self {
@@ -175,7 +175,7 @@ impl EcDsaIdentity {
 
         let cose_key = ecdsa_cose_key(
             (points.x().unwrap().to_vec(), points.y().unwrap().to_vec()),
-            Some(sk.to_be_bytes().to_vec()),
+            Some(sk.to_bytes().to_vec()),
         );
         Self::from_key(&cose_key)
     }
