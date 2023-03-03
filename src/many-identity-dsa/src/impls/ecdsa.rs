@@ -5,9 +5,9 @@ use coset::{CoseKey, CoseSign1, CoseSign1Builder, Label};
 use many_error::ManyError;
 use many_identity::cose::add_keyset_header;
 use many_identity::{cose, Address, Identity, Verifier};
-use p256::pkcs8::FromPrivateKey;
-use pkcs8::der::Document;
-use signature::{Signature, Signer};
+use p256::ecdsa::signature::{Signer, Verifier as _};
+use p256::ecdsa::Signature;
+use p256::pkcs8::{DecodePrivateKey, PrivateKeyInfo};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Build an ECDSA CoseKey
@@ -101,7 +101,7 @@ impl EcDsaIdentityInner {
             .ok_or_else(|| ManyError::unknown("Could not convert the D parameter to bytes"))?
             .as_slice();
 
-        let sk = p256::SecretKey::from_bytes(d)
+        let sk = p256::SecretKey::from_bytes(d.into())
             .map_err(|e| ManyError::unknown(format!("Invalid EcDSA keypair from bytes: {e}")))?;
 
         Ok(Self {
@@ -112,10 +112,8 @@ impl EcDsaIdentityInner {
     }
 
     pub(crate) fn try_sign(&self, bytes: &[u8]) -> Result<Vec<u8>, ManyError> {
-        self.sk
-            .try_sign(bytes)
-            .map(|x| x.as_bytes().to_vec())
-            .map_err(ManyError::unknown)
+        let signature: Signature = self.sk.try_sign(bytes).map_err(ManyError::unknown)?;
+        Ok(signature.to_vec())
     }
 }
 
@@ -160,14 +158,14 @@ impl EcDsaIdentity {
     }
 
     pub fn from_pem<P: AsRef<str>>(pem: P) -> Result<Self, ManyError> {
-        let doc = pkcs8::PrivateKeyDocument::from_pem(pem.as_ref()).unwrap();
-        let decoded = doc.decode();
+        let (_, doc) = p256::pkcs8::Document::from_pem(pem.as_ref()).map_err(ManyError::unknown)?;
+        let pk: PrivateKeyInfo = doc.decode_msg().map_err(ManyError::unknown)?;
 
         // EcDSA P256 OID
-        if decoded.algorithm.oid != pkcs8::ObjectIdentifier::new("1.2.840.10045.2.1") {
+        if pk.algorithm.oid != "1.2.840.10045.2.1".parse().unwrap() {
             return Err(ManyError::unknown(format!(
                 "Invalid OID: {}",
-                decoded.algorithm.oid
+                pk.algorithm.oid
             )));
         }
 
@@ -237,10 +235,11 @@ impl EcDsaVerifier {
     }
 
     pub fn verify_signature(&self, signature: &[u8], data: &[u8]) -> Result<(), ManyError> {
-        let signature = p256::ecdsa::Signature::from_der(signature)
-            .or_else(|_| p256::ecdsa::Signature::from_bytes(signature))
+        let signature = Signature::from_der(signature)
+            .or_else(|_| Signature::try_from(signature))
             .map_err(ManyError::could_not_verify_signature)?;
-        signature::Verifier::verify(&self.pk, data, &signature)
+        self.pk
+            .verify(data, &signature)
             .map_err(ManyError::could_not_verify_signature)
     }
 }

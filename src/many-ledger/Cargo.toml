@@ -48,17 +48,14 @@ serde = "1.0.130"
 serde_json = "1.0.72"
 sha3 = "0.9.1"
 signal-hook = "0.3.13"
-simple_asn1 = "0.6.2"
 strum = "0.24.1"
 tokio = { version = "1.24.1", features = [ "full" ] }
 tracing = "0.1.28"
 typenum = "1.15.0"
-typetag = "0.2.3"
 
 [dev-dependencies]
 cucumber = { version = "0.17.0", features = ["libtest"] }
 once_cell = "1.12"
-many-client = { path = "../many-client", version = "0.1.0" }
 many-identity = { path = "../many-identity", version = "0.1.0", features = ["default", "serde", "testing"] }
 many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0", features = [ "ed25519", "testing" ] }
 many-ledger = { path = ".", features = ["balance_testing", "migration_testing", "disable_token_sender_check"]}

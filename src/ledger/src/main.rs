@@ -1,6 +1,7 @@
+use anyhow::anyhow;
 use clap::{ArgGroup, Parser};
+use many_cli_helpers::error::ClientServerError;
 use many_client::client::blocking::ManyClient;
-use many_error::ManyError;
 use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::CoseKeyIdentity;
 use many_identity_hsm::{Hsm, HsmIdentity, HsmMechanismType, HsmSessionType, HsmUserType};
@@ -145,7 +146,7 @@ pub(crate) struct TargetCommandOpt {
 pub fn resolve_symbol(
     client: &ManyClient<impl Identity>,
     symbol: String,
-) -> Result<Address, ManyError> {
+) -> Result<Address, ClientServerError> {
     if let Ok(symbol) = Address::from_str(&symbol) {
         Ok(symbol)
     } else {
@@ -156,7 +157,7 @@ pub fn resolve_symbol(
             .into_iter()
             .find(|(_, y)| y == &symbol)
             .map(|(x, _)| x)
-            .ok_or_else(|| ManyError::unknown(format!("Could not resolve symbol '{}'", &symbol)))
+            .ok_or_else(|| anyhow!("Could not resolve symbol '{}'", &symbol).into())
     }
 }
 
@@ -164,9 +165,9 @@ fn balance(
     client: ManyClient<impl Identity>,
     account: Option<Address>,
     symbols: Vec<String>,
-) -> Result<(), ManyError> {
+) -> Result<(), ClientServerError> {
     // Get info.
-    let info: ledger::InfoReturns = minicbor::decode(&client.call_("ledger.info", ())?).unwrap();
+    let info: ledger::InfoReturns = minicbor::decode(&client.call_("ledger.info", ())?)?;
     let local_names: BTreeMap<String, Symbol> = info
         .local_names
         .iter()
@@ -187,9 +188,7 @@ fn balance(
                         } else if let Some(i) = local_names.get(x.as_str()) {
                             Ok(*i)
                         } else {
-                            Err(ManyError::unknown(format!(
-                                "Could not resolve symbol '{x}'"
-                            )))
+                            Err(anyhow!("Could not resolve symbol '{x}'"))
                         }
                     })
                     .collect::<Result<Vec<_>, _>>()?
@@ -200,7 +199,7 @@ fn balance(
     let payload = client.call_("ledger.balance", argument)?;
 
     if payload.is_empty() {
-        Err(ManyError::unexpected_empty_response())
+        Err(anyhow!("Unexpected empty response.").into())
     } else {
         let balance: ledger::BalanceReturns = minicbor::decode(&payload).unwrap();
         for (symbol, amount) in balance.balances {
@@ -218,7 +217,7 @@ fn balance(
 pub(crate) fn wait_response(
     client: ManyClient<impl Identity>,
     response: ResponseMessage,
-) -> Result<Vec<u8>, ManyError> {
+) -> Result<Vec<u8>, ClientServerError> {
     let ResponseMessage {
         data, attributes, ..
     } = response;
@@ -248,18 +247,14 @@ pub(crate) fn wait_response(
                     token: attr.token.clone(),
                 },
             )?;
-            let status: StatusReturn =
-                minicbor::decode(&response.data?).map_err(ManyError::deserialization_error)?;
+            let status: StatusReturn = minicbor::decode(&response.data?)?;
             match status {
                 StatusReturn::Done { response } => {
                     progress.finish();
                     let response: ResponseMessage =
                         minicbor::decode(&response.payload.ok_or_else(|| {
-                            ManyError::deserialization_error(
-                                "Empty payload. Expected ResponseMessage.",
-                            )
-                        })?)
-                        .map_err(ManyError::deserialization_error)?;
+                            anyhow!("Empty payload. Expected ResponseMessage.",)
+                        })?)?;
                     return wait_response(client, response);
                 }
                 StatusReturn::Expired => {
@@ -272,9 +267,7 @@ pub(crate) fn wait_response(
                 }
             }
         }
-        Err(ManyError::unknown(
-            "Transport timed out waiting for async result.",
-        ))
+        Err(anyhow!("Transport timed out waiting for async result.").into())
     } else {
         Ok(payload)
     }
@@ -287,11 +280,11 @@ fn send(
     amount: BigUint,
     symbol: String,
     memo: Option<Memo>,
-) -> Result<(), ManyError> {
+) -> Result<(), ClientServerError> {
     let symbol = resolve_symbol(&client, symbol)?;
 
     if from.is_anonymous() {
-        Err(ManyError::invalid_identity())
+        Err(anyhow!("Cannot send tokens from anonymous.").into())
     } else {
         let arguments = ledger::SendArgs {
             from: Some(from),
@@ -391,13 +384,7 @@ fn main() {
     };
 
     if let Err(err) = result {
-        error!(
-            "Error returned by server:\n|  {}\n",
-            err.to_string()
-                .split('\n')
-                .collect::<Vec<&str>>()
-                .join("\n|  ")
-        );
+        error!("{err}");
         std::process::exit(1);
     }
 }

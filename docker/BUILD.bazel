@@ -39,6 +39,7 @@ filegroup(
         "generate-allow-addrs.sh",
         "update_config.sh",
         "//staging:ledger-staging",
+        "//tests:abci-ledger-migrations",
         "//tests:ledger-migrations",
     ],
 )

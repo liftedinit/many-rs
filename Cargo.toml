@@ -9,6 +9,7 @@ members = [
     "src/ledger-db",
     "src/many",
     "src/many-abci",
+    "src/many-cli-helpers",
     "src/many-client",
     "src/many-client-macros",
     "src/many-error",

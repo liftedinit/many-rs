@@ -1,3 +1,5 @@
+#![feature(used_with_arg)]
+
 use clap::Parser;
 use many_client::ManyClient;
 use many_identity::verifiers::AnonymousVerifier;
@@ -17,10 +19,12 @@ use tracing::{debug, error, info, trace};
 
 mod abci_app;
 mod many_app;
+mod migration;
 mod module;
 
 use abci_app::AbciApp;
 use many_app::AbciModuleMany;
+use many_migration::MigrationConfig;
 use module::AbciBlockchainModuleImpl;
 
 #[derive(Debug, Parser)]
@@ -63,6 +67,12 @@ struct Opts {
     /// Any addresses will be able to execute queries, e.g., balance, get, ...
     #[clap(long)]
     allow_addrs: Option<PathBuf>,
+
+    /// Path to a JSON file containing the configurations for the
+    /// migrations. Migrations are DISABLED unless this configuration file
+    /// is given.
+    #[clap(long, short)]
+    migrations_config: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -77,6 +87,7 @@ async fn main() {
         abci_read_buf_size,
         allow_origin,
         allow_addrs,
+        migrations_config,
     } = Opts::parse();
 
     common_flags.init_logging().unwrap();
@@ -86,6 +97,14 @@ async fn main() {
         version = env!("CARGO_PKG_VERSION"),
         git_sha = env!("VERGEN_GIT_SHA")
     );
+
+    info!("Loading migrations from {migrations_config:?}");
+    let maybe_migrations = migrations_config.map(|file| {
+        let content = std::fs::read_to_string(file)
+            .expect("Could not read file passed to --migrations_config");
+        let config: MigrationConfig = serde_json::from_str(&content).unwrap();
+        config.strict()
+    });
 
     // Try to get the status of the backend MANY app.
     let many_client = ManyClient::new(&many_app, Address::anonymous(), AnonymousIdentity).unwrap();
@@ -116,7 +135,7 @@ async fn main() {
     };
 
     let abci_app = tokio::task::spawn_blocking(move || {
-        AbciApp::create(many_app, Address::anonymous()).unwrap()
+        AbciApp::create(many_app, Address::anonymous(), maybe_migrations).unwrap()
     })
     .await
     .unwrap();

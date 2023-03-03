@@ -14,5 +14,7 @@ rust_library(
     ),
     deps = all_crate_deps(
         normal = True,
-    ),
+    ) + [
+        "//src/many-error",
+    ],
 )

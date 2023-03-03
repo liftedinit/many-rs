@@ -26,6 +26,11 @@ impl<T> Reason<T> {
     }
 
     #[inline]
+    pub fn with_code(self, code: T) -> Self {
+        Self { code, ..self }
+    }
+
+    #[inline]
     pub const fn code(&self) -> &T {
         &self.code
     }
