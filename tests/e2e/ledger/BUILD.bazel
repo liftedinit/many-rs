@@ -1,23 +1,20 @@
-load("@bazel_bats//:rules.bzl", "bats_test")
+load("@bazel_bats//:rules.bzl", "bats_test", "bats_test_suite")
 
 filegroup(
     name = "webauthn-state",
     srcs = [":webauthn_state.json"],
 )
 
-bats_test(
+bats_test_suite(
     name = "bats-e2e-ledger",
-    srcs = [
-        "allow_addrs.bats",
-        "ledger.bats",
-        "migrations.bats",
-        "mintburn.bats",
-        "multisig.bats",
-        "staging.bats",
-        "tokens_no_migration.bats",
-        "webauthn.bats",
+    srcs = glob(
+        include = ["*.bats"],
+        exclude = ["tokens.bats"],
+    ),
+    tags = [
+        "exclusive",
+        "manual",
     ],
-    tags = ["manual"],
     uses_bats_assert = True,
     deps = [
         ":webauthn-state",
@@ -38,7 +35,10 @@ bats_test(
     srcs = [
         "tokens.bats",
     ],
-    tags = ["manual"],
+    tags = [
+        "exclusive",
+        "manual",
+    ],
     uses_bats_assert = True,
     deps = [
         "//src/ledger",

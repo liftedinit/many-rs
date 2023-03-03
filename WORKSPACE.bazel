@@ -204,22 +204,20 @@ container_pull(
 ### END DOCKER SECTION ##
 
 ### BATS SECTION ###
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
-BAZEL_BATS_VERSION = "0.31.0"
+BAZEL_BATS_COMMIT_ID = "e85b43efc90133d5cd4ca807a811e9aa4006fb49"
 
-BAZEL_BATS_SHA256 = "d4666a1d2c37ef38bace5b66fc787108c37ac8c8e8def0fdb5ba13f45e52711f"
-
-http_archive(
+git_repository(
     name = "bazel_bats",
-    sha256 = BAZEL_BATS_SHA256,
-    strip_prefix = "bazel-bats-%s" % BAZEL_BATS_VERSION,
-    urls = [
-        "https://github.com/filmil/bazel-bats/archive/refs/tags/v%s.tar.gz" % BAZEL_BATS_VERSION,
-    ],
+    commit = BAZEL_BATS_COMMIT_ID,
+    remote = "https://github.com/filmil/bazel-bats",
+    shallow_since = "1677540706 -0800",
 )
 
 load("@bazel_bats//:deps.bzl", "bazel_bats_dependencies")
+
+bazel_bats_dependencies()
 
 BATS_ASSERT_VERSION = "2.0.0"
 

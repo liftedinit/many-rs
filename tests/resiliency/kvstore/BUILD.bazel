@@ -1,4 +1,4 @@
-load("//:rules.bzl", "bats_test_suite")
+load("@bazel_bats//:rules.bzl", "bats_test_suite")
 
 # Run the entire test suite with
 #   $ bazel test //tests/resiliency/kvstore:bats-resiliency-kvstore
