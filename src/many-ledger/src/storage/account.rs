@@ -1,4 +1,5 @@
 use crate::error;
+use crate::migration::legacy_remove_roles::LEGACY_REMOVE_ROLES_TRIGGER;
 use crate::migration::tokens::TOKEN_MIGRATION;
 use crate::module::account::{validate_account, verify_account_role};
 use crate::storage::multisig::{
@@ -236,7 +237,16 @@ impl LedgerStorage {
 
         for (id, roles) in &args.roles {
             for r in roles {
-                account.remove_role(id, *r);
+                if self.migrations.is_active(&LEGACY_REMOVE_ROLES_TRIGGER) {
+                    // Remove the role form the account
+                    account.remove_role(id, *r);
+                    // But don't remove the entry if the role list is empty
+                    if account.get_roles(id).is_empty() {
+                        account.roles.insert(*id, BTreeSet::new());
+                    }
+                } else {
+                    account.remove_role(id, *r);
+                }
             }
         }
 
