@@ -243,6 +243,11 @@ jobs:
               name: running all tests
               command: |
                 TEST=$(circleci tests glob "tests/resiliency/ledger/*.bats" | circleci tests split)
+                TEST=($TEST)
+                TEST=${TEST[@]/#///}
+                TEST=${TEST[@]//ledger\//ledger:bats-resiliency-ledger_}
+                TEST=${TEST[@]//.bats/}
+                
                 echo $TEST
 #                bazel test --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
 
