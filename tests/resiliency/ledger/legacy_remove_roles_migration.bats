@@ -67,8 +67,7 @@ function teardown() {
     # Remove role using legacy behavior
     run many_message --pem=1 account.removeRoles '{0: "'"$account_id"'", 1: {"'"$(identity 3)"'": ["canMultisigApprove"]}}'
     run many_message --pem=1 account.info '{0: "'"$account_id"'"}'
-    assert_output --partial "$(identity_hex 3)"
-    assert_output --partial ": [],"
+    assert_output --regexp ".*$(identity_hex 3).*: \[\],"
     refute_output --partial "$(identity_hex 2)"
 
     wait_for_block 40
@@ -77,6 +76,6 @@ function teardown() {
     run many_message --pem=1 account.removeRoles '{0: "'"$account_id"'", 1: {"'"$(identity 4)"'": ["canMultisigApprove"]}}'
     run many_message --pem=1 account.info '{0: "'"$account_id"'"}'
     refute_output --partial "$(identity_hex 2)"
-    assert_output --partial "$(identity_hex 3)"
+    assert_output --regexp ".*$(identity_hex 3).*: \[\],"
     refute_output --partial "$(identity_hex 4)"
 }
