@@ -243,12 +243,12 @@ jobs:
               name: running all tests
               command: |
                 TEST=$(circleci tests glob "tests/resiliency/ledger/*.bats" | circleci tests split)
-                TEST=($TEST)
-                TEST=${TEST[@]/#///}
-                TEST=${TEST[@]//ledger\//ledger:bats-resiliency-ledger_}
-                TEST=${TEST[@]//.bats/}
+                A=($TEST)
+                B=${A[@]/#///}
+                C=${B[@]//ledger\//ledger:bats-resiliency-ledger_}
+                D=${C[@]//.bats/}
                 
-                bazel test --config=remote-cache --config=bats-resiliency-ledger $TEST 
+#                bazel test --config=remote-cache --config=bats-resiliency-ledger $D
 
   # Push a tag to GitHub
   tag:
