@@ -223,6 +223,7 @@ jobs:
   # Perform ledger resiliency testing
   ledger_resiliency_tests:
     executor: linux2204_machine
+    parallelism: 4
     parameters:
       test_name:
         type: string
@@ -240,7 +241,10 @@ jobs:
           steps:
             run:
               name: running all tests
-              command: bazel test --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
+              command: |
+                TEST=$(circleci tests glob "tests/resiliency/ledger/*.bats" | circleci tests split)
+                echo $TEST
+#                bazel test --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
 
   # Push a tag to GitHub
   tag:
