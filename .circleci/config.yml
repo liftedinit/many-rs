@@ -200,28 +200,22 @@ jobs:
   # Perform kvstore resiliency testing
   kvstore_resiliency_tests:
     executor: linux2204_machine
-    parameters:
-      test_name:
-        type: string
-        default: ""
+    parallelism: 4
     steps:
       - checkout
-      - when:
-          condition: << parameters.test_name >>
-          steps:
-            run:
-                name: running single tests
-                command: bazel test --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
-      - unless:
-          condition: << parameters.test_name >>
-          steps:
-            run:
-              name: running all tests
-              command: bazel test --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore
+      - run:
+          name: running all tests
+          command: |
+            TEST=$(circleci tests glob "tests/resiliency/kvstore/*.bats" | circleci tests split)
+            A=($TEST)
+            B=${A[@]/#///}
+            C=${B[@]//kvstore\//kvstore:bats-resiliency-kvstore_}
+            D=${C[@]//.bats/}
 
+            bazel test --config=remote-cache $D
 
-  # Perform ledger resiliency testing
-  ledger_resiliency_tests:
+  # Run a single kvstore resiliency test
+  kvstore_resiliency_single_test:
     executor: linux2204_machine
     parameters:
       test_name:
@@ -229,25 +223,39 @@ jobs:
         default: ""
     steps:
       - checkout
-      - when:
-          condition: << parameters.test_name >>
-          steps:
-            run:
-              name: running single tests
-              command: bazel test --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
-      - unless:
-          condition: << parameters.test_name >>
-          steps:
-            run:
-              name: running all tests
-              command: |
-                TEST=$(circleci tests glob "tests/resiliency/ledger/*.bats" | circleci tests split --total=4)
-                A=($TEST)
-                B=${A[@]/#///}
-                C=${B[@]//ledger\//ledger:bats-resiliency-ledger_}
-                D=${C[@]//.bats/}
-                
-                bazel test --config=remote-cache --config=bats-resiliency-ledger $D
+      - run:
+          name: running single tests
+          command: bazel test --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
+
+  # Perform ledger resiliency testing
+  ledger_resiliency_tests:
+    executor: linux2204_machine
+    parallelism: 4
+    steps:
+      - checkout
+      - run:
+          name: running all tests
+          command: |
+            TEST=$(circleci tests glob "tests/resiliency/ledger/*.bats" | circleci tests split)
+            A=($TEST)
+            B=${A[@]/#///}
+            C=${B[@]//ledger\//ledger:bats-resiliency-ledger_}
+            D=${C[@]//.bats/}
+            
+            bazel test --config=remote-cache --config=bats-resiliency-ledger $D
+
+  # Run a single ledger resiliency test
+  ledger_resiliency_single_test:
+    executor: linux2204_machine
+    parameters:
+      test_name:
+        type: string
+        default: ""
+    steps:
+      - checkout
+      - run:
+          name: running single tests
+          command: bazel test --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
 
   # Push a tag to GitHub
   tag:
@@ -474,9 +482,11 @@ workflows:
           pre-steps:
             - install-deps:
                 os: linux2204_machine
+
   kvstore_resiliency_tests:
     when:
       and:
+        - not: << pipeline.parameters.test_name >>
         - equal: [ api, << pipeline.trigger_source >> ]
         - or:
           - equal: [ true, << pipeline.parameters.run_kvstore_resiliency >> ]
@@ -486,16 +496,45 @@ workflows:
           pre-steps:
             - install-deps:
                 os: linux2204_machine
+
+  kvstore_resiliency_single_test:
+    when:
+      and:
+        - << pipeline.parameters.test_name >>
+        - equal: [ api, << pipeline.trigger_source >> ]
+        - or:
+            - equal: [ true, << pipeline.parameters.run_kvstore_resiliency >> ]
+            - equal: [ true, << pipeline.parameters.run_resiliency >> ]
+    jobs:
+      - kvstore_resiliency_single_test:
+          pre-steps:
+            - install-deps:
+                os: linux2204_machine
           test_name: << pipeline.parameters.test_name >>
+
   ledger_resiliency_tests:
     when:
       and:
+        - not: << pipeline.parameters.test_name >>
         - equal: [ api, << pipeline.trigger_source >> ]
         - or:
           - equal: [ true, << pipeline.parameters.run_ledger_resiliency >> ]
           - equal: [ true, << pipeline.parameters.run_resiliency >> ]
     jobs:
       - ledger_resiliency_tests:
+          pre-steps:
+            - install-deps:
+                os: linux2204_machine
+
+  ledger_resiliency_single_test:
+    when:
+      and:
+        - << pipeline.parameters.test_name >>
+        - equal: [ api, << pipeline.trigger_source >> ]
+        - or:
+            - equal: [ true, << pipeline.parameters.run_ledger_resiliency >> ]
+    jobs:
+      - ledger_resiliency_single_test:
           pre-steps:
             - install-deps:
                 os: linux2204_machine
