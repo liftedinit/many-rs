@@ -223,7 +223,6 @@ jobs:
   # Perform ledger resiliency testing
   ledger_resiliency_tests:
     executor: linux2204_machine
-    parallelism: 4
     parameters:
       test_name:
         type: string
@@ -242,7 +241,7 @@ jobs:
             run:
               name: running all tests
               command: |
-                TEST=$(circleci tests glob "tests/resiliency/ledger/*.bats" | circleci tests split)
+                TEST=$(circleci tests glob "tests/resiliency/ledger/*.bats" | circleci tests split --total=4)
                 A=($TEST)
                 B=${A[@]/#///}
                 C=${B[@]//ledger\//ledger:bats-resiliency-ledger_}
