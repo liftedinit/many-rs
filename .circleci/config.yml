@@ -248,9 +248,7 @@ jobs:
                 C=${B[@]//ledger\//ledger:bats-resiliency-ledger_}
                 D=${C[@]//.bats/}
                 
-                echo $D
-                
-#                bazel test --config=remote-cache --config=bats-resiliency-ledger $D
+                bazel test --config=remote-cache --config=bats-resiliency-ledger $D
 
   # Push a tag to GitHub
   tag:
