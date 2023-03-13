@@ -6,6 +6,8 @@ if [ -z "$1" ]; then
 	exit
 fi
 
+test -z "$(git ls-files --exclude-standard --others)" || { echo "Dirty git repository, exiting."; exit 1; }
+
 SEMVER_REGEX='^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
 echo "${1#v}" | grep -P "$SEMVER_REGEX" || { echo "${1#v} does not respect semver"; exit 1; }
 
