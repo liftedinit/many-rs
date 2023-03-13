@@ -1,13 +1,13 @@
 [package]
 name = "many-types"
-version = "0.1.0"
+version = "0.1.0" # managed by release.sh
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-many-error = { path = "../many-error", version = "0.1.0" }
-many-identity = { path = "../many-identity", version = "0.1.0" }
+many-error = { path = "../many-error" }
+many-identity = { path = "../many-identity" }
 base64 = "0.20.0"
 coset = "0.3.2"
 derive_more = "0.99"

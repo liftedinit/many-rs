@@ -1,12 +1,12 @@
 [package]
 name = "many-identity"
-version = "0.1.0"
+version = "0.1.0" # managed by release.sh
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-many-error = { path = "../many-error", version = "0.1.0" }
+many-error = { path = "../many-error" }
 base32 = "0.4.0"
 crc-any = "2.4.3"
 coset = { version = "0.3.2", optional = true }
