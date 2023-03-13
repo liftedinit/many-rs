@@ -1,8 +1,21 @@
+// #################################################
+// WARNING: DO NOT USE THIS FILE AS-IS IN PRODUCTION
+//
+// MANY ID : Key file
+// maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp : keys/id1.pem
+// mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow : keys/id2.pem
+// #################################################
 {
+  // ########################
+  // CHANGE ME FOR PRODUCTION
+  // ########################
   // The identity that is used to create new accounts. The server does not need to
   // know the private key for this, just that it's not reused.
   identity: "mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow",
 
+  // ########################
+  // CHANGE ME FOR PRODUCTION
+  // ########################
   // The initial database ACL
   acl: {
     "010203": {
