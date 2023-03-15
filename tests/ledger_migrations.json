@@ -24,5 +24,11 @@
     "name": "Token Migration",
     "block_height": 0,
     "disabled": true
+  },
+  {
+    "name": "LegacyRemoveRoles",
+    "block_height": 0,
+    "upper_block_height": 0,
+    "disabled": true
   }
 ] }
