@@ -14,7 +14,7 @@ echo "${1#v}" | grep -P "$SEMVER_REGEX" || { echo "${1#v} does not respect semve
 echo "Preparing $1..."
 # update the versions
 msg="# managed by release.sh"
-find src -name 'Cargo.toml' -exec sed -E -i "s/version = .* $msg$/version = \"${1#v}\" $msg/" {} \;
+find src -name 'Cargo.toml' -exec sed -E -i.bak "s/version = (\".*\")(.*)($msg)$/version = \"${1#v}\"\2$msg/" {} \;
 sed -E -i "s/^VERSION = .* $msg$/VERSION = \"${1#v}\"  $msg/" BUILD.bazel
 # update the changelog
 sed -E -i "s/\s+\#\s(.*)\s\#\sreplace issue numbers/\\t\1/g" cliff.toml
