@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-many-error = { path = "../many-error" }
+many-error = { path = "../many-error", version = "0.1.0" } # managed by release.sh
 base32 = "0.4.0"
 crc-any = "2.4.3"
 coset = { version = "0.3.2", optional = true }
@@ -19,7 +19,7 @@ static_assertions = "1.1.0"
 tracing = "0.1.29"
 
 [dev-dependencies]
-many-identity = { path = ".", features = [ "serde", "testing" ] }
+many-identity = { path = ".", features = [ "serde", "testing" ], version = "0.1.0" } # managed by release.sh
 proptest = "1.0.0"
 serde_test = "1.0.139"
 

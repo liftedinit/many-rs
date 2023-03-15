@@ -21,19 +21,19 @@ ed25519 = { version = "1.2.0", features = [ "std" ] }
 ed25519-dalek = { version = "1.0.1", features = [ "std" ] }
 fixed = "1.16.0"
 hex = "0.4.3"
-many-client-macros = { path = "../many-client-macros" }
-many-identity = { path = "../many-identity" }
-many-identity-dsa = { path = "../many-identity-dsa" }
-many-modules = { path = "../many-modules" }
-many-protocol = { path = "../many-protocol" }
-many-types = { path = "../many-types" }
+many-client-macros = { path = "../many-client-macros", version = "0.1.0" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.0" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.1.0" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.0" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.0" } # managed by release.sh
 minicbor = { version = "0.18.0", features = ["derive", "half", "std"] }
 num-derive = "0.3.3"
 num-traits = "0.2.14"
 num-bigint = "0.4.3"
 p256 = { version = "0.13.0", features = [ "pem", "ecdsa", "std" ] }
 pem = { version = "1.0.0", optional = true }
-many-server = { path = "../many-server" }
+many-server = { path = "../many-server", version = "0.1.0" } # managed by release.sh
 rand = "0.8.4"
 regex = "1.5.4"
 reqwest = { version = "0.11.5", features = ["blocking"] }

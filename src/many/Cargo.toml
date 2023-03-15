@@ -13,18 +13,18 @@ name = "many"
 path = "src/main.rs"
 
 [dependencies]
-many-cli-helpers = { path = "../many-cli-helpers" }
-many-client = { path = "../many-client" }
-many-error = { path = "../many-error" }
-many-identity = { path = "../many-identity", features = ["coset"] }
-many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa", "ed25519"] }
-many-identity-hsm = { path = "../many-identity-hsm" }
-many-identity-webauthn = { path = "../many-identity-webauthn", features = ["identity"] }
-many-mock = { path = "../many-mock" }
-many-modules = { path = "../many-modules" }
-many-protocol = { path = "../many-protocol" }
-many-types = { path = "../many-types" }
-many-server = { path = "../many-server" }
+many-cli-helpers = { path = "../many-cli-helpers", version = "0.1.0" } # managed by release.sh
+many-client = { path = "../many-client", version = "0.1.0" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.0" } # managed by release.sh
+many-identity = { path = "../many-identity", features = ["coset"], version = "0.1.0" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa", "ed25519"], version = "0.1.0" } # managed by release.sh
+many-identity-hsm = { path = "../many-identity-hsm", version = "0.1.0" } # managed by release.sh
+many-identity-webauthn = { path = "../many-identity-webauthn", features = ["identity"], version = "0.1.0" } # managed by release.sh
+many-mock = { path = "../many-mock", version = "0.1.0" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.1.0" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.0" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.0" } # managed by release.sh
+many-server = { path = "../many-server", version = "0.1.0" } # managed by release.sh
 anyhow = "1.0.57"
 async-recursion = "1.0"
 atty = "0.2.14"

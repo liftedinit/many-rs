@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-many-error = { path = "../many-error" }
-many-identity = { path = "../many-identity" }
-many-types = { path = "../many-types" }
+many-error = { path = "../many-error", version = "0.1.0" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.0" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.0" } # managed by release.sh
 async-channel = "1.8"
 base64 = "0.13.0"
 coset = "0.3.2"

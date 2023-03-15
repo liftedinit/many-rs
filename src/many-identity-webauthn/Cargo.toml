@@ -10,12 +10,12 @@ authenticator-ctap2-2021 = { version = "0.3.2-dev.1", optional = true, default-f
 base64 = "0.13.0"
 base64urlsafedata = { version = "0.1.2", optional = true }
 coset = "0.3.2"
-many-error = { path = "../many-error" }
-many-identity = { path = "../many-identity" }
-many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa"] }
-many-modules = { path = "../many-modules", optional = true }
-many-protocol = { path = "../many-protocol" }
-many-types = { path = "../many-types" }
+many-error = { path = "../many-error", version = "0.1.0" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.0" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa"], version = "0.1.0" } # managed by release.sh
+many-modules = { path = "../many-modules", optional = true, version = "0.1.0" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.0" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.0" } # managed by release.sh
 minicbor = "0.18.0"
 once_cell = "1.13.0"
 rand = { version = "0.8.5", optional = true }
