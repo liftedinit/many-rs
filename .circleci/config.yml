@@ -19,8 +19,8 @@ executors:
     resource_class: large # 4 cores, 15Gb
   macos:
     macos:
-      xcode: 13.4.1
-    resource_class: medium # 4 cores, 8Gb
+      xcode: 14.2.0
+    resource_class: macos.x86.medium.gen2 # 4 cores, 8Gb
 
 MANY_HSM_CONFIG: &many_hsm_config
   - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
