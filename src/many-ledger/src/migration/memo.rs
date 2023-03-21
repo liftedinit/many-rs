@@ -3,14 +3,14 @@ use crate::error::storage_commit_failed;
 use crate::migration::MIGRATIONS;
 use crate::storage::iterator::LedgerIterator;
 use crate::storage::multisig::MultisigTransactionStorage;
-use crate::storage::InnerStorage;
+use crate::storage::{InnerStorage, Operation};
 use linkme::distributed_slice;
 use many_error::ManyError;
 use many_migration::InnerMigration;
 use many_modules::account::features::multisig::InfoReturn;
 use many_modules::events::{EventInfo, EventLog};
 use many_types::{Memo, SortOrder};
-use merk::Op;
+use merk_v1::Op;
 use serde_json::Value;
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
@@ -93,7 +93,9 @@ fn update_multisig_submit_events(storage: &mut InnerStorage) -> Result<(), ManyE
                 };
                 batch.push((
                     key,
-                    Op::Put(minicbor::to_vec(new_log).map_err(ManyError::serialization_error)?),
+                    Operation::from(Op::Put(
+                        minicbor::to_vec(new_log).map_err(ManyError::serialization_error)?,
+                    )),
                 ));
             }
         }
@@ -105,8 +107,10 @@ fn update_multisig_submit_events(storage: &mut InnerStorage) -> Result<(), ManyE
     storage
         .apply(batch.as_slice())
         .map_err(error::storage_apply_failed)?;
-    storage.commit(&[]).map_err(storage_commit_failed)?;
-    Ok(())
+    storage
+        .commit(&[])
+        .map_err(storage_commit_failed)
+        .map(|_| ())
 }
 
 fn update_multisig_storage(storage: &mut InnerStorage) -> Result<(), ManyError> {
@@ -153,7 +157,9 @@ fn update_multisig_storage(storage: &mut InnerStorage) -> Result<(), ManyError> 
 
             batch.push((
                 key,
-                Op::Put(minicbor::to_vec(new_multisig).map_err(ManyError::serialization_error)?),
+                Operation::from(Op::Put(
+                    minicbor::to_vec(new_multisig).map_err(ManyError::serialization_error)?,
+                )),
             ));
         }
     }
@@ -164,14 +170,12 @@ fn update_multisig_storage(storage: &mut InnerStorage) -> Result<(), ManyError> 
     storage
         .apply(batch.as_slice())
         .map_err(error::storage_apply_failed)?;
-    storage.commit(&[]).map_err(storage_commit_failed)?;
-    Ok(())
+    storage.commit(&[]).map_err(storage_commit_failed)
 }
 
 fn initialize(storage: &mut InnerStorage, _: &HashMap<String, Value>) -> Result<(), ManyError> {
     update_multisig_submit_events(storage.borrow_mut())?;
-    update_multisig_storage(storage)?;
-    Ok(())
+    update_multisig_storage(storage)
 }
 
 #[distributed_slice(MIGRATIONS)]

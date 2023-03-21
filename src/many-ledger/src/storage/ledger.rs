@@ -1,3 +1,4 @@
+use super::{Operation, Query};
 use crate::error;
 use crate::storage::{key_for_account_balance, LedgerStorage, IDENTITY_ROOT, SYMBOLS_ROOT};
 use many_error::ManyError;
@@ -7,14 +8,14 @@ use many_types::{
     ledger::{Symbol, TokenAmount},
     ProofOperation,
 };
-use merk::{
+use merk_v1::{
     proofs::{
         query::QueryItem,
         Decoder,
         Node::{Hash, KVHash, KV},
         Op::{Child, Parent, Push},
     },
-    BatchEntry, Op,
+    Op,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -25,7 +26,7 @@ impl LedgerStorage {
         symbols: &BTreeMap<Symbol, String>,
         initial_balances: &BTreeMap<Address, BTreeMap<Symbol, TokenAmount>>,
     ) -> Result<Self, ManyError> {
-        let mut batch: Vec<BatchEntry> = Vec::new();
+        let mut batch = Vec::new();
         for (k, v) in initial_balances.iter() {
             for (symbol, tokens) in v.iter() {
                 if !symbols.contains_key(symbol) {
@@ -35,17 +36,19 @@ impl LedgerStorage {
                 }
 
                 let key = key_for_account_balance(k, symbol);
-                batch.push((key, Op::Put(tokens.to_vec())));
+                batch.push((key, Operation::from(Op::Put(tokens.to_vec()))));
             }
         }
 
         batch.push((
             IDENTITY_ROOT.as_bytes().to_vec(),
-            Op::Put(identity.to_vec()),
+            Operation::from(Op::Put(identity.to_vec())),
         ));
         batch.push((
             SYMBOLS_ROOT.as_bytes().to_vec(),
-            Op::Put(minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?),
+            Operation::from(Op::Put(
+                minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?,
+            )),
         ));
 
         self.persistent_store
@@ -122,12 +125,9 @@ impl LedgerStorage {
     ) -> Result<(), ManyError> {
         context.as_ref().prove(|| {
             self.persistent_store
-                .prove(
-                    keys.into_iter()
-                        .map(QueryItem::Key)
-                        .collect::<Vec<_>>()
-                        .into(),
-                )
+                .prove(Query::from(merk_v1::proofs::query::Query::from(
+                    keys.into_iter().map(QueryItem::Key).collect::<Vec<_>>(),
+                )))
                 .and_then(|proof| {
                     Decoder::new(proof.as_slice())
                         .map(|fallible_operation| {
@@ -142,6 +142,7 @@ impl LedgerStorage {
                             })
                         })
                         .collect::<Result<Vec<_>, _>>()
+                        .map_err(Into::into)
                 })
                 .map_err(|error| ManyError::unknown(error.to_string()))
         })

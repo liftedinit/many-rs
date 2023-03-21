@@ -135,6 +135,8 @@ fn main() {
             println!("Name: {}", migration.name());
             println!("Description: {}", migration.description());
         }
+        println!("Name: Hash Migration");
+        println!("Description: Migrate from old to new merk hash scheme");
         return;
     }
 

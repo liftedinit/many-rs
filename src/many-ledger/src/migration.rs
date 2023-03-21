@@ -5,6 +5,7 @@ use many_migration::{InnerMigration, MigrationSet};
 
 pub mod block_9400;
 pub mod data;
+pub mod hash;
 pub mod legacy_remove_roles;
 pub mod memo;
 pub mod tokens;

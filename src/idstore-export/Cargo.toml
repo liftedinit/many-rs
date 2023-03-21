@@ -7,7 +7,7 @@ license = "Apache-2.0"
 description = ""
 readme = "README.md"
 homepage = "https://liftedinit.org"
-repository = "https://github.com/liftedinit/many-framework"
+repository = "https://github.com/liftedinit/many-rs"
 keywords = ["cli", "web3", "blockchain", "tendermint", "proto", "crypto", "liftedinit"]
 categories = ["command-line-utilities"]
 
@@ -18,7 +18,9 @@ doc = false
 [dependencies]
 base64 = "0.20.0"
 clap = { version = "3.0.0", features = ["derive"] }
-merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
+derive_more = "0.99"
+merk_v1 = { package = "merk", git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
+merk_v2 = { package = "merk", git = "https://github.com/MavenRain/merk.git", branch = "merk-hash-migration" }
 serde = "1.0.137"
 serde_derive = "1.0.137"
 serde_json = "1.0.81"

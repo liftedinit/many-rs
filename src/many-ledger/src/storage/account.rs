@@ -1,5 +1,5 @@
+use super::Operation;
 use crate::error;
-use crate::migration::legacy_remove_roles::LEGACY_REMOVE_ROLES_TRIGGER;
 use crate::migration::tokens::TOKEN_MIGRATION;
 use crate::module::account::{validate_account, verify_account_role};
 use crate::storage::multisig::{
@@ -13,7 +13,7 @@ use many_modules::account::features::{FeatureId, FeatureInfo, FeatureSet};
 use many_modules::account::Role;
 use many_modules::{account, events};
 use many_types::Either;
-use merk::Op;
+use merk_v1::Op;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const ACCOUNT_IDENTITY_ROOT: &str = "/config/account_identity";
@@ -62,7 +62,7 @@ impl LedgerStorage {
             self.persistent_store
                 .apply(&[(
                     ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
-                    Op::Put(identity.to_vec()),
+                    Operation::from(Op::Put(identity.to_vec())),
                 )])
                 .map_err(error::storage_apply_failed)?;
         }
@@ -237,16 +237,7 @@ impl LedgerStorage {
 
         for (id, roles) in &args.roles {
             for r in roles {
-                if self.migrations.is_active(&LEGACY_REMOVE_ROLES_TRIGGER) {
-                    // Remove the role form the account
-                    account.remove_role(id, *r);
-                    // But don't remove the entry if the role list is empty
-                    if account.get_roles(id).is_empty() {
-                        account.roles.insert(*id, BTreeSet::new());
-                    }
-                } else {
-                    account.remove_role(id, *r);
-                }
+                account.remove_role(id, *r);
             }
         }
 
@@ -325,7 +316,9 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 key.clone(),
-                Op::Put(minicbor::to_vec(account).map_err(ManyError::serialization_error)?),
+                Operation::from(Op::Put(
+                    minicbor::to_vec(account).map_err(ManyError::serialization_error)?,
+                )),
             )])
             .map_err(|e| ManyError::unknown(e.to_string()))?;
 

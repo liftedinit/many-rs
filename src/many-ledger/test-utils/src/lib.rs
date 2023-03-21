@@ -7,8 +7,7 @@ use many_error::ManyError;
 use many_identity::testing::identity;
 use many_identity::{Address, Identity};
 use many_identity_dsa::ed25519::generate_random_ed25519_identity;
-use many_ledger::json::InitialStateJson;
-use many_ledger::module::LedgerModuleImpl;
+use many_ledger::{json::InitialStateJson, module::LedgerModuleImpl, storage::InnerStorage};
 use many_migration::{InnerMigration, MigrationConfig};
 use many_modules::abci_backend::{AbciBlock, ManyAbciModuleBackend};
 use many_modules::account::features::multisig::{
@@ -28,7 +27,6 @@ use many_types::ledger::{
     LedgerTokensAddressMap, Symbol, TokenAmount, TokenInfoSummary, TokenMaybeOwner,
 };
 use many_types::Memo;
-use merk::Merk;
 use minicbor::bytes::ByteVec;
 use once_cell::sync::Lazy;
 use proptest::prelude::*;
@@ -68,7 +66,7 @@ pub fn default_token_create_args(
 }
 
 pub struct MigrationHarness {
-    inner: &'static InnerMigration<merk::Merk, ManyError>,
+    inner: &'static InnerMigration<InnerStorage, ManyError>,
     block_height: u64,
     enabled: bool,
 }
@@ -89,8 +87,10 @@ impl MigrationHarness {
     }
 }
 
-impl From<(u64, &'static InnerMigration<merk::Merk, ManyError>)> for MigrationHarness {
-    fn from((block_height, inner): (u64, &'static InnerMigration<Merk, ManyError>)) -> Self {
+impl From<(u64, &'static InnerMigration<InnerStorage, ManyError>)> for MigrationHarness {
+    fn from(
+        (block_height, inner): (u64, &'static InnerMigration<InnerStorage, ManyError>),
+    ) -> Self {
         MigrationHarness {
             inner,
             block_height,
@@ -99,9 +99,13 @@ impl From<(u64, &'static InnerMigration<merk::Merk, ManyError>)> for MigrationHa
     }
 }
 
-impl From<(u64, &'static InnerMigration<merk::Merk, ManyError>, bool)> for MigrationHarness {
+impl From<(u64, &'static InnerMigration<InnerStorage, ManyError>, bool)> for MigrationHarness {
     fn from(
-        (block_height, inner, enabled): (u64, &'static InnerMigration<Merk, ManyError>, bool),
+        (block_height, inner, enabled): (
+            u64,
+            &'static InnerMigration<InnerStorage, ManyError>,
+            bool,
+        ),
     ) -> Self {
         MigrationHarness {
             inner,

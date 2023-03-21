@@ -1,3 +1,4 @@
+use super::Operation;
 use crate::error;
 use crate::storage::{key_for_account_balance, LedgerStorage};
 use many_error::ManyError;
@@ -5,7 +6,7 @@ use many_identity::Address;
 use many_modules::events::EventInfo;
 use many_types::ledger::{Symbol, TokenAmount};
 use many_types::Memo;
-use merk::{BatchEntry, Op};
+use merk_v1::Op;
 use std::cmp::Ordering;
 use tracing::info;
 
@@ -67,14 +68,20 @@ impl LedgerStorage {
         let key_from = key_for_account_balance(from, symbol);
         let key_to = key_for_account_balance(to, symbol);
 
-        let batch: Vec<BatchEntry> = match key_from.cmp(&key_to) {
+        let batch: Vec<_> = match key_from.cmp(&key_to) {
             Ordering::Less | Ordering::Equal => vec![
-                (key_from.clone(), Op::Put(amount_from.to_vec())),
-                (key_to.clone(), Op::Put(amount_to.to_vec())),
+                (
+                    key_from.clone(),
+                    Operation::from(Op::Put(amount_from.to_vec())),
+                ),
+                (key_to.clone(), Operation::from(Op::Put(amount_to.to_vec()))),
             ],
             _ => vec![
-                (key_to.clone(), Op::Put(amount_to.to_vec())),
-                (key_from.clone(), Op::Put(amount_from.to_vec())),
+                (key_to.clone(), Operation::from(Op::Put(amount_to.to_vec()))),
+                (
+                    key_from.clone(),
+                    Operation::from(Op::Put(amount_from.to_vec())),
+                ),
             ],
         };
 

@@ -1,3 +1,4 @@
+use super::Operation;
 use crate::error;
 use crate::storage::iterator::LedgerIterator;
 use crate::storage::LedgerStorage;
@@ -5,7 +6,7 @@ use many_error::ManyError;
 use many_modules::events;
 use many_modules::events::EventId;
 use many_types::{CborRange, SortOrder};
-use merk::Op;
+use merk_v1::Op;
 
 pub(crate) const EVENTS_ROOT: &[u8] = b"/events/";
 pub(crate) const EVENT_COUNT_ROOT: &[u8] = b"/events_count";
@@ -61,11 +62,13 @@ impl LedgerStorage {
             .apply(&[
                 (
                     key_for_event(event.id.clone()),
-                    Op::Put(minicbor::to_vec(&event).map_err(ManyError::serialization_error)?),
+                    Operation::from(Op::Put(
+                        minicbor::to_vec(&event).map_err(ManyError::serialization_error)?,
+                    )),
                 ),
                 (
                     EVENT_COUNT_ROOT.to_vec(),
-                    Op::Put((current_nb_events + 1).to_be_bytes().to_vec()),
+                    Operation::from(Op::Put((current_nb_events + 1).to_be_bytes().to_vec())),
                 ),
             ])
             .map_err(error::storage_apply_failed)?;

@@ -1,9 +1,10 @@
+use super::Operation;
 use crate::error;
 use crate::storage::LedgerStorage;
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::idstore;
-use merk::Op;
+use merk_v1::Op;
 use std::collections::BTreeMap;
 
 pub(crate) const IDSTORE_ROOT: &[u8] = b"/idstore/";
@@ -54,14 +55,14 @@ impl LedgerStorage {
             self.persistent_store
                 .apply(&[(
                     IDSTORE_SEED_ROOT.to_vec(),
-                    Op::Put(seed.to_be_bytes().to_vec()),
+                    Operation::from(Op::Put(seed.to_be_bytes().to_vec())),
                 )])
                 .map_err(error::storage_apply_failed)?;
         }
         if let Some(keys) = maybe_keys {
             for (k, v) in keys {
                 self.persistent_store
-                    .apply(&[(k, Op::Put(v))])
+                    .apply(&[(k, Operation::from(Op::Put(v)))])
                     .map_err(error::storage_apply_failed)?;
             }
         }
@@ -83,7 +84,7 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 IDSTORE_SEED_ROOT.to_vec(),
-                Op::Put((idstore_seed + 1).to_be_bytes().to_vec()),
+                Operation::from(Op::Put((idstore_seed + 1).to_be_bytes().to_vec())),
             )])
             .map_err(error::storage_apply_failed)?;
 
@@ -122,7 +123,7 @@ impl LedgerStorage {
                     &recall_phrase_cbor,
                 ]
                 .concat(),
-                Op::Put(value.clone()),
+                Operation::from(Op::Put(value.clone())),
             ),
             (
                 vec![
@@ -131,7 +132,7 @@ impl LedgerStorage {
                     &address.to_vec(),
                 ]
                 .concat(),
-                Op::Put(value),
+                Operation::from(Op::Put(value)),
             ),
         ];
 
@@ -212,7 +213,7 @@ pub mod tests {
             self.persistent_store
                 .apply(&[(
                     IDSTORE_SEED_ROOT.to_vec(),
-                    Op::Put(seed.to_be_bytes().to_vec()),
+                    Operation::from(Op::Put(seed.to_be_bytes().to_vec())),
                 )])
                 .map_err(error::storage_apply_failed)?;
 

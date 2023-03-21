@@ -2,9 +2,9 @@ use crate::storage::event::{key_for_event, EVENTS_ROOT};
 use crate::storage::InnerStorage;
 use many_modules::events::EventId;
 use many_types::{CborRange, SortOrder};
-use merk::rocksdb;
-use merk::rocksdb::ReadOptions;
-use merk::tree::Tree;
+use merk_v1::rocksdb;
+use merk_v1::rocksdb::ReadOptions;
+use merk_v1::tree::Tree;
 use rocksdb::IteratorMode;
 use std::collections::Bound;
 use std::ops::RangeBounds;
@@ -85,7 +85,7 @@ impl<'a> LedgerIterator<'a> {
 }
 
 impl<'a> Iterator for LedgerIterator<'a> {
-    type Item = Result<(Box<[u8]>, Vec<u8>), merk::rocksdb::Error>;
+    type Item = Result<(Box<[u8]>, Vec<u8>), merk_v1::rocksdb::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|item| {

@@ -2097,7 +2097,9 @@ version = "0.1.0"
 dependencies = [
  "base64 0.20.0",
  "clap 3.2.23",
- "merk",
+ "derive_more",
+ "merk 2.0.0 (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration)",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1)",
  "serde",
  "serde_derive",
  "serde_json",
@@ -2332,10 +2334,12 @@ name = "ledger-db"
 version = "0.1.0"
 dependencies = [
  "clap 3.2.23",
+ "derive_more",
  "hex",
  "many-modules",
  "many-types",
- "merk",
+ "merk 2.0.0 (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration)",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1)",
  "minicbor",
 ]
 
@@ -2728,6 +2732,7 @@ dependencies = [
  "async-trait",
  "clap 3.2.23",
  "coset",
+ "derive_more",
  "hex",
  "json5",
  "lazy_static",
@@ -2739,7 +2744,8 @@ dependencies = [
  "many-protocol",
  "many-server",
  "many-types",
- "merk",
+ "merk 2.0.0 (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration)",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1)",
  "minicbor",
  "num-bigint",
  "once_cell",
@@ -2765,6 +2771,7 @@ dependencies = [
  "const_format",
  "coset",
  "cucumber 0.17.0",
+ "derive_more",
  "fixed",
  "hex",
  "itertools",
@@ -2783,7 +2790,8 @@ dependencies = [
  "many-protocol",
  "many-server",
  "many-types",
- "merk",
+ "merk 2.0.0 (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration)",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1)",
  "minicbor",
  "num-bigint",
  "num-traits",
@@ -2826,7 +2834,8 @@ dependencies = [
  "many-modules",
  "many-protocol",
  "many-types",
- "merk",
+ "merk 2.0.0 (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration)",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1)",
  "minicbor",
  "once_cell",
  "proptest",
@@ -3011,6 +3020,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "merk"
+version = "2.0.0"
+source = "git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration#db8586a68dcf8bea31d300b356601d3c8ccaa02c"
+dependencies = [
+ "blake3",
+ "byteorder",
+ "colored",
+ "digest 0.9.0",
+ "ed",
+ "hex",
+ "num_cpus",
+ "rand 0.8.5",
+ "rocksdb",
+ "thiserror",
 ]
 
 [[package]]

@@ -1,3 +1,4 @@
+use super::Operation;
 use crate::error;
 use crate::migration::tokens::TOKEN_MIGRATION;
 use crate::storage::iterator::LedgerIterator;
@@ -17,7 +18,7 @@ use many_modules::ledger::{
 };
 use many_types::ledger::{Symbol, TokenAmount, TokenInfo, TokenInfoSummary, TokenInfoSupply};
 use many_types::{AttributeRelatedIndex, Either, SortOrder};
-use merk::{BatchEntry, Op};
+use merk_v1::Op;
 use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
 
@@ -113,7 +114,7 @@ impl LedgerStorage {
                 }
             }
 
-            let mut batch: Vec<BatchEntry> = Vec::new();
+            let mut batch = Vec::new();
             for (k, meta) in symbols_meta.into_iter() {
                 let total_supply = total_supply[&k].clone(); // Safe
                 let ticker = symbols[&k].clone(); // Safe
@@ -121,33 +122,36 @@ impl LedgerStorage {
 
                 batch.push((
                     key_for_ext_info(&k),
-                    Op::Put(
+                    Operation::from(Op::Put(
                         minicbor::to_vec(TokenExtendedInfo::default())
                             .map_err(ManyError::serialization_error)?,
-                    ),
+                    )),
                 ));
                 batch.push((
                     key_for_symbol(&k).into(),
-                    Op::Put(minicbor::to_vec(info).map_err(ManyError::serialization_error)?),
+                    Operation::from(Op::Put(
+                        minicbor::to_vec(info).map_err(ManyError::serialization_error)?,
+                    )),
                 ));
             }
-            batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
             self.persistent_store
                 .apply(batch.as_slice())
                 .map_err(error::storage_apply_failed)?;
 
             let token_identity = token_identity.unwrap_or(self.get_identity(IDENTITY_ROOT)?);
-            let batch: Vec<BatchEntry> = vec![
+            let batch = vec![
                 (
                     key_for_subresource_counter(
                         &token_identity,
                         self.migrations.is_active(&TOKEN_MIGRATION),
                     ),
-                    Op::Put(token_next_subresource.unwrap_or(0).to_be_bytes().to_vec()),
+                    Operation::from(Op::Put(
+                        token_next_subresource.unwrap_or(0).to_be_bytes().to_vec(),
+                    )),
                 ),
                 (
                     TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
-                    Op::Put(token_identity.to_vec()),
+                    Operation::from(Op::Put(token_identity.to_vec())),
                 ),
             ];
             self.persistent_store
@@ -225,7 +229,9 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 symbols_key.clone(),
-                Op::Put(minicbor::to_vec(&symbols).map_err(ManyError::serialization_error)?),
+                Operation::from(Op::Put(
+                    minicbor::to_vec(&symbols).map_err(ManyError::serialization_error)?,
+                )),
             )])
             .map_err(error::storage_apply_failed)
             .map(|_| vec![symbols_key])
@@ -254,13 +260,13 @@ impl LedgerStorage {
         keys.extend(update_symbol_keys.into_iter().collect::<Vec<_>>());
 
         // Initialize the total supply following the initial token distribution, if any
-        let mut batch: Vec<BatchEntry> = Vec::new();
+        let mut batch = Vec::new();
         let total_supply = if let Some(ref initial_distribution) = initial_distribution {
             let mut total_supply = TokenAmount::zero();
             for (k, v) in initial_distribution {
                 let key = key_for_account_balance(k, &symbol);
                 keys.push(key.clone());
-                batch.push((key, Op::Put(v.to_vec())));
+                batch.push((key, Operation::from(Op::Put(v.to_vec()))));
                 total_supply += v.clone();
             }
             total_supply
@@ -286,7 +292,9 @@ impl LedgerStorage {
         keys.push(symbol_key.clone().into_bytes());
         batch.push((
             symbol_key.into(),
-            Op::Put(minicbor::to_vec(&info).map_err(ManyError::serialization_error)?),
+            Operation::from(Op::Put(
+                minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+            )),
         ));
 
         let ext_info_key = key_for_ext_info(&symbol);
@@ -296,7 +304,9 @@ impl LedgerStorage {
             .map_or(TokenExtendedInfo::default(), |e| e);
         batch.push((
             ext_info_key,
-            Op::Put(minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?),
+            Operation::from(Op::Put(
+                minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+            )),
         ));
 
         self.log_event(EventInfo::TokenCreate {
@@ -408,7 +418,9 @@ impl LedgerStorage {
             self.persistent_store
                 .apply(&[(
                     symbol_key.into(),
-                    Op::Put(minicbor::to_vec(&info).map_err(ManyError::serialization_error)?),
+                    Operation::from(Op::Put(
+                        minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                    )),
                 )])
                 .map_err(error::storage_apply_failed)?;
 
@@ -463,7 +475,9 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 ext_info_key.clone(),
-                Op::Put(minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?),
+                Operation::from(Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
             )])
             .map_err(error::storage_apply_failed)?;
 
@@ -506,7 +520,9 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 ext_info_key.clone(),
-                Op::Put(minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?),
+                Operation::from(Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
             )])
             .map_err(error::storage_apply_failed)?;
 

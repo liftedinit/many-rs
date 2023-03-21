@@ -1,3 +1,4 @@
+use super::Operation;
 use crate::error;
 use crate::migration::block_9400::Block9400Tx;
 use crate::migration::memo::MEMO_MIGRATION;
@@ -10,7 +11,7 @@ use many_modules::account::features::FeatureInfo;
 use many_modules::{account, events, EmptyReturn};
 use many_protocol::ResponseMessage;
 use many_types::{SortOrder, Timestamp};
-use merk::Op;
+use merk_v1::Op;
 use std::collections::BTreeMap;
 use tracing::debug;
 
@@ -194,7 +195,7 @@ impl LedgerStorage {
                     storage.disable(account::features::multisig::MultisigTransactionState::Expired);
 
                     if let Ok(v) = minicbor::to_vec(storage) {
-                        batch.push((k.to_vec(), Op::Put(v)));
+                        batch.push((k.to_vec(), Operation::from(Op::Put(v))));
                     }
                 }
             } else if let Ok(d) = now.as_system_time()?.duration_since(storage.creation) {
@@ -267,7 +268,9 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 key_for_multisig_transaction(tx_id),
-                Op::Put(minicbor::to_vec(tx).map_err(ManyError::serialization_error)?),
+                Operation::from(Op::Put(
+                    minicbor::to_vec(tx).map_err(ManyError::serialization_error)?,
+                )),
             )])
             .map_err(error::storage_apply_failed)?;
 
@@ -529,7 +532,10 @@ impl LedgerStorage {
             minicbor::to_vec(storage).map_err(|e| ManyError::serialization_error(e.to_string()))?;
 
         self.persistent_store
-            .apply(&[(key_for_multisig_transaction(tx_id), Op::Put(v))])
+            .apply(&[(
+                key_for_multisig_transaction(tx_id),
+                Operation::from(Op::Put(v)),
+            )])
             .map_err(error::storage_apply_failed)?;
 
         self.maybe_commit()

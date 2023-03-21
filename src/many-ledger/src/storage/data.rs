@@ -1,3 +1,4 @@
+use super::Operation;
 use crate::error;
 use crate::migration::data::{ACCOUNT_TOTAL_COUNT_INDEX, NON_ZERO_ACCOUNT_TOTAL_COUNT_INDEX};
 use crate::storage::{key_for_account_balance, LedgerStorage};
@@ -5,7 +6,7 @@ use many_error::ManyError;
 use many_identity::Address;
 use many_modules::data::{DataIndex, DataInfo, DataValue};
 use many_types::ledger::TokenAmount;
-use merk::Op;
+use merk_v1::Op;
 use std::collections::BTreeMap;
 
 pub const DATA_ATTRIBUTES_KEY: &[u8] = b"/data/attributes";
@@ -82,7 +83,7 @@ impl LedgerStorage {
             self.persistent_store
                 .apply(&[(
                     DATA_ATTRIBUTES_KEY.to_vec(),
-                    Op::Put(minicbor::to_vec(attributes).unwrap()),
+                    Operation::from(Op::Put(minicbor::to_vec(attributes).unwrap())),
                 )])
                 .map_err(error::storage_apply_failed)?
         }

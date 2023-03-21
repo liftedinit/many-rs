@@ -1,14 +1,14 @@
 use crate::error;
 use crate::migration::MIGRATIONS;
 use crate::storage::data::{DATA_ATTRIBUTES_KEY, DATA_INFO_KEY};
-use crate::storage::InnerStorage;
+use crate::storage::{InnerStorage, Operation};
 use linkme::distributed_slice;
 use many_error::ManyError;
 use many_migration::InnerMigration;
 use many_modules::data::{DataIndex, DataInfo, DataValue};
 use many_types::ledger::TokenAmount;
-use merk::rocksdb::{IteratorMode, ReadOptions};
-use merk::{rocksdb, Op};
+use merk_v1::rocksdb::{IteratorMode, ReadOptions};
+use merk_v1::{rocksdb, Op};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
 
@@ -28,7 +28,7 @@ fn get_data_from_db(storage: &InnerStorage) -> Result<(u64, u64), ManyError> {
     let iterator = storage.iter_opt(IteratorMode::Start, opts);
     for item in iterator {
         let (key, value) = item.map_err(ManyError::unknown)?; // TODO: Custom error
-        let value = merk::tree::Tree::decode(key.to_vec(), value.as_ref());
+        let value = merk_v1::tree::Tree::decode(key.to_vec(), value.as_ref());
         let amount = TokenAmount::from(value.value().to_vec());
         num_unique_accounts += 1;
         if !amount.is_zero() {
@@ -82,18 +82,19 @@ fn initialize(storage: &mut InnerStorage, _: &HashMap<String, Value>) -> Result<
         .apply(&[
             (
                 DATA_ATTRIBUTES_KEY.to_vec(),
-                Op::Put(
+                Operation::from(Op::Put(
                     minicbor::to_vec(data_value(num_unique_accounts, num_non_zero_account))
                         .map_err(ManyError::serialization_error)?,
-                ),
+                )),
             ),
             (
                 DATA_INFO_KEY.to_vec(),
-                Op::Put(minicbor::to_vec(data_info()).map_err(ManyError::serialization_error)?),
+                Operation::from(Op::Put(
+                    minicbor::to_vec(data_info()).map_err(ManyError::serialization_error)?,
+                )),
             ),
         ])
-        .map_err(error::storage_apply_failed)?;
-    Ok(())
+        .map_err(error::storage_apply_failed)
 }
 
 #[distributed_slice(MIGRATIONS)]
