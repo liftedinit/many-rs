@@ -370,7 +370,11 @@ version = "0.63.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36d860121800b2a9a94f9b5604b332d5cffb234ce17609ea479d723dbc9d3885"
 dependencies = [
+<<<<<<< HEAD
  "bitflags 1.3.2",
+=======
+ "bitflags",
+>>>>>>> 8ecbead2b749f037233e9ee3d9a54f22015f83e5
  "cexpr",
  "clang-sys",
  "lazy_static",
@@ -382,7 +386,11 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex",
+<<<<<<< HEAD
  "syn 1.0.109",
+=======
+ "syn",
+>>>>>>> 8ecbead2b749f037233e9ee3d9a54f22015f83e5
  "which",
 ]
 
@@ -5459,6 +5467,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aabe153544e473b775453675851ecc86863d2a81d786d741f6b76778f2a48940"
 dependencies = [
  "webpki",
+]
+
+[[package]]
+name = "which"
+version = "4.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2441c784c52b289a054b7201fc93253e288f094e2f4be9058343127c4226a269"
+dependencies = [
+ "either",
+ "libc",
+ "once_cell",
 ]
 
 [[package]]
