@@ -1,6 +1,6 @@
 [package]
 name = "many-identity-hsm"
-version = "0.1.0"
+version = "0.1.0" # managed by release.sh
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,9 +10,9 @@ asn1 = "0.13.0"
 coset = "0.3.2"
 cryptoki = "0.3.0"
 hex = "0.4.3"
-many-error = { path = "../many-error" }
-many-identity = { path = "../many-identity" }
-many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa"] }
+many-error = { path = "../many-error", version = "0.1.0" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.0" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa"], version = "0.1.0" } # managed by release.sh
 once_cell = "1.13.0"
 p256 = "0.13.0"
 sha2 = "0.10.2"

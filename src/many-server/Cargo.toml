@@ -1,6 +1,6 @@
 [package]
 name = "many-server"
-version = "0.1.0"
+version = "0.1.0" # managed by release.sh
 edition = "2021"
 description = "Library to build MANY modules and servers."
 license-file = "../../LICENSE"
@@ -22,18 +22,18 @@ crc-any = "2.4.0"
 derive_builder = "0.10.2"
 fixed = "1.16.0"
 hex = "0.4.3"
-many-error = { path = "../many-error", version = "0.1.0" }
-many-identity = { path = "../many-identity", version = "0.1.0", features = ["coset", "raw"] }
-many-modules = { path = "../many-modules", version = "0.1.0" }
-many-protocol = { path = "../many-protocol", version = "0.1.0" }
-many-types = { path = "../many-types", version = "0.1.0" }
+many-error = { path = "../many-error", version = "0.1.0" } # managed by release.sh
+many-identity = { path = "../many-identity", features = ["coset", "raw"], version = "0.1.0" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.1.0" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.0" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.0" } # managed by release.sh
 minicbor = { version = "0.18.0", features = ["derive", "half", "std"] }
 num-bigint = "0.4.3"
 num-derive = "0.3.3"
 num-traits = "0.2.14"
 once_cell = "1.10"
 pem = { version = "1.0.0", optional = true }
-many-macros = { path = "../many-macros", version = "0.1.0" }
+many-macros = { path = "../many-macros", version = "0.1.0" } # managed by release.sh
 regex = "1.5.4"
 serde = { version = "1.0.130" }
 sha3 = "0.9.1"
@@ -44,9 +44,9 @@ tracing = "0.1.29"
 tiny_http = "0.11.0"
 
 [dev-dependencies]
-many-server = { path = ".", features = ["testing"] }
-many-identity = { path = "../many-identity", version = "0.1.0", features = ["coset", "raw", "testing"] }
-many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0", features = ["ed25519", "testing"] }
+many-server = { path = ".", features = ["testing"], version = "0.1.0" } # managed by release.sh
+many-identity = { path = "../many-identity", features = ["coset", "raw", "testing"], version = "0.1.0" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ed25519", "testing"], version = "0.1.0" } # managed by release.sh
 proptest = "1.0.0"
 semver = "1.0"
 smol = "1.2.5"

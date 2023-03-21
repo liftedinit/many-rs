@@ -15,163 +15,90 @@ Features
 - MANY common types
 - MANY message and transport layers
 - MANY client and server
-- CLI developer's tools
 - Hardware Security Module
 - CLI developer's tools
 
-# Installation
+# Requirements
+- [Bazelisk](https://github.com/bazelbuild/bazelisk) or [Bazel](https://bazel.build/versions/6.0.0/install) >= 6.0.0
+- (macOS) [Brew](https://brew.sh/)
 
-1. (macOS) Install `brew`
+# Build
+
+1. Install build dependencies
     ```shell
-    # Follow the instructions on screen
-    $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    ```
-1. Update your package database
-    ```shell
-    # Ubuntu
-    $ sudo apt update
+    # Ubuntu/Debian
+    $ sudo apt update && sudo apt install build-essential clang libssl-dev libsofthsm2 libudev-dev 
+        libusb-1.0-0-dev bsdextrautils
     
     # macOS
     $ brew update
+    $ brew install git bazelisk
     ```
-2. Install build dependencies
-    ```shell
-    # Ubuntu
-    $ sudo apt install build-essential clang libssl-dev libsofthsm2 libudev-dev \
-        libusb-1.0-0-dev bsdextrautils tmux 
-    
-    # macOS
-    $ git # and follow the instructions
-    $ brew install tmux
-    ```
-3. Build
+1. Build
     ```shell
     $ git clone https://github.com/liftedinit/many-rs.git
     $ cd many-rs
-    $ bazel build --config=remote-cache //...
+    $ bazel build //...
     ```
-4. Apply format changes
-    ```shell
-    $ bazel run @rules_rust//:rustfmt
-    ```
-5. Run tests
+1. Tests
     ```shell
     # Unit/integration tests
-    $ bazel test --config=remote-cache //...
+    $ bazel test //...
    
-    # e2e tests
-    $ bazel run --config=all-features --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
-    $ bazel run --config=all-features --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
-    $ bazel run --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
+    # E2E integration tests
+    $ bazel test --config=all-features //tests/e2e/kvstore:bats-e2e-kvstore
+    $ bazel test --config=all-features //tests/e2e/ledger:bats-e2e-ledger
+    $ bazel test --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
    
-    # Resiliency tests (requires Docker)
-    $ bazel run --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore 
-    $ bazel run --config=remote-cache --config=ledger-resiliency //tests/resiliency/ledger:bats-resiliency-ledger
+    # Resiliency integration tests (Linux only - requires Docker)
+    $ bazel test //tests/resiliency/kvstore:bats-resiliency-kvstore 
+    $ bazel test --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
     ```
 
 # Usage example
 Below are some examples of how to use the different CLI.
 
-## Requirements
-1. Install `tendermint`
-    1. Download `tendermint` **v0.34.24** from https://github.com/tendermint/tendermint/releases/tag/v0.34.24
-    2. Extract the archive
-    3. Put the path to the `tendermint` executable in your `$PATH`
-
-2. Generate a new key and get its MANY ID
+## Ledger cluster 
 ```shell
-# Generate a new Ed25519 key
-$ ssh-keygen -a 100 -q -P "" -m pkcs8 -t ecdsa -f id1.pem
+# Create a 4-nodes Ledger cluster. Requires local Docker. Linux only
+$ bazel run //:start-ledger-cluster
 
-# Get the MANY ID of the key
-$ bazel run many -- id id1.pem
-maeguvtgcrgXXXXXXXXXXXXXXXXXXXXXXXXwqg6ibizbmflicz
+# Create a 4-nodes Ledger cluster in the background
+$ bazel run //:start-ledger-cluster-detached
+
+# Stop the ledger cluster
+$ bazel run //:stop-ledger-cluster 
 ```
 
-4. Assign some tokens to your MANY ID by adding it to the `initial` section of the `staging/ledger_state.json5` file
-```json5
-    "maeguvtgcrgXXXXXXXXXXXXXXXXXXXXXXXXwqg6ibizbmflicz": {
-      "MFX": 123456789
-    }
-```
-
-5. (Dev) Comment the `hash` entry from the `staging/ledger_state.json5` file
-```json5
-  // hash: "fc0041ca4f7d959fe9e5a337e175bd8a68942cad76745711a3daf820a159f7eb"
-```
-
-## Run a blockchain key-value store and ledger
+## Balance
 ```shell
-# The script will start a `tmux` instance containing 7 panes
-#   0: Tendermint ledger
-#   1: Tendermint key-value store
-#   2: ledger server
-#   3: ledger application blockchain interface (port 8000)
-#   4: key-value store server
-#   5: key-value store application blockchain interface (port 8011)
-#   6: http proxy
-$ ./scripts/run.sh
-```
-
-## Run a non-blockchain ledger server
-```shell
-# Follow the instructions from the `Requirements` section above before running this example.
-
-# Run the ledger server using the provided initial state and key. 
-# Create a clean persistent storage.
-$ ./target/debug/many-ledger --pem id1.pem --state ./staging/ledger_state.json5 --persistent ledger.db --clean
-2022-07-05T18:21:45.598272Z  INFO many_ledger: address="maeguvtgcrgXXXXXXXXXXXXXXXXXXXXXXXXwqg6ibizbmflicz"
-2022-07-05T18:21:45.625108Z  INFO many_ledger::module: height=0 hash="fc0041ca4f7d959fe9e5a337e175bd8a68942cad76745711a3daf820a159f7eb"
-```
-
-## Query balance
-```shell
-# Follow the instructions from the `Requirements` section above before running this example.
-
-# You must have a running ledger server before running this example.
-# See section `Run a non-blockchain ledger server` above.
-# See section `Run a blockchain key-value store and ledger` above.
-$ ./target/debug/ledger --pem id1.pem balance
-   123456789 MFX (mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz)
+# Query the local ledger cluster
+$ bazel run //src/ledger -- --pem $(pwd)/keys/id1.pem balance
+  1000000000 MFX (mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz)
 ```
 
 ## Send tokens
 ```shell
-# Follow the instructions from the `Requirements` section above before running this example.
-
-# You must have a running ledger server before running this example.
-# See section `Run a non-blockchain ledger server` above.
-# See section `Run a blockchain key-value store and ledger` above.
-
-# Generate a random key and get its MANY ID
-$ ssh-keygen -a 100 -q -P "" -m pkcs8 -t ecdsa -f tmp.pem
-$ many id tmp.pem
-maf4byfbrz7dcc72tgb5zbof75cs52wg2fwbc2fdf467qj2qcx
-
-# Send tokens from id1.pem to tmp.pem
-$ ./target/debug/ledger --pem id1.pem send maf4byfbrz7dcc72tgb5zbof75cs52wg2fwbc2fdf467qj2qcx 10000 MFX
+# Send tokens from id1.pem to id2.pem
+$ bazel run //src/ledger -- --pem $(pwd)/keys/id1.pem send mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow 10000 MFX
+2023-03-13T19:07:20.120255Z  INFO ledger: Async token: a560d5409a18ae493ce457bb4008da0afc3d383c2a505979a963c26398f51fc9
+  Waiting for async response
+null
 
 # Check the balance of the new ID
-$ ./target/debug/ledger --pem tmp.pem balance
+$ bazel run //src/ledger -- --pem $(pwd)/keys/id2.pem balance
        10000 MFX (mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz)
 ```
 
-## `many` CLI
-Below are some examples of how to use the `many` CLI.
-
-## Retrieve the MANY ID of a key
+## Print the MANY ID of a key file
 ```shell
-# Generate a new Ed25519 key
-$ openssl genpkey -algorithm Ed25519 -out id1.pem
-
-# Print the MANY ID of the key
-$ ./target/debug/many id id1.pem
-mafdzlw6ktmpncikho6wwswzej7rpja7fgtbn33xzwkfngdygc
+$ bazel run //src/many -- id $(pwd)/keys/id1.pem
+maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp
 ```
 
 ## Retrieve the status of a running MANY server
 ```shell
-$ ./target/debug/many message --server https://alberto.app/api 'status' '{}'
+$ bazel run //src/many -- message --server https://alberto.app/api 'status' '{}'
 {_
     0: 1,
     1: "AbciModule(many-ledger)",
@@ -183,17 +110,24 @@ $ ./target/debug/many message --server https://alberto.app/api 'status' '{}'
 }
 ```
 
-# Crates
+# Developers
+## Contributing
+Read our [Contributing Guidelines](https://github.com/liftedinit/.github/blob/main/docs/CONTRIBUTING.md)
+## Crates
 
 Here's a list of crates published by this repository and their purposes.
 You can visit their crates entries (linked below) for more information.
 
-## Published to crates.io
+### Published to crates.io
 
 * `many`([crates](https://crates.io/crate/many), [docs](https://docs.rs/many))
     – Contains the CLI tool to contact and diagnose MANY servers.
 * `many-client`([crates](https://crates.io/crate/many-client), [docs](https://docs.rs/many-client))
   – Types and methods to talk to the MANY network.
+* `many-client-macros`([crates](https://crates.io/crate/many-client-macros), [docs](https://docs.rs/many-client-macros))
+    – `many-client` procedural macro
+* `many-cli-helpers`([crate](https://crates.io/crate/many-cli-helpers), [docs](https://docs.rs/many-cli-helpers))) 
+    – Common CLI flags
 * `many-error`([crates](https://crates.io/crate/many-error), [docs](https://docs.rs/many-error))
     – Error and Reason types, as defined by the specification.
 * `many-identity`([crates](https://crates.io/crate/many-identity), [docs](https://docs.rs/many-identity))
@@ -209,6 +143,8 @@ You can visit their crates entries (linked below) for more information.
       See the [Lifted WebAuthn Auth Paper](https://coda.io/@hans-larsen/lifted-webauthn-auth).
 * `many-macros`([crates](https://crates.io/crate/many-macros), [docs](https://docs.rs/many-macros))
     – Contains macros to help with server and module declaration and implementations.
+* `many-migration`([crates](https://crates.io/crate/many-migration), [docs](https://docs.rs/many-migration))
+  – Storage/Transaction migration framework.
 * `many-mock`([crates](https://crates.io/crate/many-mock), [docs](https://docs.rs/many-mock))
     – Utility types for creating mocked MANY servers.
 * `many-modules`([crates](https://crates.io/crate/many-modules), [docs](https://docs.rs/many-modules))
@@ -221,8 +157,41 @@ You can visit their crates entries (linked below) for more information.
 * `many-types`([crates](https://crates.io/crate/many-types), [docs](https://docs.rs/many-types))
   – General types related to CBOR encoding, or to the specification.
 
+## Using Bazel
+### Remote cache
+```shell
+# Use BuildBuddy remote cache
+$ bazel build --config=remote-cache //...
+```
 
-# References
+### Code formatting
+```shell
+# Check code formatting
+$ bazel build --config=rustfmt-check //...
+
+# Apply format changes using
+$ bazel run @rules_rust//:rustfmt
+```
+
+### Lint
+```shell
+# Clippy
+$ bazel build --config=clippy //...
+```
+
+## Generating new keys
+### ECDSA
+```shell
+$ ssh-keygen -a 100 -q -P "" -m pkcs8 -t ecdsa -f key_name.pem
+```
+
+### Ed25519
+```shell
+# Requires openssl@3 on macOS
+$ openssl genpkey -algorithm Ed25519 -out key_name.pem
+```
+
+## References
 
 - Concise Binary Object Representation (CBOR): [RFC 8949](https://www.rfc-editor.org/rfc/rfc8949.html)
 - CBOR Object Signing and Encryption (COSE): [RFC 8152](https://datatracker.ietf.org/doc/html/rfc8152)
@@ -234,7 +203,7 @@ You can visit their crates entries (linked below) for more information.
 - Platform-independent API to cryptographic tokens: [PKCS #11](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html)
 
 
-# Developer tools
+## Tools
 
 - CBOR playground: [CBOR.me](https://cbor.me)
 - CBOR diagnostic utilities: [cbor-diag](https://github.com/cabo/cbor-diag)
@@ -242,12 +211,3 @@ You can visit their crates entries (linked below) for more information.
 - Bash automated testing system: [bats-core](https://github.com/bats-core/bats-core)
 - Container engine: [Docker](https://www.docker.com/)
 - The MANY libraries: [many-rs](https://github.com/liftedinit/many-rs)
-
-# Contributing
-
-1. Read our [Contributing Guidelines](https://github.com/liftedinit/.github/blob/main/docs/CONTRIBUTING.md)
-2. Fork the project (https://github.com/liftedinit/many-rs/fork)
-3. Create a feature branch (`git checkout -b feature/fooBar`)
-4. Commit your changes (`git commit -am 'Add some fooBar'`)
-5. Push to the branch (`git push origin feature/fooBar`)
-6. Create a new Pull Request (https://github.com/liftedinit/many-rs/pull/new)

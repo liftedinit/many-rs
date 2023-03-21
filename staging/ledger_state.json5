@@ -1,11 +1,27 @@
 {
+  // #################################################
+  // WARNING: DO NOT USE THIS FILE AS-IS IN PRODUCTION
+  //
+  // MANY ID : Key file
+  // maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp : keys/id1.pem
+  // mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow : keys/id2.pem
+  // mafbp553oq57taqhnz3muqombqtw4eiqsqoaux4hmwtv2xuyf3 : keys/id3.pem
+  //
+  // #################################################
+
   // This file should be json5, and as such supports things like simpler identifiers
   // and comments.
 
+  // ########################
+  // CHANGE ME FOR PRODUCTION
+  // ########################
   // The identity that is used to create new accounts. The server does not need to
   // know the private key for this, just that it's not reused.
   identity: "mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow",
 
+  // ########################
+  // CHANGE ME FOR PRODUCTION
+  // ########################
   // Optional.
   // Default will use the server identity.
   // Identity from which new token symbols will be derived.
@@ -18,11 +34,17 @@
   // E.g., the MFX symbol in this file has subresource 1.
   token_next_subresource: 2,
 
+  // ########################
+  // CHANGE ME FOR PRODUCTION
+  // ########################
   // Optional.
   // Default will use the server identity.
   // Identity from which new account identities will be derived.
   account_identity: "mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow",
 
+  // ########################
+  // CHANGE ME FOR PRODUCTION
+  // ########################
   // Initial balances for this ledger. The symbols can be either the identity or
   // the name of the symbol. The symbol is validated during initialization so it
   // must match an existing symbol.
@@ -35,11 +57,17 @@
     }
   },
 
+  // ########################
+  // CHANGE ME FOR PRODUCTION
+  // ########################
   // List of symbols that this ledger supports.
   symbols: {
     "mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz": "MFX"
   },
 
+  // ########################
+  // CHANGE ME FOR PRODUCTION
+  // ########################
   // List of symbols metadata
   // Ignored by default.
   // Triggered by the "Token Migration"
@@ -51,6 +79,9 @@
    }
   },
 
+  // ########################
+  // CHANGE ME FOR PRODUCTION
+  // ########################
   // List of accounts to create at start time.
   accounts: [
     {
@@ -98,6 +129,9 @@
     }
   ],
 
+  // ########################
+  // CHANGE ME FOR PRODUCTION
+  // ########################
   // Hash calculated after the initial state is created.
   // Note: This will change depending on the migration activated at load
   hash: "fc0041ca4f7d959fe9e5a337e175bd8a68942cad76745711a3daf820a159f7eb"

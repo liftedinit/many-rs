@@ -15,6 +15,10 @@ test:bats-resiliency-ledger --balance_testing --migration_testing
 build:rustfmt --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect
 build:rustfmt --output_groups=+rustfmt_checks
 
+# Enable rustfmt check for all targets in the workspace
+build:rustfmt-check --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect
+build:rustfmt-check --output_groups=rustfmt_checks
+
 # Enable clippy for all targets in the workspace
 build:clippy --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect
 build:clippy --output_groups=+clippy_checks

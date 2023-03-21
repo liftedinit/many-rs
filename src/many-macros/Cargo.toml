@@ -1,6 +1,6 @@
 [package]
 name = "many-macros"
-version = "0.1.0"
+version = "0.1.0" # managed by release.sh
 edition = "2021"
 description = "Procedural macros to support create MANY modules."
 license-file = "../../LICENSE"
