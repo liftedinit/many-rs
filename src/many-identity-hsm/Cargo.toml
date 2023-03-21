@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 asn1 = "0.13.0"
 coset = "0.3.2"
-cryptoki = "0.3.0"
+cryptoki = { version = "0.3.1", features = ["generate-bindings"] }
 hex = "0.4.3"
 many-error = { path = "../many-error", version = "0.1.0" } # managed by release.sh
 many-identity = { path = "../many-identity", version = "0.1.0" } # managed by release.sh

@@ -1,5 +1,5 @@
 {
-  "checksum": "8db91577ec8044b07786f157b7bd78f8aaa32413244d2c2991b2555597265bec",
+  "checksum": "023636a4f390e5cba66bda9b52155bcfdffdea232f53610d972b18c66e75ec55",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -1923,6 +1923,123 @@
         "version": "0.1.3"
       },
       "license": "MPL-2.0"
+    },
+    "bindgen 0.63.0": {
+      "name": "bindgen",
+      "version": "0.63.0",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/bindgen/0.63.0/download",
+          "sha256": "36d860121800b2a9a94f9b5604b332d5cffb234ce17609ea479d723dbc9d3885"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "bindgen",
+            "crate_root": "lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "bindgen",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": [
+          "default",
+          "log",
+          "logging",
+          "runtime",
+          "which",
+          "which-rustfmt"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "bindgen 0.63.0",
+              "target": "build_script_build"
+            },
+            {
+              "id": "bitflags 1.3.2",
+              "target": "bitflags"
+            },
+            {
+              "id": "cexpr 0.6.0",
+              "target": "cexpr"
+            },
+            {
+              "id": "clang-sys 1.6.0",
+              "target": "clang_sys"
+            },
+            {
+              "id": "lazy_static 1.4.0",
+              "target": "lazy_static"
+            },
+            {
+              "id": "lazycell 1.3.0",
+              "target": "lazycell"
+            },
+            {
+              "id": "log 0.4.17",
+              "target": "log"
+            },
+            {
+              "id": "peeking_take_while 0.1.2",
+              "target": "peeking_take_while"
+            },
+            {
+              "id": "proc-macro2 1.0.51",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.23",
+              "target": "quote"
+            },
+            {
+              "id": "regex 1.7.1",
+              "target": "regex"
+            },
+            {
+              "id": "rustc-hash 1.1.0",
+              "target": "rustc_hash"
+            },
+            {
+              "id": "shlex 1.1.0",
+              "target": "shlex"
+            },
+            {
+              "id": "syn 1.0.109",
+              "target": "syn"
+            },
+            {
+              "id": "which 4.4.0",
+              "target": "which"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.63.0"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "BSD-3-Clause"
     },
     "bindgen 0.64.0": {
       "name": "bindgen",
@@ -4567,13 +4684,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "cryptoki 0.3.0": {
+    "cryptoki 0.3.1": {
       "name": "cryptoki",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/cryptoki/0.3.0/download",
-          "sha256": "503aa2bd88796da9bc6baf2c47696da40f135721b3d6680c7c6cee0b7d1f7a59"
+          "url": "https://crates.io/api/v1/crates/cryptoki/0.3.1/download",
+          "sha256": "570006e51d08ec89ce5bbfdcf428ad96111636d524bf2447bee6377fd0e1d889"
         }
       },
       "targets": [
@@ -4592,10 +4709,13 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": [
+          "generate-bindings"
+        ],
         "deps": {
           "common": [
             {
-              "id": "cryptoki-sys 0.1.4",
+              "id": "cryptoki-sys 0.1.5",
               "target": "cryptoki_sys"
             },
             {
@@ -4619,17 +4739,17 @@
           ],
           "selects": {}
         },
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "license": "Apache-2.0"
     },
-    "cryptoki-sys 0.1.4": {
+    "cryptoki-sys 0.1.5": {
       "name": "cryptoki-sys",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/cryptoki-sys/0.1.4/download",
-          "sha256": "1e4895bb04269df9a14f2692c6499dc2769e9a93caa33ef37c4df134f76956d2"
+          "url": "https://crates.io/api/v1/crates/cryptoki-sys/0.1.5/download",
+          "sha256": "1d12231889cbf7e11d2965a063d9518bc7aac60c5b125dc61c8ff2111a160eae"
         }
       },
       "targets": [
@@ -4657,10 +4777,14 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": [
+          "bindgen",
+          "generate-bindings"
+        ],
         "deps": {
           "common": [
             {
-              "id": "cryptoki-sys 0.1.4",
+              "id": "cryptoki-sys 0.1.5",
               "target": "build_script_build"
             },
             {
@@ -4671,7 +4795,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.1.4"
+        "version": "0.1.5"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -4679,6 +4803,10 @@
         ],
         "deps": {
           "common": [
+            {
+              "id": "bindgen 0.63.0",
+              "target": "bindgen"
+            },
             {
               "id": "target-lexicon 0.12.6",
               "target": "target_lexicon"
@@ -13238,7 +13366,7 @@
               "target": "coset"
             },
             {
-              "id": "cryptoki 0.3.0",
+              "id": "cryptoki 0.3.1",
               "target": "cryptoki"
             },
             {
@@ -26846,6 +26974,56 @@
         }
       },
       "license": "MIT OR Apache-2.0 OR BSD-2-Clause"
+    },
+    "which 4.4.0": {
+      "name": "which",
+      "version": "4.4.0",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/which/4.4.0/download",
+          "sha256": "2441c784c52b289a054b7201fc93253e288f094e2f4be9058343127c4226a269"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "which",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "which",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "either 1.8.1",
+              "target": "either"
+            },
+            {
+              "id": "libc 0.2.139",
+              "target": "libc"
+            }
+          ],
+          "selects": {
+            "cfg(windows)": [
+              {
+                "id": "once_cell 1.17.1",
+                "target": "once_cell"
+              }
+            ]
+          }
+        },
+        "edition": "2018",
+        "version": "4.4.0"
+      },
+      "license": "MIT"
     },
     "winapi 0.3.9": {
       "name": "winapi",
