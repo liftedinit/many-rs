@@ -1,7 +1,8 @@
 use crate::storage::event::HEIGHT_EVENTID_SHIFT;
-use crate::storage::LedgerStorage;
+use crate::storage::{InnerStorage, LedgerStorage};
 use many_modules::abci_backend::AbciCommitInfo;
 use many_modules::events::EventId;
+use std::path::PathBuf;
 
 impl LedgerStorage {
     pub fn commit(&mut self) -> AbciCommitInfo {
@@ -17,9 +18,18 @@ impl LedgerStorage {
         // attributes.
         self.commit_storage().expect("Unable to commit to storage.");
 
+        fn new_storage(path: PathBuf) -> InnerStorage {
+            InnerStorage::open_v2(path).expect("Unable to open v2 storage")
+        }
+
         // Initialize/update migrations at current height, if any
         self.migrations
-            .update_at_height(&mut self.persistent_store, height + 1)
+            .update_at_height(
+                &mut self.persistent_store,
+                Some(self.path.clone()),
+                Some(new_storage),
+                height + 1,
+            )
             .expect("Unable to run migrations");
 
         self.commit_storage().expect("Unable to commit to storage.");

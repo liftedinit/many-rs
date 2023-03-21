@@ -13,7 +13,7 @@ use many_types::Timestamp;
 use merk_v1::rocksdb::{DBIterator, IteratorMode, ReadOptions};
 use merk_v1::{Hash, Op};
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 mod abci;
 pub mod account;
@@ -216,6 +216,7 @@ pub struct LedgerStorage {
     current_hash: Option<Vec<u8>>,
 
     migrations: LedgerMigrations,
+    path: PathBuf,
 }
 
 impl LedgerStorage {
@@ -288,8 +289,9 @@ impl LedgerStorage {
         blockchain: bool,
         migration_config: Option<MigrationConfig>,
     ) -> Result<Self, ManyError> {
+        let path = persistent_path.as_ref().to_owned();
         let persistent_store =
-            InnerStorage::open(persistent_path).map_err(error::storage_open_failed)?;
+            InnerStorage::open(path.clone()).map_err(error::storage_open_failed)?;
 
         let height = persistent_store
             .get(HEIGHT_ROOT.as_bytes())
@@ -322,11 +324,13 @@ impl LedgerStorage {
             current_time: None,
             current_hash: None,
             migrations,
+            path,
         })
     }
 
     pub fn new<P: AsRef<Path>>(persistent_path: P, blockchain: bool) -> Result<Self, ManyError> {
-        let persistent_store = InnerStorage::open(persistent_path).map_err(ManyError::unknown)?; // TODO: Custom error
+        let path = persistent_path.as_ref().to_owned();
+        let persistent_store = InnerStorage::open(path.clone()).map_err(ManyError::unknown)?; // TODO: Custom error
 
         Ok(Self {
             persistent_store,
@@ -335,6 +339,7 @@ impl LedgerStorage {
             current_time: None,
             current_hash: None,
             migrations: MigrationSet::empty().map_err(ManyError::unknown)?, // TODO: Custom error
+            path,
         })
     }
 

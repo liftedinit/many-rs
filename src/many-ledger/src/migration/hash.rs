@@ -1,21 +1,18 @@
 use {
-    crate::storage::{InnerStorage, Operation},
+    crate::{
+        migration::{InnerMigration, MIGRATIONS},
+        storage::{InnerStorage, Operation},
+    },
+    linkme::distributed_slice,
     many_error::ManyError,
     merk_v1::rocksdb::{IteratorMode, ReadOptions},
     merk_v2::Op,
-    serde_json::Value,
-    std::{collections::HashMap, path::Path},
 };
 
-fn _initialize(
-    (storage, new_path): &mut (InnerStorage, Box<Path>),
-    _: &HashMap<String, Value>,
-) -> Result<(), ManyError> {
+fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Result<(), ManyError> {
     match storage {
         InnerStorage::V1(merk) => {
-            let mut new_storage =
-                InnerStorage::open_v2(new_path.clone()).map_err(ManyError::unknown)?;
-            new_storage
+            replacement
                 .apply(
                     merk.iter_opt(IteratorMode::Start, ReadOptions::default())
                         .map(|key_value_pair| {
@@ -28,10 +25,17 @@ fn _initialize(
                         .as_slice(),
                 )
                 .map_err(ManyError::unknown)?;
-            new_storage.commit(&[]).map_err(ManyError::unknown)?;
-            *storage = new_storage;
+            replacement.commit(&[]).map_err(ManyError::unknown)?;
+            *storage = replacement;
         }
         InnerStorage::V2(_) => (),
     }
     Ok(())
 }
+
+#[distributed_slice(MIGRATIONS)]
+pub static HASH_MIGRATION: InnerMigration<InnerStorage, ManyError> = InnerMigration::new_hash(
+    initialize,
+    "Hash Migration",
+    "Move data from old version of merk hash scheme to new version of merk hash scheme",
+);

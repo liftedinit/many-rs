@@ -109,18 +109,18 @@ fn initialize() {
     let mut storage = Storage::new();
 
     // Should not run when block height == 0
-    migrations["A"].initialize(&mut storage, 0).unwrap();
+    migrations["A"].initialize(&mut storage, None, 0).unwrap();
     assert!(storage.is_empty());
 
     // Migration should run when block height == 1
-    migrations["A"].initialize(&mut storage, 1).unwrap();
+    migrations["A"].initialize(&mut storage, None, 1).unwrap();
     assert!(!storage.is_empty());
     assert_eq!(storage.len(), 1);
     assert!(storage.contains_key(&StorageKey::Init));
     assert_eq!(storage[&StorageKey::Init], 1);
 
     // Should not do anything after it ran once
-    migrations["A"].initialize(&mut storage, 2).unwrap();
+    migrations["A"].initialize(&mut storage, None, 2).unwrap();
     assert_eq!(storage.len(), 1);
 }
 
@@ -141,7 +141,7 @@ fn initialize_extra() {
     assert!(migrations.contains_key("E"));
     let mut storage = Storage::new();
 
-    migrations["E"].initialize(&mut storage, 2).unwrap();
+    migrations["E"].initialize(&mut storage, None, 2).unwrap();
     assert_eq!(storage[&StorageKey::Init], 42);
 }
 
@@ -204,7 +204,7 @@ fn initialize_update() {
     let mut storage = Storage::from_iter([(StorageKey::Counter, 0)]);
 
     for i in 0..4 {
-        migrations["C"].initialize(&mut storage, i).unwrap();
+        migrations["C"].initialize(&mut storage, None, i).unwrap();
         match i {
             0 => assert_eq!(storage.len(), 1),
             1 => {
@@ -371,17 +371,23 @@ fn basic() {
     let mut storage = Storage::new();
     storage.insert(StorageKey::Counter, 0);
 
-    migration_set.update_at_height(&mut storage, 1).unwrap();
+    migration_set
+        .update_at_height(&mut storage, None, None, 1)
+        .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 1);
 
-    migration_set.update_at_height(&mut storage, 2).unwrap();
+    migration_set
+        .update_at_height(&mut storage, None, None, 2)
+        .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);
 
-    migration_set.update_at_height(&mut storage, 3).unwrap();
+    migration_set
+        .update_at_height(&mut storage, None, None, 3)
+        .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);
