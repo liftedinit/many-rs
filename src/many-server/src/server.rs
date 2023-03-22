@@ -404,7 +404,7 @@ mod tests {
                 .unwrap();
 
             let envelope = encode_cose_sign1_from_request(request, &id).unwrap();
-            let response = smol::block_on(async { server.execute(envelope).await }).unwrap();
+            let response = smol::block_on(server.execute(envelope)).unwrap();
             let response_message = decode_response_from_cose_sign1(&response, None, &AcceptAllVerifier).unwrap();
 
             let status: Status = minicbor::decode(&response_message.data.unwrap()).unwrap();

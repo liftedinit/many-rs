@@ -396,9 +396,9 @@ impl InnerAddress {
         bytes[0] = id.discriminant();
 
         let id = id.0;
-        bytes[(SHA_OUTPUT_SIZE + 1)] = ((id & 0x00FF_0000) >> 16) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 2)] = ((id & 0x0000_FF00) >> 8) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 3)] = (id & 0x0000_00FF) as u8;
+        bytes[SHA_OUTPUT_SIZE + 1] = ((id & 0x00FF_0000) >> 16) as u8;
+        bytes[SHA_OUTPUT_SIZE + 2] = ((id & 0x0000_FF00) >> 8) as u8;
+        bytes[SHA_OUTPUT_SIZE + 3] = (id & 0x0000_00FF) as u8;
         Self { bytes }
     }
 

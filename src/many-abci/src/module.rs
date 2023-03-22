@@ -157,7 +157,7 @@ impl<C: Client + Send + Sync> r#async::AsyncModuleBackend for AbciBlockchainModu
 
 impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockchainModuleImpl<C> {
     fn info(&self) -> Result<blockchain::InfoReturns, ManyError> {
-        let status = block_on(async { self.client.status().await }).map_err(|e| {
+        let status = block_on(self.client.status()).map_err(|e| {
             tracing::error!("abci transport: {}", e.to_string());
             abci_frontend::abci_transport_error(e.to_string())
         })?;
