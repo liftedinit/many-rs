@@ -157,7 +157,7 @@ pub(crate) mod testutils {
         };
 
         module.validate(&message, envelope)?;
-        let response = smol::block_on( module.execute(message))?;
+        let response = smol::block_on(module.execute(message))?;
         response.data
     }
 }
