@@ -113,6 +113,7 @@ rust_library(
 
 rust_test(
     name = "many-ledger-test",
+    aliases = aliases(),
     crate = ":many-ledger-lib-for-test",
     data = ["//staging:ledger-staging"],
 )
