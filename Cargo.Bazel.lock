@@ -225,7 +225,7 @@ checksum = "0e97ce7de6cf12de5d7226c73f5ba9811622f4db3a5b91b55c53e987e5f91cba"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -242,7 +242,7 @@ checksum = "86ea188f25f0255d8f92797797c97ebf5631fa88178beb1a46fdf5622c9a00e4"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -370,11 +370,7 @@ version = "0.63.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36d860121800b2a9a94f9b5604b332d5cffb234ce17609ea479d723dbc9d3885"
 dependencies = [
-<<<<<<< HEAD
  "bitflags 1.3.2",
-=======
- "bitflags",
->>>>>>> 8ecbead2b749f037233e9ee3d9a54f22015f83e5
  "cexpr",
  "clang-sys",
  "lazy_static",
@@ -386,11 +382,7 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex",
-<<<<<<< HEAD
  "syn 1.0.109",
-=======
- "syn",
->>>>>>> 8ecbead2b749f037233e9ee3d9a54f22015f83e5
  "which",
 ]
 
@@ -1777,7 +1769,7 @@ checksum = "e77ac7b51b8e6313251737fcef4b1c01a2ea102bde68415b62c0ee9268fec357"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -2134,8 +2126,8 @@ dependencies = [
  "base64 0.20.0",
  "clap 3.2.23",
  "derive_more",
- "merk 2.0.0 (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration)",
- "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1)",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1#857bf81963d9282ab03438da5013e1f816bd9da1)",
+ "merk 2.0.0-oo (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration#e145e565d750d321efc85f11455aa3f16e6efd12)",
  "serde",
  "serde_derive",
  "serde_json",
@@ -2375,8 +2367,8 @@ dependencies = [
  "hex",
  "many-modules",
  "many-types",
- "merk 2.0.0 (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration)",
- "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1)",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1#857bf81963d9282ab03438da5013e1f816bd9da1)",
+ "merk 2.0.0-oo (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration#e145e565d750d321efc85f11455aa3f16e6efd12)",
  "minicbor",
 ]
 
@@ -2483,7 +2475,7 @@ checksum = "c880e0101fc5844ae1c2f3b5b50aba1fb1939e308149dc2dde33b80a0816df18"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -2781,8 +2773,8 @@ dependencies = [
  "many-protocol",
  "many-server",
  "many-types",
- "merk 2.0.0 (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration)",
- "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1)",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1#857bf81963d9282ab03438da5013e1f816bd9da1)",
+ "merk 2.0.0-oo (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration#e145e565d750d321efc85f11455aa3f16e6efd12)",
  "minicbor",
  "num-bigint",
  "once_cell",
@@ -2827,8 +2819,8 @@ dependencies = [
  "many-protocol",
  "many-server",
  "many-types",
- "merk 2.0.0 (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration)",
- "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1)",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1#857bf81963d9282ab03438da5013e1f816bd9da1)",
+ "merk 2.0.0-oo (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration#e145e565d750d321efc85f11455aa3f16e6efd12)",
  "minicbor",
  "num-bigint",
  "num-traits",
@@ -2871,8 +2863,8 @@ dependencies = [
  "many-modules",
  "many-protocol",
  "many-types",
- "merk 2.0.0 (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration)",
- "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1)",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1#857bf81963d9282ab03438da5013e1f816bd9da1)",
+ "merk 2.0.0-oo (git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration#e145e565d750d321efc85f11455aa3f16e6efd12)",
  "minicbor",
  "once_cell",
  "proptest",
@@ -3061,8 +3053,8 @@ dependencies = [
 
 [[package]]
 name = "merk"
-version = "2.0.0"
-source = "git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration#db8586a68dcf8bea31d300b356601d3c8ccaa02c"
+version = "2.0.0-oo"
+source = "git+https://github.com/MavenRain/merk.git?branch=merk-hash-migration#e145e565d750d321efc85f11455aa3f16e6efd12"
 dependencies = [
  "blake3",
  "byteorder",
@@ -3769,9 +3761,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.52"
+version = "1.0.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d0e1ae9e836cc3beddd63db0df682593d7e2d3d891ae8c9083d2113e1744224"
+checksum = "ba466839c78239c09faf015484e5cc04860f88242cff4d03eb038f04b4699b73"
 dependencies = [
  "unicode-ident",
 ]
@@ -4302,7 +4294,7 @@ checksum = "e801c1712f48475582b7696ac71e0ca34ebb30e09338425384269d9717c62cad"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -4324,7 +4316,7 @@ checksum = "bcec881020c684085e55a25f7fd888954d56609ef363479dc5a1305eb0d40cab"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -4592,9 +4584,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.4"
+version = "2.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c622ae390c9302e214c31013517c2061ecb2699935882c60a9b37f82f8625ae"
+checksum = "89c2d1c76a26822187a1fbb5964e3fff108bc208f02e820ab9dac1234f6b388a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4858,7 +4850,7 @@ checksum = "f9456a42c5b0d803c8cd86e73dd7cc9edd429499f37a3550d286d5e86720569f"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -5467,17 +5459,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aabe153544e473b775453675851ecc86863d2a81d786d741f6b76778f2a48940"
 dependencies = [
  "webpki",
-]
-
-[[package]]
-name = "which"
-version = "4.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2441c784c52b289a054b7201fc93253e288f094e2f4be9058343127c4226a269"
-dependencies = [
- "either",
- "libc",
- "once_cell",
 ]
 
 [[package]]
