@@ -44,8 +44,6 @@ impl<I: Identity + Debug + Send + Sync> LowLevelManyRequestHandler for ManyMockS
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
         let request = many_protocol::decode_request_from_cose_sign1(&envelope, &self.verifier);
         let id = &self.identity;
-        let a: Vec<_> = self.mock_entries.keys().cloned().collect();
-        println!("{a:?}");
 
         let message = request.map_err(|_| "Error processing the request".to_string())?;
         let response = self
