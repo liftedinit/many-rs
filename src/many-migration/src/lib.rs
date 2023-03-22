@@ -16,6 +16,8 @@ pub type FnPtr<T, E> = fn(&mut T, &HashMap<String, Value>) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
 pub type FnHashPtr<T, E> = fn(&mut T, T) -> Result<(), E>;
 
+pub type Replacement<T> = (PathBuf, fn(PathBuf) -> T);
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Metadata {
     pub block_height: u64,
@@ -237,7 +239,7 @@ impl<T, E> InnerMigration<T, E> {
     fn initialize(
         &self,
         storage: &mut T,
-        replacement: Option<(PathBuf, fn(PathBuf) -> T)>,
+        replacement: Option<Replacement<T>>,
         extra: &HashMap<String, Value>,
     ) -> Result<(), E> {
         match (&self.r#type, replacement) {
@@ -356,7 +358,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     pub fn maybe_initialize_update_at_height(
         &mut self,
         storage: &mut T,
-        replacement: Option<(PathBuf, fn(PathBuf) -> T)>,
+        replacement: Option<Replacement<T>>,
         block_height: u64,
     ) -> Result<(), E> {
         if self.is_enabled() {
@@ -378,7 +380,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     pub fn initialize(
         &self,
         storage: &mut T,
-        replacement: Option<(PathBuf, fn(PathBuf) -> T)>,
+        replacement: Option<Replacement<T>>,
         block_height: u64,
     ) -> Result<(), E> {
         if self.is_enabled() && block_height == self.metadata.block_height {
