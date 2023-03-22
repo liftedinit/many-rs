@@ -957,9 +957,9 @@ dependencies = [
 
 [[package]]
 name = "cucumber"
-version = "0.17.0"
+version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24f3e7fc780b1bc0dc3b60e06d0e43d0fc2ed8ba6a854cf756764bcfc33aaab8"
+checksum = "a845da7c9fb958144700201d22e3f61f55114f9e269c13f03fe179d9da500984"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -983,13 +983,14 @@ dependencies = [
  "sealed 0.4.0",
  "serde",
  "serde_json",
+ "smart-default",
 ]
 
 [[package]]
 name = "cucumber-codegen"
-version = "0.17.0"
+version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b71f72539be877c7a0ed7464ac94936f5369ee8b9033439a0fed2103af5508f"
+checksum = "0dfb841fe8742f57fbe94738a189022e7dc858f2560c7fba5da44dc945a139e1"
 dependencies = [
  "cucumber-expressions",
  "inflections",
@@ -2819,7 +2820,6 @@ dependencies = [
 name = "many-mock"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "cbor-diag",
  "ciborium",
  "coset",
@@ -4367,6 +4367,17 @@ name = "smallvec"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
+
+[[package]]
+name = "smart-default"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "133659a15339456eeeb07572eb02a91c91e9815e9cbc89566944d2c8d3efdbf6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "smawk"
