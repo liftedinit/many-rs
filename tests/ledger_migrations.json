@@ -30,5 +30,11 @@
     "block_height": 0,
     "upper_block_height": 0,
     "disabled": true
+  },
+  {
+    "name": "HashMigration",
+    "block_height": 0,
+    "upper_block_height": 0,
+    "disabled": true
   }
 ] }
