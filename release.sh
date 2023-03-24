@@ -33,6 +33,6 @@ export GIT_CLIFF_TEMPLATE="\
 	{% endfor %}
 	{% endfor %}"
 changelog=$(git cliff --unreleased --strip all)
-git tag -a "$1" -m "Release $1" -m "$changelog"
+git tag -a "${1#v}" -m "Release $1" -m "$changelog"
 echo "Done!"
 echo "Now push the commit (git push) and the tag (git push --tags)."
