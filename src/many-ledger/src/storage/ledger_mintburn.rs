@@ -76,8 +76,7 @@ impl LedgerStorage {
         // while the `merk` Ops are sorted by String
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
-        self.persistent_store
-            .apply(batch.as_slice())?;
+        self.persistent_store.apply(batch.as_slice())?;
 
         self.maybe_commit().map(|_| keys)
     }
@@ -138,8 +137,7 @@ impl LedgerStorage {
         // while the `merk` Ops are sorted by String
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
-        self.persistent_store
-            .apply(batch.as_slice())?;
+        self.persistent_store.apply(batch.as_slice())?;
 
         self.maybe_commit().map(|_| keys)
     }

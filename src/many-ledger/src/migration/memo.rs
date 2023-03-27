@@ -103,8 +103,7 @@ fn update_multisig_submit_events(storage: &mut InnerStorage) -> Result<(), ManyE
     // The iterator is already sorted when going through rocksdb.
     // Since we only filter and map above, the keys in batch will always
     // be sorted at this point.
-    storage
-        .apply(batch.as_slice())?;
+    storage.apply(batch.as_slice())?;
     storage
         .commit(&[])
         .map_err(storage_commit_failed)
@@ -165,8 +164,7 @@ fn update_multisig_storage(storage: &mut InnerStorage) -> Result<(), ManyError> 
     // The iterator is already sorted when going through rocksdb.
     // Since we only filter and map above, the keys in batch will always
     // be sorted at this point.
-    storage
-        .apply(batch.as_slice())?;
+    storage.apply(batch.as_slice())?;
     storage.commit(&[]).map_err(storage_commit_failed)
 }
 

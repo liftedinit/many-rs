@@ -80,11 +80,10 @@ impl LedgerStorage {
                         }
                     });
             }
-            self.persistent_store
-                .apply(&[(
-                    DATA_ATTRIBUTES_KEY.to_vec(),
-                    Operation::from(Op::Put(minicbor::to_vec(attributes).unwrap())),
-                )])?;
+            self.persistent_store.apply(&[(
+                DATA_ATTRIBUTES_KEY.to_vec(),
+                Operation::from(Op::Put(minicbor::to_vec(attributes).unwrap())),
+            )])?;
         }
         Ok(())
     }

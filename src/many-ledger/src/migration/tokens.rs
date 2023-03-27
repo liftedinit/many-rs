@@ -49,9 +49,7 @@ fn migrate_account_identity(storage: &mut InnerStorage) -> Result<(), ManyError>
     ];
 
     // And use it as the account identity
-    storage
-        .apply(&batch)
-        .map_err(Into::into)
+    storage.apply(&batch).map_err(Into::into)
 }
 
 fn migrate_token(
@@ -147,9 +145,7 @@ fn migrate_token(
         ),
     ];
 
-    storage
-        .apply(batch.as_slice())
-        .map_err(Into::into)
+    storage.apply(batch.as_slice()).map_err(Into::into)
 }
 
 fn initialize(storage: &mut InnerStorage, extra: &HashMap<String, Value>) -> Result<(), ManyError> {

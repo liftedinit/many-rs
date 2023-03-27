@@ -49,8 +49,16 @@ enum Error {
 impl From<Error> for ManyError {
     fn from(error: Error) -> Self {
         match error {
-            Error::V1(error) => ManyError::new(ManyErrorCode::Unknown, Some(error.to_string()), BTreeMap::new()),
-            Error::V2(error) => ManyError::new(ManyErrorCode::Unknown, Some(error.to_string()), BTreeMap::new()),
+            Error::V1(error) => ManyError::new(
+                ManyErrorCode::Unknown,
+                Some(error.to_string()),
+                BTreeMap::new(),
+            ),
+            Error::V2(error) => ManyError::new(
+                ManyErrorCode::Unknown,
+                Some(error.to_string()),
+                BTreeMap::new(),
+            ),
         }
     }
 }
@@ -231,11 +239,10 @@ impl KvStoreStorage {
         let current_id = self.next_subresource;
         self.next_subresource += 1;
         let key = b"/config/subresource_id".to_vec();
-        self.persistent_store
-            .apply(&[(
-                key.clone(),
-                Op::Put(self.next_subresource.to_be_bytes().to_vec()).into(),
-            )])?;
+        self.persistent_store.apply(&[(
+            key.clone(),
+            Op::Put(self.next_subresource.to_be_bytes().to_vec()).into(),
+        )])?;
 
         self.root_identity
             .with_subresource_id(current_id)

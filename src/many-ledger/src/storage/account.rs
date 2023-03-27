@@ -59,11 +59,10 @@ impl LedgerStorage {
     ) -> Result<Self, ManyError> {
         if self.migrations.is_active(&TOKEN_MIGRATION) {
             let identity = identity.unwrap_or(self.get_identity(IDENTITY_ROOT)?);
-            self.persistent_store
-                .apply(&[(
-                    ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
-                    Operation::from(Op::Put(identity.to_vec())),
-                )])?;
+            self.persistent_store.apply(&[(
+                ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
+                Operation::from(Op::Put(identity.to_vec())),
+            )])?;
         }
 
         if let Some(accounts) = accounts {

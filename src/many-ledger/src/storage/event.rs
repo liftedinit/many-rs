@@ -58,19 +58,18 @@ impl LedgerStorage {
             content,
         };
 
-        self.persistent_store
-            .apply(&[
-                (
-                    key_for_event(event.id.clone()),
-                    Operation::from(Op::Put(
-                        minicbor::to_vec(&event).map_err(ManyError::serialization_error)?,
-                    )),
-                ),
-                (
-                    EVENT_COUNT_ROOT.to_vec(),
-                    Operation::from(Op::Put((current_nb_events + 1).to_be_bytes().to_vec())),
-                ),
-            ])?;
+        self.persistent_store.apply(&[
+            (
+                key_for_event(event.id.clone()),
+                Operation::from(Op::Put(
+                    minicbor::to_vec(&event).map_err(ManyError::serialization_error)?,
+                )),
+            ),
+            (
+                EVENT_COUNT_ROOT.to_vec(),
+                Operation::from(Op::Put((current_nb_events + 1).to_be_bytes().to_vec())),
+            ),
+        ])?;
 
         self.maybe_commit()
     }

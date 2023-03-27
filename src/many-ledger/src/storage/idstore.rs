@@ -52,11 +52,10 @@ impl LedgerStorage {
 
         // Apply keys and seed.
         if let Some(seed) = maybe_seed {
-            self.persistent_store
-                .apply(&[(
-                    IDSTORE_SEED_ROOT.to_vec(),
-                    Operation::from(Op::Put(seed.to_be_bytes().to_vec())),
-                )])?;
+            self.persistent_store.apply(&[(
+                IDSTORE_SEED_ROOT.to_vec(),
+                Operation::from(Op::Put(seed.to_be_bytes().to_vec())),
+            )])?;
         }
         if let Some(keys) = maybe_keys {
             for (k, v) in keys {
@@ -79,11 +78,10 @@ impl LedgerStorage {
                 u64::from_be_bytes(bytes)
             });
 
-        self.persistent_store
-            .apply(&[(
-                IDSTORE_SEED_ROOT.to_vec(),
-                Operation::from(Op::Put((idstore_seed + 1).to_be_bytes().to_vec())),
-            )])?;
+        self.persistent_store.apply(&[(
+            IDSTORE_SEED_ROOT.to_vec(),
+            Operation::from(Op::Put((idstore_seed + 1).to_be_bytes().to_vec())),
+        )])?;
 
         self.maybe_commit().map(|_| idstore_seed)
     }
@@ -133,8 +131,7 @@ impl LedgerStorage {
             ),
         ];
 
-        self.persistent_store
-            .apply(&batch)?;
+        self.persistent_store.apply(&batch)?;
 
         self.maybe_commit().map(|_| {
             vec![
@@ -206,11 +203,10 @@ pub mod tests {
 
     impl LedgerStorage {
         pub fn set_idstore_seed(&mut self, seed: u64) -> Result<(), ManyError> {
-            self.persistent_store
-                .apply(&[(
-                    IDSTORE_SEED_ROOT.to_vec(),
-                    Operation::from(Op::Put(seed.to_be_bytes().to_vec())),
-                )])?;
+            self.persistent_store.apply(&[(
+                IDSTORE_SEED_ROOT.to_vec(),
+                Operation::from(Op::Put(seed.to_be_bytes().to_vec())),
+            )])?;
 
             self.persistent_store
                 .commit(&[])

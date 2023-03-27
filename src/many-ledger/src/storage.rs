@@ -60,8 +60,16 @@ pub(crate) enum Error {
 impl From<Error> for ManyError {
     fn from(error: Error) -> Self {
         match error {
-            Error::V1(error) => ManyError::new(ManyErrorCode::Unknown, Some(error.to_string()), BTreeMap::new()),
-            Error::V2(error) => ManyError::new(ManyErrorCode::Unknown, Some(error.to_string()), BTreeMap::new()),
+            Error::V1(error) => ManyError::new(
+                ManyErrorCode::Unknown,
+                Some(error.to_string()),
+                BTreeMap::new(),
+            ),
+            Error::V2(error) => ManyError::new(
+                ManyErrorCode::Unknown,
+                Some(error.to_string()),
+                BTreeMap::new(),
+            ),
         }
     }
 }
@@ -244,8 +252,7 @@ impl LedgerStorage {
         let amount = many_types::ledger::TokenAmount::from(amount);
 
         self.persistent_store
-            .apply(&[(key, Operation::from(Op::Put(amount.to_vec())))])
-            ?;
+            .apply(&[(key, Operation::from(Op::Put(amount.to_vec())))])?;
 
         // Always commit to the store. In blockchain mode this will fail.
         self.persistent_store
@@ -460,11 +467,10 @@ impl LedgerStorage {
             self.migrations.is_active(&TOKEN_MIGRATION),
         );
 
-        self.persistent_store
-            .apply(&[(
-                key_for_subresource.clone(),
-                Op::Put((current_id + 1).to_be_bytes().to_vec()).into(),
-            )])?;
+        self.persistent_store.apply(&[(
+            key_for_subresource.clone(),
+            Op::Put((current_id + 1).to_be_bytes().to_vec()).into(),
+        )])?;
         let mut keys = vec![key_for_subresource];
 
         self.persistent_store
