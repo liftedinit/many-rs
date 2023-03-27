@@ -22,9 +22,9 @@ impl AsRef<[u8]> for AsyncToken {
     }
 }
 
-impl Into<Vec<u8>> for AsyncToken {
-    fn into(self) -> Vec<u8> {
-        self.0
+impl From<AsyncToken> for Vec<u8> {
+    fn from(val: AsyncToken) -> Self {
+        val.0
     }
 }
 

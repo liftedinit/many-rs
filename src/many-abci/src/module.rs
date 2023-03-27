@@ -32,7 +32,7 @@ fn _many_block_from_tendermint_block(block: tendermint::Block) -> Block {
         .map(|b| {
             use sha2::Digest;
             let mut hasher = sha2::Sha256::new();
-            hasher.update(&b);
+            hasher.update(b);
             Transaction {
                 id: TransactionIdentifier {
                     hash: hasher.finalize().to_vec(),
