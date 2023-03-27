@@ -88,8 +88,7 @@ impl LedgerStorage {
         self.update_account_count(from, to, amount.clone(), symbol)?;
 
         self.persistent_store
-            .apply(&batch)
-            .map_err(error::storage_apply_failed)?;
+            .apply(&batch)?;
 
         self.log_event(EventInfo::Send {
             from: *from,

@@ -1,6 +1,6 @@
 use crate::module::{KvStoreMetadata, KvStoreMetadataWrapper};
 use derive_more::{From, TryInto};
-use many_error::ManyError;
+use many_error::{ManyError, ManyErrorCode};
 use many_identity::Address;
 use many_modules::abci_backend::AbciCommitInfo;
 use many_modules::events::EventInfo;
@@ -44,6 +44,15 @@ pub enum Merk {
 enum Error {
     V1(merk_v1::Error),
     V2(merk_v2::Error),
+}
+
+impl From<Error> for ManyError {
+    fn from(error: Error) -> Self {
+        match error {
+            Error::V1(error) => ManyError::new(ManyErrorCode::Unknown, Some(error.to_string()), BTreeMap::new()),
+            Error::V2(error) => ManyError::new(ManyErrorCode::Unknown, Some(error.to_string()), BTreeMap::new()),
+        }
+    }
 }
 
 #[derive(Debug, From, TryInto)]
@@ -226,8 +235,7 @@ impl KvStoreStorage {
             .apply(&[(
                 key.clone(),
                 Op::Put(self.next_subresource.to_be_bytes().to_vec()).into(),
-            )])
-            .map_err(error::storage_apply_failed)?;
+            )])?;
 
         self.root_identity
             .with_subresource_id(current_id)

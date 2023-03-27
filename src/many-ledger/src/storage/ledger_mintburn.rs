@@ -77,8 +77,7 @@ impl LedgerStorage {
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
         self.persistent_store
-            .apply(batch.as_slice())
-            .map_err(error::storage_apply_failed)?;
+            .apply(batch.as_slice())?;
 
         self.maybe_commit().map(|_| keys)
     }
@@ -140,8 +139,7 @@ impl LedgerStorage {
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
         self.persistent_store
-            .apply(batch.as_slice())
-            .map_err(error::storage_apply_failed)?;
+            .apply(batch.as_slice())?;
 
         self.maybe_commit().map(|_| keys)
     }

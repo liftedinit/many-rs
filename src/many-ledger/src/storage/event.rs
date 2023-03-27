@@ -70,8 +70,7 @@ impl LedgerStorage {
                     EVENT_COUNT_ROOT.to_vec(),
                     Operation::from(Op::Put((current_nb_events + 1).to_be_bytes().to_vec())),
                 ),
-            ])
-            .map_err(error::storage_apply_failed)?;
+            ])?;
 
         self.maybe_commit()
     }

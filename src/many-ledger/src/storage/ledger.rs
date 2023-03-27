@@ -53,9 +53,8 @@ impl LedgerStorage {
 
         self.persistent_store
             .apply(batch.as_slice())
-            .map_err(error::storage_apply_failed)?;
-
-        Ok(self)
+            .map(|_| self)
+            .map_err(Into::into)
     }
 
     fn get_all_balances(

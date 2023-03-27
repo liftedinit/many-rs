@@ -4,7 +4,7 @@ use crate::migration::{LedgerMigrations, MIGRATIONS};
 use crate::storage::account::ACCOUNT_SUBRESOURCE_ID_ROOT;
 use crate::storage::event::HEIGHT_EVENTID_SHIFT;
 use derive_more::{From, TryInto};
-use many_error::ManyError;
+use many_error::{ManyError, ManyErrorCode};
 use many_identity::{Address, MAX_SUBRESOURCE_ID};
 use many_migration::{MigrationConfig, MigrationSet};
 use many_modules::events::EventId;
@@ -55,6 +55,15 @@ pub enum Merk {
 pub(crate) enum Error {
     V1(merk_v1::Error),
     V2(merk_v2::Error),
+}
+
+impl From<Error> for ManyError {
+    fn from(error: Error) -> Self {
+        match error {
+            Error::V1(error) => ManyError::new(ManyErrorCode::Unknown, Some(error.to_string()), BTreeMap::new()),
+            Error::V2(error) => ManyError::new(ManyErrorCode::Unknown, Some(error.to_string()), BTreeMap::new()),
+        }
+    }
 }
 
 #[derive(Debug, From, TryInto)]
@@ -236,7 +245,7 @@ impl LedgerStorage {
 
         self.persistent_store
             .apply(&[(key, Operation::from(Op::Put(amount.to_vec())))])
-            .map_err(error::storage_apply_failed)?;
+            ?;
 
         // Always commit to the store. In blockchain mode this will fail.
         self.persistent_store
@@ -380,7 +389,7 @@ impl LedgerStorage {
                 HEIGHT_ROOT.as_bytes().to_vec(),
                 Operation::from(Op::Put((current_height + 1).to_be_bytes().to_vec())),
             )])
-            .map_err(error::storage_apply_failed)
+            .map_err(Into::into)
             .map(|_| current_height)
     }
 
@@ -455,8 +464,7 @@ impl LedgerStorage {
             .apply(&[(
                 key_for_subresource.clone(),
                 Op::Put((current_id + 1).to_be_bytes().to_vec()).into(),
-            )])
-            .map_err(error::storage_apply_failed)?;
+            )])?;
         let mut keys = vec![key_for_subresource];
 
         self.persistent_store

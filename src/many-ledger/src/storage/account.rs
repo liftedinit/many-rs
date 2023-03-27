@@ -63,8 +63,7 @@ impl LedgerStorage {
                 .apply(&[(
                     ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
                     Operation::from(Op::Put(identity.to_vec())),
-                )])
-                .map_err(error::storage_apply_failed)?;
+                )])?;
         }
 
         if let Some(accounts) = accounts {

@@ -84,8 +84,7 @@ impl LedgerStorage {
                 .apply(&[(
                     DATA_ATTRIBUTES_KEY.to_vec(),
                     Operation::from(Op::Put(minicbor::to_vec(attributes).unwrap())),
-                )])
-                .map_err(error::storage_apply_failed)?
+                )])?;
         }
         Ok(())
     }

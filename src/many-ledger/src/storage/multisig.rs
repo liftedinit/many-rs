@@ -211,8 +211,7 @@ impl LedgerStorage {
             // Reverse the batch so keys are in sorted order.
             batch.reverse();
             self.persistent_store
-                .apply(&batch)
-                .map_err(error::storage_apply_failed)?;
+                .apply(&batch)?;
         }
 
         self.maybe_commit()
@@ -271,8 +270,7 @@ impl LedgerStorage {
                 Operation::from(Op::Put(
                     minicbor::to_vec(tx).map_err(ManyError::serialization_error)?,
                 )),
-            )])
-            .map_err(error::storage_apply_failed)?;
+            )])?;
 
         self.maybe_commit()
     }
@@ -535,8 +533,7 @@ impl LedgerStorage {
             .apply(&[(
                 key_for_multisig_transaction(tx_id),
                 Operation::from(Op::Put(v)),
-            )])
-            .map_err(error::storage_apply_failed)?;
+            )])?;
 
         self.maybe_commit()
     }

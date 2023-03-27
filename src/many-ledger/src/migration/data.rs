@@ -94,7 +94,7 @@ fn initialize(storage: &mut InnerStorage, _: &HashMap<String, Value>) -> Result<
                 )),
             ),
         ])
-        .map_err(error::storage_apply_failed)
+        .map_err(Into::into)
 }
 
 #[distributed_slice(MIGRATIONS)]

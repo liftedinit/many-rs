@@ -56,14 +56,12 @@ impl LedgerStorage {
                 .apply(&[(
                     IDSTORE_SEED_ROOT.to_vec(),
                     Operation::from(Op::Put(seed.to_be_bytes().to_vec())),
-                )])
-                .map_err(error::storage_apply_failed)?;
+                )])?;
         }
         if let Some(keys) = maybe_keys {
             for (k, v) in keys {
                 self.persistent_store
-                    .apply(&[(k, Operation::from(Op::Put(v)))])
-                    .map_err(error::storage_apply_failed)?;
+                    .apply(&[(k, Operation::from(Op::Put(v)))])?;
             }
         }
 
@@ -85,8 +83,7 @@ impl LedgerStorage {
             .apply(&[(
                 IDSTORE_SEED_ROOT.to_vec(),
                 Operation::from(Op::Put((idstore_seed + 1).to_be_bytes().to_vec())),
-            )])
-            .map_err(error::storage_apply_failed)?;
+            )])?;
 
         self.maybe_commit().map(|_| idstore_seed)
     }
@@ -137,8 +134,7 @@ impl LedgerStorage {
         ];
 
         self.persistent_store
-            .apply(&batch)
-            .map_err(error::storage_apply_failed)?;
+            .apply(&batch)?;
 
         self.maybe_commit().map(|_| {
             vec![
@@ -214,13 +210,11 @@ pub mod tests {
                 .apply(&[(
                     IDSTORE_SEED_ROOT.to_vec(),
                     Operation::from(Op::Put(seed.to_be_bytes().to_vec())),
-                )])
-                .map_err(error::storage_apply_failed)?;
+                )])?;
 
             self.persistent_store
                 .commit(&[])
-                .map_err(error::storage_commit_failed)?;
-            Ok(())
+                .map_err(error::storage_commit_failed)
         }
     }
 }

@@ -134,9 +134,10 @@ impl LedgerStorage {
                     )),
                 ));
             }
+            batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
             self.persistent_store
                 .apply(batch.as_slice())
-                .map_err(error::storage_apply_failed)?;
+                ?;
 
             let token_identity = token_identity.unwrap_or(self.get_identity(IDENTITY_ROOT)?);
             let batch = vec![
@@ -155,8 +156,7 @@ impl LedgerStorage {
                 ),
             ];
             self.persistent_store
-                .apply(batch.as_slice())
-                .map_err(error::storage_apply_failed)?;
+                .apply(batch.as_slice())?;
 
             self.commit_storage()?;
         }
@@ -233,8 +233,8 @@ impl LedgerStorage {
                     minicbor::to_vec(&symbols).map_err(ManyError::serialization_error)?,
                 )),
             )])
-            .map_err(error::storage_apply_failed)
             .map(|_| vec![symbols_key])
+            .map_err(Into::into)
     }
 
     pub fn create_token(
@@ -324,8 +324,7 @@ impl LedgerStorage {
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
         self.persistent_store
-            .apply(batch.as_slice())
-            .map_err(error::storage_apply_failed)?;
+            .apply(batch.as_slice())?;
 
         self.maybe_commit()
             .map(|_| (TokenCreateReturns { info }, keys))
@@ -421,8 +420,7 @@ impl LedgerStorage {
                     Operation::from(Op::Put(
                         minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
                     )),
-                )])
-                .map_err(error::storage_apply_failed)?;
+                )])?;
 
             self.log_event(EventInfo::TokenUpdate {
                 symbol,
@@ -478,8 +476,7 @@ impl LedgerStorage {
                 Operation::from(Op::Put(
                     minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
                 )),
-            )])
-            .map_err(error::storage_apply_failed)?;
+            )])?;
 
         self.log_event(EventInfo::TokenAddExtendedInfo {
             symbol,
@@ -523,8 +520,7 @@ impl LedgerStorage {
                 Operation::from(Op::Put(
                     minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
                 )),
-            )])
-            .map_err(error::storage_apply_failed)?;
+            )])?;
 
         self.log_event(EventInfo::TokenRemoveExtendedInfo {
             symbol,
