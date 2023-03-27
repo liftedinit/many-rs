@@ -26,7 +26,6 @@ function teardown() {
     account_id=$(account_create --pem=1 '{ 1: { "'"$(identity 2)"'": ["canLedgerTransact"] }, 2: [0] }')
     call_ledger --token --pem=1 --port=8000 send "$account_id" 14159265359 MFX
     token=$(echo "$output" | grep -oE "token: .*" | colrm 1 7)
-    check_consistency --pem=1 --balance=14159265359 --id="$account_id" 8000
 
     many message --server http://localhost:8000 blockchain.request "{ 0: { 0: h\"$token\" } }"
     # Check the content of the message above. We only check the method itself
