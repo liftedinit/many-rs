@@ -1,5 +1,4 @@
 use super::Operation;
-use crate::error;
 use crate::migration::block_9400::Block9400Tx;
 use crate::migration::memo::MEMO_MIGRATION;
 use crate::module::account::validate_account;

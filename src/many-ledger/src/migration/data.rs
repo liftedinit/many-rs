@@ -1,4 +1,3 @@
-use crate::error;
 use crate::migration::MIGRATIONS;
 use crate::storage::data::{DATA_ATTRIBUTES_KEY, DATA_INFO_KEY};
 use crate::storage::{InnerStorage, Operation};

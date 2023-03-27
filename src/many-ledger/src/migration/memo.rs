@@ -1,4 +1,3 @@
-use crate::error;
 use crate::error::storage_commit_failed;
 use crate::migration::MIGRATIONS;
 use crate::storage::iterator::LedgerIterator;
