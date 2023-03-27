@@ -2820,6 +2820,7 @@ dependencies = [
 name = "many-mock"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "cbor-diag",
  "ciborium",
  "coset",
