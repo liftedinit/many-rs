@@ -1,37 +1,33 @@
 use std::{
     collections::BTreeMap,
-    convert::Infallible,
     path::Path,
     sync::{atomic::AtomicBool, Arc},
 };
 
-use async_trait::async_trait;
 use ciborium::value::Value;
-use cucumber::{given, then, WorldInit};
+use cucumber::{given, then, World};
 use many_client::ManyClient;
 use many_identity::{AcceptAllVerifier, Address, AnonymousIdentity};
 use many_mock::server::ManyMockServer;
 use many_server::{transport::http::HttpServer, ManyServer};
 
-#[derive(Debug, WorldInit)]
-struct World {
+#[derive(Debug, World)]
+#[world(init = Self::new)]
+struct MockWorld {
     finish_server: Arc<AtomicBool>,
     client: ManyClient<AnonymousIdentity>,
     response: Option<Value>,
 }
 
-impl Drop for World {
+impl Drop for MockWorld {
     fn drop(&mut self) {
         self.finish_server
             .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
-#[async_trait(?Send)]
-impl cucumber::World for World {
-    type Error = Infallible;
-
-    async fn new() -> Result<Self, Self::Error> {
+impl MockWorld {
+    fn new() -> Self {
         // Support both Cargo and Bazel paths
         let tmp = format!("{}/tests/testmockfile.toml", env!("CARGO_MANIFEST_DIR"));
         let mockfile = [tmp.as_ref(), "src/many-mock/tests/testmockfile.toml"]
@@ -58,16 +54,16 @@ impl cucumber::World for World {
         let address = Address::anonymous();
         let client = ManyClient::new("http://0.0.0.0:8000/", address, key).unwrap();
 
-        Ok(World {
+        MockWorld {
             finish_server,
             client,
             response: None,
-        })
+        }
     }
 }
 
 #[given(regex = r#"I request "(.*)""#)]
-async fn make_request(w: &mut World, method: String) {
+async fn make_request(w: &mut MockWorld, method: String) {
     let result = w.client.call(method, ()).await.unwrap();
     let bytes = result.data.expect("Should have a Vec<u8>");
     let response: Value =
@@ -76,13 +72,13 @@ async fn make_request(w: &mut World, method: String) {
 }
 
 #[then(regex = "it should be (.*)")]
-async fn full_value(w: &mut World, value: String) {
+async fn full_value(w: &mut MockWorld, value: String) {
     let json_value: Value = serde_json::from_str(&value).unwrap();
     assert_eq!(w.response, Some(json_value));
 }
 
 #[then(regex = r#""(.*)" should be (.*)"#)]
-async fn field_value(w: &mut World, field_name: String, value: String) {
+async fn field_value(w: &mut MockWorld, field_name: String, value: String) {
     let object: BTreeMap<String, Value> = w
         .response
         .as_ref()
@@ -103,5 +99,5 @@ async fn main() {
         .into_iter()
         .find(|&p| Path::new(p).exists())
         .expect("Cucumber test features not found");
-    World::run(features).await;
+    MockWorld::run(features).await;
 }
