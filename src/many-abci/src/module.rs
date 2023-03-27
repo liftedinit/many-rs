@@ -127,16 +127,19 @@ impl<C: Client + Sync> AbciBlockchainModuleImpl<C> {
         match query {
             SingleTransactionQuery::Hash(hash) => {
                 if let Ok(hash) = TryInto::<[u8; 32]>::try_into(hash.clone()) {
-                    let tx::Response { tx, tx_result, .. } =
-                        match self.client.tx(tendermint::Hash::Sha256(hash), true).await {
-                            Ok(response) => response,
-                            // Cannot get more details than response error when the hash is not found.
-                            Err(Error(ErrorDetail::Response(_), _tracer)) => return Ok(None),
-                            Err(e @ Error(_, _)) => {
-                                tracing::error!("abci transport: {e}");
-                                return Err(abci_frontend::abci_transport_error(e));
-                            }
-                        };
+                    let tx::Response {
+                        tx: tx_request,
+                        tx_result,
+                        ..
+                    } = match self.client.tx(tendermint::Hash::Sha256(hash), true).await {
+                        Ok(response) => response,
+                        // Cannot get more details than response error when the hash is not found.
+                        Err(Error(ErrorDetail::Response(_), _tracer)) => return Ok(None),
+                        Err(e @ Error(_, _)) => {
+                            tracing::error!("abci transport: {e}");
+                            return Err(abci_frontend::abci_transport_error(e));
+                        }
+                    };
 
                     // Base64 decode is required because of an issue in `tendermint-rs` 0.28.0
                     // TODO: Remove when https://github.com/informalsystems/tendermint-rs/issues/1251 is fixed
@@ -144,7 +147,7 @@ impl<C: Client + Sync> AbciBlockchainModuleImpl<C> {
                         .decode(&tx_result.data)
                         .map_err(abci_frontend::abci_transport_error)?;
 
-                    Ok(Some((tx, result_tx)))
+                    Ok(Some((tx_request, result_tx)))
                 } else {
                     Err(ManyError::unknown(format!(
                         "Invalid transaction hash x'{}'.",
@@ -331,23 +334,23 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
         &self,
         args: blockchain::RequestArgs,
     ) -> Result<blockchain::RequestReturns, ManyError> {
-        let (tx, _) = block_on(async { self.tx(args.query).await })?
+        let (request, _) = block_on(async { self.tx(args.query).await })?
             .ok_or_else(|| ManyError::unknown("Hash not found."))?;
-        tracing::debug!("blockchain.request: {}", hex::encode(&tx));
-        Ok(blockchain::RequestReturns { request: tx })
+        tracing::debug!("blockchain.request: {}", hex::encode(&request));
+        Ok(blockchain::RequestReturns { request })
     }
 
     fn response(
         &self,
         args: blockchain::ResponseArgs,
     ) -> Result<blockchain::ResponseReturns, ManyError> {
-        let (_, tx) = block_on(async { self.tx(args.query).await })?
+        let (_, response) = block_on(async { self.tx(args.query).await })?
             .ok_or_else(|| ManyError::unknown("Hash not found."))?;
 
-        tracing::debug!("blockchain.response: {}", hex::encode(&tx));
+        tracing::debug!("blockchain.response: {}", hex::encode(&response));
 
         let response: ResponseMessage =
-            minicbor::decode(&tx).map_err(ManyError::deserialization_error)?;
+            minicbor::decode(&response).map_err(ManyError::deserialization_error)?;
         Ok(blockchain::ResponseReturns {
             response: encode_cose_sign1_from_response(response, &AnonymousIdentity)?
                 .to_vec()
