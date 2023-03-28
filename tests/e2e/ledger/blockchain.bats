@@ -24,7 +24,7 @@ function teardown() {
 
 @test "$SUITE: request and response works" {
     account_id=$(account_create --pem=1 '{ 1: { "'"$(identity 2)"'": ["canLedgerTransact"] }, 2: [0] }')
-    call_ledger --token --pem=1 --port=8000 send "$account_id" 14159265359 MFX
+    call_ledger --pem=1 --port=8000 send "$account_id" 14159265359 MFX
     token=$(echo "$output" | grep -oE "token: .*" | colrm 1 7)
 
     many message --server http://localhost:8000 blockchain.request "{ 0: { 0: h\"$token\" } }"
