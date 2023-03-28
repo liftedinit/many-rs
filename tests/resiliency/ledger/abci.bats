@@ -43,5 +43,5 @@ function teardown() {
     run many message --server http://localhost:8000 blockchain.response "{ 0: { 0: h'$token' } }"
     # The response should be fairly consistent, since in this case the time is set
     # to epoch.
-    assert_output --partial 8440a0582dd92712a302d92710581d$(identity_hex 1)0441f605c10040
+    assert_output --partial "8440a0582dd92712a302d92710581d$(identity_hex 1)0441f605c10040"
 }
