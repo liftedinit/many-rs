@@ -11,11 +11,17 @@ function setup() {
 
     mkdir "$BATS_TEST_ROOTDIR"
 
-    skip_if_missing_background_utilities
+    (
+      cd "$GIT_ROOT/docker/" || exit
+      make -f $MAKEFILE clean
+      make -f $MAKEFILE start-nodes-detached ID_WITH_BALANCES="$(identity 1):1000000" || {
+        echo '# Could not start nodes...' >&3
+        exit 1
+      }
+    ) > /dev/null
 
-    start_ledger --pem "$(pem 0)" \
-          "--balance-only-for-testing=$(identity 1):$START_BALANCE:$MFX_ADDRESS" \
-          "--balance-only-for-testing=$(identity 2):$START_BALANCE:$MFX_ADDRESS"
+    # Give time to the servers to start.
+    wait_for_server 8000 8001 8002 8003
 }
 
 function teardown() {
