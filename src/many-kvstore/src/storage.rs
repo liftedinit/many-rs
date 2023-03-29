@@ -1,19 +1,17 @@
 use {
     crate::module::{KvStoreMetadata, KvStoreMetadataWrapper},
-    derive_more::{From, TryInto},
     many_error::{ManyError, ManyErrorCode},
     many_identity::Address,
     many_modules::abci_backend::AbciCommitInfo,
     many_modules::events::EventInfo,
     many_types::{Either, ProofOperation, Timestamp},
-    merk_v1::rocksdb::{DBIterator, IteratorMode, ReadOptions},
-    merk_v1::{
+    merk_v2::{
         proofs::{
             query::QueryItem,
             Decoder,
             Node::{Hash, KVHash, KV},
         },
-        Hash as MerkHash, Op,
+        Op,
     },
     serde::{Deserialize, Serialize},
     std::collections::BTreeMap,
@@ -36,175 +34,8 @@ pub struct Key {
     key: Vec<u8>,
 }
 
-pub enum Merk {
-    V1(merk_v1::Merk),
-    #[allow(dead_code)]
-    V2(merk_v2::Merk),
-}
-
-#[derive(strum::Display, Debug, From, TryInto)]
-enum Error {
-    V1(merk_v1::Error),
-    V2(merk_v2::Error),
-}
-
-impl From<Error> for ManyError {
-    fn from(error: Error) -> Self {
-        match error {
-            Error::V1(error) => ManyError::new(
-                ManyErrorCode::Unknown,
-                Some(error.to_string()),
-                BTreeMap::new(),
-            ),
-            Error::V2(error) => ManyError::new(
-                ManyErrorCode::Unknown,
-                Some(error.to_string()),
-                BTreeMap::new(),
-            ),
-        }
-    }
-}
-
-#[derive(Debug, From, TryInto)]
-enum Operation {
-    V1(merk_v1::Op),
-    V2(merk_v2::Op),
-}
-
-#[derive(From, TryInto)]
-enum Query {
-    V1(merk_v1::proofs::query::Query),
-    V2(merk_v2::proofs::query::Query),
-}
-
-impl Merk {
-    fn open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        merk_v1::Merk::open(path).map(Self::V1).map_err(Into::into)
-    }
-
-    fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, Error> {
-        match self {
-            Merk::V1(merk) => merk.get(key).map_err(Into::into),
-            Merk::V2(merk) => merk.get(key).map_err(Into::into),
-        }
-    }
-
-    fn apply(&mut self, batch: &[(Vec<u8>, Operation)]) -> Result<(), Error> {
-        match self {
-            Merk::V1(merk) => merk
-                .apply(
-                    batch
-                        .iter()
-                        .filter_map(|(key, op)| match op {
-                            Operation::V1(operation) => Some((
-                                key.clone(),
-                                match operation {
-                                    merk_v1::Op::Put(value) => merk_v1::Op::Put(value.clone()),
-                                    merk_v1::Op::Delete => merk_v1::Op::Delete,
-                                },
-                            )),
-                            Operation::V2(_) => None,
-                        })
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                )
-                .map_err(Into::into),
-            Merk::V2(merk) => merk
-                .apply(
-                    batch
-                        .iter()
-                        .filter_map(|(key, op)| match op {
-                            Operation::V1(_) => None,
-                            Operation::V2(operation) => Some((
-                                key.clone(),
-                                match operation {
-                                    merk_v2::Op::Put(value) => merk_v2::Op::Put(value.clone()),
-                                    merk_v2::Op::Delete => merk_v2::Op::Delete,
-                                },
-                            )),
-                        })
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                )
-                .map_err(Into::into),
-        }
-    }
-
-    fn commit(&mut self, aux: &[(Vec<u8>, Operation)]) -> Result<(), Error> {
-        match self {
-            Merk::V1(merk) => merk
-                .commit(
-                    aux.iter()
-                        .filter_map(|(key, op)| match op {
-                            Operation::V1(operation) => Some((
-                                key.clone(),
-                                match operation {
-                                    merk_v1::Op::Put(value) => merk_v1::Op::Put(value.clone()),
-                                    merk_v1::Op::Delete => merk_v1::Op::Delete,
-                                },
-                            )),
-                            Operation::V2(_) => None,
-                        })
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                )
-                .map_err(Into::into),
-            Merk::V2(merk) => merk
-                .commit(
-                    aux.iter()
-                        .filter_map(|(key, op)| match op {
-                            Operation::V1(_) => None,
-                            Operation::V2(operation) => Some((
-                                key.clone(),
-                                match operation {
-                                    merk_v2::Op::Put(value) => merk_v2::Op::Put(value.clone()),
-                                    merk_v2::Op::Delete => merk_v2::Op::Delete,
-                                },
-                            )),
-                        })
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                )
-                .map_err(Into::into),
-        }
-    }
-
-    fn iter_opt(&self, mode: IteratorMode, readopts: ReadOptions) -> DBIterator {
-        match self {
-            Merk::V1(merk) => merk.iter_opt(mode, readopts),
-            Merk::V2(merk) => merk.iter_opt(mode, readopts),
-        }
-    }
-
-    fn root_hash(&self) -> MerkHash {
-        match self {
-            Merk::V1(merk) => merk.root_hash(),
-            Merk::V2(merk) => merk.root_hash(),
-        }
-    }
-
-    fn prove(&self, query: Query) -> Result<Vec<u8>, Error> {
-        match self {
-            Merk::V1(merk) => match query {
-                Query::V1(query) => merk.prove(query).map_err(Into::into),
-                Query::V2(_) => Err(merk_v1::Error::Proof(
-                    "Wrong version of query submitted for version of proof requested".into(),
-                )
-                .into()),
-            },
-            Merk::V2(merk) => match query {
-                Query::V1(_) => Err(merk_v2::Error::Proof(
-                    "Wrong version of query submitted for version of proof requested".into(),
-                )
-                .into()),
-                Query::V2(query) => merk.prove(query).map_err(Into::into),
-            },
-        }
-    }
-}
-
 pub type AclMap = BTreeMap<Key, KvStoreMetadataWrapper>;
-pub(crate) type InnerStorage = Merk;
+pub(crate) type InnerStorage = merk_v2::Merk;
 
 pub struct KvStoreStorage {
     persistent_store: InnerStorage,
@@ -241,10 +72,18 @@ impl KvStoreStorage {
         let current_id = self.next_subresource;
         self.next_subresource += 1;
         let key = b"/config/subresource_id".to_vec();
-        self.persistent_store.apply(&[(
-            key.clone(),
-            Op::Put(self.next_subresource.to_be_bytes().to_vec()).into(),
-        )])?;
+        self.persistent_store
+            .apply(&[(
+                key.clone(),
+                Op::Put(self.next_subresource.to_be_bytes().to_vec()),
+            )])
+            .map_err(|error| {
+                ManyError::new(
+                    ManyErrorCode::Unknown,
+                    Some(error.to_string()),
+                    BTreeMap::new(),
+                )
+            })?;
 
         self.root_identity
             .with_subresource_id(current_id)
@@ -299,18 +138,15 @@ impl KvStoreStorage {
         let mut persistent_store =
             InnerStorage::open(persistent_path).map_err(|e| e.to_string())?;
 
-        let mut batch: Vec<(Vec<u8>, Operation)> = Vec::new();
+        let mut batch = Vec::new();
 
-        batch.push((
-            b"/config/identity".to_vec(),
-            Op::Put(identity.to_vec()).into(),
-        ));
+        batch.push((b"/config/identity".to_vec(), Op::Put(identity.to_vec())));
 
         // Initialize DB with ACL
         for (k, v) in acl.into_iter() {
             batch.push((
                 vec![KVSTORE_ACL_ROOT.to_vec(), k.key.to_vec()].concat(),
-                Op::Put(minicbor::to_vec(v).map_err(|e| e.to_string())?).into(),
+                Op::Put(minicbor::to_vec(v).map_err(|e| e.to_string())?),
             ));
         }
 
@@ -322,8 +158,7 @@ impl KvStoreStorage {
         persistent_store
             .apply(&[(
                 b"/latest_event_id".to_vec(),
-                Op::Put(minicbor::to_vec(&latest_event_id).expect("Unable to encode event id"))
-                    .into(),
+                Op::Put(minicbor::to_vec(&latest_event_id).expect("Unable to encode event id")),
             )])
             .unwrap();
 
@@ -524,11 +359,11 @@ impl KvStoreStorage {
         context: impl AsRef<many_protocol::context::Context>,
         keys: impl IntoIterator<Item = Vec<u8>>,
     ) -> Result<(), ManyError> {
-        use merk_v1::proofs::Op;
+        use merk_v2::proofs::Op;
         context.as_ref().prove(|| {
             self.persistent_store
                 .prove(
-                    merk_v1::proofs::query::Query::from(
+                    merk_v2::proofs::query::Query::from(
                         keys.into_iter().map(QueryItem::Key).collect::<Vec<_>>(),
                     )
                     .into(),

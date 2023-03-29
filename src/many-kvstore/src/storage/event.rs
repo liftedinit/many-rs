@@ -1,8 +1,8 @@
 use super::{InnerStorage, KvStoreStorage};
 use many_modules::events;
 use many_types::{CborRange, SortOrder};
-use merk_v1::tree::Tree;
-use merk_v1::{rocksdb, Op};
+use merk_v2::tree::Tree;
+use merk_v2::{rocksdb, Op};
 use std::collections::Bound;
 use std::ops::RangeBounds;
 
@@ -58,11 +58,11 @@ impl KvStoreStorage {
             .apply(&[
                 (
                     key_for_event(event.id.clone()),
-                    Op::Put(minicbor::to_vec(&event).unwrap()).into(),
+                    Op::Put(minicbor::to_vec(&event).unwrap()),
                 ),
                 (
                     b"/events_count".to_vec(),
-                    Op::Put((current_nb_events + 1).to_be_bytes().to_vec()).into(),
+                    Op::Put((current_nb_events + 1).to_be_bytes().to_vec()),
                 ),
             ])
             .unwrap();
