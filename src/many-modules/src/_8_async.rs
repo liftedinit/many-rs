@@ -22,6 +22,12 @@ impl AsRef<[u8]> for AsyncToken {
     }
 }
 
+impl From<AsyncToken> for Vec<u8> {
+    fn from(val: AsyncToken) -> Self {
+        val.0
+    }
+}
+
 impl<C> Encode<C> for AsyncToken {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         e.bytes(&self.0)?;

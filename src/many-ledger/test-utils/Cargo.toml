@@ -1,6 +1,6 @@
 [package]
 name = "many-ledger-test-utils"
-version = "0.1.0"
+version = "0.1.1" # managed by release.sh
 edition = "2021"
 authors = ["The Lifted Initiative"]
 license = "Apache-2.0"
@@ -14,14 +14,14 @@ async-channel = "1.8"
 coset = "0.3"
 cucumber = { version = "0.19.1", features = ["libtest"] }
 itertools = "0.10.3"
-many-error = { path = "../../many-error", version = "0.1.0" }
-many-identity = { path = "../../many-identity", version = "0.1.0", features = ["default", "serde", "testing"] }
-many-identity-dsa = { path = "../../many-identity-dsa", version = "0.1.0", features = ["ed25519", "ecdsa", "testing"]  }
-many-ledger = { path = "..", features = ["balance_testing"] }
-many-migration = { path = "../../many-migration", version = "0.1.0" }
-many-modules = { path = "../../many-modules", version = "0.1.0", features = ["cucumber"] }
-many-protocol = { path = "../../many-protocol", version = "0.1.0" }
-many-types = { path = "../../many-types", version = "0.1.0", features = ["cucumber"] }
+many-error = { path = "../../many-error", version = "0.1.1" } # managed by release.sh
+many-identity = { path = "../../many-identity", features = ["default", "serde", "testing"], version = "0.1.1" } # managed by release.sh
+many-identity-dsa = { path = "../../many-identity-dsa", features = ["ed25519", "ecdsa", "testing"], version = "0.1.1" } # managed by release.sh
+many-ledger = { path = "..", features = ["balance_testing"], version = "0.1.1" } # managed by release.sh
+many-migration = { path = "../../many-migration", version = "0.1.1" } # managed by release.sh
+many-modules = { path = "../../many-modules", features = ["cucumber"], version = "0.1.1" } # managed by release.sh
+many-protocol = { path = "../../many-protocol", version = "0.1.1" } # managed by release.sh
+many-types = { path = "../../many-types", features = ["cucumber"], version = "0.1.1" } # managed by release.sh
 merk_v1 = { package = "merk", git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
 merk_v2 = { package = "merk", git = "https://github.com/MavenRain/merk.git", branch = "merk-hash-migration" }
 minicbor = { version = "0.18.0", features = ["derive", "std"] }
