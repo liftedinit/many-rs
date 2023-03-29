@@ -2,6 +2,11 @@
 name = "many-identity"
 version = "0.1.1" # managed by release.sh
 edition = "2021"
+description = "Types for managing an identity, its address and traits related to signing/verification of messages."
+license-file = "../../LICENSE"
+homepage = "https://liftedinit.org/"
+repository = "https://github.com/liftedinit/many-rs.git"
+authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
