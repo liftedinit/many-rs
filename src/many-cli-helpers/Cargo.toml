@@ -1,6 +1,6 @@
 [package]
 name = "many-cli-helpers"
-version = "0.1.0" # managed by release.sh
+version = "0.1.1" # managed by release.sh
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.69"
 clap = { version = "3.0", features = ["derive"] }
 log-panics = { version = "2", features = ["with-backtrace"]}
-many-error = { path = "../many-error", version = "0.1.0" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.1" } # managed by release.sh
 minicbor = { version = "0.18.0", features = ["derive", "std", "half"] }
 syslog-tracing = "0.1.0"
 tracing = "0.1.37"
