@@ -1,5 +1,5 @@
 use crate::error;
-use crate::migration::tokens::TOKEN_MIGRATION;
+use crate::migration::{hash::HASH_MIGRATION, tokens::TOKEN_MIGRATION};
 use crate::migration::{LedgerMigrations, MIGRATIONS};
 use crate::storage::account::ACCOUNT_SUBRESOURCE_ID_ROOT;
 use crate::storage::event::HEIGHT_EVENTID_SHIFT;
@@ -87,11 +87,10 @@ enum Query {
 }
 
 impl Merk {
-    fn open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+    fn open_v1<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         merk_v1::Merk::open(path).map(Self::V1).map_err(Into::into)
     }
 
-    #[allow(dead_code)]
     pub(crate) fn open_v2<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         merk_v2::Merk::open(path).map(Self::V2).map_err(Into::into)
     }
@@ -306,8 +305,26 @@ impl LedgerStorage {
         migration_config: Option<MigrationConfig>,
     ) -> Result<Self, ManyError> {
         let path = persistent_path.as_ref().to_owned();
-        let persistent_store =
-            InnerStorage::open(path.clone()).map_err(error::storage_open_failed)?;
+        let height = InnerStorage::open_v1(path.clone())
+            .or_else(|_| InnerStorage::open_v2(path.clone()))
+            .map_err(error::storage_open_failed)?
+            .get(HEIGHT_ROOT.as_bytes())?
+            .map_or(0u64, |x| {
+                let mut bytes = [0u8; 8];
+                bytes.copy_from_slice(x.as_slice());
+                u64::from_be_bytes(bytes)
+            });
+        let migrations = migration_config
+            .map_or_else(MigrationSet::empty, |config| {
+                LedgerMigrations::load(&MIGRATIONS, config, height)
+            })
+            .map_err(error::unable_to_load_migrations)?;
+        let persistent_store = if migrations.is_active(&HASH_MIGRATION) {
+            InnerStorage::open_v2(path.clone())
+        } else {
+            InnerStorage::open_v1(path.clone())
+        }
+        .map_err(error::storage_open_failed)?;
 
         let height = persistent_store
             .get(HEIGHT_ROOT.as_bytes())
@@ -327,11 +344,6 @@ impl LedgerStorage {
         // The discrepancy will lead to an application hash mismatch if the block following the `load()` contains
         // a transaction.
         let latest_tid = EventId::from(height.saturating_sub(1) << HEIGHT_EVENTID_SHIFT);
-        let migrations = migration_config
-            .map_or_else(MigrationSet::empty, |config| {
-                LedgerMigrations::load(&MIGRATIONS, config, height)
-            })
-            .map_err(error::unable_to_load_migrations)?;
 
         Ok(Self {
             persistent_store,
@@ -346,7 +358,9 @@ impl LedgerStorage {
 
     pub fn new<P: AsRef<Path>>(persistent_path: P, blockchain: bool) -> Result<Self, ManyError> {
         let path = persistent_path.as_ref().to_owned();
-        let persistent_store = InnerStorage::open(path.clone()).map_err(ManyError::unknown)?; // TODO: Custom error
+        let persistent_store = InnerStorage::open_v1(path.clone())
+            .or_else(|_| InnerStorage::open_v2(path.clone()))
+            .map_err(ManyError::unknown)?; // TODO: Custom error
 
         Ok(Self {
             persistent_store,
@@ -427,7 +441,8 @@ impl LedgerStorage {
                 .persistent_store
                 .get(identity_root.as_bytes())
                 .map_err(error::storage_get_failed)?
-                .ok_or_else(|| error::storage_key_not_found(identity_root))?,
+                .unwrap(),
+            //.ok_or_else(|| error::storage_key_not_found(identity_root))?,
         )
     }
 

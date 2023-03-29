@@ -1,22 +1,24 @@
-use crate::module::{KvStoreMetadata, KvStoreMetadataWrapper};
-use derive_more::{From, TryInto};
-use many_error::{ManyError, ManyErrorCode};
-use many_identity::Address;
-use many_modules::abci_backend::AbciCommitInfo;
-use many_modules::events::EventInfo;
-use many_types::{Either, ProofOperation, Timestamp};
-use merk_v1::rocksdb::{DBIterator, IteratorMode, ReadOptions};
-use merk_v1::{
-    proofs::{
-        query::QueryItem,
-        Decoder,
-        Node::{Hash, KVHash, KV},
+use {
+    crate::module::{KvStoreMetadata, KvStoreMetadataWrapper},
+    derive_more::{From, TryInto},
+    many_error::{ManyError, ManyErrorCode},
+    many_identity::Address,
+    many_modules::abci_backend::AbciCommitInfo,
+    many_modules::events::EventInfo,
+    many_types::{Either, ProofOperation, Timestamp},
+    merk_v1::rocksdb::{DBIterator, IteratorMode, ReadOptions},
+    merk_v1::{
+        proofs::{
+            query::QueryItem,
+            Decoder,
+            Node::{Hash, KVHash, KV},
+        },
+        Hash as MerkHash, Op,
     },
-    Hash as MerkHash, Op,
+    serde::{Deserialize, Serialize},
+    std::collections::BTreeMap,
+    std::path::Path,
 };
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::path::Path;
 
 mod account;
 mod event;
@@ -264,16 +266,16 @@ impl KvStoreStorage {
         let root_identity: Address = Address::from_bytes(
             &persistent_store
                 .get(b"/config/identity")
-                .expect("Could not open storage.")
-                .expect("Could not find key '/config/identity' in storage."),
+                .map_err(|_| "Could not open storage.".to_string())?
+                .ok_or_else(|| "Could not find key '/config/identity' in storage.".to_string())?,
         )
         .map_err(|e| e.to_string())?;
 
         let latest_event_id = minicbor::decode(
             &persistent_store
                 .get(b"/latest_event_id")
-                .expect("Could not open storage.")
-                .expect("Could not find key '/latest_event_id'"),
+                .map_err(|_| "Could not open storage.".to_string())?
+                .ok_or_else(|| "Could not find key '/latest_event_id'".to_string())?,
         )
         .map_err(|e| e.to_string())?;
 

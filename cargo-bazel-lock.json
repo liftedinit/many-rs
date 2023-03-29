@@ -1,5 +1,5 @@
 {
-  "checksum": "27d57dd505b230d5218e07f62416fbe3953e698597ffe5debace6f8691f6d7b3",
+  "checksum": "48036a60f6ffb186db4c3e1daff622f28ca75e52858140aaba059c989ac213f5",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -13484,6 +13484,10 @@
         ],
         "deps": {
           "common": [
+            {
+              "id": "anyhow 1.0.70",
+              "target": "anyhow"
+            },
             {
               "id": "async-channel 1.8.0",
               "target": "async_channel"
