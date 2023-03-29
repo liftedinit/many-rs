@@ -2,7 +2,7 @@
 name = "many-server"
 version = "0.1.1" # managed by release.sh
 edition = "2021"
-description = "Library to build MANY modules and servers."
+description = "Types and methods to create a MANY network server and neighborhood."
 license-file = "../../LICENSE"
 homepage = "https://liftedinit.org/"
 repository = "https://github.com/liftedinit/many-rs.git"

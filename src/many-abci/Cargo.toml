@@ -2,14 +2,11 @@
 name = "many-abci"
 version = "0.1.1" # managed by release.sh
 edition = "2021"
-authors = ["The Lifted Initiative"]
-license = "Apache-2.0"
-description = ""
-readme = "README.md"
-homepage = "https://liftedinit.org"
-repository = "https://github.com/liftedinit/many-framework"
-keywords = ["cli", "web3", "blockchain", "tendermint", "proto", "crypto", "liftedinit"]
-categories = ["command-line-utilities"]
+description = "MANY ABCI server."
+license-file = "../../LICENSE"
+homepage = "https://liftedinit.org/"
+repository = "https://github.com/liftedinit/many-rs.git"
+authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 build = "build.rs"
 
 [[bin]]
