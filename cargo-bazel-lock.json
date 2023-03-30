@@ -1,5 +1,5 @@
 {
-  "checksum": "cfcaf4db492eeaac701a8b7367145254d74c89e345d95bb340f452defb1226de",
+  "checksum": "27840a8ab44b4e0ef07264f56d8fff9696aeaf53ac83e8bcec8a3b7a6e5fbaa4",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -11502,7 +11502,7 @@
         },
         "version": "0.1.1"
       },
-      "license": "Apache-2.0"
+      "license": null
     },
     "libc 0.2.140": {
       "name": "libc",
@@ -13446,7 +13446,7 @@
           "selects": {}
         }
       },
-      "license": "Apache-2.0"
+      "license": null
     },
     "many-ledger 0.1.1": {
       "name": "many-ledger",
@@ -13648,7 +13648,7 @@
           "selects": {}
         }
       },
-      "license": "Apache-2.0"
+      "license": null
     },
     "many-ledger-test-macros 0.1.1": {
       "name": "many-ledger-test-macros",
