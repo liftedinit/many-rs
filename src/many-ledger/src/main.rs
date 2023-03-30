@@ -1,7 +1,12 @@
 #![feature(used_with_arg)]
 
 use {
-    crate::allow_addrs::AllowAddrsModule,
+    crate::{
+        json::InitialStateJson,
+        migration::MIGRATIONS,
+        module::allow_addrs::AllowAddrsModule,
+        module::{account::AccountFeatureModule, LedgerModuleImpl},
+    },
     clap::Parser,
     derive_more::{From, TryInto},
     many_cli_helpers::CommonCliFlags,
