@@ -39,6 +39,18 @@ function teardown() {
 }
 
 @test "$SUITE: Hash Migration" {
+    # Initial consistency check
     check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
+
+    # Transaction and post-transaction consistency check
+    call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000 MFX
+    check_consistency --pem=1 --balance=999000 --id="$(identity 1)" 8000 8001 8002
+    check_consistency --pem=2 --balance=1000 --id="$(identity 2)" 8000 8001 8002
+
+    wait_for_block 30
+
+    # Post-migration consistency check
+    check_consistency --pem=1 --balance=999000 --id="$(identity 1)" 8000 8001 8002
+    check_consistency --pem=2 --balance=1000 --id="$(identity 2)" 8000 8001 8002
 
 }
