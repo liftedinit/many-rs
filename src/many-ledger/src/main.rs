@@ -179,14 +179,13 @@ fn main() -> Result<(), Error> {
         .transpose()?;
 
     info!("Loading migrations from {migrations_config:?}");
-    let maybe_migrations = match migrations_config {
-        Some(file) => {
+    let maybe_migrations = migrations_config
+        .map(|file| {
             let content = std::fs::read_to_string(file)?;
             let config: MigrationConfig = serde_json::from_str(&content)?;
-            Some(config.strict())
-        }
-        None => None,
-    };
+            Ok::<_, Error>(config.strict())
+        })
+        .transpose()?;
 
     let module_impl = if persistent.exists() {
         if state.is_some() {
