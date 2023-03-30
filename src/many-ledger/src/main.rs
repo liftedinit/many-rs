@@ -29,10 +29,7 @@ use {
 };
 
 #[cfg(feature = "webauthn_testing")]
-use {
-    crate::idstore_webauthn::IdStoreWebAuthnModule, crate::json::InitialStateJson,
-    crate::migration::MIGRATIONS, crate::module::account::AccountFeatureModule, module::*,
-};
+use {crate::idstore_webauthn::IdStoreWebAuthnModule, module::*};
 
 mod error;
 mod json;
