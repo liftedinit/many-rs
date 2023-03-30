@@ -1,14 +1,16 @@
 #![feature(const_mut_refs)]
 
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::{BTreeMap, HashMap};
-use std::fmt;
-use std::fmt::Formatter;
-use std::ops::Index;
-use std::path::PathBuf;
-use strum::Display;
-use tracing::trace;
+use {
+    serde::{Deserialize, Serialize},
+    serde_json::Value,
+    std::collections::{BTreeMap, HashMap},
+    std::fmt,
+    std::fmt::Formatter,
+    std::ops::Index,
+    std::path::PathBuf,
+    strum::Display,
+    tracing::trace,
+};
 
 // Initialize and update functions receive the `metadata.extra` fields.
 // The `metadata.extra` field can be used to provide custom parameters to migrations.

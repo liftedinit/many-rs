@@ -1,38 +1,40 @@
 pub mod cucumber;
 
-use async_channel::unbounded;
-use coset::CborSerializable;
-use itertools::Itertools;
-use many_error::ManyError;
-use many_identity::testing::identity;
-use many_identity::{Address, Identity};
-use many_identity_dsa::ed25519::generate_random_ed25519_identity;
-use many_ledger::{json::InitialStateJson, module::LedgerModuleImpl, storage::InnerStorage};
-use many_migration::{InnerMigration, MigrationConfig};
-use many_modules::abci_backend::{AbciBlock, ManyAbciModuleBackend};
-use many_modules::account::features::multisig::{
-    AccountMultisigModuleBackend, ExecuteArgs, InfoReturn,
-};
-use many_modules::account::features::FeatureInfo;
-use many_modules::account::AccountModuleBackend;
-use many_modules::idstore::{CredentialId, PublicKey};
-use many_modules::ledger::extended_info::visual_logo::VisualTokenLogo;
-use many_modules::ledger::extended_info::TokenExtendedInfo;
-use many_modules::ledger::{
-    BalanceArgs, LedgerCommandsModuleBackend, LedgerModuleBackend, TokenCreateArgs,
-};
-use many_modules::{account, events, ledger};
-use many_protocol::{context::Context, RequestMessage, ResponseMessage};
-use many_types::ledger::{
-    LedgerTokensAddressMap, Symbol, TokenAmount, TokenInfoSummary, TokenMaybeOwner,
-};
-use many_types::Memo;
-use minicbor::bytes::ByteVec;
-use once_cell::sync::Lazy;
-use proptest::prelude::*;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    str::FromStr,
+use {
+    async_channel::unbounded,
+    coset::CborSerializable,
+    itertools::Itertools,
+    many_error::ManyError,
+    many_identity::testing::identity,
+    many_identity::{Address, Identity},
+    many_identity_dsa::ed25519::generate_random_ed25519_identity,
+    many_ledger::{json::InitialStateJson, module::LedgerModuleImpl, storage::InnerStorage},
+    many_migration::{InnerMigration, MigrationConfig},
+    many_modules::abci_backend::{AbciBlock, ManyAbciModuleBackend},
+    many_modules::account::features::multisig::{
+        AccountMultisigModuleBackend, ExecuteArgs, InfoReturn,
+    },
+    many_modules::account::features::FeatureInfo,
+    many_modules::account::AccountModuleBackend,
+    many_modules::idstore::{CredentialId, PublicKey},
+    many_modules::ledger::extended_info::visual_logo::VisualTokenLogo,
+    many_modules::ledger::extended_info::TokenExtendedInfo,
+    many_modules::ledger::{
+        BalanceArgs, LedgerCommandsModuleBackend, LedgerModuleBackend, TokenCreateArgs,
+    },
+    many_modules::{account, events, ledger},
+    many_protocol::{context::Context, RequestMessage, ResponseMessage},
+    many_types::ledger::{
+        LedgerTokensAddressMap, Symbol, TokenAmount, TokenInfoSummary, TokenMaybeOwner,
+    },
+    many_types::Memo,
+    minicbor::bytes::ByteVec,
+    once_cell::sync::Lazy,
+    proptest::prelude::*,
+    std::{
+        collections::{BTreeMap, BTreeSet},
+        str::FromStr,
+    },
 };
 
 pub fn default_token_create_args(
