@@ -174,12 +174,9 @@ fn main() -> Result<(), Error> {
     let key = CoseKeyIdentity::from_pem(pem)?;
     info!(address = key.address().to_string().as_str());
 
-    let state: Option<InitialStateJson> = match state {
-        Some(p) => {
-            Some(InitialStateJson::read(p).map_err(|_| "Could not read state file.".to_string())?)
-        }
-        None => None,
-    };
+    let state = state
+        .map(|p| InitialStateJson::read(p).map_err(|error| error.to_string()))
+        .transpose()?;
 
     info!("Loading migrations from {migrations_config:?}");
     let maybe_migrations = match migrations_config {
