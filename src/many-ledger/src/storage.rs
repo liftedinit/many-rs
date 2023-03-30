@@ -10,8 +10,8 @@ use many_migration::{MigrationConfig, MigrationSet};
 use many_modules::events::EventId;
 use many_types::ledger::Symbol;
 use many_types::Timestamp;
-use merk_v1::rocksdb::{DBIterator, IteratorMode, ReadOptions};
-use merk_v1::{Hash, Op};
+use merk_v2::rocksdb::{DBIterator, IteratorMode, ReadOptions};
+use merk_v2::Hash;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
@@ -250,8 +250,13 @@ impl LedgerStorage {
         let key = key_for_account_balance(&account, &symbol);
         let amount = many_types::ledger::TokenAmount::from(amount);
 
-        self.persistent_store
-            .apply(&[(key, Operation::from(Op::Put(amount.to_vec())))])?;
+        self.persistent_store.apply(&[(
+            key,
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(amount.to_vec())),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(amount.to_vec())),
+            },
+        )])?;
 
         // Always commit to the store. In blockchain mode this will fail.
         self.persistent_store
@@ -408,7 +413,14 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 HEIGHT_ROOT.as_bytes().to_vec(),
-                Operation::from(Op::Put((current_height + 1).to_be_bytes().to_vec())),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                        (current_height + 1).to_be_bytes().to_vec(),
+                    )),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                        (current_height + 1).to_be_bytes().to_vec(),
+                    )),
+                },
             )])
             .map_err(Into::into)
             .map(|_| current_height)
@@ -441,8 +453,7 @@ impl LedgerStorage {
                 .persistent_store
                 .get(identity_root.as_bytes())
                 .map_err(error::storage_get_failed)?
-                .unwrap(),
-            //.ok_or_else(|| error::storage_key_not_found(identity_root))?,
+                .ok_or_else(|| error::storage_key_not_found(identity_root))?,
         )
     }
 
@@ -484,7 +495,14 @@ impl LedgerStorage {
 
         self.persistent_store.apply(&[(
             key_for_subresource.clone(),
-            Op::Put((current_id + 1).to_be_bytes().to_vec()).into(),
+            match self.persistent_store {
+                InnerStorage::V1(_) => {
+                    merk_v1::Op::Put((current_id + 1).to_be_bytes().to_vec()).into()
+                }
+                InnerStorage::V2(_) => {
+                    merk_v2::Op::Put((current_id + 1).to_be_bytes().to_vec()).into()
+                }
+            },
         )])?;
         let mut keys = vec![key_for_subresource];
 
