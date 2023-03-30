@@ -161,9 +161,7 @@ fn main() -> Result<(), Error> {
         match std::fs::remove_dir_all(persistent.as_path()) {
             Ok(_) => {}
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => {
-                panic!("Error: {e}")
-            }
+            Err(e) => Err(format!("Error: {e}"))?,
         }
     } else if persistent.exists() {
         // Initial state is ignored.
