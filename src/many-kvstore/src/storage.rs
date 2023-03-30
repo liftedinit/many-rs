@@ -180,7 +180,7 @@ impl KvStoreStorage {
         self.persistent_store
             .apply(&[(
                 b"/height".to_vec(),
-                Op::Put((current_height + 1).to_be_bytes().to_vec()).into(),
+                Op::Put((current_height + 1).to_be_bytes().to_vec()),
             )])
             .unwrap();
         current_height
@@ -204,8 +204,7 @@ impl KvStoreStorage {
                 b"/latest_event_id".to_vec(),
                 Op::Put(
                     minicbor::to_vec(&self.latest_event_id).expect("Unable to encode event id"),
-                )
-                .into(),
+                ),
             )])
             .unwrap();
         self.persistent_store.commit(&[]).unwrap();
@@ -264,12 +263,11 @@ impl KvStoreStorage {
                     Op::Put(
                         minicbor::to_vec(meta)
                             .map_err(|e| ManyError::serialization_error(e.to_string()))?,
-                    )
-                    .into(),
+                    ),
                 ),
                 (
                     vec![KVSTORE_ROOT.to_vec(), key.to_vec()].concat(),
-                    Op::Put(value.clone()).into(),
+                    Op::Put(value.clone()),
                 ),
             ])
             .map_err(|e| ManyError::unknown(e.to_string()))?;
@@ -295,8 +293,7 @@ impl KvStoreStorage {
                 Op::Put(
                     minicbor::to_vec(meta)
                         .map_err(|e| ManyError::serialization_error(e.to_string()))?,
-                )
-                .into(),
+                ),
             )])
             .map_err(ManyError::unknown)?;
 
@@ -335,8 +332,7 @@ impl KvStoreStorage {
                 Op::Put(
                     minicbor::to_vec(meta)
                         .map_err(|e| ManyError::serialization_error(e.to_string()))?,
-                )
-                .into(),
+                ),
             )])
             .map_err(ManyError::unknown)?;
 
@@ -362,12 +358,9 @@ impl KvStoreStorage {
         use merk_v2::proofs::Op;
         context.as_ref().prove(|| {
             self.persistent_store
-                .prove(
-                    merk_v2::proofs::query::Query::from(
-                        keys.into_iter().map(QueryItem::Key).collect::<Vec<_>>(),
-                    )
-                    .into(),
-                )
+                .prove(merk_v2::proofs::query::Query::from(
+                    keys.into_iter().map(QueryItem::Key).collect::<Vec<_>>(),
+                ))
                 .and_then(|proof| {
                     Decoder::new(proof.as_slice())
                         .map(|fallible_operation| {
