@@ -1,6 +1,5 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
-MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
-
+MIGRATION_ROOT="$GIT_ROOT/staging/ledger_migrations.json"
 load '../../test_helper/load'
 load '../../test_helper/ledger'
 

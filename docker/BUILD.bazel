@@ -38,9 +38,9 @@ filegroup(
         "docker-compose-ledger.jsonnet",
         "generate-allow-addrs.sh",
         "update_config.sh",
+        "//staging:abci-ledger-migrations",
+        "//staging:ledger-migrations",
         "//staging:ledger-staging",
-        "//tests:abci-ledger-migrations",
-        "//tests:ledger-migrations",
     ],
 )
 

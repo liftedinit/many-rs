@@ -1,5 +1,5 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
-ABCI_MIGRATION_ROOT="$GIT_ROOT/tests/abci_migrations.json"
+ABCI_MIGRATION_ROOT="$GIT_ROOT/staging/abci_migrations.json"
 MAKEFILE="Makefile.ledger"
 
 load '../../test_helper/load'
@@ -11,7 +11,11 @@ function setup() {
 
     mkdir "$BATS_TEST_ROOTDIR"
 
-    cp "$ABCI_MIGRATION_ROOT" "$BATS_TEST_ROOTDIR/abci_migrations.json"
+    jq '(.migrations[] | select(.name == "LegacyErrorCode")).block_height |= 20 |
+        (.migrations[] | select(.name == "LegacyErrorCode")).upper_block_height |= 40 |
+        (.migrations[] | select(.name == "LegacyErrorCode")).disabled |= empty' \
+        "$ABCI_MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/abci_migrations.json"
+
 
     (
       cd "$GIT_ROOT/docker/" || exit

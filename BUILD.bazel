@@ -34,6 +34,8 @@ pkg_tar(
         "//src/many-abci",
         "//src/many-kvstore",
         "//src/many-ledger",
+        "//staging:abci-ledger-migrations",
+        "//staging:ledger-migrations",
     ],
     extension = ".tar.gz",
     package_file_name = "{product_name}-{version}-{compilation_mode}.tar.gz",
