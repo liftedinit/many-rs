@@ -38,6 +38,7 @@ function teardown() {
     cd "$GIT_ROOT/tests/resiliency/ledger" || exit 1
 }
 
-@test "$SUITE: Memo Migration" {
+@test "$SUITE: Hash Migration" {
+    check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
 
 }
