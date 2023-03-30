@@ -117,7 +117,7 @@ impl<'a> KvStoreIterator<'a> {
 }
 
 impl<'a> Iterator for KvStoreIterator<'a> {
-    type Item = Result<(Box<[u8]>, Vec<u8>), merk_v1::rocksdb::Error>;
+    type Item = Result<(Box<[u8]>, Vec<u8>), merk_v2::rocksdb::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|item| {
