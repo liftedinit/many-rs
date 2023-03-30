@@ -1,18 +1,19 @@
-use crate::error::storage_commit_failed;
-use crate::migration::MIGRATIONS;
-use crate::storage::iterator::LedgerIterator;
-use crate::storage::multisig::MultisigTransactionStorage;
-use crate::storage::{InnerStorage, Operation};
-use linkme::distributed_slice;
-use many_error::ManyError;
-use many_migration::InnerMigration;
-use many_modules::account::features::multisig::InfoReturn;
-use many_modules::events::{EventInfo, EventLog};
-use many_types::{Memo, SortOrder};
-use merk_v1::Op;
-use serde_json::Value;
-use std::borrow::BorrowMut;
-use std::collections::HashMap;
+use {
+    crate::error::storage_commit_failed,
+    crate::migration::MIGRATIONS,
+    crate::storage::iterator::LedgerIterator,
+    crate::storage::multisig::MultisigTransactionStorage,
+    crate::storage::{InnerStorage, Operation},
+    linkme::distributed_slice,
+    many_error::ManyError,
+    many_migration::InnerMigration,
+    many_modules::account::features::multisig::InfoReturn,
+    many_modules::events::{EventInfo, EventLog},
+    many_types::{Memo, SortOrder},
+    serde_json::Value,
+    std::borrow::BorrowMut,
+    std::collections::HashMap,
+};
 
 fn iter_through_events(
     storage: &InnerStorage,
@@ -92,10 +93,15 @@ fn update_multisig_submit_events(storage: &mut InnerStorage) -> Result<(), ManyE
                 };
                 batch.push((
                     key,
-                    Operation::from(Op::Put(
-                        minicbor::to_vec(new_log).map_err(ManyError::serialization_error)?,
-                    )),
-                ));
+                    match storage {
+                        InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                            minicbor::to_vec(new_log).map_err(ManyError::serialization_error)?,
+                        )),
+                        InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                            minicbor::to_vec(new_log).map_err(ManyError::serialization_error)?,
+                        )),
+                    },
+                ))
             }
         }
     }
@@ -154,10 +160,15 @@ fn update_multisig_storage(storage: &mut InnerStorage) -> Result<(), ManyError> 
 
             batch.push((
                 key,
-                Operation::from(Op::Put(
-                    minicbor::to_vec(new_multisig).map_err(ManyError::serialization_error)?,
-                )),
-            ));
+                match storage {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                        minicbor::to_vec(new_multisig).map_err(ManyError::serialization_error)?,
+                    )),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                        minicbor::to_vec(new_multisig).map_err(ManyError::serialization_error)?,
+                    )),
+                },
+            ))
         }
     }
 

@@ -1,11 +1,12 @@
-use super::Operation;
-use crate::error;
-use crate::storage::LedgerStorage;
-use many_error::ManyError;
-use many_identity::Address;
-use many_modules::idstore;
-use merk_v1::Op;
-use std::collections::BTreeMap;
+use {
+    super::{InnerStorage, Operation},
+    crate::error,
+    crate::storage::LedgerStorage,
+    many_error::ManyError,
+    many_identity::Address,
+    many_modules::idstore,
+    std::collections::BTreeMap,
+};
 
 pub(crate) const IDSTORE_ROOT: &[u8] = b"/idstore/";
 pub(crate) const IDSTORE_SEED_ROOT: &[u8] = b"/config/idstore_seed";
@@ -52,15 +53,26 @@ impl LedgerStorage {
 
         // Apply keys and seed.
         if let Some(seed) = maybe_seed {
-            self.persistent_store.apply(&[(
-                IDSTORE_SEED_ROOT.to_vec(),
-                Operation::from(Op::Put(seed.to_be_bytes().to_vec())),
-            )])?;
+            self.persistent_store.apply(&match self.persistent_store {
+                InnerStorage::V1(_) => [(
+                    IDSTORE_SEED_ROOT.to_vec(),
+                    Operation::from(merk_v1::Op::Put(seed.to_be_bytes().to_vec())),
+                )],
+                InnerStorage::V2(_) => [(
+                    IDSTORE_SEED_ROOT.to_vec(),
+                    Operation::from(merk_v2::Op::Put(seed.to_be_bytes().to_vec())),
+                )],
+            })?;
         }
         if let Some(keys) = maybe_keys {
             for (k, v) in keys {
-                self.persistent_store
-                    .apply(&[(k, Operation::from(Op::Put(v)))])?;
+                self.persistent_store.apply(&[(
+                    k,
+                    match self.persistent_store {
+                        InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(v)),
+                        InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(v)),
+                    },
+                )])?;
             }
         }
 
@@ -80,7 +92,14 @@ impl LedgerStorage {
 
         self.persistent_store.apply(&[(
             IDSTORE_SEED_ROOT.to_vec(),
-            Operation::from(Op::Put((idstore_seed + 1).to_be_bytes().to_vec())),
+            match self.persistent_store {
+                InnerStorage::V1(_) => {
+                    Operation::from(merk_v1::Op::Put((idstore_seed + 1).to_be_bytes().to_vec()))
+                }
+                InnerStorage::V2(_) => {
+                    Operation::from(merk_v2::Op::Put((idstore_seed + 1).to_be_bytes().to_vec()))
+                }
+            },
         )])?;
 
         self.maybe_commit().map(|_| idstore_seed)
@@ -110,26 +129,48 @@ impl LedgerStorage {
         })
         .map_err(ManyError::serialization_error)?;
 
-        let batch = vec![
-            (
-                vec![
-                    IDSTORE_ROOT,
-                    IdStoreRootSeparator::RecallPhrase.value(),
-                    &recall_phrase_cbor,
-                ]
-                .concat(),
-                Operation::from(Op::Put(value.clone())),
-            ),
-            (
-                vec![
-                    IDSTORE_ROOT,
-                    IdStoreRootSeparator::Address.value(),
-                    &address.to_vec(),
-                ]
-                .concat(),
-                Operation::from(Op::Put(value)),
-            ),
-        ];
+        let batch = match self.persistent_store {
+            InnerStorage::V1(_) => vec![
+                (
+                    vec![
+                        IDSTORE_ROOT,
+                        IdStoreRootSeparator::RecallPhrase.value(),
+                        &recall_phrase_cbor,
+                    ]
+                    .concat(),
+                    Operation::from(merk_v1::Op::Put(value.clone())),
+                ),
+                (
+                    vec![
+                        IDSTORE_ROOT,
+                        IdStoreRootSeparator::Address.value(),
+                        &address.to_vec(),
+                    ]
+                    .concat(),
+                    Operation::from(merk_v1::Op::Put(value)),
+                ),
+            ],
+            InnerStorage::V2(_) => vec![
+                (
+                    vec![
+                        IDSTORE_ROOT,
+                        IdStoreRootSeparator::RecallPhrase.value(),
+                        &recall_phrase_cbor,
+                    ]
+                    .concat(),
+                    Operation::from(merk_v2::Op::Put(value.clone())),
+                ),
+                (
+                    vec![
+                        IDSTORE_ROOT,
+                        IdStoreRootSeparator::Address.value(),
+                        &address.to_vec(),
+                    ]
+                    .concat(),
+                    Operation::from(merk_v2::Op::Put(value)),
+                ),
+            ],
+        };
 
         self.persistent_store.apply(&batch)?;
 
@@ -205,7 +246,14 @@ pub mod tests {
         pub fn set_idstore_seed(&mut self, seed: u64) -> Result<(), ManyError> {
             self.persistent_store.apply(&[(
                 IDSTORE_SEED_ROOT.to_vec(),
-                Operation::from(Op::Put(seed.to_be_bytes().to_vec())),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => {
+                        Operation::from(merk_v1::Op::Put(seed.to_be_bytes().to_vec()))
+                    }
+                    InnerStorage::V2(_) => {
+                        Operation::from(merk_v2::Op::Put(seed.to_be_bytes().to_vec()))
+                    }
+                },
             )])?;
 
             self.persistent_store

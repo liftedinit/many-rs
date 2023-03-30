@@ -1,20 +1,21 @@
-use super::Operation;
-use crate::error;
-use crate::migration::tokens::TOKEN_MIGRATION;
-use crate::module::account::{validate_account, verify_account_role};
-use crate::storage::multisig::{
-    MULTISIG_DEFAULT_EXECUTE_AUTOMATICALLY, MULTISIG_DEFAULT_TIMEOUT_IN_SECS,
-    MULTISIG_MAXIMUM_TIMEOUT_IN_SECS,
+use {
+    super::{InnerStorage, Operation},
+    crate::error,
+    crate::migration::tokens::TOKEN_MIGRATION,
+    crate::module::account::{validate_account, verify_account_role},
+    crate::storage::multisig::{
+        MULTISIG_DEFAULT_EXECUTE_AUTOMATICALLY, MULTISIG_DEFAULT_TIMEOUT_IN_SECS,
+        MULTISIG_MAXIMUM_TIMEOUT_IN_SECS,
+    },
+    crate::storage::{LedgerStorage, IDENTITY_ROOT},
+    many_error::ManyError,
+    many_identity::Address,
+    many_modules::account::features::{FeatureId, FeatureInfo, FeatureSet},
+    many_modules::account::Role,
+    many_modules::{account, events},
+    many_types::Either,
+    std::collections::{BTreeMap, BTreeSet},
 };
-use crate::storage::{LedgerStorage, IDENTITY_ROOT};
-use many_error::ManyError;
-use many_identity::Address;
-use many_modules::account::features::{FeatureId, FeatureInfo, FeatureSet};
-use many_modules::account::Role;
-use many_modules::{account, events};
-use many_types::Either;
-use merk_v1::Op;
-use std::collections::{BTreeMap, BTreeSet};
 
 pub const ACCOUNT_IDENTITY_ROOT: &str = "/config/account_identity";
 pub const ACCOUNT_SUBRESOURCE_ID_ROOT: &str = "/config/account_id";
@@ -61,7 +62,10 @@ impl LedgerStorage {
             let identity = identity.unwrap_or(self.get_identity(IDENTITY_ROOT)?);
             self.persistent_store.apply(&[(
                 ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
-                Operation::from(Op::Put(identity.to_vec())),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(identity.to_vec())),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(identity.to_vec())),
+                },
             )])?;
         }
 
@@ -314,9 +318,14 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 key.clone(),
-                Operation::from(Op::Put(
-                    minicbor::to_vec(account).map_err(ManyError::serialization_error)?,
-                )),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                        minicbor::to_vec(account).map_err(ManyError::serialization_error)?,
+                    )),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                        minicbor::to_vec(account).map_err(ManyError::serialization_error)?,
+                    )),
+                },
             )])
             .map_err(|e| ManyError::unknown(e.to_string()))?;
 

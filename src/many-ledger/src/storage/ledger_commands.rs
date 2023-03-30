@@ -1,14 +1,15 @@
-use super::Operation;
-use crate::error;
-use crate::storage::{key_for_account_balance, LedgerStorage};
-use many_error::ManyError;
-use many_identity::Address;
-use many_modules::events::EventInfo;
-use many_types::ledger::{Symbol, TokenAmount};
-use many_types::Memo;
-use merk_v1::Op;
-use std::cmp::Ordering;
-use tracing::info;
+use {
+    super::{InnerStorage, Operation},
+    crate::error,
+    crate::storage::{key_for_account_balance, LedgerStorage},
+    many_error::ManyError,
+    many_identity::Address,
+    many_modules::events::EventInfo,
+    many_types::ledger::{Symbol, TokenAmount},
+    many_types::Memo,
+    std::cmp::Ordering,
+    tracing::info,
+};
 
 impl LedgerStorage {
     pub fn get_balance(
@@ -16,21 +17,16 @@ impl LedgerStorage {
         identity: &Address,
         symbol: &Symbol,
     ) -> Result<TokenAmount, ManyError> {
-        if identity.is_anonymous() {
-            Ok(TokenAmount::zero())
+        Ok(if identity.is_anonymous() {
+            TokenAmount::zero()
         } else {
             let key = key_for_account_balance(identity, symbol);
-            Ok(
-                match self
-                    .persistent_store
-                    .get(&key)
-                    .map_err(error::storage_get_failed)?
-                {
-                    None => TokenAmount::zero(),
-                    Some(amount) => TokenAmount::from(amount),
-                },
-            )
-        }
+
+            self.persistent_store
+                .get(&key)
+                .map_err(error::storage_get_failed)?
+                .map_or(TokenAmount::zero(), TokenAmount::from)
+        })
     }
 
     pub fn send(
@@ -68,19 +64,45 @@ impl LedgerStorage {
         let key_from = key_for_account_balance(from, symbol);
         let key_to = key_for_account_balance(to, symbol);
 
-        let batch: Vec<_> = match key_from.cmp(&key_to) {
-            Ordering::Less | Ordering::Equal => vec![
+        let batch: Vec<_> = match (&self.persistent_store, key_from.cmp(&key_to)) {
+            (InnerStorage::V1(_), Ordering::Less) | (InnerStorage::V1(_), Ordering::Equal) => vec![
                 (
                     key_from.clone(),
-                    Operation::from(Op::Put(amount_from.to_vec())),
+                    Operation::from(merk_v1::Op::Put(amount_from.to_vec())),
                 ),
-                (key_to.clone(), Operation::from(Op::Put(amount_to.to_vec()))),
+                (
+                    key_to.clone(),
+                    Operation::from(merk_v1::Op::Put(amount_to.to_vec())),
+                ),
             ],
-            _ => vec![
-                (key_to.clone(), Operation::from(Op::Put(amount_to.to_vec()))),
+            (InnerStorage::V2(_), Ordering::Less) | (InnerStorage::V2(_), Ordering::Equal) => vec![
                 (
                     key_from.clone(),
-                    Operation::from(Op::Put(amount_from.to_vec())),
+                    Operation::from(merk_v2::Op::Put(amount_from.to_vec())),
+                ),
+                (
+                    key_to.clone(),
+                    Operation::from(merk_v2::Op::Put(amount_to.to_vec())),
+                ),
+            ],
+            (InnerStorage::V1(_), Ordering::Greater) => vec![
+                (
+                    key_to.clone(),
+                    Operation::from(merk_v1::Op::Put(amount_to.to_vec())),
+                ),
+                (
+                    key_from.clone(),
+                    Operation::from(merk_v1::Op::Put(amount_from.to_vec())),
+                ),
+            ],
+            (InnerStorage::V2(_), Ordering::Greater) => vec![
+                (
+                    key_to.clone(),
+                    Operation::from(merk_v2::Op::Put(amount_to.to_vec())),
+                ),
+                (
+                    key_from.clone(),
+                    Operation::from(merk_v2::Op::Put(amount_from.to_vec())),
                 ),
             ],
         };

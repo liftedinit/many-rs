@@ -1,21 +1,22 @@
-use crate::error;
-use crate::migration::MIGRATIONS;
-use crate::storage::{
-    account::{ACCOUNT_IDENTITY_ROOT, ACCOUNT_SUBRESOURCE_ID_ROOT},
-    key_for_subresource_counter,
-    ledger_tokens::{key_for_ext_info, key_for_symbol, TOKEN_IDENTITY_ROOT},
-    InnerStorage, Operation, IDENTITY_ROOT, SYMBOLS_ROOT,
+use {
+    crate::error,
+    crate::migration::MIGRATIONS,
+    crate::storage::{
+        account::{ACCOUNT_IDENTITY_ROOT, ACCOUNT_SUBRESOURCE_ID_ROOT},
+        key_for_subresource_counter,
+        ledger_tokens::{key_for_ext_info, key_for_symbol, TOKEN_IDENTITY_ROOT},
+        InnerStorage, Operation, IDENTITY_ROOT, SYMBOLS_ROOT,
+    },
+    linkme::distributed_slice,
+    many_error::ManyError,
+    many_identity::Address,
+    many_migration::InnerMigration,
+    many_modules::ledger::extended_info::TokenExtendedInfo,
+    many_types::ledger::{Symbol, TokenInfo, TokenInfoSummary, TokenInfoSupply},
+    serde_json::Value,
+    std::collections::{BTreeMap, HashMap},
+    std::str::FromStr,
 };
-use linkme::distributed_slice;
-use many_error::ManyError;
-use many_identity::Address;
-use many_migration::InnerMigration;
-use many_modules::ledger::extended_info::TokenExtendedInfo;
-use many_types::ledger::{Symbol, TokenInfo, TokenInfoSummary, TokenInfoSupply};
-use merk_v1::Op;
-use serde_json::Value;
-use std::collections::{BTreeMap, HashMap};
-use std::str::FromStr;
 
 fn migrate_account_identity(storage: &mut InnerStorage) -> Result<(), ManyError> {
     // Fetch the root identity
@@ -33,20 +34,36 @@ fn migrate_account_identity(storage: &mut InnerStorage) -> Result<(), ManyError>
         });
     let root_address = Address::from_bytes(&root_identity)?;
 
-    let batch = vec![
-        (
-            ACCOUNT_SUBRESOURCE_ID_ROOT.as_bytes().to_vec(),
-            Operation::from(Op::Delete),
-        ),
-        (
-            ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
-            Operation::from(Op::Put(root_identity)),
-        ),
-        (
-            key_for_subresource_counter(&root_address, true),
-            Operation::from(Op::Put(subresource_counter.to_be_bytes().to_vec())),
-        ),
-    ];
+    let batch = match storage {
+        InnerStorage::V1(_) => vec![
+            (
+                ACCOUNT_SUBRESOURCE_ID_ROOT.as_bytes().to_vec(),
+                Operation::from(merk_v1::Op::Delete),
+            ),
+            (
+                ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
+                Operation::from(merk_v1::Op::Put(root_identity)),
+            ),
+            (
+                key_for_subresource_counter(&root_address, true),
+                Operation::from(merk_v1::Op::Put(subresource_counter.to_be_bytes().to_vec())),
+            ),
+        ],
+        InnerStorage::V2(_) => vec![
+            (
+                ACCOUNT_SUBRESOURCE_ID_ROOT.as_bytes().to_vec(),
+                Operation::from(merk_v2::Op::Delete),
+            ),
+            (
+                ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
+                Operation::from(merk_v2::Op::Put(root_identity)),
+            ),
+            (
+                key_for_subresource_counter(&root_address, true),
+                Operation::from(merk_v2::Op::Put(subresource_counter.to_be_bytes().to_vec())),
+            ),
+        ],
+    };
 
     // And use it as the account identity
     storage.apply(&batch).map_err(Into::into)
@@ -121,29 +138,58 @@ fn migrate_token(
     })()
     .map_err(ManyError::deserialization_error)?;
 
-    let batch = vec![
-        (
-            key_for_ext_info(&symbol),
-            Operation::from(Op::Put(
-                minicbor::to_vec(TokenExtendedInfo::default())
-                    .map_err(ManyError::serialization_error)?,
-            )),
-        ),
-        (
-            key_for_subresource_counter(&token_identity, true),
-            Operation::from(Op::Put(token_next_subresource.to_be_bytes().to_vec())),
-        ),
-        (
-            key_for_symbol(&symbol).into_bytes(),
-            Operation::from(Op::Put(
-                minicbor::to_vec(info).map_err(ManyError::serialization_error)?,
-            )),
-        ),
-        (
-            TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
-            Operation::from(Op::Put(token_identity.to_vec())),
-        ),
-    ];
+    let batch = match storage {
+        InnerStorage::V1(_) => vec![
+            (
+                key_for_ext_info(&symbol),
+                Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(TokenExtendedInfo::default())
+                        .map_err(ManyError::serialization_error)?,
+                )),
+            ),
+            (
+                key_for_subresource_counter(&token_identity, true),
+                Operation::from(merk_v1::Op::Put(
+                    token_next_subresource.to_be_bytes().to_vec(),
+                )),
+            ),
+            (
+                key_for_symbol(&symbol).into_bytes(),
+                Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(info).map_err(ManyError::serialization_error)?,
+                )),
+            ),
+            (
+                TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
+                Operation::from(merk_v1::Op::Put(token_identity.to_vec())),
+            ),
+        ],
+        InnerStorage::V2(_) => vec![
+            (
+                key_for_ext_info(&symbol),
+                Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(TokenExtendedInfo::default())
+                        .map_err(ManyError::serialization_error)?,
+                )),
+            ),
+            (
+                key_for_subresource_counter(&token_identity, true),
+                Operation::from(merk_v2::Op::Put(
+                    token_next_subresource.to_be_bytes().to_vec(),
+                )),
+            ),
+            (
+                key_for_symbol(&symbol).into_bytes(),
+                Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(info).map_err(ManyError::serialization_error)?,
+                )),
+            ),
+            (
+                TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
+                Operation::from(merk_v2::Op::Put(token_identity.to_vec())),
+            ),
+        ],
+    };
 
     storage.apply(batch.as_slice()).map_err(Into::into)
 }

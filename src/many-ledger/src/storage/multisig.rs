@@ -1,18 +1,19 @@
-use super::Operation;
-use crate::migration::block_9400::Block9400Tx;
-use crate::migration::memo::MEMO_MIGRATION;
-use crate::module::account::validate_account;
-use crate::storage::event::EVENT_ID_KEY_SIZE_IN_BYTES;
-use crate::storage::LedgerStorage;
-use many_error::ManyError;
-use many_identity::Address;
-use many_modules::account::features::FeatureInfo;
-use many_modules::{account, events, EmptyReturn};
-use many_protocol::ResponseMessage;
-use many_types::{SortOrder, Timestamp};
-use merk_v1::Op;
-use std::collections::BTreeMap;
-use tracing::debug;
+use {
+    super::{InnerStorage, Operation},
+    crate::migration::block_9400::Block9400Tx,
+    crate::migration::memo::MEMO_MIGRATION,
+    crate::module::account::validate_account,
+    crate::storage::event::EVENT_ID_KEY_SIZE_IN_BYTES,
+    crate::storage::LedgerStorage,
+    many_error::ManyError,
+    many_identity::Address,
+    many_modules::account::features::FeatureInfo,
+    many_modules::{account, events, EmptyReturn},
+    many_protocol::ResponseMessage,
+    many_types::{SortOrder, Timestamp},
+    std::collections::BTreeMap,
+    tracing::debug,
+};
 
 pub(crate) const MULTISIG_TRANSACTIONS_ROOT: &[u8] = b"/multisig/";
 
@@ -193,8 +194,14 @@ impl LedgerStorage {
                 if !storage.disabled {
                     storage.disable(account::features::multisig::MultisigTransactionState::Expired);
 
-                    if let Ok(v) = minicbor::to_vec(storage) {
-                        batch.push((k.to_vec(), Operation::from(Op::Put(v))));
+                    match (minicbor::to_vec(storage), &self.persistent_store) {
+                        (Ok(v), InnerStorage::V1(_)) => {
+                            batch.push((k.to_vec(), Operation::from(merk_v1::Op::Put(v))))
+                        }
+                        (Ok(v), InnerStorage::V2(_)) => {
+                            batch.push((k.to_vec(), Operation::from(merk_v2::Op::Put(v))))
+                        }
+                        (Err(_), _) => (),
                     }
                 }
             } else if let Ok(d) = now.as_system_time()?.duration_since(storage.creation) {
@@ -264,9 +271,14 @@ impl LedgerStorage {
         debug!("{:?}", tx);
         self.persistent_store.apply(&[(
             key_for_multisig_transaction(tx_id),
-            Operation::from(Op::Put(
-                minicbor::to_vec(tx).map_err(ManyError::serialization_error)?,
-            )),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(tx).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(tx).map_err(ManyError::serialization_error)?,
+                )),
+            },
         )])?;
 
         self.maybe_commit()
@@ -370,9 +382,8 @@ impl LedgerStorage {
             execute_automatically,
             data_,
             memo,
-        })?;
-
-        Ok(event_id.into())
+        })
+        .map(|_| event_id.into())
     }
 
     pub fn get_multisig_info(&self, tx_id: &[u8]) -> Result<MultisigTransactionStorage, ManyError> {
@@ -528,7 +539,10 @@ impl LedgerStorage {
 
         self.persistent_store.apply(&[(
             key_for_multisig_transaction(tx_id),
-            Operation::from(Op::Put(v)),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(v)),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(v)),
+            },
         )])?;
 
         self.maybe_commit()

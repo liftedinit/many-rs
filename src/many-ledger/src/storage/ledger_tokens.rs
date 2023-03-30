@@ -1,26 +1,27 @@
-use super::Operation;
-use crate::error;
-use crate::migration::tokens::TOKEN_MIGRATION;
-use crate::storage::iterator::LedgerIterator;
-use crate::storage::{
-    key_for_account_balance, key_for_subresource_counter, LedgerStorage, IDENTITY_ROOT,
-    SYMBOLS_ROOT,
+use {
+    super::{InnerStorage, Operation},
+    crate::error,
+    crate::migration::tokens::TOKEN_MIGRATION,
+    crate::storage::iterator::LedgerIterator,
+    crate::storage::{
+        key_for_account_balance, key_for_subresource_counter, LedgerStorage, IDENTITY_ROOT,
+        SYMBOLS_ROOT,
+    },
+    itertools::Itertools,
+    many_error::ManyError,
+    many_identity::Address,
+    many_modules::events::EventInfo,
+    many_modules::ledger::extended_info::{ExtendedInfoKey, TokenExtendedInfo},
+    many_modules::ledger::{
+        TokenAddExtendedInfoArgs, TokenAddExtendedInfoReturns, TokenCreateArgs, TokenCreateReturns,
+        TokenInfoArgs, TokenInfoReturns, TokenRemoveExtendedInfoArgs,
+        TokenRemoveExtendedInfoReturns, TokenUpdateArgs, TokenUpdateReturns,
+    },
+    many_types::ledger::{Symbol, TokenAmount, TokenInfo, TokenInfoSummary, TokenInfoSupply},
+    many_types::{AttributeRelatedIndex, Either, SortOrder},
+    std::collections::{BTreeMap, BTreeSet},
+    std::str::FromStr,
 };
-use itertools::Itertools;
-use many_error::ManyError;
-use many_identity::Address;
-use many_modules::events::EventInfo;
-use many_modules::ledger::extended_info::{ExtendedInfoKey, TokenExtendedInfo};
-use many_modules::ledger::{
-    TokenAddExtendedInfoArgs, TokenAddExtendedInfoReturns, TokenCreateArgs, TokenCreateReturns,
-    TokenInfoArgs, TokenInfoReturns, TokenRemoveExtendedInfoArgs, TokenRemoveExtendedInfoReturns,
-    TokenUpdateArgs, TokenUpdateReturns,
-};
-use many_types::ledger::{Symbol, TokenAmount, TokenInfo, TokenInfoSummary, TokenInfoSupply};
-use many_types::{AttributeRelatedIndex, Either, SortOrder};
-use merk_v1::Op;
-use std::collections::{BTreeMap, BTreeSet};
-use std::str::FromStr;
 
 pub const SYMBOLS_ROOT_DASH: &str = const_format::concatcp!(SYMBOLS_ROOT, "/");
 pub const TOKEN_IDENTITY_ROOT: &str = "/config/token_identity";
@@ -120,39 +121,75 @@ impl LedgerStorage {
                 let ticker = symbols[&k].clone(); // Safe
                 let info = LedgerStorage::_token_info(k, ticker, meta, total_supply.clone());
 
-                batch.push((
-                    key_for_ext_info(&k),
-                    Operation::from(Op::Put(
-                        minicbor::to_vec(TokenExtendedInfo::default())
-                            .map_err(ManyError::serialization_error)?,
-                    )),
-                ));
-                batch.push((
-                    key_for_symbol(&k).into(),
-                    Operation::from(Op::Put(
-                        minicbor::to_vec(info).map_err(ManyError::serialization_error)?,
-                    )),
-                ));
+                match self.persistent_store {
+                    InnerStorage::V1(_) => {
+                        batch.push((
+                            key_for_ext_info(&k),
+                            Operation::from(merk_v1::Op::Put(
+                                minicbor::to_vec(TokenExtendedInfo::default())
+                                    .map_err(ManyError::serialization_error)?,
+                            )),
+                        ));
+                        batch.push((
+                            key_for_symbol(&k).into(),
+                            Operation::from(merk_v1::Op::Put(
+                                minicbor::to_vec(info).map_err(ManyError::serialization_error)?,
+                            )),
+                        ));
+                    }
+                    InnerStorage::V2(_) => {
+                        batch.push((
+                            key_for_ext_info(&k),
+                            Operation::from(merk_v1::Op::Put(
+                                minicbor::to_vec(TokenExtendedInfo::default())
+                                    .map_err(ManyError::serialization_error)?,
+                            )),
+                        ));
+                        batch.push((
+                            key_for_symbol(&k).into(),
+                            Operation::from(merk_v2::Op::Put(
+                                minicbor::to_vec(info).map_err(ManyError::serialization_error)?,
+                            )),
+                        ));
+                    }
+                }
             }
             batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
             self.persistent_store.apply(batch.as_slice())?;
 
             let token_identity = token_identity.unwrap_or(self.get_identity(IDENTITY_ROOT)?);
-            let batch = vec![
-                (
-                    key_for_subresource_counter(
-                        &token_identity,
-                        self.migrations.is_active(&TOKEN_MIGRATION),
+            let batch = match self.persistent_store {
+                InnerStorage::V1(_) => vec![
+                    (
+                        key_for_subresource_counter(
+                            &token_identity,
+                            self.migrations.is_active(&TOKEN_MIGRATION),
+                        ),
+                        Operation::from(merk_v1::Op::Put(
+                            token_next_subresource.unwrap_or(0).to_be_bytes().to_vec(),
+                        )),
                     ),
-                    Operation::from(Op::Put(
-                        token_next_subresource.unwrap_or(0).to_be_bytes().to_vec(),
-                    )),
-                ),
-                (
-                    TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
-                    Operation::from(Op::Put(token_identity.to_vec())),
-                ),
-            ];
+                    (
+                        TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v1::Op::Put(token_identity.to_vec())),
+                    ),
+                ],
+                InnerStorage::V2(_) => vec![
+                    (
+                        key_for_subresource_counter(
+                            &token_identity,
+                            self.migrations.is_active(&TOKEN_MIGRATION),
+                        ),
+                        Operation::from(merk_v2::Op::Put(
+                            token_next_subresource.unwrap_or(0).to_be_bytes().to_vec(),
+                        )),
+                    ),
+                    (
+                        TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v2::Op::Put(token_identity.to_vec())),
+                    ),
+                ],
+            };
             self.persistent_store.apply(batch.as_slice())?;
 
             self.commit_storage()?;
@@ -226,9 +263,14 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 symbols_key.clone(),
-                Operation::from(Op::Put(
-                    minicbor::to_vec(&symbols).map_err(ManyError::serialization_error)?,
-                )),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                        minicbor::to_vec(&symbols).map_err(ManyError::serialization_error)?,
+                    )),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                        minicbor::to_vec(&symbols).map_err(ManyError::serialization_error)?,
+                    )),
+                },
             )])
             .map(|_| vec![symbols_key])
             .map_err(Into::into)
@@ -263,7 +305,13 @@ impl LedgerStorage {
             for (k, v) in initial_distribution {
                 let key = key_for_account_balance(k, &symbol);
                 keys.push(key.clone());
-                batch.push((key, Operation::from(Op::Put(v.to_vec()))));
+                batch.push((
+                    key,
+                    match self.persistent_store {
+                        InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(v.to_vec())),
+                        InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(v.to_vec())),
+                    },
+                ));
                 total_supply += v.clone();
             }
             total_supply
@@ -289,9 +337,14 @@ impl LedgerStorage {
         keys.push(symbol_key.clone().into_bytes());
         batch.push((
             symbol_key.into(),
-            Operation::from(Op::Put(
-                minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
-            )),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                )),
+            },
         ));
 
         let ext_info_key = key_for_ext_info(&symbol);
@@ -301,9 +354,14 @@ impl LedgerStorage {
             .map_or(TokenExtendedInfo::default(), |e| e);
         batch.push((
             ext_info_key,
-            Operation::from(Op::Put(
-                minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
-            )),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+            },
         ));
 
         self.log_event(EventInfo::TokenCreate {
@@ -412,9 +470,14 @@ impl LedgerStorage {
 
             self.persistent_store.apply(&[(
                 symbol_key.into(),
-                Operation::from(Op::Put(
-                    minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
-                )),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                        minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                    )),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                        minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                    )),
+                },
             )])?;
 
             self.log_event(EventInfo::TokenUpdate {
@@ -467,9 +530,14 @@ impl LedgerStorage {
 
         self.persistent_store.apply(&[(
             ext_info_key.clone(),
-            Operation::from(Op::Put(
-                minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
-            )),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+            },
         )])?;
 
         self.log_event(EventInfo::TokenAddExtendedInfo {
@@ -510,9 +578,14 @@ impl LedgerStorage {
 
         self.persistent_store.apply(&[(
             ext_info_key.clone(),
-            Operation::from(Op::Put(
-                minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
-            )),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+            },
         )])?;
 
         self.log_event(EventInfo::TokenRemoveExtendedInfo {

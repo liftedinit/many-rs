@@ -1,22 +1,21 @@
-use super::Operation;
-use crate::error;
-use crate::storage::ledger_tokens::key_for_symbol;
-use crate::storage::{key_for_account_balance, LedgerStorage};
-use many_error::ManyError;
-use many_modules::ledger::TokenInfoArgs;
-use many_types::ledger::{LedgerTokensAddressMap, Symbol, TokenAmount, TokenInfoSupply};
-use merk_v1::Op;
-use std::collections::BTreeSet;
+use {
+    super::{InnerStorage, Operation},
+    crate::error,
+    crate::storage::ledger_tokens::key_for_symbol,
+    crate::storage::{key_for_account_balance, LedgerStorage},
+    many_error::ManyError,
+    many_modules::ledger::TokenInfoArgs,
+    many_types::ledger::{LedgerTokensAddressMap, Symbol, TokenAmount, TokenInfoSupply},
+    std::collections::BTreeSet,
+};
 
 impl LedgerStorage {
     pub(crate) fn get_token_supply(&self, symbol: &Symbol) -> Result<TokenInfoSupply, ManyError> {
-        Ok(self
-            .info_token(TokenInfoArgs {
-                symbol: *symbol,
-                extended_info: None,
-            })?
-            .info
-            .supply)
+        self.info_token(TokenInfoArgs {
+            symbol: *symbol,
+            extended_info: None,
+        })
+        .map(|x| x.info.supply)
     }
 
     pub fn mint_token(
@@ -51,7 +50,13 @@ impl LedgerStorage {
             let new_balance = balances.get(&symbol).map_or(amount.clone(), |b| b + amount);
             let key = key_for_account_balance(address, &symbol);
             keys.push(key.clone());
-            batch.push((key, Operation::from(Op::Put(new_balance.to_vec()))));
+            batch.push((
+                key,
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(new_balance.to_vec())),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(new_balance.to_vec())),
+                },
+            ));
         }
 
         // Update circulating supply
@@ -67,9 +72,14 @@ impl LedgerStorage {
         keys.push(symbol_key.clone().into_bytes());
         batch.push((
             symbol_key.into(),
-            Operation::from(Op::Put(
-                minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
-            )),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                )),
+            },
         ));
 
         // We need to sort here because `distribution` is sorted by Address (bytes)
@@ -109,7 +119,13 @@ impl LedgerStorage {
             let new_balance = &balance_amount - amount;
             let key = key_for_account_balance(address, &symbol);
             keys.push(key.clone());
-            batch.push((key, Operation::from(Op::Put(new_balance.to_vec()))));
+            batch.push((
+                key,
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(new_balance.to_vec())),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(new_balance.to_vec())),
+                },
+            ));
             circulating += amount;
         }
 
@@ -128,9 +144,14 @@ impl LedgerStorage {
 
         batch.push((
             symbol_key.into(),
-            Operation::from(Op::Put(
-                minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
-            )),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                )),
+            },
         ));
 
         // We need to sort here because `distribution` is sorted by Address (bytes)

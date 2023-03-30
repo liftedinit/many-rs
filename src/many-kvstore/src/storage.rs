@@ -95,7 +95,7 @@ impl KvStoreStorage {
 
         let next_subresource = persistent_store
             .get(b"/config/subresource_id")
-            .unwrap()
+            .map_err(|error| error.to_string())?
             .map_or(0, |x| {
                 let mut bytes = [0u8; 4];
                 bytes.copy_from_slice(x.as_slice());
@@ -160,7 +160,7 @@ impl KvStoreStorage {
                 b"/latest_event_id".to_vec(),
                 Op::Put(minicbor::to_vec(&latest_event_id).expect("Unable to encode event id")),
             )])
-            .unwrap();
+            .map_err(|error| error.to_string())?;
 
         persistent_store.commit(&[]).map_err(|e| e.to_string())?;
 
