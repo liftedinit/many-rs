@@ -1,5 +1,6 @@
 use crate::error;
 use crate::storage::LedgerStorage;
+use base64::{engine::general_purpose, Engine as _};
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::idstore;
@@ -42,8 +43,12 @@ impl LedgerStorage {
         let maybe_keys = maybe_keys.map(|keys| {
             keys.iter()
                 .map(|(k, v)| {
-                    let k = base64::decode(k).expect("Invalid base64 for key");
-                    let v = base64::decode(v).expect("Invalid base64 for value");
+                    let k = general_purpose::STANDARD
+                        .decode(k)
+                        .expect("Invalid base64 for key");
+                    let v = general_purpose::STANDARD
+                        .decode(v)
+                        .expect("Invalid base64 for value");
                     (k, v)
                 })
                 .collect::<BTreeMap<_, _>>()

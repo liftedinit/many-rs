@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose, Engine as _};
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
@@ -148,7 +149,7 @@ impl<R, T: AsRef<R>> AsRef<R> for Base64Encoder<T> {
 
 impl<C, T: std::ops::Deref<Target = [u8]>> Encode<C> for Base64Encoder<T> {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
-        e.str(&base64::encode(self.0.as_ref()))?;
+        e.str(&general_purpose::STANDARD.encode(self.0.as_ref()))?;
         Ok(())
     }
 }
@@ -156,8 +157,9 @@ impl<C, T: std::ops::Deref<Target = [u8]>> Encode<C> for Base64Encoder<T> {
 impl<'d, C, T: FromIterator<u8>> Decode<'d, C> for Base64Encoder<T> {
     fn decode(d: &mut Decoder<'d>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
         let b64 = d.str()?;
-        let bytes =
-            base64::decode(b64).map_err(|e| minicbor::decode::Error::message(e.to_string()))?;
+        let bytes = general_purpose::STANDARD
+            .decode(b64)
+            .map_err(|e| minicbor::decode::Error::message(e.to_string()))?;
 
         Ok(Self(T::from_iter(bytes.into_iter())))
     }

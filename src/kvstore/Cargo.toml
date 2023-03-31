@@ -13,11 +13,11 @@ name = "kvstore"
 doc = false
 
 [dependencies]
-clap = { version = "3.0.0", features = ["derive"] }
+clap = { version = "3.2.23", features = ["derive"] }
 hex = "0.4.3"
-indicatif = "0.16.2"
+indicatif = "0.17.3"
 log-panics = { version = "2", features = ["with-backtrace"]}
-minicbor = { version = "0.18.0", features = ["derive", "std"] }
+minicbor = { version = "0.19.1", features = ["derive", "std"] }
 many-client = { path = "../many-client", version = "0.1.1" } # managed by release.sh
 many-error = { path = "../many-error", version = "0.1.1" } # managed by release.sh
 many-identity = { path = "../many-identity", version = "0.1.1" } # managed by release.sh

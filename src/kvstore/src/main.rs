@@ -270,7 +270,7 @@ pub(crate) fn wait_response(
 
         let progress =
             indicatif::ProgressBar::new_spinner().with_message("Waiting for async response");
-        progress.enable_steady_tick(100);
+        progress.enable_steady_tick(Duration::from_millis(100));
 
         // TODO: improve on this by using duration and thread and watchdog.
         // Wait for the server for ~60 seconds by pinging it every second.

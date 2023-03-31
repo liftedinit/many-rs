@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use async_recursion::async_recursion;
+use base64::{engine::general_purpose, Engine as _};
 use clap::{ArgGroup, Parser};
 use coset::{CborSerializable, CoseSign1};
 use many_cli_helpers::error::ClientServerError;
@@ -599,7 +600,7 @@ async fn main() {
                 if o.hex {
                     println!("{}", hex::encode(&bytes));
                 } else if o.base64 {
-                    println!("{}", base64::encode(&bytes));
+                    println!("{}", general_purpose::STANDARD.encode(&bytes));
                 } else {
                     panic!("Must specify one of hex, base64 or server...");
                 }
