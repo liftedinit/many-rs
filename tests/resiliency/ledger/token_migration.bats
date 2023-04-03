@@ -3,7 +3,7 @@
 # Token endpoints should be activated after the migration
 
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
-MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
+MIGRATION_ROOT="$GIT_ROOT/staging/ledger_migrations.json"
 MAKEFILE="Makefile.ledger"
 MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
 

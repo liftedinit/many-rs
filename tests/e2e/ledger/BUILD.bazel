@@ -22,9 +22,9 @@ bats_test_suite(
         "//src/ledger",
         "//src/many",
         "//src/many-ledger",
+        "//staging:ledger-migrations",
         "//staging:ledger-staging",
         "//tests:bats-helpers",
-        "//tests:ledger-migrations",
     ],
 )
 
@@ -44,8 +44,8 @@ bats_test(
         "//src/ledger",
         "//src/many",
         "//src/many-ledger",
+        "//staging:ledger-migrations",
         "//staging:ledger-staging",
         "//tests:bats-helpers",
-        "//tests:ledger-migrations",
     ],
 )

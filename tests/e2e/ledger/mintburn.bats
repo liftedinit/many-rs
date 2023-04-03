@@ -3,8 +3,7 @@
 
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
-MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
-
+MIGRATION_ROOT="$GIT_ROOT/staging/ledger_migrations.json"
 load '../../test_helper/load'
 load '../../test_helper/ledger'
 

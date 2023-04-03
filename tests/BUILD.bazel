@@ -1,5 +1,4 @@
 package(default_visibility = [
-    "//docker:__pkg__",
     "//tests/e2e:__subpackages__",
     "//tests/resiliency:__subpackages__",
 ])
@@ -16,14 +15,4 @@ sh_library(
         "test_helper/token.bash",
     ],
     tags = ["manual"],
-)
-
-filegroup(
-    name = "ledger-migrations",
-    srcs = ["ledger_migrations.json"],
-)
-
-filegroup(
-    name = "abci-ledger-migrations",
-    srcs = ["abci_migrations.json"],
 )
