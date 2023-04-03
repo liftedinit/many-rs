@@ -27,7 +27,11 @@ impl LedgerStorage {
             .update_at_height(
                 &mut self.persistent_store,
                 //Some(self.path.clone()),
-                Some(["/tmp", "v2_storage"].iter().collect::<std::path::PathBuf>()),
+                Some(
+                    ["/tmp", "v2_storage"]
+                        .iter()
+                        .collect::<std::path::PathBuf>(),
+                ),
                 Some(new_storage),
                 height + 1,
             )
