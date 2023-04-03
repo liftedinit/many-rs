@@ -1,3 +1,5 @@
+GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
+MIGRATION_ROOT="$GIT_ROOT/tests/ledger_migrations.json"
 MAKEFILE="Makefile.ledger"
 
 load '../../test_helper/load'
