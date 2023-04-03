@@ -6,7 +6,7 @@ use serde_tokenstream::from_tokenstream;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{FnArg, Pat, PatType, ReturnType, Token, TraitItem, TraitItemMethod, Type, TypePath};
+use syn::{FnArg, Pat, PatType, ReturnType, Token, TraitItem, TraitItemFn, Type, TypePath};
 
 #[derive(Deserialize)]
 struct ManyModuleAttributes {
@@ -88,7 +88,7 @@ struct Endpoint {
 }
 
 impl Endpoint {
-    pub fn new(item: &TraitItemMethod) -> syn::Result<Self> {
+    pub fn new(item: &TraitItemFn) -> syn::Result<Self> {
         let signature = &item.sig;
 
         let func = signature.ident.clone();
@@ -199,7 +199,7 @@ impl Endpoint {
             .attrs
             .clone()
             .into_iter()
-            .partition(|attr| attr.path.is_ident("many"));
+            .partition(|attr| attr.path().is_ident("many"));
 
         let metadata =
             meta_attrs
@@ -461,7 +461,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         .items
         .iter()
         .filter_map(|item| {
-            if let TraitItem::Method(m) = item {
+            if let TraitItem::Fn(m) = item {
                 Some(Endpoint::new(m))
             } else {
                 None

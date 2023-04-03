@@ -1,4 +1,5 @@
 use crate::challenge::Challenge;
+use base64::{engine::general_purpose, Engine as _};
 use coset::cbor::value::Value;
 use coset::{CborSerializable, CoseKey, CoseKeySet, CoseSign1, Label};
 use many_error::ManyError;
@@ -115,7 +116,8 @@ impl WebAuthnVerifier {
         let payload_sha512 = sha2::Sha512::digest(payload);
 
         tracing::trace!("Decoding `challenge`");
-        let challenge = base64::decode_config(&client_data_json.challenge, base64::URL_SAFE_NO_PAD)
+        let challenge = general_purpose::URL_SAFE_NO_PAD
+            .decode(&client_data_json.challenge)
             .map_err(ManyError::unknown)?;
         let challenge: Challenge = minicbor::decode(&challenge).map_err(ManyError::unknown)?;
         tracing::trace!("Verifying `challenge` SHA against payload");

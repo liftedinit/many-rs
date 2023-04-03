@@ -14,7 +14,7 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 async-trait = "0.1"
 coset = "0.3"
 serde = { version = "1.0", features = ["derive"] }
-toml = "0.5"
+toml = "0.7.3"
 regex = "1.5.4"
 many-error = { path = "../many-error", version = "0.1.1" } # managed by release.sh
 many-identity = { path = "../many-identity", version = "0.1.1" } # managed by release.sh

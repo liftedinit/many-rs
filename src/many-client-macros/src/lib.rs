@@ -8,7 +8,6 @@ use syn::parse2;
 use syn::spanned::Spanned;
 use syn::FnArg;
 use syn::ItemTrait;
-use syn::TraitItemMethod;
 use syn::Type;
 use syn::{parse_macro_input, parse_quote, LitStr};
 
@@ -40,7 +39,7 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
     let methods_vec = input_trait.items.iter().map(|func| {
         let namespace = namespace.clone();
         let func = func.to_token_stream();
-        let method: TraitItemMethod =
+        let method: syn::TraitItemFn =
             parse2(func)?;
         let mut method = method.sig;
         method.asyncness = parse_quote! { async };
