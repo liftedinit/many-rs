@@ -63,10 +63,9 @@ impl KvStoreStorage {
                 .unwrap_or_default()
                 .as_ref()
                 .and_then(|bytes| {
-                    //minicbor::decode::<account::Account>(bytes)
-                    //    .map_err(|e| ManyError::deserialization_error(e.to_string()))
-                    //    .ok()
-                    Some(minicbor::decode::<account::Account>(bytes).unwrap())
+                    minicbor::decode::<account::Account>(bytes)
+                        .map_err(|e| ManyError::deserialization_error(e.to_string()))
+                        .ok()
                 }),
             key,
         )
