@@ -84,7 +84,8 @@ impl<C: Client + Sync> AbciModuleMany<C> {
             let is_command = info.is_command;
             let data = envelope
                 .to_vec()
-                .map_err(ManyError::unexpected_transport_error)?;
+                //.map_err(ManyError::unexpected_transport_error)?;
+                .unwrap();
 
             if is_command {
                 // TODO: Refactor this when `is_some_and` and/or `let-chains` are stabilized
@@ -98,7 +99,8 @@ impl<C: Client + Sync> AbciModuleMany<C> {
                     .client
                     .broadcast_tx_sync(data)
                     .await
-                    .map_err(ManyError::unexpected_transport_error)?;
+                    //.map_err(ManyError::unexpected_transport_error)?;
+                    .unwrap();
 
                 // A command will always return an empty payload with an ASYNC attribute.
                 let response =
@@ -107,17 +109,20 @@ impl<C: Client + Sync> AbciModuleMany<C> {
                             many_modules::r#async::attributes::ASYNC
                                 .with_argument(CborAny::Bytes(response.hash.as_bytes().to_vec())),
                         );
-                encode_cose_sign1_from_response(response, &self.identity)
-                    .map_err(ManyError::unexpected_transport_error)
+                //encode_cose_sign1_from_response(response, &self.identity)
+                //    .map_err(ManyError::unexpected_transport_error)
+                Ok(encode_cose_sign1_from_response(response, &self.identity).unwrap())
             } else {
                 let response = self
                     .client
                     .abci_query(None, data, None, false)
                     .await
-                    .map_err(ManyError::unexpected_transport_error)?;
+                    //.map_err(ManyError::unexpected_transport_error)?;
+                    .unwrap();
 
-                CoseSign1::from_slice(&response.value)
-                    .map_err(ManyError::unexpected_transport_error)
+                //CoseSign1::from_slice(&response.value)
+                //    .map_err(ManyError::unexpected_transport_error)
+                Ok(CoseSign1::from_slice(&response.value).unwrap())
             }
         } else {
             Err(ManyError::invalid_method_name(message.method))
