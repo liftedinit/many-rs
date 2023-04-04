@@ -73,8 +73,6 @@ impl<I: Identity> ManyClient<I> {
         &self,
         message: RequestMessage,
     ) -> Result<ResponseMessage, ManyError> {
-        println!("SM - Request message before sending envelope:");
-        println!("{message:?}");
         let cose = encode_cose_sign1_from_request(message, &self.identity)?;
         let cose_sign1 = send_envelope(self.url.clone(), cose).await?;
 
