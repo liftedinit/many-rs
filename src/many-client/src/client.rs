@@ -37,6 +37,8 @@ impl<I: Identity + Debug> Debug for ManyClient<I> {
 }
 
 pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<CoseSign1, ManyError> {
+    println!("Send envelope message:");
+    println!("{message:?}");
     let bytes = message
         .to_tagged_vec()
         .map_err(|_| ManyError::internal_server_error())?;
