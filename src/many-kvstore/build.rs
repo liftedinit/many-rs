@@ -1,7 +1,8 @@
-use vergen::{vergen, Config};
+use std::error::Error;
+use vergen::EmitBuilder;
 
-fn main() {
-    let mut config = Config::default();
-    *config.git_mut().enabled_mut() = true;
-    vergen(config).expect("Vergen could not run.")
+fn main() -> Result<(), Box<dyn Error>> {
+    // Emit the instructions
+    EmitBuilder::builder().git_sha(false).emit()?;
+    Ok(())
 }

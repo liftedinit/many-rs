@@ -13,6 +13,7 @@
 //!
 //! The changes to this file from the original are marked with `<<<<<`
 //! and `>>>>>`.
+use std::io::BufReader;
 use tracing::{error, info, trace, warn};
 
 // >>>>>>
@@ -116,8 +117,12 @@ impl U2FHid {
                 }
                 Ok(StatusUpdate::PinError(error, sender)) => match error {
                     PinError::PinRequired => {
-                        let raw_pin = rpassword::prompt_password_stderr("Enter PIN: ")
-                            .expect("Failed to read PIN");
+                        let raw_pin = rpassword::prompt_password_from_bufread(
+                            &mut BufReader::new(std::io::stdin()),
+                            &mut std::io::stderr(),
+                            "Enter PIN: ",
+                        )
+                        .expect("Failed to read PIN");
                         sender.send(Pin::new(&raw_pin)).expect("Failed to send PIN");
                         continue;
                     }
@@ -138,8 +143,12 @@ impl U2FHid {
                         //     ))
                         // );
                         // <<<<<<
-                        let raw_pin = rpassword::prompt_password_stderr("Enter PIN: ")
-                            .expect("Failed to read PIN");
+                        let raw_pin = rpassword::prompt_password_from_bufread(
+                            &mut BufReader::new(std::io::stdin()),
+                            &mut std::io::stderr(),
+                            "Enter PIN: ",
+                        )
+                        .expect("Failed to read PIN");
                         sender.send(Pin::new(&raw_pin)).expect("Failed to send PIN");
                         continue;
                     }
