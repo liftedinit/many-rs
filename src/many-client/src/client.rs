@@ -37,8 +37,6 @@ impl<I: Identity + Debug> Debug for ManyClient<I> {
 }
 
 pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<CoseSign1, ManyError> {
-    println!("Send envelope message:");
-    println!("{message:?}");
     let bytes = message
         .to_tagged_vec()
         .map_err(|_| ManyError::internal_server_error())?;
@@ -53,6 +51,8 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
         //.map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
         .unwrap();
     let body = response.bytes().await.unwrap();
+    println!("Send envelop response:");
+    println!("{body:?}");
     let bytes = body.to_vec();
     tracing::debug!("reply {}", hex::encode(&bytes));
     //CoseSign1::from_tagged_slice(&bytes)
