@@ -196,13 +196,20 @@ impl KvStoreModuleBackend for KvStoreModuleImpl {
     }
 
     fn query(&self, _sender: &Address, args: QueryArgs) -> Result<QueryReturns, ManyError> {
-        minicbor::decode(
+        //minicbor::decode(
+        //    &self
+        //        .storage
+        //        .get_metadata(&args.key)?
+        //        .ok_or_else(error::key_not_found)?,
+        //)
+        //.map_err(|e| ManyError::deserialization_error(e.to_string()))
+        Ok(minicbor::decode(
             &self
                 .storage
                 .get_metadata(&args.key)?
                 .ok_or_else(error::key_not_found)?,
         )
-        .map_err(|e| ManyError::deserialization_error(e.to_string()))
+        .unwrap())
     }
 }
 
@@ -284,7 +291,8 @@ impl KvStoreTransferModuleBackend for KvStoreModuleImpl {
                 .get_metadata(&key)?
                 .ok_or_else(error::key_not_found)?,
         )
-        .map_err(|e| ManyError::deserialization_error(e.to_string()))?;
+        //.map_err(|e| ManyError::deserialization_error(e.to_string()))?;
+        .unwrap();
 
         let owner = if let Some(ref alternative_owner) = args.alternative_owner {
             self.validate_alternative_owner(

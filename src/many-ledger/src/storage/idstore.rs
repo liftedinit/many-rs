@@ -215,7 +215,8 @@ impl LedgerStorage {
             self.get_from_storage(&recall_phrase_cbor, IdStoreRootSeparator::RecallPhrase)?
         {
             let value: CredentialStorage =
-                minicbor::decode(&value).map_err(ManyError::deserialization_error)?;
+                //minicbor::decode(&value).map_err(ManyError::deserialization_error)?;
+                minicbor::decode(&value).unwrap();
             Ok((value.cred_id, value.public_key, storage_key))
         } else {
             Err(idstore::entry_not_found(recall_phrase.join(" ")))
@@ -230,7 +231,8 @@ impl LedgerStorage {
             self.get_from_storage(&address.to_vec(), IdStoreRootSeparator::Address)?
         {
             let value: CredentialStorage =
-                minicbor::decode(&value).map_err(ManyError::deserialization_error)?;
+                //minicbor::decode(&value).map_err(ManyError::deserialization_error)?;
+                minicbor::decode(&value).unwrap();
             Ok((value.cred_id, value.public_key, storage_key))
         } else {
             Err(idstore::entry_not_found(address.to_string()))

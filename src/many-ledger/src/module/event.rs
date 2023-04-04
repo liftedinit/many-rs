@@ -128,8 +128,9 @@ impl events::EventsModuleBackend for LedgerModuleImpl {
 
         let iter = Box::new(iter.map(|item| {
             let (_k, v) = item.map_err(ManyError::unknown)?;
-            minicbor::decode::<events::EventLog>(v.as_slice())
-                .map_err(ManyError::deserialization_error)
+            //minicbor::decode::<events::EventLog>(v.as_slice())
+            //    .map_err(ManyError::deserialization_error)
+            Ok(minicbor::decode::<events::EventLog>(v.as_slice()).unwrap())
         }));
 
         let iter = filter_account(iter, filter.account);

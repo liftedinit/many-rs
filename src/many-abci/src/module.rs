@@ -350,7 +350,8 @@ impl<C: Client + Send + Sync> blockchain::BlockchainModuleBackend for AbciBlockc
         tracing::debug!("blockchain.response: {}", hex::encode(&response));
 
         let response: ResponseMessage =
-            minicbor::decode(&response).map_err(ManyError::deserialization_error)?;
+            //minicbor::decode(&response).map_err(ManyError::deserialization_error)?;
+            minicbor::decode(&response).unwrap();
         Ok(blockchain::ResponseReturns {
             response: encode_cose_sign1_from_response(response, &AnonymousIdentity)?
                 .to_vec()

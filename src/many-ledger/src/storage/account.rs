@@ -300,9 +300,10 @@ impl LedgerStorage {
             .get(&key)
             .unwrap_or_default()
             .map(|bytes| {
-                minicbor::decode::<account::Account>(&bytes)
-                    .map_err(ManyError::deserialization_error)
+                Ok(minicbor::decode::<account::Account>(&bytes)
+                    //.map_err(ManyError::deserialization_error)
                     .map(|account| (account, vec![key]))
+                    .unwrap())
             })
             .unwrap_or_else(|| Err(account::errors::unknown_account(id)))
     }

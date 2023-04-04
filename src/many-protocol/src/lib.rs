@@ -26,7 +26,8 @@ pub fn decode_request_from_cose_sign1(
         .payload
         .as_ref()
         .ok_or_else(ManyError::empty_envelope)?;
-    let message = RequestMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
+    //let message = RequestMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
+    let message = RequestMessage::from_bytes(payload).unwrap();
 
     // Check the `from` field.
     let message_from = message.from.unwrap_or_default();

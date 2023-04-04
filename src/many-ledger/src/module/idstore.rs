@@ -54,7 +54,8 @@ impl idstore::IdStoreModuleBackend for LedgerModuleImpl {
         }
 
         let _: CoseKey =
-            CoseKey::from_slice(&public_key.0).map_err(ManyError::deserialization_error)?;
+            //CoseKey::from_slice(&public_key.0).map_err(ManyError::deserialization_error)?;
+            CoseKey::from_slice(&public_key.0).unwrap();
 
         let mut current_try = 1u8;
         let mut keys: Vec<Vec<u8>> = vec![IDSTORE_ROOT.into()];

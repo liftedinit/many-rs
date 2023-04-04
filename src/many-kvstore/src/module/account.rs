@@ -315,7 +315,8 @@ impl KvStoreModuleImpl {
         if let Some(meta_cbor) = self.storage.get_metadata(&key)? {
             // Decode ACL
             let meta: KvStoreMetadata = minicbor::decode(&meta_cbor)
-                .map_err(|e| ManyError::deserialization_error(e.to_string()))?;
+                //.map_err(|e| ManyError::deserialization_error(e.to_string()))?;
+                .unwrap();
 
             if &meta.owner == sender {
                 return Ok(());

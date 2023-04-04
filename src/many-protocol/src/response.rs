@@ -100,7 +100,8 @@ impl ResponseMessage {
             .as_ref()
             .ok_or_else(ManyError::empty_envelope)?;
         let message =
-            ResponseMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
+            //ResponseMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
+            ResponseMessage::from_bytes(payload).unwrap();
 
         if address != message.from {
             Err(ManyError::invalid_from_identity())

@@ -187,7 +187,8 @@ impl LedgerStorage {
             let (k, v) = item.map_err(ManyError::unknown)?;
 
             let mut storage: MultisigTransactionStorage =
-                minicbor::decode(v.as_slice()).map_err(ManyError::deserialization_error)?;
+                //minicbor::decode(v.as_slice()).map_err(ManyError::deserialization_error)?;
+                minicbor::decode(v.as_slice()).unwrap();
             let now = self.now();
 
             if now >= storage.info.timeout {
@@ -392,8 +393,9 @@ impl LedgerStorage {
             .get(&key_for_multisig_transaction(tx_id))
             .unwrap_or(None)
             .ok_or_else(account::features::multisig::errors::transaction_cannot_be_found)?;
-        minicbor::decode::<MultisigTransactionStorage>(&storage_bytes)
-            .map_err(ManyError::deserialization_error)
+        //minicbor::decode::<MultisigTransactionStorage>(&storage_bytes)
+        //    .map_err(ManyError::deserialization_error)
+        Ok(minicbor::decode::<MultisigTransactionStorage>(&storage_bytes).unwrap())
     }
 
     pub fn approve_multisig(&mut self, sender: &Address, tx_id: &[u8]) -> Result<bool, ManyError> {
