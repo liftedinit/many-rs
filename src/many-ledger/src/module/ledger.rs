@@ -13,16 +13,21 @@ impl ledger::LedgerModuleBackend for LedgerModuleImpl {
         _: ledger::InfoArgs,
         context: Context,
     ) -> Result<ledger::InfoReturns, ManyError> {
+        println!("Entered ledger.info");
         let storage = &self.storage;
 
         // Hash the storage.
         let hash = storage.hash();
+        println!("Hash: {hash:?}");
         let symbols = storage.get_symbols_and_tickers()?;
+        println!("Symbols and tickers:");
+        println!("{symbols:?}");
 
         storage.prove_state(
             context,
             vec![hash.clone(), SYMBOLS_ROOT.as_bytes().to_vec()],
         )?;
+        println!("Storage proved");
 
         info!(
             "info(): hash={} symbols={:?}",
