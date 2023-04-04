@@ -20,9 +20,9 @@ doc = false
 anyhow = "1.0"
 async-channel = "1.8"
 async-trait = "0.1.51"
-base64 = "0.20.0-alpha.1"
+base64 = "0.21.0"
 bip39-dict = "0.1"
-clap = { version = "3.0.0", features = ["derive"] }
+clap = { version = "3.2.23", features = ["derive"] }
 coset = "0.3"
 const_format = "0.2.30"
 derive_more = "0.99"
@@ -35,7 +35,7 @@ json5 = "0.4.1"
 linkme = { version = "0.3.5", features = ["used_linker"] }
 num-bigint = "0.4.3"
 num-traits = "0.2.14"
-minicbor = { version = "0.18.0", features = ["derive", "std"] }
+minicbor = { version = "0.19.1", features = ["derive", "std"] }
 many-cli-helpers = { path = "../many-cli-helpers", version = "0.1.1" } # managed by release.sh
 many-error = { path = "../many-error", version = "0.1.1" } # managed by release.sh
 many-identity = { path = "../many-identity", features = ["default", "serde"], version = "0.1.1" } # managed by release.sh
@@ -49,7 +49,7 @@ many-types = { path = "../many-types", version = "0.1.1" } # managed by release.
 rand = "0.8"
 serde = "1.0.130"
 serde_json = "1.0.72"
-sha3 = "0.9.1"
+sha3 = "0.10.6"
 signal-hook = "0.3.13"
 strum = "0.24.1"
 tokio = { version = "1.24.1", features = [ "full" ] }
@@ -91,7 +91,7 @@ path = "tests/ledger_tokens/remove_token_ext_info.rs"
 harness = false
 
 [build-dependencies]
-vergen = "7"
+vergen = { version = "8.1.0", features = ["git", "git2"] }
 
 [features]
 balance_testing=[]                  # Enable balance initialization from the CLI

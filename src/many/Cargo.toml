@@ -28,14 +28,14 @@ many-server = { path = "../many-server", version = "0.1.1" } # managed by releas
 anyhow = "1.0.57"
 async-recursion = "1.0"
 atty = "0.2.14"
-base64 = "0.13.0"
+base64 = "0.21.0"
 cbor-diag = "0.1.9"
-clap = { version = "3.0.14", features = [ "derive" ] }
+clap = { version = "3.2.23", features = [ "derive" ] }
 coset = "0.3"
 hex = "0.4.3"
-minicbor = { version = "0.18.0", features = ["derive", "half", "std"] }
+minicbor = { version = "0.19.1", features = ["derive", "half", "std"] }
 rand = "0.8.5"
-rpassword = "6.0"
+rpassword = "7.2.0"
 tracing = "0.1.29"
 tracing-subscriber = "0.3.15"
 tokio = { version = "1.24.1", features = [ "full" ] }

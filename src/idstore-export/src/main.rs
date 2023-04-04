@@ -1,6 +1,7 @@
 extern crate core;
 
 use {
+    base64::{engine::general_purpose, Engine as _},
     clap::Parser,
     derive_more::{From, TryInto},
     merk_v2::rocksdb::{self, IteratorMode, ReadOptions},
@@ -48,7 +49,10 @@ fn main() -> Result<(), Error> {
         let new_v = Tree::decode(key.to_vec(), value.as_ref());
         let value = new_v.value().to_vec();
 
-        idstore.insert(base64::encode(key.as_ref()), base64::encode(value));
+        idstore.insert(
+            general_purpose::STANDARD.encode(key.as_ref()),
+            general_purpose::STANDARD.encode(value),
+        );
     }
 
     let root = JsonRoot {
