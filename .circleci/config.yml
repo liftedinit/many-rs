@@ -50,6 +50,7 @@ jobs:
                     --config=all-features \
                     --config=clippy \
                     --config=rustfmt \
+                    --test_output=errors \
                     --test_env=PKCS11_SOFTHSM2_MODULE \
                     --test_env=SOFTHSM2_CONF \
                     -- //...
@@ -63,6 +64,7 @@ jobs:
                 command: |
                   bazel test \
                     --jobs=4 \
+                    --test_output=errors \
                     --config=remote-cache \
                     --config=all-features \
                     -- //... -//src/many-identity-hsm:many-identity-hsm-test
@@ -86,11 +88,11 @@ jobs:
       - run:
           name: running tests
           command: |
-              bazel test --config=all-features --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
-              bazel test --config=all-features --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
+              bazel test --test_output=errors --config=all-features --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
+              bazel test --test_output=errors --config=all-features --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
             
               # --disable_token_sender_check needs to be disabled for the token tests
-              bazel test --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
+              bazel test --test_output=errors --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
 
   # Compute code coverage and push the results to CodeCov.
   coverage:
@@ -212,7 +214,7 @@ jobs:
             C=${B[@]//kvstore\//kvstore:bats-resiliency-kvstore_}
             D=${C[@]//.bats/}
 
-            bazel test --config=remote-cache $D
+            bazel test --test_output=errors --config=remote-cache $D
 
   # Run a single kvstore resiliency test
   kvstore_resiliency_single_test:
@@ -225,7 +227,7 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: bazel test --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
+          command: bazel test --test_output=errors --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
 
   # Perform ledger resiliency testing
   ledger_resiliency_tests:
@@ -242,7 +244,7 @@ jobs:
             C=${B[@]//ledger\//ledger:bats-resiliency-ledger_}
             D=${C[@]//.bats/}
             
-            bazel test --config=remote-cache --config=bats-resiliency-ledger $D
+            bazel test --test_output=errors --config=remote-cache --config=bats-resiliency-ledger $D
 
   # Run a single ledger resiliency test
   ledger_resiliency_single_test:
@@ -255,7 +257,7 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: bazel test --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
+          command: bazel test --test_output=errors --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
 
   # Push a tag to GitHub
   tag:
