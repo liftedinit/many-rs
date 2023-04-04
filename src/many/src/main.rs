@@ -365,6 +365,8 @@ async fn message_from_hex(
     let client = ManyClient::new(s.clone(), to, key).unwrap();
 
     let data = hex::decode(hex).map_err(|e| anyhow!(e))?;
+    println!("SM - Data before message_from_hex:");
+    println!("{data:?}");
     let envelope = CoseSign1::from_slice(&data).map_err(|e| anyhow!(e))?;
 
     let cose_sign1 = many_client::client::send_envelope(s, envelope).await?;

@@ -48,11 +48,8 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
         .body(bytes)
         .send()
         .await
-        //.map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
-        .unwrap();
+        .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
     let body = response.bytes().await.unwrap();
-    println!("Send envelop response:");
-    println!("{body:?}");
     let bytes = body.to_vec();
     tracing::debug!("reply {}", hex::encode(&bytes));
     //CoseSign1::from_tagged_slice(&bytes)
@@ -76,7 +73,9 @@ impl<I: Identity> ManyClient<I> {
         &self,
         message: RequestMessage,
     ) -> Result<ResponseMessage, ManyError> {
-        let cose = encode_cose_sign1_from_request(message, &self.identity).unwrap();
+        println!("SM - Request message before sending envelope:");
+        println!("{message:?}");
+        let cose = encode_cose_sign1_from_request(message, &self.identity)?;
         let cose_sign1 = send_envelope(self.url.clone(), cose).await?;
 
         ResponseMessage::decode_and_verify(&cose_sign1, &self.verifier)
