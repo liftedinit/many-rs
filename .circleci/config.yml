@@ -257,10 +257,7 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: |
-            RUST_BACKTRACE=1
-
-            bazel test --test_output=errors --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
+          command: bazel test --test_output=errors --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
 
   # Push a tag to GitHub
   tag:
