@@ -94,6 +94,15 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                         .as_slice(),
                 )
                 .map_err(ManyError::unknown)?;
+            replacement
+                .apply(
+                    [(
+                        SYMBOLS_ROOT.as_bytes().to_vec(),
+                        Operation::from(Op::Put(minicbor::to_vec(&root).unwrap())),
+                    )]
+                    .as_slice(),
+                )
+                .map_err(ManyError::unknown)?;
             //replacement
             //    .apply(
             //        merk.iter_opt(IteratorMode::Start, ReadOptions::default())
