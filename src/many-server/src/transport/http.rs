@@ -28,6 +28,8 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
     }
 
     async fn handle_request(&self, request: &mut Request) -> Response<std::io::Cursor<Vec<u8>>> {
+        println!("Incoming request to server:");
+        println!("{request:?}");
         match request.body_length() {
             Some(x) if x > READ_BUFFER_LEN => {
                 // This is a transport error, and as such an HTTP error.

@@ -13,7 +13,6 @@ impl ledger::LedgerModuleBackend for LedgerModuleImpl {
         _: ledger::InfoArgs,
         context: Context,
     ) -> Result<ledger::InfoReturns, ManyError> {
-        println!("Entered ledger.info");
         let storage = &self.storage;
 
         // Hash the storage.
