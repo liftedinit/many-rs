@@ -28,10 +28,7 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                     merk.iter_opt(IteratorMode::Start, ReadOptions::default())
                         .map(|key_value_pair| {
                             key_value_pair.map(|(key, value)| {
-                                (
-                                    minicbor::to_vec(key).unwrap(),
-                                    Operation::from(Op::Put(minicbor::to_vec(value).unwrap())),
-                                )
+                                (key.into(), Operation::from(Op::Put(value.into())))
                             })
                         })
                         .collect::<Result<Vec<_>, _>>()
