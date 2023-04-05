@@ -5,12 +5,21 @@ use {
     },
     linkme::distributed_slice,
     many_error::ManyError,
+    many_types::ledger::Symbol,
     merk_v1::rocksdb::{IteratorMode, ReadOptions},
     merk_v2::Op,
+    std::collections::BTreeMap,
 };
 
 fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Result<(), ManyError> {
-    let root = storage.get(SYMBOLS_ROOT.as_bytes()).unwrap().unwrap();
+    let root = minicbor::decode::<BTreeMap<Symbol, String>>(
+        storage
+            .get(SYMBOLS_ROOT.as_bytes())
+            .unwrap()
+            .unwrap()
+            .as_slice(),
+    )
+    .unwrap();
     println!("Old SYMBOLS_ROOT: {root:?}");
     match storage {
         InnerStorage::V1(merk) => {
@@ -29,7 +38,14 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                 .map_err(ManyError::unknown)?;
             replacement.commit(&[]).map_err(ManyError::unknown)?;
             *storage = replacement;
-            let root = storage.get(SYMBOLS_ROOT.as_bytes()).unwrap().unwrap();
+            let root = minicbor::decode::<BTreeMap<Symbol, String>>(
+                storage
+                    .get(SYMBOLS_ROOT.as_bytes())
+                    .unwrap()
+                    .unwrap()
+                    .as_slice(),
+            )
+            .unwrap();
             println!("SYMBOLS_ROOT: {root:?}");
         }
         InnerStorage::V2(_) => (),
