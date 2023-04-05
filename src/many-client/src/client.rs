@@ -54,9 +54,8 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
     let body = response.bytes().await.unwrap();
     let bytes = body.to_vec();
     tracing::debug!("reply {}", hex::encode(&bytes));
-    //CoseSign1::from_tagged_slice(&bytes)
-    //    .map_err(|e| ManyError::deserialization_error(e.to_string()))
-    Ok(CoseSign1::from_tagged_slice(&bytes).unwrap())
+    CoseSign1::from_tagged_slice(&bytes)
+        .map_err(|e| ManyError::deserialization_error(e.to_string()))
 }
 
 impl<I: Identity> ManyClient<I> {
