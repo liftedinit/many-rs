@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use {
     crate::{
         migration::{InnerMigration, MIGRATIONS},
@@ -13,7 +14,8 @@ use {
         ledger::{Symbol, TokenInfo},
         SortOrder,
     },
-    //merk_v1::rocksdb::{IteratorMode, ReadOptions},
+    merk_v1::rocksdb::{IteratorMode, ReadOptions},
+    merk_v1::tree::Tree,
     merk_v2::Op,
     std::collections::BTreeMap,
 };
@@ -29,19 +31,16 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
     .unwrap();
     println!("Old SYMBOLS_ROOT: {root:#?}");
     match storage {
-        InnerStorage::V1(_) => {
+        InnerStorage::V1(merk) => {
             replacement
                 .apply(
-                    LedgerIterator::all_symbols(storage, SortOrder::Indeterminate)
+                    merk.iter_opt(IteratorMode::Start, Default::default())
                         .map(|key_value_pair| {
                             key_value_pair.map(|(key, value)| {
                                 (
-                                    key.into(),
+                                    key.clone().into(),
                                     Operation::from(Op::Put(
-                                        minicbor::to_vec(
-                                            minicbor::decode::<TokenInfo>(&value).unwrap(),
-                                        )
-                                        .unwrap(),
+                                        Tree::decode(key.to_vec(), value.as_ref()).value().to_vec(),
                                     )),
                                 )
                             })
@@ -49,71 +48,79 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                         .collect::<Result<Vec<_>, _>>()
                         .map_err(ManyError::unknown)?
                         .as_slice(),
-                )
-                .map_err(ManyError::unknown)?;
-            replacement
-                .apply(
-                    LedgerIterator::all_events(storage)
-                        .map(|key_value_pair| {
-                            key_value_pair.map(|(key, value)| {
-                                (
-                                    key.into(),
-                                    Operation::from(Op::Put(
-                                        minicbor::to_vec(
-                                            &minicbor::decode::<EventLog>(&value).unwrap(),
-                                        )
-                                        .unwrap(),
-                                    )),
-                                )
-                            })
-                        })
-                        .collect::<Result<Vec<_>, _>>()
-                        .map_err(ManyError::unknown)?
-                        .as_slice(),
-                )
-                .map_err(ManyError::unknown)?;
-            replacement
-                .apply(
-                    LedgerIterator::all_multisig(storage, SortOrder::Indeterminate)
-                        .map(|key_value_pair| {
-                            key_value_pair.map(|(key, value)| {
-                                (
-                                    key.into(),
-                                    Operation::from(Op::Put(
-                                        minicbor::to_vec(
-                                            &minicbor::decode::<MultisigTransactionStorage>(&value)
-                                                .unwrap(),
-                                        )
-                                        .unwrap(),
-                                    )),
-                                )
-                            })
-                        })
-                        .collect::<Result<Vec<_>, _>>()
-                        .map_err(ManyError::unknown)?
-                        .as_slice(),
-                )
-                .map_err(ManyError::unknown)?;
-            replacement
-                .apply(
-                    [(
-                        SYMBOLS_ROOT.as_bytes().to_vec(),
-                        Operation::from(Op::Put(minicbor::to_vec(&root).unwrap())),
-                    )]
-                    .as_slice(),
                 )
                 .map_err(ManyError::unknown)?;
             //replacement
             //    .apply(
-            //        merk.iter_opt(IteratorMode::Start, ReadOptions::default())
+            //        LedgerIterator::all_symbols(storage, SortOrder::Indeterminate)
             //            .map(|key_value_pair| {
             //                key_value_pair.map(|(key, value)| {
-            //                    (key.into(), Operation::from(Op::Put(value.into())))
+            //                    (
+            //                        key.into(),
+            //                        Operation::from(Op::Put(
+            //                            minicbor::to_vec(
+            //                                minicbor::decode::<TokenInfo>(&value).unwrap(),
+            //                            )
+            //                            .unwrap(),
+            //                        )),
+            //                    )
             //                })
             //            })
             //            .collect::<Result<Vec<_>, _>>()
             //            .map_err(ManyError::unknown)?
             //            .as_slice(),
+            //    )
+            //    .map_err(ManyError::unknown)?;
+            //replacement
+            //    .apply(
+            //        LedgerIterator::all_events(storage)
+            //            .map(|key_value_pair| {
+            //                key_value_pair.map(|(key, value)| {
+            //                    (
+            //                        key.into(),
+            //                        Operation::from(Op::Put(
+            //                            minicbor::to_vec(
+            //                                &minicbor::decode::<EventLog>(&value).unwrap(),
+            //                            )
+            //                            .unwrap(),
+            //                        )),
+            //                    )
+            //                })
+            //            })
+            //            .collect::<Result<Vec<_>, _>>()
+            //            .map_err(ManyError::unknown)?
+            //            .as_slice(),
+            //    )
+            //    .map_err(ManyError::unknown)?;
+            //replacement
+            //    .apply(
+            //        LedgerIterator::all_multisig(storage, SortOrder::Indeterminate)
+            //            .map(|key_value_pair| {
+            //                key_value_pair.map(|(key, value)| {
+            //                    (
+            //                        key.into(),
+            //                        Operation::from(Op::Put(
+            //                            minicbor::to_vec(
+            //                                &minicbor::decode::<MultisigTransactionStorage>(&value)
+            //                                    .unwrap(),
+            //                            )
+            //                            .unwrap(),
+            //                        )),
+            //                    )
+            //                })
+            //            })
+            //            .collect::<Result<Vec<_>, _>>()
+            //            .map_err(ManyError::unknown)?
+            //            .as_slice(),
+            //    )
+            //    .map_err(ManyError::unknown)?;
+            //replacement
+            //    .apply(
+            //        [(
+            //            SYMBOLS_ROOT.as_bytes().to_vec(),
+            //            Operation::from(Op::Put(minicbor::to_vec(&root).unwrap())),
+            //        )]
+            //        .as_slice(),
             //    )
             //    .map_err(ManyError::unknown)?;
             replacement.commit(&[]).map_err(ManyError::unknown)?;

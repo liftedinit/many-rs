@@ -17,16 +17,12 @@ impl ledger::LedgerModuleBackend for LedgerModuleImpl {
 
         // Hash the storage.
         let hash = storage.hash();
-        println!("Hash: {hash:?}");
         let symbols = storage.get_symbols_and_tickers()?;
-        println!("Symbols and tickers:");
-        println!("{symbols:?}");
 
         storage.prove_state(
             context,
             vec![hash.clone(), SYMBOLS_ROOT.as_bytes().to_vec()],
         )?;
-        println!("Storage proved");
 
         info!(
             "info(): hash={} symbols={:?}",
