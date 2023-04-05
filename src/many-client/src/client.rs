@@ -50,7 +50,7 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
         .await
         .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?
         .error_for_status()
-        .unwrap();
+        .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
     let body = response.bytes().await.unwrap();
     let bytes = body.to_vec();
     tracing::debug!("reply {}", hex::encode(&bytes));
