@@ -20,7 +20,7 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
             .as_slice(),
     )
     .unwrap();
-    println!("Old SYMBOLS_ROOT: {root:?}");
+    println!("Old SYMBOLS_ROOT: {root:#?}");
     match storage {
         InnerStorage::V1(merk) => {
             replacement
@@ -46,7 +46,7 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                     .as_slice(),
             )
             .unwrap();
-            println!("SYMBOLS_ROOT: {root:?}");
+            println!("SYMBOLS_ROOT: {root:#?}");
         }
         InnerStorage::V2(_) => (),
     }
