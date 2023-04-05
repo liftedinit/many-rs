@@ -43,10 +43,13 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
 
     let client = reqwest::Client::new();
     tracing::debug!("request {}", hex::encode(&bytes));
-    let response = client.post(url).body(bytes).send().await.unwrap();
+    let response = client
+        .post(url)
+        .body(bytes)
+        .send()
+        .await
+        .map_err(|error| ManyError::unknown(error.to_string()))?;
     //.map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
-    println!("Response for send_envelope:");
-    println!("{response:?}");
     let body = response.bytes().await.unwrap();
     let bytes = body.to_vec();
     tracing::debug!("reply {}", hex::encode(&bytes));
