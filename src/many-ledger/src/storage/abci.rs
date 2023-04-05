@@ -35,7 +35,8 @@ impl LedgerStorage {
                 Some(new_storage),
                 height + 1,
             )
-            .expect("Unable to run migrations");
+            .unwrap();
+        //.expect("Unable to run migrations");
 
         self.commit_storage().expect("Unable to commit to storage.");
 
