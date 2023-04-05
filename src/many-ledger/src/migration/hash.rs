@@ -39,7 +39,7 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                                     key.into(),
                                     Operation::from(Op::Put(
                                         minicbor::to_vec(
-                                            &minicbor::decode::<TokenInfo>(&value).unwrap(),
+                                            minicbor::decode::<TokenInfo>(&value).unwrap(),
                                         )
                                         .unwrap(),
                                     )),
