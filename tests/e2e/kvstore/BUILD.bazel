@@ -8,6 +8,7 @@ bats_test_suite(
         "manual",
     ],
     uses_bats_assert = True,
+    bats_args = ["--formatter", "tap", "--report-formatter", "junit", "--output", "."],
     deps = [
         "//src/kvstore",
         "//src/many",

@@ -94,6 +94,15 @@ jobs:
               # --disable_token_sender_check needs to be disabled for the token tests
               bazel test --test_output=errors --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
 
+              # Collect all test reports
+              # NOTE: The combinaison of `xargs` and `sh -c` is insecure.
+              #       The risks are acceptable on CI.
+              mkdir -p bats-reports
+              bazel cquery 'kind(.bats, "//tests/e2e/kvstore:*" + "//tests/e2e/ledger:*")' --output=files | \
+                xargs -I {} sh -c 'cp {}.runfiles/__main__/report.xml ./bats-reports/$(basename {})_report.xml'
+      - store_test_results:
+          path: bats-reports
+
   # Compute code coverage and push the results to CodeCov.
   coverage:
     parameters:
