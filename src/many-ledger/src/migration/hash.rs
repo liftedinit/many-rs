@@ -74,7 +74,7 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                 .map_err(ManyError::unknown)?;
             replacement
                 .apply(
-                    LedgerIterator::all_events(storage)
+                    LedgerIterator::all_multisig(storage, SortOrder::Indeterminate)
                         .map(|key_value_pair| {
                             key_value_pair.map(|(key, value)| {
                                 (
