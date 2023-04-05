@@ -232,6 +232,8 @@ jobs:
             mkdir -p bats-reports
             bazel cquery 'kind(.bats, ${E:2})' --output=files | \
               xargs -I {} sh -c 'cp {}.runfiles/__main__/report.xml ./bats-reports/$(basename {})_report.xml'
+      - store_test_results:
+          path: bats-reports
 
   # Run a single kvstore resiliency test
   kvstore_resiliency_single_test:
@@ -270,6 +272,8 @@ jobs:
             mkdir -p bats-reports
             bazel cquery 'kind(.bats, ${E:2})' --output=files | \
               xargs -I {} sh -c 'cp {}.runfiles/__main__/report.xml ./bats-reports/$(basename {})_report.xml'
+      - store_test_results:
+          path: bats-reports
 
   # Run a single ledger resiliency test
   ledger_resiliency_single_test:
