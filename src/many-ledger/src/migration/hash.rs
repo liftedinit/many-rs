@@ -1,12 +1,19 @@
 use {
     crate::{
         migration::{InnerMigration, MIGRATIONS},
-        storage::{InnerStorage, Operation, SYMBOLS_ROOT},
+        storage::{
+            iterator::LedgerIterator, multisig::MultisigTransactionStorage, InnerStorage,
+            Operation, SYMBOLS_ROOT,
+        },
     },
     linkme::distributed_slice,
     many_error::ManyError,
-    many_types::ledger::Symbol,
-    merk_v1::rocksdb::{IteratorMode, ReadOptions},
+    many_modules::events::EventLog,
+    many_types::{
+        ledger::{Symbol, TokenInfo},
+        SortOrder,
+    },
+    //merk_v1::rocksdb::{IteratorMode, ReadOptions},
     merk_v2::Op,
     std::collections::BTreeMap,
 };
@@ -22,13 +29,21 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
     .unwrap();
     println!("Old SYMBOLS_ROOT: {root:#?}");
     match storage {
-        InnerStorage::V1(merk) => {
+        InnerStorage::V1(_) => {
             replacement
                 .apply(
-                    merk.iter_opt(IteratorMode::Start, ReadOptions::default())
+                    LedgerIterator::all_symbols(storage, SortOrder::Indeterminate)
                         .map(|key_value_pair| {
                             key_value_pair.map(|(key, value)| {
-                                (key.into(), Operation::from(Op::Put(value.into())))
+                                (
+                                    key.into(),
+                                    Operation::from(Op::Put(
+                                        minicbor::to_vec(
+                                            &minicbor::decode::<TokenInfo>(&value).unwrap(),
+                                        )
+                                        .unwrap(),
+                                    )),
+                                )
                             })
                         })
                         .collect::<Result<Vec<_>, _>>()
@@ -36,6 +51,62 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                         .as_slice(),
                 )
                 .map_err(ManyError::unknown)?;
+            replacement
+                .apply(
+                    LedgerIterator::all_events(storage)
+                        .map(|key_value_pair| {
+                            key_value_pair.map(|(key, value)| {
+                                (
+                                    key.into(),
+                                    Operation::from(Op::Put(
+                                        minicbor::to_vec(
+                                            &minicbor::decode::<EventLog>(&value).unwrap(),
+                                        )
+                                        .unwrap(),
+                                    )),
+                                )
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(ManyError::unknown)?
+                        .as_slice(),
+                )
+                .map_err(ManyError::unknown)?;
+            replacement
+                .apply(
+                    LedgerIterator::all_events(storage)
+                        .map(|key_value_pair| {
+                            key_value_pair.map(|(key, value)| {
+                                (
+                                    key.into(),
+                                    Operation::from(Op::Put(
+                                        minicbor::to_vec(
+                                            &minicbor::decode::<MultisigTransactionStorage>(&value)
+                                                .unwrap(),
+                                        )
+                                        .unwrap(),
+                                    )),
+                                )
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(ManyError::unknown)?
+                        .as_slice(),
+                )
+                .map_err(ManyError::unknown)?;
+            //replacement
+            //    .apply(
+            //        merk.iter_opt(IteratorMode::Start, ReadOptions::default())
+            //            .map(|key_value_pair| {
+            //                key_value_pair.map(|(key, value)| {
+            //                    (key.into(), Operation::from(Op::Put(value.into())))
+            //                })
+            //            })
+            //            .collect::<Result<Vec<_>, _>>()
+            //            .map_err(ManyError::unknown)?
+            //            .as_slice(),
+            //    )
+            //    .map_err(ManyError::unknown)?;
             replacement.commit(&[]).map_err(ManyError::unknown)?;
             *storage = replacement;
             let root = minicbor::decode::<BTreeMap<Symbol, String>>(
