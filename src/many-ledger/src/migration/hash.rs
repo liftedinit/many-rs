@@ -1,7 +1,7 @@
 use {
     crate::{
         migration::{InnerMigration, MIGRATIONS},
-        storage::{InnerStorage, Operation},
+        storage::{InnerStorage, Operation, SYMBOLS_ROOT},
     },
     linkme::distributed_slice,
     many_error::ManyError,
@@ -10,6 +10,8 @@ use {
 };
 
 fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Result<(), ManyError> {
+    let root = storage.get(SYMBOLS_ROOT.as_bytes()).unwrap().unwrap();
+    println!("Old SYMBOLS_ROOT: {root:?}");
     match storage {
         InnerStorage::V1(merk) => {
             replacement
@@ -27,6 +29,8 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                 .map_err(ManyError::unknown)?;
             replacement.commit(&[]).map_err(ManyError::unknown)?;
             *storage = replacement;
+            let root = storage.get(SYMBOLS_ROOT.as_bytes()).unwrap().unwrap();
+            println!("SYMBOLS_ROOT: {root:?}");
         }
         InnerStorage::V2(_) => (),
     }
