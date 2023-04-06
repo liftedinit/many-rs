@@ -22,10 +22,10 @@ impl LedgerStorage {
         self.migrations
             .update_at_height(
                 &mut self.persistent_store,
-                Some(|| {
+                || {
                     InnerStorage::open_v2(["/tmp", "v2_storage"].iter().collect::<PathBuf>())
                         .expect("Unable to open v2 storage")
-                }),
+                },
                 height + 1,
             )
             .expect("Unable to run migrations");

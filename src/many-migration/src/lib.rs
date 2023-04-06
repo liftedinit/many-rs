@@ -238,14 +238,12 @@ impl<T, E> InnerMigration<T, E> {
     fn initialize<R: Fn() -> T>(
         &self,
         storage: &mut T,
-        replacement: Option<R>,
+        replacement: R,
         extra: &HashMap<String, Value>,
     ) -> Result<(), E> {
         match (&self.r#type, replacement) {
             (MigrationType::Regular(migration), _) => (migration.initialize_fn)(storage, extra),
-            (MigrationType::Hash(migration), Some(new_storage)) => {
-                (migration.0)(storage, new_storage())
-            }
+            (MigrationType::Hash(migration), new_storage) => (migration.0)(storage, new_storage()),
             (MigrationType::Hotfix(_), _) | (MigrationType::Trigger(_), _) => Ok(()),
             (x, _) => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
@@ -357,7 +355,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     pub fn maybe_initialize_update_at_height<R: Fn() -> T>(
         &mut self,
         storage: &mut T,
-        replacement: Option<R>,
+        replacement: R,
         block_height: u64,
     ) -> Result<(), E> {
         if self.is_enabled() {
@@ -379,7 +377,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     pub fn initialize<R: Fn() -> T>(
         &self,
         storage: &mut T,
-        replacement: Option<R>,
+        replacement: R,
         block_height: u64,
     ) -> Result<(), E> {
         if self.is_enabled() && block_height == self.metadata.block_height {
@@ -597,7 +595,7 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
     pub fn update_at_height<R: Fn() -> T + Clone>(
         &mut self,
         storage: &mut T,
-        replacement: Option<R>,
+        replacement: R,
         block_height: u64,
     ) -> Result<(), E> {
         for migration in self.inner.values_mut() {
