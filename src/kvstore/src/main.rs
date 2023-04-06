@@ -153,8 +153,7 @@ fn get(client: ManyClient<impl Identity>, key: &[u8], hex: bool) -> Result<(), M
         Err(ManyError::unexpected_empty_response())
     } else {
         let result: kvstore::GetReturns =
-            //minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
-            minicbor::decode(&payload).unwrap();
+            minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
         let value = result.value;
 
         if let Some(value) = value {
@@ -181,8 +180,7 @@ fn query(client: ManyClient<impl Identity>, key: &[u8]) -> Result<(), ManyError>
         Err(ManyError::unexpected_empty_response())
     } else {
         let result: kvstore::QueryReturns =
-            //minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
-            minicbor::decode(&payload).unwrap();
+            minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
 
         let owner = result.owner.to_string();
 
