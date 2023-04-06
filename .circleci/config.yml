@@ -232,6 +232,13 @@ jobs:
             mkdir -p bats-reports
             bazel cquery "kind(.bats, ${E:2})" --output=files | \
               xargs -I {} sh -c 'cp {}.runfiles/__main__/report.xml ./bats-reports/$(basename {})_report.xml'
+
+            # Add `file` attribute to `testcase` XML tag
+            # CircleCI needs it for timing test splitting
+            # NOTE: The combinaison of `xargs` and `sh -c` is insecure.
+            #       The risks are acceptable on CI.
+            find ./bats-reports -name '*.xml' -print0 | \
+              xargs -0 -I {} sh -c 'xmlstarlet ed -i "/testsuites/testsuite/testcase" -t attr -n file -v $(pwd)/tests/resiliency/kvstore/$(xmlstarlet sel -t -v "//testsuites/testsuite/@name" {}) {}'
       - store_test_results:
           path: bats-reports
 
@@ -272,6 +279,13 @@ jobs:
             mkdir -p bats-reports
             bazel cquery "kind(.bats, ${E:2})" --output=files | \
               xargs -I {} sh -c 'cp {}.runfiles/__main__/report.xml ./bats-reports/$(basename {})_report.xml'
+
+            # Add `file` attribute to `testcase` XML tag
+            # CircleCI needs it for timing test splitting
+            # NOTE: The combinaison of `xargs` and `sh -c` is insecure.
+            #       The risks are acceptable on CI.
+            find ./bats-reports -name '*.xml' -print0 | \
+              xargs -0 -I {} sh -c 'xmlstarlet ed -i "/testsuites/testsuite/testcase" -t attr -n file -v $(pwd)/tests/resiliency/ledger/$(xmlstarlet sel -t -v "//testsuites/testsuite/@name" {}) {}'
       - store_test_results:
           path: bats-reports
 
@@ -328,7 +342,7 @@ commands:
                 name: installing << parameters.os >> dependencies
                 command: |
                   sudo DEBIAN_FRONTEND=noninteractive apt -y update
-                  sudo DEBIAN_FRONTEND=noninteractive apt -y install clang libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev bsdextrautils
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install clang libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev bsdextrautils xmlstarlet
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
             - run:
