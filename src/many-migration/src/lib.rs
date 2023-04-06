@@ -7,7 +7,6 @@ use {
     std::fmt,
     std::fmt::Formatter,
     std::ops::Index,
-    std::path::PathBuf,
     strum::Display,
     tracing::trace,
 };
@@ -17,8 +16,6 @@ use {
 pub type FnPtr<T, E> = fn(&mut T, &HashMap<String, Value>) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
 pub type FnHashPtr<T, E> = fn(&mut T, T) -> Result<(), E>;
-
-pub type Replacement<T> = (PathBuf, fn(PathBuf) -> T);
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Metadata {
@@ -238,16 +235,16 @@ impl<T, E> InnerMigration<T, E> {
     }
 
     /// This function gets executed when the storage block height == the migration block height
-    fn initialize(
+    fn initialize<R: Fn() -> T>(
         &self,
         storage: &mut T,
-        replacement: Option<Replacement<T>>,
+        replacement: Option<R>,
         extra: &HashMap<String, Value>,
     ) -> Result<(), E> {
         match (&self.r#type, replacement) {
             (MigrationType::Regular(migration), _) => (migration.initialize_fn)(storage, extra),
             (MigrationType::Hash(migration), Some(new_storage)) => {
-                (migration.0)(storage, new_storage.1(new_storage.0))
+                (migration.0)(storage, new_storage())
             }
             (MigrationType::Hotfix(_), _) | (MigrationType::Trigger(_), _) => Ok(()),
             (x, _) => {
@@ -357,10 +354,10 @@ impl<'a, T, E> Migration<'a, T, E> {
     }
 
     /// Check the height and call the inner migration's methods.
-    pub fn maybe_initialize_update_at_height(
+    pub fn maybe_initialize_update_at_height<R: Fn() -> T>(
         &mut self,
         storage: &mut T,
-        replacement: Option<Replacement<T>>,
+        replacement: Option<R>,
         block_height: u64,
     ) -> Result<(), E> {
         if self.is_enabled() {
@@ -379,10 +376,10 @@ impl<'a, T, E> Migration<'a, T, E> {
     }
 
     #[inline]
-    pub fn initialize(
+    pub fn initialize<R: Fn() -> T>(
         &self,
         storage: &mut T,
-        replacement: Option<Replacement<T>>,
+        replacement: Option<R>,
         block_height: u64,
     ) -> Result<(), E> {
         if self.is_enabled() && block_height == self.metadata.block_height {
@@ -597,18 +594,16 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
     }
 
     #[inline]
-    pub fn update_at_height(
+    pub fn update_at_height<R: Fn() -> T + Clone>(
         &mut self,
         storage: &mut T,
-        path: Option<PathBuf>,
-        replacement: Option<fn(PathBuf) -> T>,
+        replacement: Option<R>,
         block_height: u64,
     ) -> Result<(), E> {
         for migration in self.inner.values_mut() {
             migration.maybe_initialize_update_at_height(
                 storage,
-                path.clone()
-                    .and_then(|path| replacement.map(|replacement| (path, replacement))),
+                replacement.clone(),
                 block_height,
             )?;
 

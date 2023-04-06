@@ -372,21 +372,21 @@ fn basic() {
     storage.insert(StorageKey::Counter, 0);
 
     migration_set
-        .update_at_height(&mut storage, None, None, 1)
+        .update_at_height(&mut storage, None, 1)
         .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 1);
 
     migration_set
-        .update_at_height(&mut storage, None, None, 2)
+        .update_at_height(&mut storage, None, 2)
         .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);
 
     migration_set
-        .update_at_height(&mut storage, None, None, 3)
+        .update_at_height(&mut storage, None, 3)
         .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);

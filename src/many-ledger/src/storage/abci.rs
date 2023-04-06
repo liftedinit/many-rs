@@ -18,16 +18,14 @@ impl LedgerStorage {
         // attributes.
         self.commit_storage().expect("Unable to commit to storage.");
 
-        fn new_storage(path: PathBuf) -> InnerStorage {
-            InnerStorage::open_v2(path).expect("Unable to open v2 storage")
-        }
-
         // Initialize/update migrations at current height, if any
         self.migrations
             .update_at_height(
                 &mut self.persistent_store,
-                Some(["/tmp", "v2_storage"].iter().collect::<PathBuf>()),
-                Some(new_storage),
+                Some(|| {
+                    InnerStorage::open_v2(["/tmp", "v2_storage"].iter().collect::<PathBuf>())
+                        .expect("Unable to open v2 storage")
+                }),
                 height + 1,
             )
             .expect("Unable to run migrations");
