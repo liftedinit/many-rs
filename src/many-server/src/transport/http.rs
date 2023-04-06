@@ -48,7 +48,8 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
             Ok(cs) => cs,
             Err(e) => {
                 tracing::debug!(r#"error description="{}""#, e.to_string());
-                return Response::empty(500u16).with_data(Cursor::new(vec![]), Some(0));
+                return Response::empty(500u16)
+                    .with_data(Cursor::new(e.to_string().into()), Some(0));
             }
         };
 
@@ -59,8 +60,9 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
             .and_then(|r| r.to_tagged_vec().map_err(|e| e.to_string()));
         let bytes = match response {
             Ok(bytes) => bytes,
-            Err(_e) => {
-                return Response::empty(500u16).with_data(Cursor::new(vec![]), Some(0));
+            Err(e) => {
+                return Response::empty(500u16)
+                    .with_data(Cursor::new(e.to_string().into()), Some(0));
             }
         };
         tracing::debug!("response len={}", bytes.len());
