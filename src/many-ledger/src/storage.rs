@@ -390,15 +390,14 @@ impl LedgerStorage {
 
     /// Kept for backward compatibility
     pub fn get_symbols_and_tickers(&self) -> Result<BTreeMap<Symbol, String>, ManyError> {
-        Ok(minicbor::decode::<BTreeMap<Symbol, String>>(
+        minicbor::decode::<BTreeMap<Symbol, String>>(
             &self
                 .persistent_store
                 .get(SYMBOLS_ROOT.as_bytes())
                 .map_err(error::storage_get_failed)?
                 .ok_or_else(|| error::storage_key_not_found(SYMBOLS_ROOT))?,
         )
-        .unwrap())
-        //.map_err(ManyError::deserialization_error)
+        .map_err(ManyError::deserialization_error)
     }
 
     /// Fetch symbols from `/config/symbols/{symbol}` iif "Token Migration" is enabled
@@ -558,9 +557,9 @@ impl LedgerStorage {
             .migrations
             .hotfix(name, &data_enc, self.get_height()? + 1)?
         {
-            //.map_err(ManyError::deserialization_error)?;
-            let dec_data = minicbor::decode(&data).unwrap();
-            Ok(Some(dec_data))
+            minicbor::decode(&data)
+                .map_err(ManyError::deserialization_error)
+                .map(Some)
         } else {
             Ok(None)
         }

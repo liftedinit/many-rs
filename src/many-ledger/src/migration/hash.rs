@@ -1,35 +1,16 @@
-#[allow(unused_imports)]
 use {
     crate::{
         migration::{InnerMigration, MIGRATIONS},
-        storage::{
-            iterator::LedgerIterator, multisig::MultisigTransactionStorage, InnerStorage,
-            Operation, SYMBOLS_ROOT,
-        },
+        storage::{InnerStorage, Operation},
     },
     linkme::distributed_slice,
     many_error::ManyError,
-    many_modules::events::EventLog,
-    many_types::{
-        ledger::{Symbol, TokenInfo},
-        SortOrder,
-    },
-    merk_v1::rocksdb::{IteratorMode, ReadOptions},
+    merk_v1::rocksdb::IteratorMode,
     merk_v1::tree::Tree,
     merk_v2::Op,
-    std::collections::BTreeMap,
 };
 
 fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Result<(), ManyError> {
-    let root = minicbor::decode::<BTreeMap<Symbol, String>>(
-        storage
-            .get(SYMBOLS_ROOT.as_bytes())
-            .unwrap()
-            .unwrap()
-            .as_slice(),
-    )
-    .unwrap();
-    println!("Old SYMBOLS_ROOT: {root:#?}");
     match storage {
         InnerStorage::V1(merk) => {
             replacement
@@ -52,15 +33,6 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                 .map_err(ManyError::unknown)?;
             replacement.commit(&[]).map_err(ManyError::unknown)?;
             *storage = replacement;
-            let root = minicbor::decode::<BTreeMap<Symbol, String>>(
-                storage
-                    .get(SYMBOLS_ROOT.as_bytes())
-                    .unwrap()
-                    .unwrap()
-                    .as_slice(),
-            )
-            .unwrap();
-            println!("SYMBOLS_ROOT: {root:#?}");
         }
         InnerStorage::V2(_) => (),
     }
