@@ -6,6 +6,7 @@ pub mod ledger;
 pub use ledger::LedgerClient;
 
 use coset::{CoseSign1, TaggedCborSerializable};
+use futures_util::future::TryFutureExt;
 use many_identity::verifiers::AnonymousVerifier;
 use many_identity::{verifiers, Identity};
 use many_identity_dsa::CoseKeyVerifier;
@@ -43,16 +44,15 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
 
     let client = reqwest::Client::new();
     tracing::debug!("request {}", hex::encode(&bytes));
-    let response = client
+    let bytes = client
         .post(url)
         .body(bytes)
         .send()
-        .await
-        .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?
-        .error_for_status()
-        .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
-    let body = response.bytes().await.unwrap();
-    let bytes = body.to_vec();
+        .and_then(|response| async move { response.error_for_status() })
+        .and_then(|response| response.bytes())
+        .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))
+        .await?
+        .to_vec();
     tracing::debug!("reply {}", hex::encode(&bytes));
     CoseSign1::from_tagged_slice(&bytes)
         .map_err(|e| ManyError::deserialization_error(e.to_string()))

@@ -2503,6 +2503,7 @@ dependencies = [
  "ed25519 2.2.1",
  "ed25519-dalek",
  "fixed",
+ "futures-util",
  "hex",
  "many-client-macros",
  "many-identity",

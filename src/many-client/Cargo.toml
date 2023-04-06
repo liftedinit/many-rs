@@ -20,6 +20,7 @@ ecdsa = "0.16.0"
 ed25519 = { version = "2.2.0", features = [ "std" ] }
 ed25519-dalek = { version = "1.0.1", features = [ "std" ] }
 fixed = "1.16.0"
+futures-util = "0.3"
 hex = "0.4.3"
 many-client-macros = { path = "../many-client-macros", version = "0.1.1" } # managed by release.sh
 many-identity = { path = "../many-identity", version = "0.1.1" } # managed by release.sh
