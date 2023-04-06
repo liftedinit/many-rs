@@ -210,8 +210,7 @@ impl LedgerStorage {
             .ok_or_else(|| error::token_info_not_found(symbol))?;
 
         let info: TokenInfo =
-            //minicbor::decode(&token_info_enc).map_err(ManyError::deserialization_error)?;
-            minicbor::decode(&token_info_enc).unwrap();
+            minicbor::decode(&token_info_enc).map_err(ManyError::deserialization_error)?;
 
         Ok((info.owner, symbol_key.into()))
     }
@@ -225,8 +224,7 @@ impl LedgerStorage {
             let (k, _) = item.map_err(ManyError::unknown)?;
             symbols.insert(Symbol::from_str(
                 std::str::from_utf8(&k.as_ref()[SYMBOLS_ROOT_DASH.len()..])
-                    //.map_err(ManyError::deserialization_error)?, // TODO: We could safely use from_utf8_unchecked() if performance is an issue
-                    .unwrap(),
+                    .map_err(ManyError::deserialization_error)?, // TODO: We could safely use from_utf8_unchecked() if performance is an issue
             )?);
         }
         Ok(symbols)
@@ -239,13 +237,11 @@ impl LedgerStorage {
             for item in it {
                 let (k, v) = item.map_err(ManyError::unknown)?;
                 let info: TokenInfo =
-                    //minicbor::decode(&v).map_err(ManyError::deserialization_error)?;
-                    minicbor::decode(&v).unwrap();
+                    minicbor::decode(&v).map_err(ManyError::deserialization_error)?;
                 info_summary.insert(
                     Symbol::from_str(
                         std::str::from_utf8(&k.as_ref()[SYMBOLS_ROOT_DASH.len()..])
-                            //.map_err(ManyError::deserialization_error)?, // TODO: We could safely use from_utf8_unchecked() if performance is an issue
-                            .unwrap(),
+                            .map_err(ManyError::deserialization_error)?, // TODO: We could safely use from_utf8_unchecked() if performance is an issue
                     )?,
                     info.summary,
                 );
@@ -408,8 +404,7 @@ impl LedgerStorage {
             .ok_or_else(|| error::ext_info_not_found(symbol))?;
 
         let mut ext_info: TokenExtendedInfo =
-            //minicbor::decode(&ext_info_enc).map_err(ManyError::deserialization_error)?;
-            minicbor::decode(&ext_info_enc).unwrap();
+            minicbor::decode(&ext_info_enc).map_err(ManyError::deserialization_error)?;
 
         let ext_info = if let Some(indices) = extended_info {
             ext_info.retain(indices)?;
@@ -419,8 +414,7 @@ impl LedgerStorage {
         };
 
         let info: TokenInfo =
-            //minicbor::decode(&token_info_enc).map_err(ManyError::deserialization_error)?;
-            minicbor::decode(&token_info_enc).unwrap();
+            minicbor::decode(&token_info_enc).map_err(ManyError::deserialization_error)?;
 
         Ok(TokenInfoReturns {
             info,
@@ -519,8 +513,7 @@ impl LedgerStorage {
             .get(&ext_info_key)
             .map_err(error::storage_get_failed)?
         {
-            //minicbor::decode(&ext_info_enc).map_err(ManyError::deserialization_error)?
-            minicbor::decode(&ext_info_enc).unwrap()
+            minicbor::decode(&ext_info_enc).map_err(ManyError::deserialization_error)?
         } else {
             TokenExtendedInfo::new()
         };
@@ -575,8 +568,7 @@ impl LedgerStorage {
             .ok_or_else(|| error::ext_info_not_found(symbol))?;
 
         let mut ext_info: TokenExtendedInfo =
-            //minicbor::decode(&ext_info_enc).map_err(ManyError::deserialization_error)?;
-            minicbor::decode(&ext_info_enc).unwrap();
+            minicbor::decode(&ext_info_enc).map_err(ManyError::deserialization_error)?;
 
         for index in &extended_info {
             if ext_info.contains_index(index)? {

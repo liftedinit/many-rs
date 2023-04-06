@@ -234,8 +234,7 @@ impl KvStoreStorage {
     pub fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, ManyError> {
         if let Some(cbor) = self._get(key, KVSTORE_ACL_ROOT)? {
             let meta: KvStoreMetadata = minicbor::decode(&cbor)
-                //.map_err(|e| ManyError::deserialization_error(e.to_string()))?;
-                .unwrap();
+                .map_err(|e| ManyError::deserialization_error(e.to_string()))?;
 
             if let Some(either) = meta.disabled {
                 match either {

@@ -94,18 +94,15 @@ fn migrate_token(
     }
 
     let token_identity: String = serde_json::from_value(extra["token_identity"].clone())
-        //.map_err(ManyError::deserialization_error)?;
-        .unwrap();
+        .map_err(ManyError::deserialization_error)?;
     let token_identity = Address::from_str(&token_identity)?;
 
     let token_next_subresource: u32 =
         serde_json::from_value(extra["token_next_subresource"].clone())
-            //.map_err(ManyError::deserialization_error)?;
-            .unwrap();
+            .map_err(ManyError::deserialization_error)?;
 
     let symbol: String = serde_json::from_value(extra["symbol"].clone())
-        //.map_err(ManyError::deserialization_error)?;
-        .unwrap();
+        .map_err(ManyError::deserialization_error)?;
     let symbol = Symbol::from_str(&symbol)?;
 
     // Get symbol list from DB
@@ -115,8 +112,7 @@ fn migrate_token(
         .ok_or_else(|| error::storage_key_not_found(SYMBOLS_ROOT))?;
 
     let symbol_and_ticker: BTreeMap<Address, String> =
-        //minicbor::decode(&symbol_and_ticker_enc).map_err(ManyError::deserialization_error)?;
-        minicbor::decode(&symbol_and_ticker_enc).unwrap();
+        minicbor::decode(&symbol_and_ticker_enc).map_err(ManyError::deserialization_error)?;
 
     // Get the symbol ticker from symbol list
     let ticker = symbol_and_ticker
@@ -140,8 +136,7 @@ fn migrate_token(
             owner: serde_json::from_value(extra["symbol_owner"].clone())?,
         })
     })()
-    //.map_err(ManyError::deserialization_error)?;
-    .unwrap();
+    .map_err(ManyError::deserialization_error)?;
 
     let batch = match storage {
         InnerStorage::V1(_) => vec![

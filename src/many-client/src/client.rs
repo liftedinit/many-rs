@@ -131,11 +131,7 @@ impl<I: Identity> ManyClient<I> {
     }
 
     pub async fn status(&self) -> Result<Status, ManyError> {
-        let response = self.call_("status", ()).await?;
-
-        let status = minicbor::decode(response.as_slice())
-            //.map_err(|e| ManyError::deserialization_error(e.to_string()))?;
-            .unwrap();
-        Ok(status)
+        minicbor::decode(self.call_("status", ()).await?.as_slice())
+            .map_err(|e| ManyError::deserialization_error(e.to_string()))
     }
 }

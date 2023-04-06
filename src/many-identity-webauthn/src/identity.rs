@@ -32,8 +32,7 @@ impl WebAuthnIdentity {
         creds: idstore::GetReturns,
     ) -> Result<Self, ManyError> {
         let mut public_key = CoseKey::from_slice(creds.public_key.0.as_slice())
-            //.map_err(ManyError::deserialization_error)?;
-            .unwrap();
+            .map_err(ManyError::deserialization_error)?;
         public_key
             .key_ops
             .insert(KeyOperation::Assigned(iana::KeyOperation::Verify));

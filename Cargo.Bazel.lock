@@ -2461,7 +2461,7 @@ dependencies = [
  "many-types",
  "minicbor",
  "num-integer",
- "reqwest 0.11.16",
+ "reqwest",
  "serde_json",
  "sha2 0.10.6",
  "signal-hook",
@@ -2519,7 +2519,7 @@ dependencies = [
  "pem",
  "rand 0.8.5",
  "regex",
- "reqwest 0.11.16",
+ "reqwest",
  "serde",
  "sha3",
  "static_assertions",
@@ -3845,42 +3845,6 @@ name = "reqwest"
 version = "0.11.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27b71749df584b7f4cac2c426c127a7c785a5106cc98f7a8feb044115f0fa254"
-dependencies = [
- "base64 0.21.0",
- "bytes",
- "encoding_rs",
- "futures-core",
- "futures-util",
- "h2",
- "http",
- "http-body",
- "hyper",
- "hyper-tls",
- "ipnet",
- "js-sys",
- "log",
- "mime",
- "native-tls",
- "once_cell",
- "percent-encoding",
- "pin-project-lite",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "tokio",
- "tokio-native-tls",
- "tower-service",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "winreg",
-]
-
-[[package]]
-name = "reqwest"
-version = "0.11.16"
-source = "git+https://github.com/MavenRain/reqwest?branch=oobi/debugging#fa5cb578fe963b093d3f838fb5f93f7ff2412f86"
 dependencies = [
  "base64 0.21.0",
  "bytes",

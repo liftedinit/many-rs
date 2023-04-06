@@ -21,8 +21,7 @@ fn iter_through_events(
     LedgerIterator::all_events(storage).map(|r| match r {
         Ok((k, v)) => {
             let log = minicbor::decode::<EventLog>(v.as_slice())
-                //.map_err(ManyError::deserialization_error)?;
-                .unwrap();
+                .map_err(ManyError::deserialization_error)?;
             Ok((k.into(), log))
         }
         Err(e) => Err(ManyError::unknown(e)),
@@ -35,8 +34,7 @@ fn iter_through_multisig_storage(
     LedgerIterator::all_multisig(storage, SortOrder::Ascending).map(|r| match r {
         Ok((k, v)) => {
             let log = minicbor::decode::<MultisigTransactionStorage>(v.as_slice())
-                //.map_err(ManyError::deserialization_error)?;
-                .unwrap();
+                .map_err(ManyError::deserialization_error)?;
             Ok((k.into(), log))
         }
         Err(e) => Err(ManyError::unknown(e)),

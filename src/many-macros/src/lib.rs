@@ -316,8 +316,7 @@ impl Endpoint {
         let check_ty = if let Some((_, ty)) = &self.arg {
             quote_spanned! { span =>
                 minicbor::decode::<'_, #ty>(data)
-                    //.map_err(|e| many_error::ManyError::deserialization_error(e.to_string()))?;
-                    .unwrap();
+                    .map_err(|e| many_error::ManyError::deserialization_error(e.to_string()))?;
             }
         } else {
             quote! { {} }
@@ -526,8 +525,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
                 many_types::PROOF
             };
             fn decode<'a, T: minicbor::Decode<'a, ()>>(data: &'a [u8]) -> Result<T, ManyError> {
-                //minicbor::decode(data).map_err(|e| ManyError::deserialization_error(e.to_string()))
-                Ok(minicbor::decode(data).unwrap())
+                minicbor::decode(data).map_err(|e| ManyError::deserialization_error(e.to_string()))
             }
             fn encode<T: minicbor::Encode<()>>(result: Result<T, ManyError>) -> Result<Vec<u8>, ManyError> {
                 minicbor::to_vec(result?).map_err(|e| ManyError::serialization_error(e.to_string()))

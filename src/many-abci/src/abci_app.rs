@@ -20,8 +20,7 @@ lazy_static::lazy_static!(
 fn get_abci_info_(client: &ManyClient<AnonymousIdentity>) -> Result<AbciInfo, ManyError> {
     client
         .call_("abci.info", ())
-        //.and_then(|payload| minicbor::decode(&payload).map_err(ManyError::deserialization_error))
-        .map(|payload| minicbor::decode(&payload).unwrap())
+        .and_then(|payload| minicbor::decode(&payload).map_err(ManyError::deserialization_error))
 }
 
 #[derive(Debug, Clone)]

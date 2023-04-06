@@ -284,19 +284,17 @@ pub(crate) fn wait_response(
                 },
             )?;
             let status: StatusReturn =
-                //minicbor::decode(&response.data?).map_err(ManyError::deserialization_error)?;
-                minicbor::decode(&response.data?).unwrap();
+                minicbor::decode(&response.data?).map_err(ManyError::deserialization_error)?;
             match status {
                 StatusReturn::Done { response } => {
                     progress.finish();
                     let response: ResponseMessage =
-                        //minicbor::decode(&response.payload.ok_or_else(|| {
-                        //    ManyError::deserialization_error(
-                        //        "Empty payload. Expected ResponseMessage.",
-                        //    )
-                        //})?)
-                        //.map_err(ManyError::deserialization_error)?;
-                        minicbor::decode(&response.payload.unwrap()).unwrap();
+                        minicbor::decode(&response.payload.ok_or_else(|| {
+                            ManyError::deserialization_error(
+                                "Empty payload. Expected ResponseMessage.",
+                            )
+                        })?)
+                        .map_err(ManyError::deserialization_error)?;
                     return wait_response(client, response);
                 }
                 StatusReturn::Expired => {

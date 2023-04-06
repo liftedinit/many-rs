@@ -1,10 +1,10 @@
 use {
     super::{InnerStorage, Operation},
-    crate::migration::block_9400::Block9400Tx,
-    crate::migration::memo::MEMO_MIGRATION,
-    crate::module::account::validate_account,
-    crate::storage::event::EVENT_ID_KEY_SIZE_IN_BYTES,
-    crate::storage::LedgerStorage,
+    crate::{
+        migration::{block_9400::Block9400Tx, memo::MEMO_MIGRATION},
+        module::account::validate_account,
+        storage::{event::EVENT_ID_KEY_SIZE_IN_BYTES, LedgerStorage},
+    },
     many_error::ManyError,
     many_identity::Address,
     many_modules::account::features::FeatureInfo,
@@ -187,8 +187,7 @@ impl LedgerStorage {
             let (k, v) = item.map_err(ManyError::unknown)?;
 
             let mut storage: MultisigTransactionStorage =
-                //minicbor::decode(v.as_slice()).map_err(ManyError::deserialization_error)?;
-                minicbor::decode(v.as_slice()).unwrap();
+                minicbor::decode(v.as_slice()).map_err(ManyError::deserialization_error)?;
             let now = self.now();
 
             if now >= storage.info.timeout {

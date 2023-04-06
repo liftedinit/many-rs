@@ -36,9 +36,8 @@ impl events::EventsModuleBackend for KvStoreModuleImpl {
 
         let iter = Box::new(iter.map(|item| {
             let (_k, v) = item.map_err(|e| ManyError::unknown(e.to_string()))?;
-            //minicbor::decode::<events::EventLog>(v.as_slice())
-            //    .map_err(|e| ManyError::deserialization_error(e.to_string()))
-            Ok(minicbor::decode::<events::EventLog>(v.as_slice()).unwrap())
+            minicbor::decode::<events::EventLog>(v.as_slice())
+                .map_err(|e| ManyError::deserialization_error(e.to_string()))
         }));
 
         let iter = filter_account(iter, filter.account);
