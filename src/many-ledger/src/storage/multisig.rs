@@ -392,9 +392,8 @@ impl LedgerStorage {
             .get(&key_for_multisig_transaction(tx_id))
             .unwrap_or(None)
             .ok_or_else(account::features::multisig::errors::transaction_cannot_be_found)?;
-        //minicbor::decode::<MultisigTransactionStorage>(&storage_bytes)
-        //    .map_err(ManyError::deserialization_error)
-        Ok(minicbor::decode::<MultisigTransactionStorage>(&storage_bytes).unwrap())
+        minicbor::decode::<MultisigTransactionStorage>(&storage_bytes)
+            .map_err(ManyError::deserialization_error)
     }
 
     pub fn approve_multisig(&mut self, sender: &Address, tx_id: &[u8]) -> Result<bool, ManyError> {

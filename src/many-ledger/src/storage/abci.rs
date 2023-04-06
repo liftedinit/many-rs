@@ -1,10 +1,12 @@
-use crate::storage::event::HEIGHT_EVENTID_SHIFT;
-use crate::storage::{InnerStorage, LedgerStorage};
-use many_error::ManyError;
-use many_modules::abci_backend::AbciCommitInfo;
-use many_modules::events::EventId;
-use minicbor::bytes::ByteVec;
-use std::path::PathBuf;
+use {
+    crate::storage::event::HEIGHT_EVENTID_SHIFT,
+    crate::storage::{InnerStorage, LedgerStorage},
+    many_error::ManyError,
+    many_modules::abci_backend::AbciCommitInfo,
+    many_modules::events::EventId,
+    minicbor::bytes::ByteVec,
+    std::path::PathBuf,
+};
 
 impl LedgerStorage {
     pub fn commit(&mut self) -> AbciCommitInfo {
