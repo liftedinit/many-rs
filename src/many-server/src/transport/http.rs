@@ -61,8 +61,7 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
         let bytes = match response {
             Ok(bytes) => bytes,
             Err(e) => {
-                return Response::empty(500u16)
-                    .with_data(Cursor::new(e.to_string().into()), Some(0));
+                return Response::empty(500u16).with_data(Cursor::new(e.into()), Some(0));
             }
         };
         tracing::debug!("response len={}", bytes.len());
