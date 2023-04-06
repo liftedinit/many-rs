@@ -217,7 +217,7 @@ jobs:
       - run:
           name: running all tests
           command: |
-            TEST=$(circleci tests glob "tests/resiliency/kvstore/*.bats" | circleci tests split)
+            TEST=$(circleci tests glob "tests/resiliency/kvstore/*.bats" | circleci tests split --split-by=timings)
             A=($TEST)
             B=(${A[@]/#///})
             C=(${B[@]//kvstore\//kvstore:bats-resiliency-kvstore_})
@@ -257,7 +257,7 @@ jobs:
       - run:
           name: running all tests
           command: |
-            TEST=$(circleci tests glob "tests/resiliency/ledger/*.bats" | circleci tests split)
+            TEST=$(circleci tests glob "tests/resiliency/ledger/*.bats" | circleci tests split --split-by=timings)
             A=($TEST)
             B=(${A[@]/#///})
             C=(${B[@]//ledger\//ledger:bats-resiliency-ledger_})
