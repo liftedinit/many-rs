@@ -1,12 +1,11 @@
 use {
     crate::{
         migration::{InnerMigration, MIGRATIONS},
-        storage::{InnerStorage, Operation},
+        storage::{v1_forest, InnerStorage, Operation},
     },
     linkme::distributed_slice,
     many_error::ManyError,
     merk_v1::rocksdb::IteratorMode,
-    merk_v1::tree::Tree,
     merk_v2::Op,
 };
 
@@ -15,15 +14,10 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
         InnerStorage::V1(merk) => {
             replacement
                 .apply(
-                    merk.iter_opt(IteratorMode::Start, Default::default())
+                    v1_forest(merk, IteratorMode::Start, Default::default())
                         .map(|key_value_pair| {
                             key_value_pair.map(|(key, value)| {
-                                (
-                                    key.clone().into(),
-                                    Operation::from(Op::Put(
-                                        Tree::decode(key.to_vec(), value.as_ref()).value().to_vec(),
-                                    )),
-                                )
+                                (key, Operation::from(Op::Put(value.value().to_vec())))
                             })
                         })
                         .collect::<Result<Vec<_>, _>>()

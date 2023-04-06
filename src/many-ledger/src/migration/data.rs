@@ -1,7 +1,9 @@
 use {
     crate::migration::MIGRATIONS,
-    crate::storage::data::{DATA_ATTRIBUTES_KEY, DATA_INFO_KEY},
-    crate::storage::InnerStorage,
+    crate::storage::{
+        data::{DATA_ATTRIBUTES_KEY, DATA_INFO_KEY},
+        v1_forest, v2_forest, InnerStorage,
+    },
     linkme::distributed_slice,
     many_error::{ManyError, ManyErrorCode},
     many_migration::InnerMigration,
@@ -23,13 +25,12 @@ fn get_data_from_db(storage: &InnerStorage) -> Result<(u64, u64), ManyError> {
 
     match storage {
         InnerStorage::V1(storage) => {
-            let mut opts = merk_v1::rocksdb::ReadOptions::default();
-            opts.set_iterate_range(merk_v1::rocksdb::PrefixRange(BALANCES_ROOT_BYTES));
-
-            let iterator = storage.iter_opt(merk_v1::rocksdb::IteratorMode::Start, opts);
-            for item in iterator {
-                let (key, value) = item.map_err(ManyError::unknown)?; // TODO: Custom error
-                let value = merk_v1::tree::Tree::decode(key.to_vec(), value.as_ref());
+            for item in v1_forest(storage, merk_v1::rocksdb::IteratorMode::Start, {
+                let mut opts = merk_v1::rocksdb::ReadOptions::default();
+                opts.set_iterate_range(merk_v1::rocksdb::PrefixRange(BALANCES_ROOT_BYTES));
+                opts
+            }) {
+                let (_, value) = item.map_err(ManyError::unknown)?; // TODO: Custom error
                 let amount = TokenAmount::from(value.value().to_vec());
                 num_unique_accounts += 1;
                 if !amount.is_zero() {
@@ -38,13 +39,12 @@ fn get_data_from_db(storage: &InnerStorage) -> Result<(u64, u64), ManyError> {
             }
         }
         InnerStorage::V2(storage) => {
-            let mut opts = merk_v2::rocksdb::ReadOptions::default();
-            opts.set_iterate_range(merk_v2::rocksdb::PrefixRange(BALANCES_ROOT_BYTES));
-
-            let iterator = storage.iter_opt(merk_v2::rocksdb::IteratorMode::Start, opts);
-            for item in iterator {
-                let (key, value) = item.map_err(ManyError::unknown)?; // TODO: Custom error
-                let value = merk_v2::tree::Tree::decode(key.to_vec(), value.as_ref());
+            for item in v2_forest(storage, merk_v2::rocksdb::IteratorMode::Start, {
+                let mut opts = merk_v2::rocksdb::ReadOptions::default();
+                opts.set_iterate_range(merk_v2::rocksdb::PrefixRange(BALANCES_ROOT_BYTES));
+                opts
+            }) {
+                let (_, value) = item.map_err(ManyError::unknown)?; // TODO: Custom error
                 let amount = TokenAmount::from(value.value().to_vec());
                 num_unique_accounts += 1;
                 if !amount.is_zero() {

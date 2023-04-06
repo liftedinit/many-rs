@@ -49,7 +49,6 @@ pub(super) fn key_for_subresource_counter(id: &Address, token_migration_active: 
 
 pub enum Merk {
     V1(merk_v1::Merk),
-    #[allow(dead_code)]
     V2(merk_v2::Merk),
 }
 
@@ -216,6 +215,42 @@ impl Merk {
             },
         }
     }
+}
+
+// Merk object storage is organized as a forest, or a collection of trees.
+// The different versions necessarily produce different iterator types,
+// which is why the following methods for generating them cannot be combined.
+
+pub(crate) fn v1_forest<'a>(
+    merk: &'a merk_v1::Merk,
+    iterator_mode: IteratorMode,
+    read_options: ReadOptions,
+) -> impl Iterator<Item = Result<(Vec<u8>, merk_v1::tree::Tree), merk_v1::rocksdb::Error>> + 'a {
+    merk.iter_opt(iterator_mode, read_options)
+        .map(|key_value_pair| {
+            key_value_pair.map(|(key, value)| {
+                (
+                    key.clone().into(),
+                    merk_v1::tree::Tree::decode(key.to_vec(), value.as_ref()),
+                )
+            })
+        })
+}
+
+pub(crate) fn v2_forest<'a>(
+    merk: &'a merk_v2::Merk,
+    iterator_mode: IteratorMode,
+    read_options: ReadOptions,
+) -> impl Iterator<Item = Result<(Vec<u8>, merk_v2::tree::Tree), merk_v2::rocksdb::Error>> + 'a {
+    merk.iter_opt(iterator_mode, read_options)
+        .map(|key_value_pair| {
+            key_value_pair.map(|(key, value)| {
+                (
+                    key.clone().into(),
+                    merk_v2::tree::Tree::decode(key.to_vec(), value.as_ref()),
+                )
+            })
+        })
 }
 
 pub type InnerStorage = Merk;
@@ -529,17 +564,18 @@ impl LedgerStorage {
     /// Get the subresource counter from the given DB key.
     /// Returns 0 if the key is not found in the DB
     fn get_subresource_counter(&self, id: &Address) -> Result<u32, ManyError> {
-        self.persistent_store
+        Ok(self
+            .persistent_store
             .get(&key_for_subresource_counter(
                 id,
                 self.migrations.is_active(&TOKEN_MIGRATION),
             ))
             .map_err(error::storage_get_failed)?
-            .map_or(Ok(0), |x| {
+            .map_or(0, |x| {
                 let mut bytes = [0u8; 4];
                 bytes.copy_from_slice(x.as_slice());
-                Ok(u32::from_be_bytes(bytes))
-            })
+                u32::from_be_bytes(bytes)
+            }))
     }
 
     pub fn block_hotfix<
