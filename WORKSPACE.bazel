@@ -206,13 +206,13 @@ container_pull(
 ### BATS SECTION ###
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
-BAZEL_BATS_COMMIT_ID = "e85b43efc90133d5cd4ca807a811e9aa4006fb49"
+BAZEL_BATS_COMMIT_ID = "8ebd7d11cac3316e429b55d414667f320fb5eda3"
 
 git_repository(
     name = "bazel_bats",
     commit = BAZEL_BATS_COMMIT_ID,
-    remote = "https://github.com/filmil/bazel-bats",
-    shallow_since = "1677540706 -0800",
+    remote = "https://github.com/fmorency/bazel-bats",
+    shallow_since = "1680722748 -0400",
 )
 
 load("@bazel_bats//:deps.bzl", "bazel_bats_dependencies")
