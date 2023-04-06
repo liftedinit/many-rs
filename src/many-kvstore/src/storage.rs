@@ -225,7 +225,7 @@ impl KvStoreStorage {
 
         AbciCommitInfo {
             retain_height,
-            hash: hash.into(),
+            hash,
         }
     }
 
