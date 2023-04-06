@@ -173,8 +173,6 @@ impl Application for AbciApp {
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
-        println!("SM - Request message before deliver tx:");
-        println!("{request:?}");
         let cose = match CoseSign1::from_slice(&request.tx) {
             Ok(x) => x,
             Err(err) => {
