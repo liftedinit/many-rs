@@ -235,7 +235,7 @@ impl<T, E> InnerMigration<T, E> {
     }
 
     /// This function gets executed when the storage block height == the migration block height
-    fn initialize<R: Fn() -> T>(
+    fn initialize<R: Fn() -> Result<T, E>>(
         &self,
         storage: &mut T,
         replacement: R,
@@ -243,7 +243,7 @@ impl<T, E> InnerMigration<T, E> {
     ) -> Result<(), E> {
         match (&self.r#type, replacement) {
             (MigrationType::Regular(migration), _) => (migration.initialize_fn)(storage, extra),
-            (MigrationType::Hash(migration), new_storage) => (migration.0)(storage, new_storage()),
+            (MigrationType::Hash(migration), new_storage) => (migration.0)(storage, new_storage()?),
             (MigrationType::Hotfix(_), _) | (MigrationType::Trigger(_), _) => Ok(()),
             (x, _) => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
@@ -352,7 +352,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     }
 
     /// Check the height and call the inner migration's methods.
-    pub fn maybe_initialize_update_at_height<R: Fn() -> T>(
+    pub fn maybe_initialize_update_at_height<R: Fn() -> Result<T, E>>(
         &mut self,
         storage: &mut T,
         replacement: R,
@@ -374,7 +374,7 @@ impl<'a, T, E> Migration<'a, T, E> {
     }
 
     #[inline]
-    pub fn initialize<R: Fn() -> T>(
+    pub fn initialize<R: Fn() -> Result<T, E>>(
         &self,
         storage: &mut T,
         replacement: R,
@@ -592,7 +592,7 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
     }
 
     #[inline]
-    pub fn update_at_height<R: Fn() -> T + Clone>(
+    pub fn update_at_height<R: Fn() -> Result<T, E> + Clone>(
         &mut self,
         storage: &mut T,
         replacement: R,

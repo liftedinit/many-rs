@@ -1,5 +1,6 @@
 use {
     crate::module::{KvStoreMetadata, KvStoreMetadataWrapper},
+    derive_more::{From, TryInto},
     many_error::{ManyError, ManyErrorCode},
     many_identity::Address,
     many_modules::abci_backend::AbciCommitInfo,
@@ -198,20 +199,29 @@ impl KvStoreStorage {
     }
 
     pub fn commit(&mut self) -> AbciCommitInfo {
-        let _ = self.inc_height();
-        self.persistent_store
-            .apply(&[(
+        #[derive(Debug, From, TryInto)]
+        enum Error {
+            Cbor(minicbor::encode::Error<core::convert::Infallible>),
+            Merk(merk_v2::Error),
+        }
+        let (retain_height, hash) = (|| -> Result<(u64, minicbor::bytes::ByteVec), Error> {
+            let _ = self.inc_height();
+            self.persistent_store.apply(&[(
                 b"/latest_event_id".to_vec(),
-                Op::Put(
-                    minicbor::to_vec(&self.latest_event_id).expect("Unable to encode event id"),
-                ),
-            )])
-            .unwrap();
-        self.persistent_store.commit(&[]).unwrap();
+                Op::Put(minicbor::to_vec(&self.latest_event_id)?),
+            )])?;
+            self.persistent_store.commit(&[])?;
 
-        let retain_height = 0;
-        let hash = self.persistent_store.root_hash().to_vec();
-        self.current_hash = Some(hash.clone());
+            let retain_height = 0;
+            let hash = self.persistent_store.root_hash().to_vec();
+            self.current_hash = Some(hash.clone());
+            Ok((retain_height, hash.into()))
+        })()
+        .unwrap();
+
+        // TODO: For KvStore, it seems like LedgerModuleImpl::commit needs a
+        // return type of Result<(u64, ByteVec), Error>, as shown in the
+        // aforementioned closure.
 
         AbciCommitInfo {
             retain_height,
