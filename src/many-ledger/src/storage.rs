@@ -269,6 +269,7 @@ pub struct LedgerStorage {
     current_hash: Option<Vec<u8>>,
 
     migrations: LedgerMigrations,
+    #[allow(dead_code)]
     path: PathBuf,
 }
 
