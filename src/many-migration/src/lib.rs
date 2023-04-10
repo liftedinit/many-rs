@@ -4,9 +4,10 @@ use {
     serde::{Deserialize, Serialize},
     serde_json::Value,
     std::collections::{BTreeMap, HashMap},
-    std::fmt,
-    std::fmt::Formatter,
-    std::ops::Index,
+    std::{
+        fmt::{self, Formatter},
+        ops::Index,
+    },
     strum::Display,
     tracing::trace,
 };
