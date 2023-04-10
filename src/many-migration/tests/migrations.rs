@@ -110,13 +110,23 @@ fn initialize() {
 
     // Should not run when block height == 0
     migrations["A"]
-        .initialize(&mut storage, || Ok(BTreeMap::new()), 0)
+        .initialize(
+            &mut storage,
+            || Ok(BTreeMap::new()),
+            0,
+            [""].iter().collect::<std::path::PathBuf>(),
+        )
         .unwrap();
     assert!(storage.is_empty());
 
     // Migration should run when block height == 1
     migrations["A"]
-        .initialize(&mut storage, || Ok(BTreeMap::new()), 1)
+        .initialize(
+            &mut storage,
+            || Ok(BTreeMap::new()),
+            1,
+            [""].iter().collect::<std::path::PathBuf>(),
+        )
         .unwrap();
     assert!(!storage.is_empty());
     assert_eq!(storage.len(), 1);
@@ -125,7 +135,12 @@ fn initialize() {
 
     // Should not do anything after it ran once
     migrations["A"]
-        .initialize(&mut storage, || Ok(BTreeMap::new()), 2)
+        .initialize(
+            &mut storage,
+            || Ok(BTreeMap::new()),
+            2,
+            [""].iter().collect::<std::path::PathBuf>(),
+        )
         .unwrap();
     assert_eq!(storage.len(), 1);
 }
@@ -148,7 +163,12 @@ fn initialize_extra() {
     let mut storage = Storage::new();
 
     migrations["E"]
-        .initialize(&mut storage, || Ok(BTreeMap::new()), 2)
+        .initialize(
+            &mut storage,
+            || Ok(BTreeMap::new()),
+            2,
+            [""].iter().collect::<std::path::PathBuf>(),
+        )
         .unwrap();
     assert_eq!(storage[&StorageKey::Init], 42);
 }
@@ -213,7 +233,12 @@ fn initialize_update() {
 
     for i in 0..4 {
         migrations["C"]
-            .initialize(&mut storage, || Ok(BTreeMap::new()), i)
+            .initialize(
+                &mut storage,
+                || Ok(BTreeMap::new()),
+                i,
+                [""].iter().collect::<std::path::PathBuf>(),
+            )
             .unwrap();
         match i {
             0 => assert_eq!(storage.len(), 1),
@@ -386,7 +411,7 @@ fn basic() {
             &mut storage,
             || Ok(BTreeMap::new()),
             1,
-            [].iter().collect::<std::path::PathBuf>(),
+            [""].iter().collect::<std::path::PathBuf>(),
         )
         .unwrap();
     assert_eq!(migration_set.values().count(), 3);
@@ -398,7 +423,7 @@ fn basic() {
             &mut storage,
             || Ok(BTreeMap::new()),
             2,
-            [].iter().collect::<std::path::PathBuf>(),
+            [""].iter().collect::<std::path::PathBuf>(),
         )
         .unwrap();
     assert_eq!(migration_set.values().count(), 3);
@@ -410,7 +435,7 @@ fn basic() {
             &mut storage,
             || Ok(BTreeMap::new()),
             3,
-            [].iter().collect::<std::path::PathBuf>(),
+            [""].iter().collect::<std::path::PathBuf>(),
         )
         .unwrap();
     assert_eq!(migration_set.values().count(), 3);
