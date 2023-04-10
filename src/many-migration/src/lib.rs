@@ -16,7 +16,7 @@ use {
 // The `metadata.extra` field can be used to provide custom parameters to migrations.
 pub type FnPtr<T, E> = fn(&mut T, &HashMap<String, Value>) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
-pub type FnHashPtr<T, E> = fn(&mut T, T) -> Result<(), E>;
+pub type FnHashPtr<T, E> = fn(&mut T, T, std::path::PathBuf) -> Result<(), E>;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Metadata {
@@ -241,10 +241,13 @@ impl<T, E> InnerMigration<T, E> {
         storage: &mut T,
         replacement: R,
         extra: &HashMap<String, Value>,
+        path: std::path::PathBuf,
     ) -> Result<(), E> {
         match (&self.r#type, replacement) {
             (MigrationType::Regular(migration), _) => (migration.initialize_fn)(storage, extra),
-            (MigrationType::Hash(migration), new_storage) => (migration.0)(storage, new_storage()?),
+            (MigrationType::Hash(migration), new_storage) => {
+                (migration.0)(storage, new_storage()?, path)
+            }
             (MigrationType::Hotfix(_), _) | (MigrationType::Trigger(_), _) => Ok(()),
             (x, _) => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
@@ -358,12 +361,13 @@ impl<'a, T, E> Migration<'a, T, E> {
         storage: &mut T,
         replacement: R,
         block_height: u64,
+        path: std::path::PathBuf,
     ) -> Result<(), E> {
         if self.is_enabled() {
             match self.activate_at_height(block_height) {
                 Activated::Initialize => {
                     self.migration
-                        .initialize(storage, replacement, &self.metadata.extra)?
+                        .initialize(storage, replacement, &self.metadata.extra, path)?
                 }
                 Activated::Update => self.migration.update(storage, &self.metadata.extra)?,
                 Activated::None => {}
@@ -380,10 +384,11 @@ impl<'a, T, E> Migration<'a, T, E> {
         storage: &mut T,
         replacement: R,
         block_height: u64,
+        path: std::path::PathBuf,
     ) -> Result<(), E> {
         if self.is_enabled() && block_height == self.metadata.block_height {
             self.migration
-                .initialize(storage, replacement, &self.metadata.extra)?;
+                .initialize(storage, replacement, &self.metadata.extra, path)?;
         }
         Ok(())
     }
@@ -598,12 +603,14 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
         storage: &mut T,
         replacement: R,
         block_height: u64,
+        path: std::path::PathBuf,
     ) -> Result<(), E> {
         for migration in self.inner.values_mut() {
             migration.maybe_initialize_update_at_height(
                 storage,
                 replacement.clone(),
                 block_height,
+                path.clone(),
             )?;
 
             trace!(

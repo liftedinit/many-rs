@@ -1,7 +1,7 @@
 use {
     crate::{
         migration::{InnerMigration, MIGRATIONS},
-        storage::{v1_forest, InnerStorage, Operation},
+        storage::{v1_forest, v2_forest, InnerStorage, Operation},
     },
     linkme::distributed_slice,
     many_error::ManyError,
@@ -9,7 +9,11 @@ use {
     merk_v2::Op,
 };
 
-fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Result<(), ManyError> {
+fn initialize(
+    storage: &mut InnerStorage,
+    mut replacement: InnerStorage,
+    path: std::path::PathBuf,
+) -> Result<(), ManyError> {
     match storage {
         InnerStorage::V1(merk) => {
             replacement
@@ -26,7 +30,29 @@ fn initialize(storage: &mut InnerStorage, mut replacement: InnerStorage) -> Resu
                 )
                 .map_err(ManyError::unknown)?;
             replacement.commit(&[]).map_err(ManyError::unknown)?;
-            *storage = replacement;
+            drop(merk);
+            let mut destination =
+                InnerStorage::open_v2(path.clone()).map_err(ManyError::unknown)?;
+            match replacement {
+                InnerStorage::V1(_) => (),
+                InnerStorage::V2(ref merk) => {
+                    destination
+                        .apply(
+                            v2_forest(&merk, IteratorMode::Start, Default::default())
+                                .map(|key_value_pair| {
+                                    key_value_pair.map(|(key, value)| {
+                                        (key, Operation::from(Op::Put(value.value().to_vec())))
+                                    })
+                                })
+                                .collect::<Result<Vec<_>, _>>()
+                                .map_err(ManyError::unknown)?
+                                .as_slice(),
+                        )
+                        .map_err(ManyError::unknown)?;
+                    destination.commit(&[]).map_err(ManyError::unknown)?;
+                }
+            }
+            *storage = destination;
         }
         InnerStorage::V2(_) => (),
     }

@@ -382,21 +382,36 @@ fn basic() {
     storage.insert(StorageKey::Counter, 0);
 
     migration_set
-        .update_at_height(&mut storage, || Ok(BTreeMap::new()), 1)
+        .update_at_height(
+            &mut storage,
+            || Ok(BTreeMap::new()),
+            1,
+            [].iter().collect::<std::path::PathBuf>(),
+        )
         .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 1);
 
     migration_set
-        .update_at_height(&mut storage, || Ok(BTreeMap::new()), 2)
+        .update_at_height(
+            &mut storage,
+            || Ok(BTreeMap::new()),
+            2,
+            [].iter().collect::<std::path::PathBuf>(),
+        )
         .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);
 
     migration_set
-        .update_at_height(&mut storage, || Ok(BTreeMap::new()), 3)
+        .update_at_height(
+            &mut storage,
+            || Ok(BTreeMap::new()),
+            3,
+            [].iter().collect::<std::path::PathBuf>(),
+        )
         .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);

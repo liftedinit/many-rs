@@ -2692,6 +2692,7 @@ dependencies = [
  "cucumber",
  "derive_more",
  "fixed",
+ "futures-util",
  "hex",
  "itertools",
  "json5",
