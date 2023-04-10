@@ -30,32 +30,37 @@ fn initialize(
                 )
                 .map_err(ManyError::unknown)?;
             replacement.commit(&[]).map_err(ManyError::unknown)?;
-            drop(merk);
-            let mut destination =
-                InnerStorage::open_v2(path.clone()).map_err(ManyError::unknown)?;
-            match replacement {
-                InnerStorage::V1(_) => (),
-                InnerStorage::V2(ref merk) => {
-                    destination
-                        .apply(
-                            v2_forest(&merk, IteratorMode::Start, Default::default())
-                                .map(|key_value_pair| {
-                                    key_value_pair.map(|(key, value)| {
-                                        (key, Operation::from(Op::Put(value.value().to_vec())))
-                                    })
-                                })
-                                .collect::<Result<Vec<_>, _>>()
-                                .map_err(ManyError::unknown)?
-                                .as_slice(),
-                        )
-                        .map_err(ManyError::unknown)?;
-                    destination.commit(&[]).map_err(ManyError::unknown)?;
-                }
-            }
-            *storage = destination;
+            core::mem::replace(
+                merk,
+                merk_v1::Merk::open([""].iter().collect::<std::path::PathBuf>())
+                    .map_err(ManyError::unknown)?,
+            )
+            .destroy()
+            .map_err(ManyError::unknown)?
         }
         InnerStorage::V2(_) => (),
     }
+    let mut destination = InnerStorage::open_v2(path).map_err(ManyError::unknown)?;
+    match replacement {
+        InnerStorage::V1(_) => (),
+        InnerStorage::V2(ref merk) => {
+            destination
+                .apply(
+                    v2_forest(merk, IteratorMode::Start, Default::default())
+                        .map(|key_value_pair| {
+                            key_value_pair.map(|(key, value)| {
+                                (key, Operation::from(Op::Put(value.value().to_vec())))
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(ManyError::unknown)?
+                        .as_slice(),
+                )
+                .map_err(ManyError::unknown)?;
+            destination.commit(&[]).map_err(ManyError::unknown)?;
+        }
+    }
+    *storage = destination;
     Ok(())
 }
 
