@@ -1,9 +1,9 @@
 use {
     crate::error,
-    crate::migration::{hash::HASH_MIGRATION, tokens::TOKEN_MIGRATION},
-    crate::migration::{LedgerMigrations, MIGRATIONS},
-    crate::storage::account::ACCOUNT_SUBRESOURCE_ID_ROOT,
-    crate::storage::event::HEIGHT_EVENTID_SHIFT,
+    crate::migration::{
+        hash::HASH_MIGRATION, tokens::TOKEN_MIGRATION, LedgerMigrations, MIGRATIONS,
+    },
+    crate::storage::{account::ACCOUNT_SUBRESOURCE_ID_ROOT, event::HEIGHT_EVENTID_SHIFT},
     derive_more::{From, TryInto},
     many_error::{ManyError, ManyErrorCode},
     many_identity::{Address, MAX_SUBRESOURCE_ID},
@@ -269,6 +269,7 @@ pub struct LedgerStorage {
     current_hash: Option<Vec<u8>>,
 
     migrations: LedgerMigrations,
+    #[allow(dead_code)]
     path: PathBuf,
 }
 

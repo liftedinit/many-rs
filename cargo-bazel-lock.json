@@ -1,5 +1,5 @@
 {
-  "checksum": "72a6706015ebf7fa014cc3750a6be0221dee8d3e98ecea4e99d0755fda657ca3",
+  "checksum": "8dca8e1257ed166b064b2972991d9df041537bd96b2a2f7014b7eba23ca0bc19",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -13246,6 +13246,10 @@
             {
               "id": "fixed 1.23.1",
               "target": "fixed"
+            },
+            {
+              "id": "futures-util 0.3.28",
+              "target": "futures_util"
             },
             {
               "id": "hex 0.4.3",

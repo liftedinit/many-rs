@@ -161,7 +161,12 @@ impl Application for AbciApp {
             if let Ok(mut m) = self.migrations.write() {
                 // Since it's impossible to truly handle error here, and
                 // we don't actually want to panic, just ignore any errors.
-                let _ = m.update_at_height(&mut (), || Ok(()), height);
+                let _ = m.update_at_height(
+                    &mut (),
+                    || Ok(()),
+                    height,
+                    [""].iter().collect::<std::path::PathBuf>(),
+                );
             } else {
                 error!("Migration: Could not acquire migration lock...");
             }

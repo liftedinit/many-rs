@@ -31,6 +31,7 @@ impl LedgerStorage {
                         .map_err(ManyError::unknown)
                 },
                 height + 1,
+                self.path.clone(),
             )?;
 
             self.commit_storage()?;
