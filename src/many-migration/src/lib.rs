@@ -537,7 +537,7 @@ impl<'a, T, E: fmt::Debug> fmt::Debug for MigrationSet<'a, T, E> {
     }
 }
 
-impl<'a, T, E> MigrationSet<'a, T, E> {
+impl<'a, T, E: core::fmt::Debug> MigrationSet<'a, T, E> {
     pub fn empty() -> Result<Self, String> {
         Ok(Self {
             inner: Default::default(),
@@ -606,12 +606,14 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
         path: std::path::PathBuf,
     ) -> Result<(), E> {
         for migration in self.inner.values_mut() {
-            migration.maybe_initialize_update_at_height(
-                storage,
-                replacement.clone(),
-                block_height,
-                path.clone(),
-            )?;
+            migration
+                .maybe_initialize_update_at_height(
+                    storage,
+                    replacement.clone(),
+                    block_height,
+                    path.clone(),
+                )
+                .unwrap();
 
             trace!(
                 "Migration {} updated at height {block_height}: active? {}",

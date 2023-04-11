@@ -16,28 +16,30 @@ impl LedgerStorage {
             // errors.
             let _ = self.check_timed_out_multisig_transactions();
 
-            let height = self.inc_height().unwrap();
+            let height = self.inc_height()?;
             let retain_height = 0;
 
             // Committing before the migration so that the migration has
             // the actual state of the database when setting its
             // attributes.
-            self.commit_storage().unwrap();
+            self.commit_storage()?;
 
             // Initialize/update migrations at current height, if any
             self.migrations
                 .update_at_height(
                     &mut self.persistent_store,
                     || {
-                        InnerStorage::open_v2(["/tmp", "v2_storage"].iter().collect::<PathBuf>())
-                            .map_err(ManyError::unknown)
+                        Ok(InnerStorage::open_v2(
+                            ["/tmp", "v2_storage"].iter().collect::<PathBuf>(),
+                        )
+                        .unwrap()) //.map_err(ManyError::unknown)
                     },
                     height + 1,
                     self.path.clone(),
                 )
                 .unwrap();
 
-            self.commit_storage().unwrap();
+            self.commit_storage()?;
 
             let hash = self.persistent_store.root_hash().to_vec();
             self.current_hash = Some(hash.clone());
