@@ -387,9 +387,23 @@ impl<'a, T, E: core::fmt::Debug> Migration<'a, T, E> {
         path: std::path::PathBuf,
     ) -> Result<(), E> {
         if self.is_enabled() && block_height == self.metadata.block_height {
-            self.migration
-                .initialize(storage, replacement, &self.metadata.extra, path)
-                .unwrap();
+            //self.migration
+            //    .initialize(storage, replacement, &self.metadata.extra, path)
+            //    .unwrap();
+            match (&self.migration.r#type, replacement) {
+                (MigrationType::Regular(migration), _) => {
+                    (migration.initialize_fn)(storage, &self.metadata.extra)
+                }
+                (MigrationType::Hash(migration), new_storage) => {
+                    (migration.0)(storage, new_storage().unwrap(), path)
+                }
+                (MigrationType::Hotfix(_), _) | (MigrationType::Trigger(_), _) => Ok(()),
+                (x, _) => {
+                    trace!("Migration {} has unknown type {}", self.migration.name(), x);
+                    Ok(())
+                }
+            }
+            .unwrap()
         }
         Ok(())
     }
