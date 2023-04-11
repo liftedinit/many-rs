@@ -126,13 +126,13 @@ impl<T, E> fmt::Display for InnerMigration<T, E> {
     }
 }
 
-impl<T, E> AsRef<str> for InnerMigration<T, E> {
+impl<T, E: core::fmt::Debug> AsRef<str> for InnerMigration<T, E> {
     fn as_ref(&self) -> &str {
         self.name()
     }
 }
 
-impl<T, E> InnerMigration<T, E> {
+impl<T, E: core::fmt::Debug> InnerMigration<T, E> {
     pub const fn new_hotfix(
         hotfix_fn: FnByte,
         name: &'static str,
@@ -246,7 +246,7 @@ impl<T, E> InnerMigration<T, E> {
         match (&self.r#type, replacement) {
             (MigrationType::Regular(migration), _) => (migration.initialize_fn)(storage, extra),
             (MigrationType::Hash(migration), new_storage) => {
-                (migration.0)(storage, new_storage()?, path)
+                (migration.0)(storage, new_storage().unwrap(), path)
             }
             (MigrationType::Hotfix(_), _) | (MigrationType::Trigger(_), _) => Ok(()),
             (x, _) => {
@@ -313,7 +313,7 @@ impl<'a, T, E> fmt::Debug for Migration<'a, T, E> {
     }
 }
 
-impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
+impl<'a, T, E: core::fmt::Debug> fmt::Display for Migration<'a, T, E> {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         formatter.write_fmt(format_args!(
             "{}, Metadata: \"{:?}\", Status: \"{}\"",
@@ -324,7 +324,7 @@ impl<'a, T, E> fmt::Display for Migration<'a, T, E> {
     }
 }
 
-impl<'a, T, E> Migration<'a, T, E> {
+impl<'a, T, E: core::fmt::Debug> Migration<'a, T, E> {
     pub fn new(migration: &'a InnerMigration<T, E>, metadata: Metadata) -> Self {
         let enabled = !metadata.disabled;
         Self {
@@ -365,10 +365,10 @@ impl<'a, T, E> Migration<'a, T, E> {
     ) -> Result<(), E> {
         if self.is_enabled() {
             match self.activate_at_height(block_height) {
-                Activated::Initialize => {
-                    self.migration
-                        .initialize(storage, replacement, &self.metadata.extra, path)?
-                }
+                Activated::Initialize => self
+                    .migration
+                    .initialize(storage, replacement, &self.metadata.extra, path)
+                    .unwrap(),
                 Activated::Update => self.migration.update(storage, &self.metadata.extra)?,
                 Activated::None => {}
             }
