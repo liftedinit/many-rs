@@ -9,6 +9,7 @@ use {
 };
 
 impl LedgerStorage {
+    #[allow(clippy::redundant_closure_call)]
     pub fn commit(&mut self) -> AbciCommitInfo {
         let (retain_height, hash) = (|| -> Result<(u64, ByteVec), ManyError> {
             // First check if there's any need to clean up multisig transactions. Ignore
