@@ -25,22 +25,26 @@ fn initialize(
                             })
                         })
                         .collect::<Result<Vec<_>, _>>()
-                        .map_err(ManyError::unknown)?
+                        //.map_err(ManyError::unknown)?
+                        .unwrap()
                         .as_slice(),
                 )
-                .map_err(ManyError::unknown)?;
-            replacement.commit(&[]).map_err(ManyError::unknown)?;
+                //.map_err(ManyError::unknown)?;
+                .unwrap();
+            replacement.commit(&[]).unwrap(); //.map_err(ManyError::unknown)?;
             core::mem::replace(
                 merk,
                 merk_v1::Merk::open([""].iter().collect::<std::path::PathBuf>())
-                    .map_err(ManyError::unknown)?,
+                    //.map_err(ManyError::unknown)?,
+                    .unwrap(),
             )
             .destroy()
-            .map_err(ManyError::unknown)?
+            //.map_err(ManyError::unknown)?
+            .unwrap()
         }
         InnerStorage::V2(_) => (),
     }
-    let mut destination = InnerStorage::open_v2(path).map_err(ManyError::unknown)?;
+    let mut destination = InnerStorage::open_v2(path).unwrap(); //.map_err(ManyError::unknown)?;
     match replacement {
         InnerStorage::V1(_) => (),
         InnerStorage::V2(ref merk) => {
@@ -53,11 +57,13 @@ fn initialize(
                             })
                         })
                         .collect::<Result<Vec<_>, _>>()
-                        .map_err(ManyError::unknown)?
+                        //.map_err(ManyError::unknown)?
+                        .unwrap()
                         .as_slice(),
                 )
-                .map_err(ManyError::unknown)?;
-            destination.commit(&[]).map_err(ManyError::unknown)?;
+                //.map_err(ManyError::unknown)?;
+                .unwrap();
+            destination.commit(&[]).unwrap(); //.map_err(ManyError::unknown)?;
         }
     }
     *storage = destination;
