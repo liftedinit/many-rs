@@ -59,7 +59,7 @@ impl Metadata {
 
 #[derive(Copy, Clone, Display)]
 #[non_exhaustive]
-pub enum MigrationType<T, E> {
+pub enum MigrationType<T, E: core::fmt::Debug> {
     Regular(RegularMigration<T, E>),
     Hash(HashMigration<T, E>),
     Hotfix(HotfixMigration),
@@ -69,14 +69,14 @@ pub enum MigrationType<T, E> {
     _Unreachable,
 }
 
-impl<T, E> fmt::Debug for MigrationType<T, E> {
+impl<T, E: core::fmt::Debug> fmt::Debug for MigrationType<T, E> {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         formatter.write_str(&format!("{self}"))
     }
 }
 
 #[derive(Copy, Clone)]
-pub struct RegularMigration<T, E> {
+pub struct RegularMigration<T, E: core::fmt::Debug> {
     initialize_fn: FnPtr<T, E>,
     update_fn: FnPtr<T, E>,
 }
@@ -99,7 +99,7 @@ pub struct TriggerMigration {
 pub struct HashMigration<T, E>(FnHashPtr<T, E>);
 
 #[derive(Copy, Clone)]
-pub struct InnerMigration<T, E> {
+pub struct InnerMigration<T, E: core::fmt::Debug> {
     r#type: MigrationType<T, E>,
     name: &'static str,
     description: &'static str,
@@ -107,7 +107,7 @@ pub struct InnerMigration<T, E> {
 
 // The Debug derive requires that _all_ parametric types also implement Debug,
 // even if the sub-types don't. So we have to implement our own version.
-impl<T, E> fmt::Debug for InnerMigration<T, E> {
+impl<T, E: core::fmt::Debug> fmt::Debug for InnerMigration<T, E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("InnerMigration")
             .field("type", &self.r#type)
@@ -117,7 +117,7 @@ impl<T, E> fmt::Debug for InnerMigration<T, E> {
     }
 }
 
-impl<T, E> fmt::Display for InnerMigration<T, E> {
+impl<T, E: core::fmt::Debug> fmt::Display for InnerMigration<T, E> {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         formatter.write_fmt(format_args!(
             "Type: \"{}\", Name: \"{}\", Description: \"{}\"",
@@ -287,7 +287,7 @@ pub enum Activated {
     None,
 }
 
-pub struct Migration<'a, T, E> {
+pub struct Migration<'a, T, E: core::fmt::Debug> {
     migration: &'a InnerMigration<T, E>,
 
     /// The metadata used during creation of this migration.
@@ -302,7 +302,7 @@ pub struct Migration<'a, T, E> {
 
 // The Debug derive requires that _all_ parametric types also implement Debug,
 // even if the sub-types don't. So we have to implement our own version.
-impl<'a, T, E> fmt::Debug for Migration<'a, T, E> {
+impl<'a, T, E: core::fmt::Debug> fmt::Debug for Migration<'a, T, E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Migration")
             .field("migration", &self.migration)
@@ -473,7 +473,7 @@ pub struct SingleMigrationConfig {
     metadata: Metadata,
 }
 
-impl<T, E> From<(&InnerMigration<T, E>, Metadata)> for SingleMigrationConfig {
+impl<T, E: core::fmt::Debug> From<(&InnerMigration<T, E>, Metadata)> for SingleMigrationConfig {
     fn from((migration, metadata): (&InnerMigration<T, E>, Metadata)) -> Self {
         Self {
             name: migration.name.to_string(),
@@ -499,11 +499,11 @@ impl MigrationConfig {
         self
     }
 
-    pub fn with_migration<T, E>(self, migration: &InnerMigration<T, E>) -> Self {
+    pub fn with_migration<T, E: core::fmt::Debug>(self, migration: &InnerMigration<T, E>) -> Self {
         self.with_migration_opts(migration, Metadata::default())
     }
 
-    pub fn with_migration_opts<T, E>(
+    pub fn with_migration_opts<T, E: core::fmt::Debug>(
         mut self,
         migration: &InnerMigration<T, E>,
         metadata: Metadata,
@@ -525,7 +525,7 @@ impl<T: IntoIterator<Item = impl Into<SingleMigrationConfig>>> From<T> for Migra
     }
 }
 
-pub struct MigrationSet<'a, T: 'a, E: 'a = many_error::ManyError> {
+pub struct MigrationSet<'a, T: 'a, E: 'a + core::fmt::Debug = many_error::ManyError> {
     inner: BTreeMap<String, Migration<'a, T, E>>,
 }
 
@@ -658,7 +658,7 @@ impl<'a, T, E: core::fmt::Debug> MigrationSet<'a, T, E> {
 /// Implement necessary BTreeMap<...> methods to have the same interface for
 /// existing code/tests.
 /// TODO: remove these and move to new Migration-specific APIs in tests.
-impl<'a, T, E> MigrationSet<'a, T, E> {
+impl<'a, T, E: core::fmt::Debug> MigrationSet<'a, T, E> {
     pub fn contains_key(&self, name: impl AsRef<str>) -> bool {
         self.inner.contains_key(name.as_ref())
     }
@@ -676,7 +676,7 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
     }
 }
 
-impl<'a, T, E, IDX: AsRef<str>> Index<IDX> for MigrationSet<'a, T, E> {
+impl<'a, T, E: core::fmt::Debug, IDX: AsRef<str>> Index<IDX> for MigrationSet<'a, T, E> {
     type Output = Migration<'a, T, E>;
 
     fn index(&self, index: IDX) -> &Self::Output {

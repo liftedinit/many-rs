@@ -77,7 +77,7 @@ static F: InnerMigration<Storage, String> =
 
 /// Enable all migrations from the registry EXCEPT the hotfix.
 /// Should not be used outside of tests.
-pub fn load_enable_all_regular_migrations<T, E>(
+pub fn load_enable_all_regular_migrations<T, E: core::fmt::Debug>(
     registry: &[InnerMigration<T, E>],
 ) -> MigrationSet<T, E> {
     // Keep a default of block height 1 for backward compatibility.
