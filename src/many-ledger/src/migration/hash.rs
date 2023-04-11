@@ -51,12 +51,9 @@ fn initialize(
             .map_err(ManyError::unknown)
             .and_then(|trees| destination.apply(trees.as_slice()).map_err(Into::into))
             .and_then(|_| {
-                destination
-                    .commit(&[])
-                    .map_err(ManyError::unknown)
-                    .map(|_| {
-                        *storage = destination;
-                    })
+                destination.commit(&[]).map_err(Into::into).map(|_| {
+                    *storage = destination;
+                })
             }),
     })
 }
