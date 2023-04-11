@@ -388,7 +388,8 @@ impl<'a, T, E: core::fmt::Debug> Migration<'a, T, E> {
     ) -> Result<(), E> {
         if self.is_enabled() && block_height == self.metadata.block_height {
             self.migration
-                .initialize(storage, replacement, &self.metadata.extra, path)?;
+                .initialize(storage, replacement, &self.metadata.extra, path)
+                .unwrap();
         }
         Ok(())
     }
