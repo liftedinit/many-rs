@@ -24,15 +24,17 @@ impl LedgerStorage {
             self.commit_storage().unwrap();
 
             // Initialize/update migrations at current height, if any
-            self.migrations.update_at_height(
-                &mut self.persistent_store,
-                || {
-                    InnerStorage::open_v2(["/tmp", "v2_storage"].iter().collect::<PathBuf>())
-                        .map_err(ManyError::unknown)
-                },
-                height + 1,
-                self.path.clone(),
-            )?;
+            self.migrations
+                .update_at_height(
+                    &mut self.persistent_store,
+                    || {
+                        InnerStorage::open_v2(["/tmp", "v2_storage"].iter().collect::<PathBuf>())
+                            .map_err(ManyError::unknown)
+                    },
+                    height + 1,
+                    self.path.clone(),
+                )
+                .unwrap();
 
             self.commit_storage().unwrap();
 
