@@ -34,7 +34,7 @@ fn initialize(
             replacement.commit(&[]).unwrap(); //.map_err(ManyError::unknown)?;
             core::mem::replace(
                 merk,
-                merk_v1::Merk::open([""].iter().collect::<std::path::PathBuf>())
+                merk_v1::Merk::open(["/tmp", "temp"].iter().collect::<std::path::PathBuf>())
                     //.map_err(ManyError::unknown)?,
                     .unwrap(),
             )
