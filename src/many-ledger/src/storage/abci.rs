@@ -15,13 +15,13 @@ impl LedgerStorage {
             // errors.
             let _ = self.check_timed_out_multisig_transactions();
 
-            let height = self.inc_height()?;
+            let height = self.inc_height().unwrap();
             let retain_height = 0;
 
             // Committing before the migration so that the migration has
             // the actual state of the database when setting its
             // attributes.
-            self.commit_storage()?;
+            self.commit_storage().unwrap();
 
             // Initialize/update migrations at current height, if any
             self.migrations.update_at_height(
@@ -34,7 +34,7 @@ impl LedgerStorage {
                 self.path.clone(),
             )?;
 
-            self.commit_storage()?;
+            self.commit_storage().unwrap();
 
             let hash = self.persistent_store.root_hash().to_vec();
             self.current_hash = Some(hash.clone());
