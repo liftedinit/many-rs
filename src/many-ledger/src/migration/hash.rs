@@ -53,7 +53,7 @@ fn initialize<P: AsRef<Path>>(storage: &mut InnerStorage, path: P) -> Result<(),
         }
     }
     .and_then(|replacement| {
-        InnerStorage::open_v2(path.as_ref().to_path_buf())
+        InnerStorage::open_v2(path.as_ref())
             .map_err(ManyError::unknown)
             .map(|destination| (replacement, destination))
     })
