@@ -1,13 +1,16 @@
 #![cfg(feature = "migration_testing")]
 
-use crate::migration::MIGRATIONS;
-use crate::storage::InnerStorage;
-use linkme::distributed_slice;
-use many_error::ManyError;
-use many_migration::InnerMigration;
-use many_protocol::ResponseMessage;
-use many_types::Timestamp;
-use minicbor::{Decode, Encode};
+use {
+    crate::migration::MIGRATIONS,
+    crate::storage::InnerStorage,
+    linkme::distributed_slice,
+    many_error::ManyError,
+    many_migration::InnerMigration,
+    many_protocol::ResponseMessage,
+    many_types::Timestamp,
+    minicbor::{Decode, Encode},
+    std::path::PathBuf,
+};
 
 #[derive(Decode, Encode)]
 pub struct DummyHotfix<'a> {
@@ -50,5 +53,5 @@ fn dummy_hotfix(b: &[u8]) -> Option<Vec<u8>> {
 }
 
 #[distributed_slice(MIGRATIONS)]
-static DUMMY_HOTFIX: InnerMigration<InnerStorage, ManyError> =
+static DUMMY_HOTFIX: InnerMigration<InnerStorage, ManyError, PathBuf> =
     InnerMigration::new_hotfix(dummy_hotfix, "Dummy Hotfix", "For testing purpose only.");

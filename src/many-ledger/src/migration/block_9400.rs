@@ -1,13 +1,16 @@
 //! https://github.com/liftedinit/many-framework/issues/205
 
-use crate::migration::MIGRATIONS;
-use crate::storage::InnerStorage;
-use linkme::distributed_slice;
-use many_error::ManyError;
-use many_migration::InnerMigration;
-use many_protocol::ResponseMessage;
-use many_types::Timestamp;
-use minicbor::{Decode, Encode};
+use {
+    crate::migration::MIGRATIONS,
+    crate::storage::InnerStorage,
+    linkme::distributed_slice,
+    many_error::ManyError,
+    many_migration::InnerMigration,
+    many_protocol::ResponseMessage,
+    many_types::Timestamp,
+    minicbor::{Decode, Encode},
+    std::path::PathBuf,
+};
 
 #[derive(Decode, Encode)]
 pub struct Block9400Tx<'a> {
@@ -50,7 +53,7 @@ fn block_9400(b: &[u8]) -> Option<Vec<u8>> {
 }
 
 #[distributed_slice(MIGRATIONS)]
-static B9400: InnerMigration<InnerStorage, ManyError> = InnerMigration::new_hotfix(
+static B9400: InnerMigration<InnerStorage, ManyError, PathBuf> = InnerMigration::new_hotfix(
     block_9400,
     "Block 9400",
     r#"Fix Block 9400 timestamp. Lifted Initiative Ledger network.

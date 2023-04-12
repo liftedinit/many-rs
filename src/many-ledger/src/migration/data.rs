@@ -10,7 +10,10 @@ use {
     many_modules::data::{DataIndex, DataInfo, DataValue},
     many_types::ledger::TokenAmount,
     serde_json::Value,
-    std::collections::{BTreeMap, HashMap},
+    std::{
+        collections::{BTreeMap, HashMap},
+        path::PathBuf,
+    },
 };
 
 pub static ACCOUNT_TOTAL_COUNT_INDEX: DataIndex = DataIndex::new(0).with_index(2).with_index(0);
@@ -147,7 +150,7 @@ fn initialize(storage: &mut InnerStorage, _: &HashMap<String, Value>) -> Result<
 }
 
 #[distributed_slice(MIGRATIONS)]
-pub static ACCOUNT_COUNT_DATA_ATTRIBUTE: InnerMigration<InnerStorage, ManyError> =
+pub static ACCOUNT_COUNT_DATA_ATTRIBUTE: InnerMigration<InnerStorage, ManyError, PathBuf> =
     InnerMigration::new_initialize(
         initialize,
         "Account Count Data Attribute",

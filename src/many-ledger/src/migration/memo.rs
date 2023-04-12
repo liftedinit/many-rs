@@ -13,6 +13,7 @@ use {
     serde_json::Value,
     std::borrow::BorrowMut,
     std::collections::HashMap,
+    std::path::PathBuf,
 };
 
 fn iter_through_events(
@@ -185,8 +186,9 @@ fn initialize(storage: &mut InnerStorage, _: &HashMap<String, Value>) -> Result<
 }
 
 #[distributed_slice(MIGRATIONS)]
-pub static MEMO_MIGRATION: InnerMigration<InnerStorage, ManyError> = InnerMigration::new_initialize(
-    initialize,
-    "Memo Migration",
-    "Move the database from legacy memo and data to the new memo data type.",
-);
+pub static MEMO_MIGRATION: InnerMigration<InnerStorage, ManyError, PathBuf> =
+    InnerMigration::new_initialize(
+        initialize,
+        "Memo Migration",
+        "Move the database from legacy memo and data to the new memo data type.",
+    );

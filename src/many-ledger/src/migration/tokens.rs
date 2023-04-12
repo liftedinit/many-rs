@@ -15,6 +15,7 @@ use {
     many_types::ledger::{Symbol, TokenInfo, TokenInfoSummary, TokenInfoSupply},
     serde_json::Value,
     std::collections::{BTreeMap, HashMap},
+    std::path::PathBuf,
     std::str::FromStr,
 };
 
@@ -200,7 +201,7 @@ fn initialize(storage: &mut InnerStorage, extra: &HashMap<String, Value>) -> Res
 }
 
 #[distributed_slice(MIGRATIONS)]
-pub static TOKEN_MIGRATION: InnerMigration<InnerStorage, ManyError> =
+pub static TOKEN_MIGRATION: InnerMigration<InnerStorage, ManyError, PathBuf> =
     InnerMigration::new_initialize(
         initialize,
         "Token Migration",

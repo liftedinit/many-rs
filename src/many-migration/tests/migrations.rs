@@ -19,7 +19,7 @@ enum StorageKey {
 }
 
 #[distributed_slice]
-static SOME_MANY_RS_MIGRATIONS: [InnerMigration<Storage, String>] = [..];
+static SOME_MANY_RS_MIGRATIONS: [InnerMigration<Storage, String, PathBuf>] = [..];
 
 fn _initialize(s: &mut Storage, _: &HashMap<String, Value>) -> Result<(), String> {
     s.insert(StorageKey::Init, 1);
@@ -57,32 +57,34 @@ fn _hotfix(data: &[u8]) -> Option<Vec<u8>> {
 }
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static A: InnerMigration<Storage, String> =
+static A: InnerMigration<Storage, String, PathBuf> =
     InnerMigration::new_initialize(_initialize, "A", "A desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static B: InnerMigration<Storage, String> = InnerMigration::new_update(_update, "B", "B desc");
+static B: InnerMigration<Storage, String, PathBuf> =
+    InnerMigration::new_update(_update, "B", "B desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static C: InnerMigration<Storage, String> =
+static C: InnerMigration<Storage, String, PathBuf> =
     InnerMigration::new_initialize_update(_initialize, _update, "C", "C desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static D: InnerMigration<Storage, String> = InnerMigration::new_hotfix(_hotfix, "D", "D desc");
+static D: InnerMigration<Storage, String, PathBuf> =
+    InnerMigration::new_hotfix(_hotfix, "D", "D desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static E: InnerMigration<Storage, String> =
+static E: InnerMigration<Storage, String, PathBuf> =
     InnerMigration::new_initialize(_initialize_extra, "E", "E desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static F: InnerMigration<Storage, String> =
+static F: InnerMigration<Storage, String, PathBuf> =
     InnerMigration::new_update(_update_extra, "F", "F desc");
 
 /// Enable all migrations from the registry EXCEPT the hotfix.
 /// Should not be used outside of tests.
-pub fn load_enable_all_regular_migrations<T, E: core::fmt::Debug>(
-    registry: &[InnerMigration<T, E>],
-) -> MigrationSet<T, E> {
+pub fn load_enable_all_regular_migrations<T, E: core::fmt::Debug, P: Clone>(
+    registry: &[InnerMigration<T, E, P>],
+) -> MigrationSet<T, P, E> {
     // Keep a default of block height 1 for backward compatibility.
     let metadata = Metadata {
         block_height: 1,

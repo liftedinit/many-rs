@@ -8,10 +8,10 @@ use {
     many_error::ManyError,
     merk_v1::rocksdb::IteratorMode,
     merk_v2::Op,
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
 };
 
-fn initialize(storage: &mut InnerStorage, path: PathBuf) -> Result<(), ManyError> {
+fn initialize<P: AsRef<Path>>(storage: &mut InnerStorage, path: P) -> Result<(), ManyError> {
     match storage {
         InnerStorage::V1(merk) => v1_forest(merk, IteratorMode::Start, Default::default())
             .map(|key_value_pair| {
@@ -53,7 +53,7 @@ fn initialize(storage: &mut InnerStorage, path: PathBuf) -> Result<(), ManyError
         }
     }
     .and_then(|replacement| {
-        InnerStorage::open_v2(path)
+        InnerStorage::open_v2(path.as_ref().to_path_buf())
             .map_err(ManyError::unknown)
             .map(|destination| (replacement, destination))
     })
@@ -79,8 +79,9 @@ fn initialize(storage: &mut InnerStorage, path: PathBuf) -> Result<(), ManyError
 }
 
 #[distributed_slice(MIGRATIONS)]
-pub static HASH_MIGRATION: InnerMigration<InnerStorage, ManyError> = InnerMigration::new_hash(
-    initialize,
-    "Hash Migration",
-    "Move data from old version of merk hash scheme to new version of merk hash scheme",
-);
+pub static HASH_MIGRATION: InnerMigration<InnerStorage, ManyError, PathBuf> =
+    InnerMigration::new_hash(
+        initialize,
+        "Hash Migration",
+        "Move data from old version of merk hash scheme to new version of merk hash scheme",
+    );

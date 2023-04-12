@@ -33,6 +33,7 @@ use {
     proptest::prelude::*,
     std::{
         collections::{BTreeMap, BTreeSet},
+        path::PathBuf,
         str::FromStr,
     },
 };
@@ -68,7 +69,7 @@ pub fn default_token_create_args(
 }
 
 pub struct MigrationHarness {
-    inner: &'static InnerMigration<InnerStorage, ManyError>,
+    inner: &'static InnerMigration<InnerStorage, ManyError, PathBuf>,
     block_height: u64,
     enabled: bool,
 }
@@ -89,9 +90,17 @@ impl MigrationHarness {
     }
 }
 
-impl From<(u64, &'static InnerMigration<InnerStorage, ManyError>)> for MigrationHarness {
+impl
+    From<(
+        u64,
+        &'static InnerMigration<InnerStorage, ManyError, PathBuf>,
+    )> for MigrationHarness
+{
     fn from(
-        (block_height, inner): (u64, &'static InnerMigration<InnerStorage, ManyError>),
+        (block_height, inner): (
+            u64,
+            &'static InnerMigration<InnerStorage, ManyError, PathBuf>,
+        ),
     ) -> Self {
         MigrationHarness {
             inner,
@@ -101,11 +110,17 @@ impl From<(u64, &'static InnerMigration<InnerStorage, ManyError>)> for Migration
     }
 }
 
-impl From<(u64, &'static InnerMigration<InnerStorage, ManyError>, bool)> for MigrationHarness {
+impl
+    From<(
+        u64,
+        &'static InnerMigration<InnerStorage, ManyError, PathBuf>,
+        bool,
+    )> for MigrationHarness
+{
     fn from(
         (block_height, inner, enabled): (
             u64,
-            &'static InnerMigration<InnerStorage, ManyError>,
+            &'static InnerMigration<InnerStorage, ManyError, PathBuf>,
             bool,
         ),
     ) -> Self {
