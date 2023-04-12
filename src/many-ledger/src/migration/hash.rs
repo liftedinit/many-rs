@@ -11,7 +11,7 @@ use {
     std::path::PathBuf,
 };
 
-fn initialize(storage: &mut InnerStorage, _: InnerStorage, path: PathBuf) -> Result<(), ManyError> {
+fn initialize(storage: &mut InnerStorage, path: PathBuf) -> Result<(), ManyError> {
     match storage {
         InnerStorage::V1(merk) => v1_forest(merk, IteratorMode::Start, Default::default())
             .map(|key_value_pair| {

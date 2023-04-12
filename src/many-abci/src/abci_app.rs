@@ -8,7 +8,10 @@ use many_migration::MigrationConfig;
 use many_modules::abci_backend::{AbciBlock, AbciCommitInfo, AbciInfo};
 use many_protocol::ResponseMessage;
 use reqwest::{IntoUrl, Url};
-use std::sync::{Arc, RwLock};
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 use tendermint_abci::Application;
 use tendermint_proto::abci::*;
 use tracing::{debug, error};
@@ -161,12 +164,7 @@ impl Application for AbciApp {
             if let Ok(mut m) = self.migrations.write() {
                 // Since it's impossible to truly handle error here, and
                 // we don't actually want to panic, just ignore any errors.
-                let _ = m.update_at_height(
-                    &mut (),
-                    || Ok(()),
-                    height,
-                    [""].iter().collect::<std::path::PathBuf>(),
-                );
+                let _ = m.update_at_height(&mut (), height, [""].iter().collect::<PathBuf>());
             } else {
                 error!("Migration: Could not acquire migration lock...");
             }

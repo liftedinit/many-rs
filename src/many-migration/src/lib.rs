@@ -18,7 +18,7 @@ use {
 // The `metadata.extra` field can be used to provide custom parameters to migrations.
 pub type FnPtr<T, E> = fn(&mut T, &HashMap<String, Value>) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
-pub type FnHashPtr<T, E> = fn(&mut T, T, std::path::PathBuf) -> Result<(), E>;
+pub type FnHashPtr<T, E> = fn(&mut T, PathBuf) -> Result<(), E>;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Metadata {
@@ -238,20 +238,17 @@ impl<T, E: Debug> InnerMigration<T, E> {
     }
 
     /// This function gets executed when the storage block height == the migration block height
-    fn initialize<R: Fn() -> Result<T, E>>(
+    fn initialize(
         &self,
         storage: &mut T,
-        replacement: R,
         extra: &HashMap<String, Value>,
         path: PathBuf,
     ) -> Result<(), E> {
-        match (&self.r#type, replacement) {
-            (MigrationType::Regular(migration), _) => (migration.initialize_fn)(storage, extra),
-            (MigrationType::Hash(migration), new_storage) => {
-                (migration.0)(storage, new_storage()?, path)
-            }
-            (MigrationType::Hotfix(_), _) | (MigrationType::Trigger(_), _) => Ok(()),
-            (x, _) => {
+        match &self.r#type {
+            MigrationType::Regular(migration) => (migration.initialize_fn)(storage, extra),
+            MigrationType::Hash(migration) => (migration.0)(storage, path),
+            MigrationType::Hotfix(_) | MigrationType::Trigger(_) => Ok(()),
+            x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
                 Ok(())
             }
@@ -358,18 +355,17 @@ impl<'a, T, E: Debug> Migration<'a, T, E> {
     }
 
     /// Check the height and call the inner migration's methods.
-    pub fn maybe_initialize_update_at_height<R: Fn() -> Result<T, E>>(
+    pub fn maybe_initialize_update_at_height(
         &mut self,
         storage: &mut T,
-        replacement: R,
         block_height: u64,
-        path: std::path::PathBuf,
+        path: PathBuf,
     ) -> Result<(), E> {
         if self.is_enabled() {
             match self.activate_at_height(block_height) {
                 Activated::Initialize => {
                     self.migration
-                        .initialize(storage, replacement, &self.metadata.extra, path)?
+                        .initialize(storage, &self.metadata.extra, path)?
                 }
                 Activated::Update => self.migration.update(storage, &self.metadata.extra)?,
                 Activated::None => {}
@@ -381,16 +377,10 @@ impl<'a, T, E: Debug> Migration<'a, T, E> {
     }
 
     #[inline]
-    pub fn initialize<R: Fn() -> Result<T, E>>(
-        &self,
-        storage: &mut T,
-        replacement: R,
-        block_height: u64,
-        path: std::path::PathBuf,
-    ) -> Result<(), E> {
+    pub fn initialize(&self, storage: &mut T, block_height: u64, path: PathBuf) -> Result<(), E> {
         if self.is_enabled() && block_height == self.metadata.block_height {
             self.migration
-                .initialize(storage, replacement, &self.metadata.extra, path)?;
+                .initialize(storage, &self.metadata.extra, path)?;
         }
         Ok(())
     }
@@ -600,20 +590,14 @@ impl<'a, T, E: Debug> MigrationSet<'a, T, E> {
     }
 
     #[inline]
-    pub fn update_at_height<R: Fn() -> Result<T, E> + Clone>(
+    pub fn update_at_height(
         &mut self,
         storage: &mut T,
-        replacement: R,
         block_height: u64,
         path: PathBuf,
     ) -> Result<(), E> {
         for migration in self.inner.values_mut() {
-            migration.maybe_initialize_update_at_height(
-                storage,
-                replacement.clone(),
-                block_height,
-                path.clone(),
-            )?;
+            migration.maybe_initialize_update_at_height(storage, block_height, path.clone())?;
 
             trace!(
                 "Migration {} updated at height {block_height}: active? {}",

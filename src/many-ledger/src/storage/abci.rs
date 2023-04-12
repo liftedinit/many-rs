@@ -1,11 +1,9 @@
 use {
-    crate::storage::event::HEIGHT_EVENTID_SHIFT,
-    crate::storage::{InnerStorage, LedgerStorage},
+    crate::storage::{event::HEIGHT_EVENTID_SHIFT, LedgerStorage},
     many_error::ManyError,
     many_modules::abci_backend::AbciCommitInfo,
     many_modules::events::EventId,
     minicbor::bytes::ByteVec,
-    std::path::PathBuf,
 };
 
 impl LedgerStorage {
@@ -26,17 +24,7 @@ impl LedgerStorage {
 
             // Initialize/update migrations at current height, if any
             self.migrations
-                .update_at_height(
-                    &mut self.persistent_store,
-                    || {
-                        Ok(InnerStorage::open_v2(
-                            ["/tmp", "v2_storage"].iter().collect::<PathBuf>(),
-                        )
-                        .unwrap()) //.map_err(ManyError::unknown)
-                    },
-                    height + 1,
-                    self.path.clone(),
-                )
+                .update_at_height(&mut self.persistent_store, height + 1, self.path.clone())
                 .unwrap();
 
             self.commit_storage()?;
