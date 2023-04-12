@@ -8,13 +8,10 @@ use {
     many_error::ManyError,
     merk_v1::rocksdb::IteratorMode,
     merk_v2::Op,
+    std::path::PathBuf,
 };
 
-fn initialize(
-    storage: &mut InnerStorage,
-    mut replacement: InnerStorage,
-    path: std::path::PathBuf,
-) -> Result<(), ManyError> {
+fn initialize(storage: &mut InnerStorage, _: InnerStorage, path: PathBuf) -> Result<(), ManyError> {
     match storage {
         InnerStorage::V1(merk) => v1_forest(merk, IteratorMode::Start, Default::default())
             .map(|key_value_pair| {
@@ -23,21 +20,44 @@ fn initialize(
             })
             .collect::<Result<Vec<_>, _>>()
             .map_err(ManyError::unknown)
-            .and_then(|trees| replacement.apply(trees.as_slice()).map_err(Into::into))
-            .and_then(|_| replacement.commit(&[]).map_err(Into::into))
-            .and_then(|_| {
-                merk_v1::Merk::open(["/tmp", "temp"].iter().collect::<std::path::PathBuf>())
-                    .map_err(ManyError::unknown)
+            .and_then(|trees| {
+                InnerStorage::open_v2(["/tmp", "temp1"].iter().collect::<PathBuf>())
+                    .map(|replacement| (trees, replacement))
+                    .map_err(Into::into)
             })
-            .and_then(|new_storage| {
+            .and_then(|(trees, mut replacement)| {
+                replacement
+                    .apply(trees.as_slice())
+                    .map_err(Into::into)
+                    .map(|_| replacement)
+            })
+            .and_then(|mut replacement| {
+                replacement
+                    .commit(&[])
+                    .map_err(Into::into)
+                    .map(|_| replacement)
+            })
+            .and_then(|replacement| {
+                merk_v1::Merk::open(["/tmp", "temp2"].iter().collect::<PathBuf>())
+                    .map_err(ManyError::unknown)
+                    .map(|new_storage| (new_storage, replacement))
+            })
+            .and_then(|(new_storage, replacement)| {
                 replace(merk, new_storage)
                     .destroy()
                     .map_err(ManyError::unknown)
+                    .map(|_| replacement)
             }),
-        InnerStorage::V2(_) => Ok(()),
+        InnerStorage::V2(_) => {
+            InnerStorage::open_v2(["/tmp", "temp1"].iter().collect::<PathBuf>()).map_err(Into::into)
+        }
     }
-    .and_then(|_| InnerStorage::open_v2(path).map_err(ManyError::unknown))
-    .and_then(|mut destination| match replacement {
+    .and_then(|replacement| {
+        InnerStorage::open_v2(path)
+            .map_err(ManyError::unknown)
+            .map(|destination| (replacement, destination))
+    })
+    .and_then(|(replacement, mut destination)| match replacement {
         InnerStorage::V1(_) => {
             *storage = destination;
             Ok(())
