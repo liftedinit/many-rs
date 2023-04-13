@@ -12,7 +12,11 @@ impl LedgerStorage {
         //       It is currently NOT possible to run new code in non-blockchain mode when loading an existing DB
         self.migrations = migration_config
             .map_or_else(MigrationSet::empty, |config| {
-                LedgerMigrations::load(&MIGRATIONS, config, self.get_height()?)
+                LedgerMigrations::load(
+                    &MIGRATIONS,
+                    config,
+                    self.get_height().map_err(|e| e.to_string())?,
+                )
             })
             .map_err(ManyError::unknown)?; // TODO: Custom error
 
