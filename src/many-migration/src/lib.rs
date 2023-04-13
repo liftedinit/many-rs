@@ -555,6 +555,8 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
             let _ = v.activate_at_height(height);
         }
 
+        tracing::info!("h = {}, inner = {:?}", height, inner);
+
         Ok(Self { inner })
     }
 
