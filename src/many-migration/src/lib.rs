@@ -326,6 +326,18 @@ impl<'a, T, E> Migration<'a, T, E> {
         }
     }
 
+    /// Activate this migration, during initialization. This does not initialize
+    /// or call any side effects.
+    fn set_active_at_height(&mut self, height: u64) {
+        if self.migration.is_trigger() {
+            self.active = (self.metadata.block_height
+                ..self.metadata.upper_block_height.unwrap_or(u64::MAX))
+                .contains(&height);
+        } else if height >= self.metadata.block_height {
+            self.active = true;
+        }
+    }
+
     /// Check the height and call the inner migration's methods.
     pub fn maybe_initialize_update_at_height(
         &mut self,
@@ -552,7 +564,7 @@ impl<'a, T, E> MigrationSet<'a, T, E> {
 
         // Activate all already active migrations. Do not call initialize though.
         for v in inner.values_mut().filter(|m| m.is_enabled()) {
-            let _ = v.activate_at_height(height);
+            v.set_active_at_height(height);
         }
 
         tracing::info!("h = {}, inner = {:?}", height, inner);
