@@ -438,6 +438,40 @@ fn migration_config() {
 }
 
 #[test]
+fn migration_config_at_height() {
+    let config = MigrationConfig::default()
+        .with_migration_opts(&A, Metadata::enabled(5))
+        .with_migration(&B)
+        .with_migration_opts(&C, Metadata::disabled(100));
+
+    assert_eq!(
+        config,
+        [
+            (&A, Metadata::enabled(5)),
+            (&B, Metadata::enabled(0)),
+            (&C, Metadata::disabled(100))
+        ]
+        .into()
+    );
+
+    let migration_set = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config.clone(), 105).unwrap();
+    assert!(migration_set.is_enabled(&A));
+    assert!(migration_set.is_active(&A));
+    assert!(migration_set.is_enabled(&B));
+    assert!(migration_set.is_active(&B));
+    assert!(!migration_set.is_enabled(&C));
+    assert!(!migration_set.is_active(&C));
+
+    let migration_set = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 5).unwrap();
+    assert!(migration_set.is_enabled(&A));
+    assert!(migration_set.is_active(&A));
+    assert!(migration_set.is_enabled(&B));
+    assert!(migration_set.is_active(&B));
+    assert!(!migration_set.is_enabled(&C));
+    assert!(!migration_set.is_active(&C));
+}
+
+#[test]
 fn strict_config_one() {
     let config = MigrationConfig::default()
         .with_migration_opts(&A, Metadata::enabled(5))
