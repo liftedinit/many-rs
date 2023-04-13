@@ -333,7 +333,7 @@ impl<'a, T, E> Migration<'a, T, E> {
             self.active = (self.metadata.block_height
                 ..self.metadata.upper_block_height.unwrap_or(u64::MAX))
                 .contains(&height);
-        } else if height > self.metadata.block_height {
+        } else if height >= self.metadata.block_height {
             self.active = true;
         }
     }
