@@ -167,3 +167,17 @@ function teardown() {
     # Creation successful
     create_token --pem=1 --port=8000
 }
+
+@test "$SUITE: Token creation migration is properly initialized when resetting the node" {
+    check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
+    wait_for_block 30
+    make -f $MAKEFILE stop-single-node-1
+    call_ledger --pem=1 --port=8000 token mint ${SYMBOL} ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
+
+    wait_for_block 40
+    make -f $MAKEFILE start-single-node-1
+
+    wait_for_block 50
+    check_consistency --pem=1 --balance=123 --id="$(identity 2)" 8000 8001 8002 8003
+    check_consistency --pem=1 --balance=456 --id="$(identity 3)" 8000 8001 8002 8003
+}
