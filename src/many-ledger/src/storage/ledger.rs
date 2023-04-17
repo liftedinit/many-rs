@@ -19,59 +19,66 @@ impl LedgerStorage {
         symbols: &BTreeMap<Symbol, String>,
         initial_balances: &BTreeMap<Address, BTreeMap<Symbol, TokenAmount>>,
     ) -> Result<Self, ManyError> {
-        let mut batch = Vec::new();
-        match self.persistent_store {
+        let batch = match self.persistent_store {
             InnerStorage::V1(_) => {
-                for (k, v) in initial_balances.iter() {
-                    for (symbol, tokens) in v.iter() {
-                        if !symbols.contains_key(symbol) {
-                            return Err(ManyError::unknown(format!(
+                let mut batch = initial_balances
+                    .iter()
+                    .flat_map(|(k, v)| v.iter().map(move |(symbols, tokens)| (k, symbols, tokens)))
+                    .map(|(k, symbol, tokens)| {
+                        if symbols.contains_key(symbol) {
+                            let key = key_for_account_balance(k, symbol);
+                            Ok((key, Operation::from(merk_v1::Op::Put(tokens.to_vec()))))
+                        } else {
+                            Err(ManyError::unknown(format!(
                                 r#"Unknown symbol "{symbol}" for identity {k}"#
-                            ))); // TODO: Custom error
+                            )))
                         }
-
-                        let key = key_for_account_balance(k, symbol);
-                        batch.push((key, Operation::from(merk_v1::Op::Put(tokens.to_vec()))));
-                    }
-                }
-
-                batch.push((
-                    IDENTITY_ROOT.as_bytes().to_vec(),
-                    Operation::from(merk_v1::Op::Put(identity.to_vec())),
-                ));
-                batch.push((
-                    SYMBOLS_ROOT.as_bytes().to_vec(),
-                    Operation::from(merk_v1::Op::Put(
-                        minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?,
-                    )),
-                ));
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                batch.extend([
+                    (
+                        IDENTITY_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v1::Op::Put(identity.to_vec())),
+                    ),
+                    (
+                        SYMBOLS_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v1::Op::Put(
+                            minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?,
+                        )),
+                    ),
+                ]);
+                batch
             }
             InnerStorage::V2(_) => {
-                for (k, v) in initial_balances.iter() {
-                    for (symbol, tokens) in v.iter() {
-                        if !symbols.contains_key(symbol) {
-                            return Err(ManyError::unknown(format!(
+                let mut batch = initial_balances
+                    .iter()
+                    .flat_map(|(k, v)| v.iter().map(move |(symbols, tokens)| (k, symbols, tokens)))
+                    .map(|(k, symbol, tokens)| {
+                        if symbols.contains_key(symbol) {
+                            let key = key_for_account_balance(k, symbol);
+                            Ok((key, Operation::from(merk_v2::Op::Put(tokens.to_vec()))))
+                        } else {
+                            Err(ManyError::unknown(format!(
                                 r#"Unknown symbol "{symbol}" for identity {k}"#
-                            ))); // TODO: Custom error
+                            )))
                         }
-
-                        let key = key_for_account_balance(k, symbol);
-                        batch.push((key, Operation::from(merk_v2::Op::Put(tokens.to_vec()))));
-                    }
-                }
-
-                batch.push((
-                    IDENTITY_ROOT.as_bytes().to_vec(),
-                    Operation::from(merk_v2::Op::Put(identity.to_vec())),
-                ));
-                batch.push((
-                    SYMBOLS_ROOT.as_bytes().to_vec(),
-                    Operation::from(merk_v2::Op::Put(
-                        minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?,
-                    )),
-                ));
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                batch.extend([
+                    (
+                        IDENTITY_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v2::Op::Put(identity.to_vec())),
+                    ),
+                    (
+                        SYMBOLS_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v2::Op::Put(
+                            minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?,
+                        )),
+                    ),
+                ]);
+                batch
             }
-        }
+        };
 
         self.persistent_store
             .apply(batch.as_slice())

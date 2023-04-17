@@ -19,28 +19,30 @@ impl<'a> LedgerIterator<'a> {
 
         let inner = match merk {
             InnerStorage::V1(_) => {
-                // Set the iterator bounds to iterate all multisig transactions.
-                let mut options = merk_v1::rocksdb::ReadOptions::default();
-                options.set_iterate_range(rocksdb::PrefixRange(MULTISIG_TRANSACTIONS_ROOT));
-
                 let it_mode = match order {
                     SortOrder::Indeterminate | SortOrder::Ascending => IteratorMode::Start,
                     SortOrder::Descending => IteratorMode::End,
                 };
 
-                merk.iter_opt(it_mode, options)
+                merk.iter_opt(it_mode, {
+                    // Set the iterator bounds to iterate all multisig transactions.
+                    let mut options = merk_v1::rocksdb::ReadOptions::default();
+                    options.set_iterate_range(rocksdb::PrefixRange(MULTISIG_TRANSACTIONS_ROOT));
+                    options
+                })
             }
             InnerStorage::V2(_) => {
-                // Set the iterator bounds to iterate all multisig transactions.
-                let mut options = merk_v2::rocksdb::ReadOptions::default();
-                options.set_iterate_range(rocksdb::PrefixRange(MULTISIG_TRANSACTIONS_ROOT));
-
                 let it_mode = match order {
                     SortOrder::Indeterminate | SortOrder::Ascending => IteratorMode::Start,
                     SortOrder::Descending => IteratorMode::End,
                 };
 
-                merk.iter_opt(it_mode, options)
+                merk.iter_opt(it_mode, {
+                    // Set the iterator bounds to iterate all multisig transactions.
+                    let mut options = merk_v2::rocksdb::ReadOptions::default();
+                    options.set_iterate_range(rocksdb::PrefixRange(MULTISIG_TRANSACTIONS_ROOT));
+                    options
+                })
             }
         };
 
@@ -52,26 +54,28 @@ impl<'a> LedgerIterator<'a> {
 
         let inner = match merk {
             InnerStorage::V1(_) => {
-                let mut options = merk_v1::rocksdb::ReadOptions::default();
-                options.set_iterate_range(rocksdb::PrefixRange(SYMBOLS_ROOT_DASH.as_bytes()));
-
                 let it_mode = match order {
                     SortOrder::Indeterminate | SortOrder::Ascending => IteratorMode::Start,
                     SortOrder::Descending => IteratorMode::End,
                 };
 
-                merk.iter_opt(it_mode, options)
+                merk.iter_opt(it_mode, {
+                    let mut options = merk_v1::rocksdb::ReadOptions::default();
+                    options.set_iterate_range(rocksdb::PrefixRange(SYMBOLS_ROOT_DASH.as_bytes()));
+                    options
+                })
             }
             InnerStorage::V2(_) => {
-                let mut options = merk_v2::rocksdb::ReadOptions::default();
-                options.set_iterate_range(rocksdb::PrefixRange(SYMBOLS_ROOT_DASH.as_bytes()));
-
                 let it_mode = match order {
                     SortOrder::Indeterminate | SortOrder::Ascending => IteratorMode::Start,
                     SortOrder::Descending => IteratorMode::End,
                 };
 
-                merk.iter_opt(it_mode, options)
+                merk.iter_opt(it_mode, {
+                    let mut options = merk_v2::rocksdb::ReadOptions::default();
+                    options.set_iterate_range(rocksdb::PrefixRange(SYMBOLS_ROOT_DASH.as_bytes()));
+                    options
+                })
             }
         };
 

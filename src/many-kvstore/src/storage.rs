@@ -139,17 +139,23 @@ impl KvStoreStorage {
         let mut persistent_store =
             InnerStorage::open(persistent_path).map_err(|e| e.to_string())?;
 
-        let mut batch = Vec::new();
-
-        batch.push((b"/config/identity".to_vec(), Op::Put(identity.to_vec())));
-
-        // Initialize DB with ACL
-        for (k, v) in acl.into_iter() {
-            batch.push((
-                vec![KVSTORE_ACL_ROOT.to_vec(), k.key.to_vec()].concat(),
-                Op::Put(minicbor::to_vec(v).map_err(|e| e.to_string())?),
-            ));
-        }
+        let mut batch = vec![(b"/config/identity".to_vec(), Op::Put(identity.to_vec()))];
+        batch.extend(
+            acl.into_iter()
+                .map(|(k, v)| {
+                    minicbor::to_vec(v)
+                        .map_err(|e| e.to_string())
+                        .map(Op::Put)
+                        .map(|value| {
+                            (
+                                vec![KVSTORE_ACL_ROOT.to_vec(), k.key.to_vec()].concat(),
+                                value,
+                            )
+                        })
+                })
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter(),
+        );
 
         persistent_store
             .apply(batch.as_slice())

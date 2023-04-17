@@ -5,19 +5,21 @@ pub mod ledger;
 
 pub use ledger::LedgerClient;
 
-use coset::{CoseSign1, TaggedCborSerializable};
-use futures_util::future::TryFutureExt;
-use many_identity::verifiers::AnonymousVerifier;
-use many_identity::{verifiers, Identity};
-use many_identity_dsa::CoseKeyVerifier;
-use many_modules::base::Status;
-use many_protocol::{
-    encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
+use {
+    coset::{CoseSign1, TaggedCborSerializable},
+    futures_util::future::TryFutureExt,
+    many_identity::verifiers::AnonymousVerifier,
+    many_identity::{verifiers, Identity},
+    many_identity_dsa::CoseKeyVerifier,
+    many_modules::base::Status,
+    many_protocol::{
+        encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
+    },
+    many_server::{Address, ManyError},
+    minicbor::Encode,
+    reqwest::{IntoUrl, Url},
+    std::fmt::{Debug, Formatter},
 };
-use many_server::{Address, ManyError};
-use minicbor::Encode;
-use reqwest::{IntoUrl, Url};
-use std::fmt::{Debug, Formatter};
 
 #[derive(Clone)]
 pub struct ManyClient<I: Identity> {

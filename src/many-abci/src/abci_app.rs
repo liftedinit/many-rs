@@ -1,20 +1,21 @@
-use crate::migration::error_code::LEGACY_ERROR_CODE_TRIGGER;
-use crate::migration::{AbciAppMigrations, MIGRATIONS};
-use coset::{CborSerializable, CoseSign1};
-use many_client::client::blocking::{block_on, ManyClient};
-use many_error::{ManyError, ManyErrorCode};
-use many_identity::{Address, AnonymousIdentity};
-use many_migration::MigrationConfig;
-use many_modules::abci_backend::{AbciBlock, AbciCommitInfo, AbciInfo};
-use many_protocol::ResponseMessage;
-use reqwest::{IntoUrl, Url};
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
+use {
+    crate::migration::{error_code::LEGACY_ERROR_CODE_TRIGGER, AbciAppMigrations, MIGRATIONS},
+    coset::{CborSerializable, CoseSign1},
+    many_client::client::blocking::{block_on, ManyClient},
+    many_error::{ManyError, ManyErrorCode},
+    many_identity::{Address, AnonymousIdentity},
+    many_migration::MigrationConfig,
+    many_modules::abci_backend::{AbciBlock, AbciCommitInfo, AbciInfo},
+    many_protocol::ResponseMessage,
+    reqwest::{IntoUrl, Url},
+    std::{
+        path::PathBuf,
+        sync::{Arc, RwLock},
+    },
+    tendermint_abci::Application,
+    tendermint_proto::abci::*,
+    tracing::{debug, error},
 };
-use tendermint_abci::Application;
-use tendermint_proto::abci::*;
-use tracing::{debug, error};
 
 lazy_static::lazy_static!(
     static ref EPOCH: many_types::Timestamp = many_types::Timestamp::new(0).unwrap();

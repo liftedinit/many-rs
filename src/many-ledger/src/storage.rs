@@ -541,23 +541,31 @@ impl LedgerStorage {
                 }
             },
         )])?;
-        let mut keys = vec![key_for_subresource];
 
         self.persistent_store
             .get((*identity_root).as_bytes())
             .map_err(error::storage_get_failed)?
             .map_or(
-                {
-                    keys.push(IDENTITY_ROOT.into());
-                    self.get_identity(IDENTITY_ROOT)
-                },
+                self.get_identity(IDENTITY_ROOT).map(|address| {
+                    (
+                        address,
+                        vec![key_for_subresource.clone(), IDENTITY_ROOT.into()],
+                    )
+                }),
                 |bytes| {
-                    keys.push(identity_root.as_bytes().to_vec());
-                    Address::from_bytes(&bytes)
+                    Address::from_bytes(&bytes).map(|address| {
+                        (
+                            address,
+                            vec![key_for_subresource, identity_root.as_bytes().to_vec()],
+                        )
+                    })
                 },
-            )?
-            .with_subresource_id(current_id)
-            .map(|address| (address, keys))
+            )
+            .and_then(|(address, keys)| {
+                address
+                    .with_subresource_id(current_id)
+                    .map(|address| (address, keys))
+            })
     }
 
     /// Get the subresource counter from the given DB key.

@@ -20,11 +20,9 @@ fn iter_through_events(
     storage: &InnerStorage,
 ) -> impl Iterator<Item = Result<(Vec<u8>, EventLog), ManyError>> + '_ {
     LedgerIterator::all_events(storage).map(|r| match r {
-        Ok((k, v)) => {
-            let log = minicbor::decode::<EventLog>(v.as_slice())
-                .map_err(ManyError::deserialization_error)?;
-            Ok((k.into(), log))
-        }
+        Ok((k, v)) => minicbor::decode::<EventLog>(v.as_slice())
+            .map_err(ManyError::deserialization_error)
+            .map(|log| Ok((k.into(), log)))?,
         Err(e) => Err(ManyError::unknown(e)),
     })
 }
@@ -33,11 +31,9 @@ fn iter_through_multisig_storage(
     storage: &InnerStorage,
 ) -> impl Iterator<Item = Result<(Vec<u8>, MultisigTransactionStorage), ManyError>> + '_ {
     LedgerIterator::all_multisig(storage, SortOrder::Ascending).map(|r| match r {
-        Ok((k, v)) => {
-            let log = minicbor::decode::<MultisigTransactionStorage>(v.as_slice())
-                .map_err(ManyError::deserialization_error)?;
-            Ok((k.into(), log))
-        }
+        Ok((k, v)) => minicbor::decode::<MultisigTransactionStorage>(v.as_slice())
+            .map_err(ManyError::deserialization_error)
+            .map(|log| Ok((k.into(), log)))?,
         Err(e) => Err(ManyError::unknown(e)),
     })
 }

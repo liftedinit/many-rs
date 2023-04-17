@@ -101,59 +101,75 @@ impl LedgerStorage {
                 .ok_or_else(|| ManyError::unknown("Symbols metadata needs to be provided"))?; // TODO: Custom error
             let total_supply = LedgerStorage::_total_supply(initial_balances)?;
 
-            for symbol in symbols.keys() {
-                if !symbols_meta.contains_key(symbol) {
-                    return Err(ManyError::unknown(format!(
+            symbols
+                .keys()
+                .map(|symbol| match symbol {
+                    _ if !symbols_meta.contains_key(symbol) => Err(ManyError::unknown(format!(
                         "Symbol {symbol} missing metadata"
-                    ))); // TODO: Custom error
-                }
-
-                if !total_supply.contains_key(symbol) {
-                    return Err(ManyError::unknown(format!(
+                    ))),
+                    _ if !total_supply.contains_key(symbol) => Err(ManyError::unknown(format!(
                         "Symbol {symbol} missing total supply"
-                    ))); // TODO: Custom error
-                }
-            }
+                    ))),
+                    _ => Ok(()),
+                })
+                .collect::<Result<Vec<_>, _>>()?;
 
-            let mut batch = Vec::new();
-            for (k, meta) in symbols_meta.into_iter() {
-                let total_supply = total_supply[&k].clone(); // Safe
-                let ticker = symbols[&k].clone(); // Safe
-                let info = LedgerStorage::_token_info(k, ticker, meta, total_supply.clone());
+            let mut batch = symbols_meta
+                .into_iter()
+                .map(|(k, meta)| {
+                    let total_supply = total_supply[&k].clone(); // Safe
+                    let ticker = symbols[&k].clone(); // Safe
+                    let info = LedgerStorage::_token_info(k, ticker, meta, total_supply.clone());
 
-                match self.persistent_store {
-                    InnerStorage::V1(_) => {
-                        batch.push((
-                            key_for_ext_info(&k),
-                            Operation::from(merk_v1::Op::Put(
-                                minicbor::to_vec(TokenExtendedInfo::default())
-                                    .map_err(ManyError::serialization_error)?,
-                            )),
-                        ));
-                        batch.push((
-                            key_for_symbol(&k).into(),
-                            Operation::from(merk_v1::Op::Put(
-                                minicbor::to_vec(info).map_err(ManyError::serialization_error)?,
-                            )),
-                        ));
+                    match self.persistent_store {
+                        InnerStorage::V1(_) => minicbor::to_vec(TokenExtendedInfo::default())
+                            .map_err(ManyError::serialization_error)
+                            .map(|value| {
+                                (
+                                    key_for_ext_info(&k),
+                                    Operation::from(merk_v1::Op::Put(value)),
+                                )
+                            })
+                            .and_then(|entry| {
+                                minicbor::to_vec(info)
+                                    .map_err(ManyError::serialization_error)
+                                    .map(|value| {
+                                        vec![
+                                            entry,
+                                            (
+                                                key_for_symbol(&k).into(),
+                                                Operation::from(merk_v1::Op::Put(value)),
+                                            ),
+                                        ]
+                                    })
+                            }),
+                        InnerStorage::V2(_) => minicbor::to_vec(TokenExtendedInfo::default())
+                            .map_err(ManyError::serialization_error)
+                            .map(|value| {
+                                (
+                                    key_for_ext_info(&k),
+                                    Operation::from(merk_v2::Op::Put(value)),
+                                )
+                            })
+                            .and_then(|entry| {
+                                minicbor::to_vec(info)
+                                    .map_err(ManyError::serialization_error)
+                                    .map(|value| {
+                                        vec![
+                                            entry,
+                                            (
+                                                key_for_symbol(&k).into(),
+                                                Operation::from(merk_v2::Op::Put(value)),
+                                            ),
+                                        ]
+                                    })
+                            }),
                     }
-                    InnerStorage::V2(_) => {
-                        batch.push((
-                            key_for_ext_info(&k),
-                            Operation::from(merk_v1::Op::Put(
-                                minicbor::to_vec(TokenExtendedInfo::default())
-                                    .map_err(ManyError::serialization_error)?,
-                            )),
-                        ));
-                        batch.push((
-                            key_for_symbol(&k).into(),
-                            Operation::from(merk_v2::Op::Put(
-                                minicbor::to_vec(info).map_err(ManyError::serialization_error)?,
-                            )),
-                        ));
-                    }
-                }
-            }
+                })
+                .collect::<Result<Vec<Vec<_>>, _>>()?
+                .into_iter()
+                .flat_map(|x| x)
+                .collect::<Vec<_>>();
             batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
             self.persistent_store.apply(batch.as_slice())?;
 

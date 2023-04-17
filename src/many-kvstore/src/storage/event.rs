@@ -1,10 +1,12 @@
-use super::{InnerStorage, KvStoreStorage};
-use many_modules::events;
-use many_types::{CborRange, SortOrder};
-use merk_v2::tree::Tree;
-use merk_v2::{rocksdb, Op};
-use std::collections::Bound;
-use std::ops::RangeBounds;
+use {
+    super::{InnerStorage, KvStoreStorage},
+    many_modules::events,
+    many_types::{CborRange, SortOrder},
+    merk_v2::tree::Tree,
+    merk_v2::{rocksdb, Op},
+    std::collections::Bound,
+    std::ops::RangeBounds,
+};
 
 const EVENTS_ROOT: &[u8] = b"/events/";
 
