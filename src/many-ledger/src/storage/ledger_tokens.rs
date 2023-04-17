@@ -119,7 +119,7 @@ impl LedgerStorage {
                 .map(|(k, meta)| {
                     let total_supply = total_supply[&k].clone(); // Safe
                     let ticker = symbols[&k].clone(); // Safe
-                    let info = LedgerStorage::_token_info(k, ticker, meta, total_supply.clone());
+                    let info = LedgerStorage::_token_info(k, ticker, meta, total_supply);
 
                     match self.persistent_store {
                         InnerStorage::V1(_) => minicbor::to_vec(TokenExtendedInfo::default())
@@ -168,7 +168,7 @@ impl LedgerStorage {
                 })
                 .collect::<Result<Vec<Vec<_>>, _>>()?
                 .into_iter()
-                .flat_map(|x| x)
+                .flatten()
                 .collect::<Vec<_>>();
             batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
             self.persistent_store.apply(batch.as_slice())?;
