@@ -175,7 +175,7 @@ impl<C: Client + Send + Sync> r#async::AsyncModuleBackend for AbciBlockchainModu
                 None => return Ok(StatusReturn::Unknown),
             };
 
-            tracing::warn!("result: {}", hex::encode(&tx_result_data));
+            tracing::debug!("result: {}", hex::encode(&tx_result_data));
             Ok(StatusReturn::Done {
                 response: Box::new(
                     encode_cose_sign1_from_response(
