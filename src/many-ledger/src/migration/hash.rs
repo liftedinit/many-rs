@@ -72,7 +72,7 @@ fn initialize<P: AsRef<Path>>(
     }
     .and_then(|replacement| {
         extra
-            .get("ledger-db-path")
+            .get("ledger_db_path")
             .ok_or_else(|| ManyError::unknown("Missing ledger db path"))
             .and_then(|db_path| {
                 InnerStorage::open_v2(db_path.to_string())

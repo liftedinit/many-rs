@@ -204,7 +204,7 @@ fn main() -> Result<(), Error> {
                                     .to_str()
                                     .and_then(|persistent| serde_json::from_str(persistent).ok())
                                     .and_then(|persistent| {
-                                        metadata.extra.insert("ledger-db-path".into(), persistent)
+                                        metadata.extra.insert("ledger_db_path".into(), persistent)
                                     });
                                 metadata.extra
                             },
