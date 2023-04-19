@@ -23,9 +23,11 @@ impl LedgerStorage {
             self.commit_storage()?;
 
             // Initialize/update migrations at current height, if any
-            self.migrations
-                .update_at_height(&mut self.persistent_store, height + 1, self.path.clone())
-                .unwrap();
+            self.migrations.update_at_height(
+                &mut self.persistent_store,
+                height + 1,
+                self.path.clone(),
+            )?;
 
             self.commit_storage()?;
 
