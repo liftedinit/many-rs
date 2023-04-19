@@ -221,7 +221,6 @@ impl Application for AbciApp {
     }
 
     fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
-        let _ = request.tx;
         let (transmitter, receiver) = channel::<Option<transaction_cache::Value>>();
         self.transmitter
             .send(transaction_cache::Message::Get(
