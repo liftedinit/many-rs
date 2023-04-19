@@ -186,6 +186,38 @@ fn main() -> Result<(), Error> {
             Ok::<_, Error>(config.strict())
         })
         .transpose()?;
+    let maybe_migrations = maybe_migrations.map(|config| {
+        config
+            .migrations()
+            .map(|migration| {
+                let (name, mut metadata) = migration.clone().into();
+                if name == "Hash Migration" {
+                    (
+                        "Hash Migration".to_string(),
+                        many_migration::Metadata {
+                            block_height: metadata.block_height,
+                            upper_block_height: metadata.upper_block_height,
+                            disabled: metadata.disabled,
+                            issue: metadata.issue,
+                            extra: {
+                                persistent
+                                    .to_str()
+                                    .and_then(|persistent| serde_json::from_str(persistent).ok())
+                                    .and_then(|persistent| {
+                                        metadata.extra.insert("ledger-db-path".into(), persistent)
+                                    });
+                                metadata.extra
+                            },
+                        },
+                    )
+                        .into()
+                } else {
+                    migration
+                }
+            })
+            .collect::<Vec<_>>()
+            .into()
+    });
 
     let module_impl = if persistent.exists() {
         if state.is_some() {

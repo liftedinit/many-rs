@@ -34,6 +34,7 @@
   {
     "name": "Hash Migration",
     "block_height": 0,
-    "disabled": true
+    "disabled": true,
+    "ledger_db_path": "/tmp"
   }
 ] }

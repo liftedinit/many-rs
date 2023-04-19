@@ -1,5 +1,5 @@
 {
-  "checksum": "8dca8e1257ed166b064b2972991d9df041537bd96b2a2f7014b7eba23ca0bc19",
+  "checksum": "423753d3e5faa173ccd31453ec68f6a205dea130c1b87a732771f7b464cd05ad",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -13318,6 +13318,10 @@
               "target": "strum"
             },
             {
+              "id": "tempfile 3.5.0",
+              "target": "tempfile"
+            },
+            {
               "id": "tokio 1.27.0",
               "target": "tokio"
             },
@@ -13345,10 +13349,6 @@
             {
               "id": "proptest 1.1.0",
               "target": "proptest"
-            },
-            {
-              "id": "tempfile 3.5.0",
-              "target": "tempfile"
             }
           ],
           "selects": {}

@@ -498,6 +498,7 @@ async fn main() {
             println!("{}", identity.address());
         }
         SubCommand::Message(o) => {
+            let time = std::time::Instant::now();
             let to_identity = o.to.unwrap_or_default();
             let timestamp = o.timestamp.map(|secs| {
                 SystemTime::UNIX_EPOCH
@@ -605,6 +606,7 @@ async fn main() {
                     panic!("Must specify one of hex, base64 or server...");
                 }
             }
+            println!("Time elapsed for message: {:?}", time.elapsed());
         }
         SubCommand::Server(o) => {
             let pem = std::fs::read_to_string(&o.pem).expect("Could not read PEM file.");

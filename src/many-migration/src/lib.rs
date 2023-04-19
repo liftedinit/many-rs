@@ -17,7 +17,7 @@ use {
 // The `metadata.extra` field can be used to provide custom parameters to migrations.
 pub type FnPtr<T, E> = fn(&mut T, &HashMap<String, Value>) -> Result<(), E>;
 pub type FnByte = fn(&[u8]) -> Option<Vec<u8>>;
-pub type FnHashPtr<T, E, P> = fn(&mut T, P) -> Result<(), E>;
+pub type FnHashPtr<T, E, P> = fn(&mut T, P, &HashMap<String, Value>) -> Result<(), E>;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Metadata {
@@ -245,7 +245,7 @@ impl<T, E: Debug, P> InnerMigration<T, E, P> {
     ) -> Result<(), E> {
         match &self.r#type {
             MigrationType::Regular(migration) => (migration.initialize_fn)(storage, extra),
-            MigrationType::Hash(migration) => (migration.0)(storage, path),
+            MigrationType::Hash(migration) => (migration.0)(storage, path, extra),
             MigrationType::Hotfix(_) | MigrationType::Trigger(_) => Ok(()),
             x => {
                 trace!("Migration {} has unknown type {}", self.name(), x);
@@ -473,6 +473,18 @@ impl<T, E: Debug, P> From<(&InnerMigration<T, E, P>, Metadata)> for SingleMigrat
     }
 }
 
+impl From<(String, Metadata)> for SingleMigrationConfig {
+    fn from((name, metadata): (String, Metadata)) -> Self {
+        Self { name, metadata }
+    }
+}
+
+impl From<SingleMigrationConfig> for (String, Metadata) {
+    fn from(config: SingleMigrationConfig) -> Self {
+        (config.name, config.metadata)
+    }
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct MigrationConfig {
     #[serde(skip)]
@@ -504,6 +516,10 @@ impl MigrationConfig {
             metadata,
         });
         self
+    }
+
+    pub fn migrations(self) -> impl Iterator<Item = SingleMigrationConfig> {
+        self.migrations.into_iter()
     }
 }
 

@@ -8,10 +8,17 @@ use {
     many_error::ManyError,
     merk_v1::rocksdb::IteratorMode,
     merk_v2::Op,
+    serde_json::Value,
+    std::collections::HashMap,
     std::path::{Path, PathBuf},
+    tempfile::tempdir,
 };
 
-fn initialize<P: AsRef<Path>>(storage: &mut InnerStorage, path: P) -> Result<(), ManyError> {
+fn initialize<P: AsRef<Path>>(
+    storage: &mut InnerStorage,
+    _: P,
+    extra: &HashMap<String, Value>,
+) -> Result<(), ManyError> {
     match storage {
         InnerStorage::V1(merk) => v1_forest(merk, IteratorMode::Start, Default::default())
             .map(|key_value_pair| {
@@ -21,9 +28,14 @@ fn initialize<P: AsRef<Path>>(storage: &mut InnerStorage, path: P) -> Result<(),
             .collect::<Result<Vec<_>, _>>()
             .map_err(ManyError::unknown)
             .and_then(|trees| {
-                InnerStorage::open_v2(["/tmp", "temp1"].iter().collect::<PathBuf>())
-                    .map(|replacement| (trees, replacement))
-                    .map_err(Into::into)
+                tempdir()
+                    .map_err(ManyError::unknown)
+                    .map(|dir| dir.path().join("temp1"))
+                    .and_then(|file| {
+                        InnerStorage::open_v2(file)
+                            .map(|replacement| (trees, replacement))
+                            .map_err(Into::into)
+                    })
             })
             .and_then(|(trees, mut replacement)| {
                 replacement
@@ -38,9 +50,14 @@ fn initialize<P: AsRef<Path>>(storage: &mut InnerStorage, path: P) -> Result<(),
                     .map(|_| replacement)
             })
             .and_then(|replacement| {
-                merk_v1::Merk::open(["/tmp", "temp2"].iter().collect::<PathBuf>())
+                tempdir()
                     .map_err(ManyError::unknown)
-                    .map(|new_storage| (new_storage, replacement))
+                    .map(|dir| dir.path().join("temp1"))
+                    .and_then(|file| {
+                        merk_v1::Merk::open(file)
+                            .map_err(ManyError::unknown)
+                            .map(|new_storage| (new_storage, replacement))
+                    })
             })
             .and_then(|(new_storage, replacement)| {
                 replace(merk, new_storage)
@@ -48,14 +65,20 @@ fn initialize<P: AsRef<Path>>(storage: &mut InnerStorage, path: P) -> Result<(),
                     .map_err(ManyError::unknown)
                     .map(|_| replacement)
             }),
-        InnerStorage::V2(_) => {
-            InnerStorage::open_v2(["/tmp", "temp1"].iter().collect::<PathBuf>()).map_err(Into::into)
-        }
+        InnerStorage::V2(_) => tempdir()
+            .map_err(ManyError::unknown)
+            .map(|dir| dir.path().join("temp1"))
+            .and_then(|file| InnerStorage::open_v2(file).map_err(Into::into)),
     }
     .and_then(|replacement| {
-        InnerStorage::open_v2(path.as_ref())
-            .map_err(ManyError::unknown)
-            .map(|destination| (replacement, destination))
+        extra
+            .get("ledger-db-path")
+            .ok_or_else(|| ManyError::unknown("Missing ledger db path"))
+            .and_then(|db_path| {
+                InnerStorage::open_v2(db_path.to_string())
+                    .map_err(ManyError::unknown)
+                    .map(|destination| (replacement, destination))
+            })
     })
     .and_then(|(replacement, mut destination)| match replacement {
         InnerStorage::V1(_) => {
