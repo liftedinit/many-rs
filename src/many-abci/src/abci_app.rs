@@ -246,16 +246,6 @@ impl Application for AbciApp {
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
-        self.transmitter
-            .send(transaction_cache::Message::Put(
-                {
-                    let mut hasher = Sha256::new();
-                    hasher.update(request.tx.clone());
-                    hasher.finalize().to_vec().into()
-                },
-                request.tx.to_vec().into(),
-            ))
-            .unwrap_or_default();
         let cose = match CoseSign1::from_slice(&request.tx) {
             Ok(x) => x,
             Err(err) => {
@@ -301,6 +291,17 @@ impl Application for AbciApp {
                         };
                     }
                 }
+
+                self.transmitter
+                    .send(transaction_cache::Message::Put(
+                        {
+                            let mut hasher = Sha256::new();
+                            hasher.update(request.tx.clone());
+                            hasher.finalize().to_vec().into()
+                        },
+                        request.tx.to_vec().into(),
+                    ))
+                    .unwrap_or_default();
 
                 if let Ok(data) = response.to_bytes() {
                     ResponseDeliverTx {
