@@ -8,7 +8,11 @@ use many_migration::MigrationConfig;
 use many_modules::abci_backend::{AbciBlock, AbciCommitInfo, AbciInfo};
 use many_protocol::ResponseMessage;
 use reqwest::{IntoUrl, Url};
-use std::sync::{Arc, RwLock};
+use sha2::{Digest, Sha256};
+use std::sync::{
+    mpsc::{channel, Sender},
+    Arc, RwLock,
+};
 use tendermint_abci::Application;
 use tendermint_proto::abci::*;
 use tracing::{debug, error};
@@ -23,6 +27,21 @@ fn get_abci_info_(client: &ManyClient<AnonymousIdentity>) -> Result<AbciInfo, Ma
         .and_then(|payload| minicbor::decode(&payload).map_err(ManyError::deserialization_error))
 }
 
+pub(super) mod transaction_cache {
+    use {
+        derive_more::{From, Into},
+        std::sync::mpsc::Sender,
+    };
+    #[derive(Clone, Eq, From, Hash, Into, PartialEq)]
+    pub(super) struct Key(Vec<u8>);
+    #[derive(Clone, Eq, From, Hash, Into, PartialEq)]
+    pub(super) struct Value(Vec<u8>);
+    pub(super) enum Message {
+        Put(Key, Value),
+        Get(Key, Sender<Option<Value>>),
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct AbciApp {
     app_name: String,
@@ -31,6 +50,7 @@ pub struct AbciApp {
 
     /// We need interior mutability, safely.
     migrations: Arc<RwLock<AbciAppMigrations>>,
+    transmitter: Sender<transaction_cache::Message>,
 }
 
 impl AbciApp {
@@ -68,12 +88,39 @@ impl AbciApp {
             debug!("Final migrations: {:?}", migrations);
             migrations
         });
+        let (transmitter, receiver) = channel::<transaction_cache::Message>();
+        std::thread::spawn(move || {
+            use {
+                std::{collections::HashMap, iter::repeat},
+                transaction_cache::{
+                    Key,
+                    Message::{Get, Put},
+                    Value,
+                },
+            };
+            repeat(&receiver.recv()).fold(HashMap::<Key, Value>::new(), |mut cache, message| {
+                match message {
+                    Ok(Put(key, value)) => {
+                        cache.insert(key.clone(), value.clone());
+                        cache
+                    }
+                    Ok(Get(key, transmitter)) => {
+                        transmitter
+                            .send(cache.get(key).cloned())
+                            .unwrap_or_default();
+                        cache
+                    }
+                    Err(_) => cache,
+                }
+            });
+        });
 
         Ok(Self {
             app_name,
             many_url,
             many_client,
             migrations: Arc::new(migrations),
+            transmitter,
         })
     }
 }
@@ -172,7 +219,43 @@ impl Application for AbciApp {
         ResponseBeginBlock { events: vec![] }
     }
 
+    fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
+        let _ = request.tx;
+        let (transmitter, receiver) = channel::<Option<transaction_cache::Value>>();
+        self.transmitter
+            .send(transaction_cache::Message::Get(
+                {
+                    let mut hasher = Sha256::new();
+                    hasher.update(request.tx);
+                    hasher.finalize().to_vec().into()
+                },
+                transmitter,
+            ))
+            .unwrap_or_default();
+        match receiver.recv() {
+            Ok(None) => Default::default(),
+            Ok(Some(_)) => ResponseCheckTx {
+                code: 4,
+                ..Default::default()
+            },
+            Err(_) => ResponseCheckTx {
+                code: 5,
+                ..Default::default()
+            },
+        }
+    }
+
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
+        self.transmitter
+            .send(transaction_cache::Message::Put(
+                {
+                    let mut hasher = Sha256::new();
+                    hasher.update(request.tx.clone());
+                    hasher.finalize().to_vec().into()
+                },
+                request.tx.to_vec().into(),
+            ))
+            .unwrap_or_default();
         let cose = match CoseSign1::from_slice(&request.tx) {
             Ok(x) => x,
             Err(err) => {
