@@ -37,7 +37,6 @@ pub struct AbciApp {
 
 impl AbciApp {
     /// Constructor.
-    #[allow(clippy::infinite_iter)]
     pub fn create<U>(
         many_url: U,
         server_id: Address,
