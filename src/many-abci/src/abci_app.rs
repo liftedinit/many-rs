@@ -238,7 +238,7 @@ impl Application for AbciApp {
                 transmitter,
             ))
             .unwrap_or_default();
-        match CoseSign1::from_slice(&request.tx)
+        CoseSign1::from_slice(&request.tx)
             .map_err(|_| ResponseCheckTx {
                 code: 6,
                 ..Default::default()
@@ -264,15 +264,16 @@ impl Application for AbciApp {
                     code: 5,
                     ..Default::default()
                 })
-            }) {
-            Ok(optional_cached_value) => optional_cached_value
-                .map(|_| ResponseCheckTx {
-                    code: 4,
-                    ..Default::default()
-                })
-                .unwrap_or_default(),
-            Err(error) => error,
-        }
+            })
+            .map(|optional_cached_value| {
+                optional_cached_value
+                    .map(|_| ResponseCheckTx {
+                        code: 4,
+                        ..Default::default()
+                    })
+                    .unwrap_or_default()
+            })
+            .unwrap_or_else(|error| error)
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
