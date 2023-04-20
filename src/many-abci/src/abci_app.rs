@@ -175,7 +175,7 @@ impl Application for AbciApp {
     }
 
     fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
-        use std::time::SystemTime;
+        use many_types::Timestamp;
         CoseSign1::from_slice(&request.tx)
             .map_err(|_| ResponseCheckTx {
                 code: 4,
@@ -188,8 +188,9 @@ impl Application for AbciApp {
                 })
             })
             .and_then(|message| {
-                message
-                    .validate_time(SystemTime::now(), MANYABCI_DEFAULT_TIMEOUT)
+                Timestamp::now()
+                    .as_system_time()
+                    .and_then(|now| message.validate_time(now, MANYABCI_DEFAULT_TIMEOUT))
                     .map_err(|_| ResponseCheckTx {
                         code: 6,
                         ..Default::default()
