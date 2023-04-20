@@ -23,25 +23,13 @@ pub fn decode_request_from_cose_sign1(
     }
 
     // Check the `from` field.
-    let message = decode_request_from_cose_sign1_without_verification(envelope)?;
+    let message: RequestMessage = envelope.try_into()?;
     let message_from = message.from.unwrap_or_default();
     if !from_id.matches(&message_from) || message_from.is_illegal() {
         Err(ManyError::invalid_from_identity())
     } else {
         Ok(message)
     }
-}
-
-pub fn decode_request_from_cose_sign1_without_verification(
-    envelope: &CoseSign1,
-) -> Result<RequestMessage, ManyError> {
-    envelope
-        .payload
-        .as_ref()
-        .ok_or_else(ManyError::empty_envelope)
-        .and_then(|payload| {
-            RequestMessage::from_bytes(payload).map_err(ManyError::deserialization_error)
-        })
 }
 
 pub fn decode_response_from_cose_sign1(

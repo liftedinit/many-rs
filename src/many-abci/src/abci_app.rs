@@ -6,7 +6,7 @@ use many_error::{ManyError, ManyErrorCode};
 use many_identity::{Address, AnonymousIdentity};
 use many_migration::MigrationConfig;
 use many_modules::abci_backend::{AbciBlock, AbciCommitInfo, AbciInfo};
-use many_protocol::ResponseMessage;
+use many_protocol::{RequestMessage, ResponseMessage};
 use reqwest::{IntoUrl, Url};
 use std::sync::{Arc, RwLock};
 use tendermint_abci::Application;
@@ -175,21 +175,16 @@ impl Application for AbciApp {
     }
 
     fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
-        use {
-            many_protocol::decode_request_from_cose_sign1_without_verification,
-            std::time::SystemTime,
-        };
+        use std::time::SystemTime;
         CoseSign1::from_slice(&request.tx)
             .map_err(|_| ResponseCheckTx {
                 code: 4,
                 ..Default::default()
             })
             .and_then(|cose| {
-                decode_request_from_cose_sign1_without_verification(&cose).map_err(|_| {
-                    ResponseCheckTx {
-                        code: 5,
-                        ..Default::default()
-                    }
+                RequestMessage::try_from(cose).map_err(|_| ResponseCheckTx {
+                    code: 5,
+                    ..Default::default()
                 })
             })
             .and_then(|message| {

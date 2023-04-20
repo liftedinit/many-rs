@@ -1,3 +1,4 @@
+use coset::CoseSign1;
 use derive_builder::Builder;
 use many_error::ManyError;
 use many_identity::Address;
@@ -7,6 +8,7 @@ use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use num_derive::{FromPrimitive, ToPrimitive};
+use std::convert::TryFrom;
 use std::time::SystemTime;
 
 #[derive(FromPrimitive, ToPrimitive)]
@@ -64,6 +66,30 @@ impl std::fmt::Debug for RequestMessage {
         }
 
         s.finish()
+    }
+}
+
+impl TryFrom<CoseSign1> for RequestMessage {
+    type Error = ManyError;
+
+    fn try_from(envelope: CoseSign1) -> Result<Self, Self::Error> {
+        envelope
+            .payload
+            .as_ref()
+            .ok_or_else(ManyError::empty_envelope)
+            .and_then(|payload| Self::from_bytes(payload).map_err(ManyError::deserialization_error))
+    }
+}
+
+impl<'a> TryFrom<&'a CoseSign1> for RequestMessage {
+    type Error = ManyError;
+
+    fn try_from(envelope: &'a CoseSign1) -> Result<Self, Self::Error> {
+        envelope
+            .payload
+            .as_ref()
+            .ok_or_else(ManyError::empty_envelope)
+            .and_then(|payload| Self::from_bytes(payload).map_err(ManyError::deserialization_error))
     }
 }
 
