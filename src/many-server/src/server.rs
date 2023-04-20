@@ -11,39 +11,6 @@ use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-/// Validate that the timestamp of a message is within a timeout, either in the future
-/// or the past.
-fn _validate_time(
-    message: &RequestMessage,
-    now: SystemTime,
-    timeout_in_secs: u64,
-) -> Result<(), ManyError> {
-    if timeout_in_secs == 0 {
-        return Err(ManyError::timestamp_out_of_range());
-    }
-    let ts = message
-        .timestamp
-        .ok_or_else(|| ManyError::required_field_missing("timestamp".to_string()))?
-        .as_system_time()?;
-
-    // Get the absolute time difference.
-    let (early, later) = if ts < now { (ts, now) } else { (now, ts) };
-    let diff = later
-        .duration_since(early)
-        .map_err(|_| ManyError::timestamp_out_of_range())?;
-
-    if diff.as_secs() >= timeout_in_secs {
-        tracing::error!(
-            "ERR: Timestamp outside of timeout: {} >= {}",
-            diff.as_secs(),
-            timeout_in_secs
-        );
-        return Err(ManyError::timestamp_out_of_range());
-    }
-
-    Ok(())
-}
-
 trait ManyServerFallback: LowLevelManyRequestHandler + base::BaseModuleBackend {}
 
 impl<M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static> ManyServerFallback for M {}
@@ -302,7 +269,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 
                 id = message.id;
 
-                _validate_time(&message, now, this.timeout)?;
+                message.validate_time(now, this.timeout)?;
 
                 this.validate_id(&message)?;
 
@@ -468,16 +435,24 @@ mod tests {
             .unwrap();
 
         // Okay with the same
-        assert!(_validate_time(&request, timestamp, 100).is_ok());
+        assert!(request.validate_time(timestamp, 100).is_ok());
         // Okay with the past
-        assert!(_validate_time(&request, timestamp - Duration::from_secs(10), 100).is_ok());
+        assert!(request
+            .validate_time(timestamp - Duration::from_secs(10), 100)
+            .is_ok());
         // Okay with the future
-        assert!(_validate_time(&request, timestamp + Duration::from_secs(10), 100).is_ok());
+        assert!(request
+            .validate_time(timestamp + Duration::from_secs(10), 100)
+            .is_ok());
 
         // NOT okay with the past too much
-        assert!(_validate_time(&request, timestamp - Duration::from_secs(101), 100).is_err());
+        assert!(request
+            .validate_time(timestamp - Duration::from_secs(101), 100)
+            .is_err());
         // NOT okay with the future too much
-        assert!(_validate_time(&request, timestamp + Duration::from_secs(101), 100).is_err());
+        assert!(request
+            .validate_time(timestamp + Duration::from_secs(101), 100)
+            .is_err());
     }
 
     #[test]

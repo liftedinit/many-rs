@@ -21,6 +21,8 @@ lazy_static::lazy_static!(
     static ref EPOCH: many_types::Timestamp = many_types::Timestamp::new(0).unwrap();
 );
 
+pub const MANYABCI_DEFAULT_TIMEOUT: u64 = 300;
+
 fn get_abci_info_(client: &ManyClient<AnonymousIdentity>) -> Result<AbciInfo, ManyError> {
     client
         .call_("abci.info", ())
@@ -221,27 +223,55 @@ impl Application for AbciApp {
     }
 
     fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
+        use {
+            many_protocol::decode_request_from_cose_sign1_without_verification,
+            std::time::SystemTime,
+        };
         let (transmitter, receiver) = channel::<Option<transaction_cache::Value>>();
         self.transmitter
             .send(transaction_cache::Message::Get(
                 {
                     let mut hasher = Sha256::new();
-                    hasher.update(request.tx);
+                    hasher.update(request.tx.clone());
                     hasher.finalize().to_vec().into()
                 },
                 transmitter,
             ))
             .unwrap_or_default();
-        match receiver.recv() {
-            Ok(None) => Default::default(),
-            Ok(Some(_)) => ResponseCheckTx {
-                code: 4,
+        match CoseSign1::from_slice(&request.tx)
+            .map_err(|_| ResponseCheckTx {
+                code: 6,
                 ..Default::default()
-            },
-            Err(_) => ResponseCheckTx {
-                code: 5,
-                ..Default::default()
-            },
+            })
+            .and_then(|cose| {
+                decode_request_from_cose_sign1_without_verification(&cose).map_err(|_| {
+                    ResponseCheckTx {
+                        code: 7,
+                        ..Default::default()
+                    }
+                })
+            })
+            .and_then(|message| {
+                message
+                    .validate_time(SystemTime::now(), MANYABCI_DEFAULT_TIMEOUT)
+                    .map_err(|_| ResponseCheckTx {
+                        code: 8,
+                        ..Default::default()
+                    })
+            })
+            .and_then(|_| {
+                receiver.recv().map_err(|_| ResponseCheckTx {
+                    code: 5,
+                    ..Default::default()
+                })
+            }) {
+            Ok(optional_cached_value) => optional_cached_value
+                .map(|_| ResponseCheckTx {
+                    code: 4,
+                    ..Default::default()
+                })
+                .unwrap_or_default(),
+            Err(error) => error,
         }
     }
 
