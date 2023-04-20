@@ -1,5 +1,5 @@
 {
-  "checksum": "8edfdf0154589d79477cb6b1168f020430cb4bc144519be8387b16f0f668fdcd",
+  "checksum": "a75baa99e4ee1cb0780d2dd324e11929600b213b6044bd56d29899bb4d4f6d28",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -12133,10 +12133,6 @@
             {
               "id": "async-trait 0.1.67",
               "target": "async_trait"
-            },
-            {
-              "id": "derive_more 0.99.17",
-              "target": "derive_more"
             }
           ],
           "selects": {}
