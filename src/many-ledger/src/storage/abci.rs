@@ -37,7 +37,10 @@ impl LedgerStorage {
             self.latest_tid = EventId::from(height << HEIGHT_EVENTID_SHIFT);
             Ok((retain_height, hash.into()))
         })()
-        .unwrap();
+        .unwrap_or_else(|error| {
+            println!("AbciCommitInfo erorr: {error:?}");
+            (0, error.to_string().into_bytes().into())
+        });
 
         // TODO: This function's implementation proves that the return type of
         // LedgerModuleImpl's trait method should be Result<AbciCommitInfo, ManyError>
