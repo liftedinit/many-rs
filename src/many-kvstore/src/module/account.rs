@@ -1,14 +1,16 @@
-use super::{error, KvStoreMetadata, KvStoreModuleImpl};
-use coset::CoseSign1;
-use many_error::{ManyError, ManyErrorCode};
-use many_identity::Address;
-use many_modules::account::features::{FeatureInfo, TryCreateFeature};
-use many_modules::account::{AccountModuleBackend, Role};
-use many_modules::{account, EmptyReturn, ManyModule, ManyModuleInfo};
-use many_protocol::{context::Context, RequestMessage, ResponseMessage};
-use many_types::cbor::CborAny;
-use std::collections::BTreeSet;
-use std::fmt::{Debug, Formatter};
+use {
+    super::{error, KvStoreMetadata, KvStoreModuleImpl},
+    coset::CoseSign1,
+    many_error::{ManyError, ManyErrorCode},
+    many_identity::Address,
+    many_modules::account::features::{FeatureInfo, TryCreateFeature},
+    many_modules::account::{AccountModuleBackend, Role},
+    many_modules::{account, EmptyReturn, ManyModule, ManyModuleInfo},
+    many_protocol::{context::Context, RequestMessage, ResponseMessage},
+    many_types::cbor::CborAny,
+    std::collections::BTreeSet,
+    std::fmt::{Debug, Formatter},
+};
 
 pub(crate) fn validate_account(account: &account::Account) -> Result<(), ManyError> {
     // Verify that we support all features.

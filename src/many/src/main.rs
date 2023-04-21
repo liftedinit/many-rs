@@ -362,7 +362,7 @@ async fn message_from_hex(
     hex: String,
     r#async: bool,
 ) -> Result<(), ClientServerError> {
-    let client = ManyClient::new(s.clone(), to, key).unwrap();
+    let client = ManyClient::new(s.clone(), to, key).map_err(|error| anyhow::anyhow!(error))?;
 
     let data = hex::decode(hex).map_err(|e| anyhow!(e))?;
     let envelope = CoseSign1::from_slice(&data).map_err(|e| anyhow!(e))?;

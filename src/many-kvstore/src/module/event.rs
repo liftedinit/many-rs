@@ -1,8 +1,10 @@
-use super::KvStoreModuleImpl;
-use many_error::ManyError;
-use many_identity::Address;
-use many_modules::events;
-use many_types::{CborRange, Timestamp, VecOrSingle};
+use {
+    super::KvStoreModuleImpl,
+    many_error::ManyError,
+    many_identity::Address,
+    many_modules::events,
+    many_types::{CborRange, Timestamp, VecOrSingle},
+};
 
 const MAXIMUM_EVENT_COUNT: usize = 100;
 

@@ -1,33 +1,53 @@
-use crate::error;
-use crate::migration::data::{ACCOUNT_TOTAL_COUNT_INDEX, NON_ZERO_ACCOUNT_TOTAL_COUNT_INDEX};
-use crate::storage::{key_for_account_balance, LedgerStorage};
-use many_error::ManyError;
-use many_identity::Address;
-use many_modules::data::{DataIndex, DataInfo, DataValue};
-use many_types::ledger::TokenAmount;
-use merk::Op;
-use std::collections::BTreeMap;
+use {
+    super::{InnerStorage, Operation},
+    crate::error,
+    crate::migration::data::{ACCOUNT_TOTAL_COUNT_INDEX, NON_ZERO_ACCOUNT_TOTAL_COUNT_INDEX},
+    crate::storage::{key_for_account_balance, LedgerStorage},
+    many_error::{ManyError, ManyErrorCode},
+    many_identity::Address,
+    many_modules::data::{DataIndex, DataInfo, DataValue},
+    many_types::ledger::TokenAmount,
+    std::collections::BTreeMap,
+};
 
 pub const DATA_ATTRIBUTES_KEY: &[u8] = b"/data/attributes";
 pub const DATA_INFO_KEY: &[u8] = b"/data/info";
 
 impl LedgerStorage {
     pub(crate) fn data_info(&self) -> Result<Option<BTreeMap<DataIndex, DataInfo>>, ManyError> {
-        Ok(self
-            .persistent_store
+        self.persistent_store
             .get(DATA_INFO_KEY)
-            .map_err(error::storage_get_failed)?
-            .map(|x| minicbor::decode(&x).unwrap()))
+            .map_err(error::storage_get_failed)
+            .and_then(|x| {
+                x.map(|x| minicbor::decode(&x))
+                    .transpose()
+                    .map_err(|error| {
+                        ManyError::new(
+                            ManyErrorCode::Unknown,
+                            Some(error.to_string()),
+                            BTreeMap::new(),
+                        )
+                    })
+            })
     }
 
     pub(crate) fn data_attributes(
         &self,
     ) -> Result<Option<BTreeMap<DataIndex, DataValue>>, ManyError> {
-        Ok(self
-            .persistent_store
+        self.persistent_store
             .get(DATA_ATTRIBUTES_KEY)
-            .map_err(error::storage_get_failed)?
-            .map(|x| minicbor::decode(&x).unwrap()))
+            .map_err(error::storage_get_failed)
+            .and_then(|x| {
+                x.map(|x| minicbor::decode(&x))
+                    .transpose()
+                    .map_err(|error| {
+                        ManyError::new(
+                            ManyErrorCode::Unknown,
+                            Some(error.to_string()),
+                            BTreeMap::new(),
+                        )
+                    })
+            })
     }
 
     pub(crate) fn update_account_count(
@@ -79,12 +99,29 @@ impl LedgerStorage {
                         }
                     });
             }
-            self.persistent_store
-                .apply(&[(
-                    DATA_ATTRIBUTES_KEY.to_vec(),
-                    Op::Put(minicbor::to_vec(attributes).unwrap()),
-                )])
-                .map_err(error::storage_apply_failed)?
+            self.persistent_store.apply(&[(
+                DATA_ATTRIBUTES_KEY.to_vec(),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                        minicbor::to_vec(attributes).map_err(|error| {
+                            ManyError::new(
+                                ManyErrorCode::Unknown,
+                                Some(error.to_string()),
+                                BTreeMap::new(),
+                            )
+                        })?,
+                    )),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                        minicbor::to_vec(attributes).map_err(|error| {
+                            ManyError::new(
+                                ManyErrorCode::Unknown,
+                                Some(error.to_string()),
+                                BTreeMap::new(),
+                            )
+                        })?,
+                    )),
+                },
+            )])?;
         }
         Ok(())
     }

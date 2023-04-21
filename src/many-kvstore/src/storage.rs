@@ -1,20 +1,23 @@
-use crate::module::{KvStoreMetadata, KvStoreMetadataWrapper};
-use many_error::ManyError;
-use many_identity::Address;
-use many_modules::abci_backend::AbciCommitInfo;
-use many_modules::events::EventInfo;
-use many_types::{Either, ProofOperation, Timestamp};
-use merk::{
-    proofs::{
-        Decoder,
-        Node::{Hash, KVHash, KV},
-        Query,
+use {
+    crate::module::{KvStoreMetadata, KvStoreMetadataWrapper},
+    derive_more::{From, TryInto},
+    many_error::{ManyError, ManyErrorCode},
+    many_identity::Address,
+    many_modules::abci_backend::AbciCommitInfo,
+    many_modules::events::EventInfo,
+    many_types::{Either, ProofOperation, Timestamp},
+    merk_v2::{
+        proofs::{
+            query::QueryItem,
+            Decoder,
+            Node::{Hash, KVHash, KV},
+        },
+        Op,
     },
-    BatchEntry, Op,
+    serde::{Deserialize, Serialize},
+    std::collections::BTreeMap,
+    std::path::Path,
 };
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::path::Path;
 
 mod account;
 mod event;
@@ -33,9 +36,10 @@ pub struct Key {
 }
 
 pub type AclMap = BTreeMap<Key, KvStoreMetadataWrapper>;
+pub(crate) type InnerStorage = merk_v2::Merk;
 
 pub struct KvStoreStorage {
-    persistent_store: merk::Merk,
+    persistent_store: InnerStorage,
 
     /// When this is true, we do not commit every transactions as they come,
     /// but wait for a `commit` call before committing the batch to the
@@ -74,7 +78,13 @@ impl KvStoreStorage {
                 key.clone(),
                 Op::Put(self.next_subresource.to_be_bytes().to_vec()),
             )])
-            .map_err(error::storage_apply_failed)?;
+            .map_err(|error| {
+                ManyError::new(
+                    ManyErrorCode::Unknown,
+                    Some(error.to_string()),
+                    BTreeMap::new(),
+                )
+            })?;
 
         self.root_identity
             .with_subresource_id(current_id)
@@ -82,11 +92,11 @@ impl KvStoreStorage {
     }
 
     pub fn load<P: AsRef<Path>>(persistent_path: P, blockchain: bool) -> Result<Self, String> {
-        let persistent_store = merk::Merk::open(persistent_path).map_err(|e| e.to_string())?;
+        let persistent_store = InnerStorage::open(persistent_path).map_err(|e| e.to_string())?;
 
         let next_subresource = persistent_store
             .get(b"/config/subresource_id")
-            .unwrap()
+            .map_err(|error| error.to_string())?
             .map_or(0, |x| {
                 let mut bytes = [0u8; 4];
                 bytes.copy_from_slice(x.as_slice());
@@ -96,16 +106,16 @@ impl KvStoreStorage {
         let root_identity: Address = Address::from_bytes(
             &persistent_store
                 .get(b"/config/identity")
-                .expect("Could not open storage.")
-                .expect("Could not find key '/config/identity' in storage."),
+                .map_err(|_| "Could not open storage.".to_string())?
+                .ok_or_else(|| "Could not find key '/config/identity' in storage.".to_string())?,
         )
         .map_err(|e| e.to_string())?;
 
         let latest_event_id = minicbor::decode(
             &persistent_store
                 .get(b"/latest_event_id")
-                .expect("Could not open storage.")
-                .expect("Could not find key '/latest_event_id'"),
+                .map_err(|_| "Could not open storage.".to_string())?
+                .ok_or_else(|| "Could not find key '/latest_event_id'".to_string())?,
         )
         .map_err(|e| e.to_string())?;
 
@@ -126,19 +136,26 @@ impl KvStoreStorage {
         persistent_path: P,
         blockchain: bool,
     ) -> Result<Self, String> {
-        let mut persistent_store = merk::Merk::open(persistent_path).map_err(|e| e.to_string())?;
+        let mut persistent_store =
+            InnerStorage::open(persistent_path).map_err(|e| e.to_string())?;
 
-        let mut batch: Vec<BatchEntry> = Vec::new();
-
-        batch.push((b"/config/identity".to_vec(), Op::Put(identity.to_vec())));
-
-        // Initialize DB with ACL
-        for (k, v) in acl.into_iter() {
-            batch.push((
-                vec![KVSTORE_ACL_ROOT.to_vec(), k.key.to_vec()].concat(),
-                Op::Put(minicbor::to_vec(v).map_err(|e| e.to_string())?),
-            ));
-        }
+        let mut batch = vec![(b"/config/identity".to_vec(), Op::Put(identity.to_vec()))];
+        batch.extend(
+            acl.into_iter()
+                .map(|(k, v)| {
+                    minicbor::to_vec(v)
+                        .map_err(|e| e.to_string())
+                        .map(Op::Put)
+                        .map(|value| {
+                            (
+                                vec![KVSTORE_ACL_ROOT.to_vec(), k.key.to_vec()].concat(),
+                                value,
+                            )
+                        })
+                })
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter(),
+        );
 
         persistent_store
             .apply(batch.as_slice())
@@ -150,7 +167,7 @@ impl KvStoreStorage {
                 b"/latest_event_id".to_vec(),
                 Op::Put(minicbor::to_vec(&latest_event_id).expect("Unable to encode event id")),
             )])
-            .unwrap();
+            .map_err(|error| error.to_string())?;
 
         persistent_store.commit(&[]).map_err(|e| e.to_string())?;
 
@@ -188,24 +205,33 @@ impl KvStoreStorage {
     }
 
     pub fn commit(&mut self) -> AbciCommitInfo {
-        let _ = self.inc_height();
-        self.persistent_store
-            .apply(&[(
+        #[derive(Debug, From, TryInto)]
+        enum Error {
+            Cbor(minicbor::encode::Error<core::convert::Infallible>),
+            Merk(merk_v2::Error),
+        }
+        let (retain_height, hash) = (|| -> Result<(u64, minicbor::bytes::ByteVec), Error> {
+            let _ = self.inc_height();
+            self.persistent_store.apply(&[(
                 b"/latest_event_id".to_vec(),
-                Op::Put(
-                    minicbor::to_vec(&self.latest_event_id).expect("Unable to encode event id"),
-                ),
-            )])
-            .unwrap();
-        self.persistent_store.commit(&[]).unwrap();
+                Op::Put(minicbor::to_vec(&self.latest_event_id)?),
+            )])?;
+            self.persistent_store.commit(&[])?;
 
-        let retain_height = 0;
-        let hash = self.persistent_store.root_hash().to_vec();
-        self.current_hash = Some(hash.clone());
+            let retain_height = 0;
+            let hash = self.persistent_store.root_hash().to_vec();
+            self.current_hash = Some(hash.clone());
+            Ok((retain_height, hash.into()))
+        })()
+        .unwrap();
+
+        // TODO: For KvStore, it seems like LedgerModuleImpl::commit needs a
+        // return type of Result<(u64, ByteVec), Error>, as shown in the
+        // aforementioned closure.
 
         AbciCommitInfo {
             retain_height,
-            hash: hash.into(),
+            hash,
         }
     }
 
@@ -269,7 +295,9 @@ impl KvStoreStorage {
         });
 
         if !self.blockchain {
-            self.persistent_store.commit(&[]).unwrap();
+            self.persistent_store
+                .commit(&[])
+                .map_err(ManyError::unknown)?;
         }
         Ok(())
     }
@@ -283,12 +311,12 @@ impl KvStoreStorage {
                         .map_err(|e| ManyError::serialization_error(e.to_string()))?,
                 ),
             )])
-            .map_err(|e| ManyError::unknown(e.to_string()))?;
+            .map_err(ManyError::unknown)?;
 
         let reason = if let Some(disabled) = &meta.disabled {
             match disabled {
                 Either::Right(reason) => Some(reason),
-                _ => None,
+                Either::Left(_) => None,
             }
         } else {
             None
@@ -300,7 +328,9 @@ impl KvStoreStorage {
         });
 
         if !self.blockchain {
-            self.persistent_store.commit(&[]).unwrap();
+            self.persistent_store
+                .commit(&[])
+                .map_err(ManyError::unknown)?;
         }
         Ok(())
     }
@@ -320,7 +350,7 @@ impl KvStoreStorage {
                         .map_err(|e| ManyError::serialization_error(e.to_string()))?,
                 ),
             )])
-            .map_err(|e| ManyError::unknown(e.to_string()))?;
+            .map_err(ManyError::unknown)?;
 
         self.log_event(EventInfo::KvStoreTransfer {
             key: key.to_vec().into(),
@@ -329,7 +359,9 @@ impl KvStoreStorage {
         });
 
         if !self.blockchain {
-            self.persistent_store.commit(&[]).unwrap();
+            self.persistent_store
+                .commit(&[])
+                .map_err(ManyError::unknown)?;
         }
         Ok(())
     }
@@ -339,14 +371,12 @@ impl KvStoreStorage {
         context: impl AsRef<many_protocol::context::Context>,
         keys: impl IntoIterator<Item = Vec<u8>>,
     ) -> Result<(), ManyError> {
-        use merk::proofs::Op;
+        use merk_v2::proofs::Op;
         context.as_ref().prove(|| {
             self.persistent_store
-                .prove({
-                    let mut query = Query::new();
-                    keys.into_iter().for_each(|key| query.insert_key(key));
-                    query
-                })
+                .prove(merk_v2::proofs::query::Query::from(
+                    keys.into_iter().map(QueryItem::Key).collect::<Vec<_>>(),
+                ))
                 .and_then(|proof| {
                     Decoder::new(proof.as_slice())
                         .map(|fallible_operation| {
@@ -363,6 +393,7 @@ impl KvStoreStorage {
                             })
                         })
                         .collect::<Result<Vec<_>, _>>()
+                        .map_err(Into::into)
                 })
                 .map_err(|error| ManyError::unknown(error.to_string()))
         })

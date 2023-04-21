@@ -1,22 +1,16 @@
-use crate::error;
-use crate::storage::{key_for_account_balance, LedgerStorage, IDENTITY_ROOT, SYMBOLS_ROOT};
-use many_error::ManyError;
-use many_identity::Address;
-use many_protocol::context::Context;
-use many_types::{
-    ledger::{Symbol, TokenAmount},
-    ProofOperation,
-};
-use merk::{
-    proofs::{
-        query::QueryItem,
-        Decoder,
-        Node::{Hash, KVHash, KV},
-        Op::{Child, Parent, Push},
+use {
+    super::{InnerStorage, Operation, Query},
+    crate::error,
+    crate::storage::{key_for_account_balance, LedgerStorage, IDENTITY_ROOT, SYMBOLS_ROOT},
+    many_error::ManyError,
+    many_identity::Address,
+    many_protocol::context::Context,
+    many_types::{
+        ledger::{Symbol, TokenAmount},
+        ProofOperation,
     },
-    BatchEntry, Op,
+    std::collections::{BTreeMap, BTreeSet},
 };
-use std::collections::{BTreeMap, BTreeSet};
 
 impl LedgerStorage {
     pub fn with_balances(
@@ -25,34 +19,71 @@ impl LedgerStorage {
         symbols: &BTreeMap<Symbol, String>,
         initial_balances: &BTreeMap<Address, BTreeMap<Symbol, TokenAmount>>,
     ) -> Result<Self, ManyError> {
-        let mut batch: Vec<BatchEntry> = Vec::new();
-        for (k, v) in initial_balances.iter() {
-            for (symbol, tokens) in v.iter() {
-                if !symbols.contains_key(symbol) {
-                    return Err(ManyError::unknown(format!(
-                        r#"Unknown symbol "{symbol}" for identity {k}"#
-                    ))); // TODO: Custom error
-                }
-
-                let key = key_for_account_balance(k, symbol);
-                batch.push((key, Op::Put(tokens.to_vec())));
+        let batch = match self.persistent_store {
+            InnerStorage::V1(_) => {
+                let mut batch = initial_balances
+                    .iter()
+                    .flat_map(|(k, v)| v.iter().map(move |(symbols, tokens)| (k, symbols, tokens)))
+                    .map(|(k, symbol, tokens)| {
+                        if symbols.contains_key(symbol) {
+                            let key = key_for_account_balance(k, symbol);
+                            Ok((key, Operation::from(merk_v1::Op::Put(tokens.to_vec()))))
+                        } else {
+                            Err(ManyError::unknown(format!(
+                                r#"Unknown symbol "{symbol}" for identity {k}"#
+                            )))
+                        }
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                batch.extend([
+                    (
+                        IDENTITY_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v1::Op::Put(identity.to_vec())),
+                    ),
+                    (
+                        SYMBOLS_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v1::Op::Put(
+                            minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?,
+                        )),
+                    ),
+                ]);
+                batch
             }
-        }
-
-        batch.push((
-            IDENTITY_ROOT.as_bytes().to_vec(),
-            Op::Put(identity.to_vec()),
-        ));
-        batch.push((
-            SYMBOLS_ROOT.as_bytes().to_vec(),
-            Op::Put(minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?),
-        ));
+            InnerStorage::V2(_) => {
+                let mut batch = initial_balances
+                    .iter()
+                    .flat_map(|(k, v)| v.iter().map(move |(symbols, tokens)| (k, symbols, tokens)))
+                    .map(|(k, symbol, tokens)| {
+                        if symbols.contains_key(symbol) {
+                            let key = key_for_account_balance(k, symbol);
+                            Ok((key, Operation::from(merk_v2::Op::Put(tokens.to_vec()))))
+                        } else {
+                            Err(ManyError::unknown(format!(
+                                r#"Unknown symbol "{symbol}" for identity {k}"#
+                            )))
+                        }
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                batch.extend([
+                    (
+                        IDENTITY_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v2::Op::Put(identity.to_vec())),
+                    ),
+                    (
+                        SYMBOLS_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v2::Op::Put(
+                            minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?,
+                        )),
+                    ),
+                ]);
+                batch
+            }
+        };
 
         self.persistent_store
             .apply(batch.as_slice())
-            .map_err(error::storage_apply_failed)?;
-
-        Ok(self)
+            .map(|_| self)
+            .map_err(Into::into)
     }
 
     fn get_all_balances(
@@ -121,29 +152,65 @@ impl LedgerStorage {
         keys: impl IntoIterator<Item = Vec<u8>>,
     ) -> Result<(), ManyError> {
         context.as_ref().prove(|| {
-            self.persistent_store
-                .prove(
-                    keys.into_iter()
-                        .map(QueryItem::Key)
-                        .collect::<Vec<_>>()
-                        .into(),
-                )
-                .and_then(|proof| {
-                    Decoder::new(proof.as_slice())
-                        .map(|fallible_operation| {
-                            fallible_operation.map(|operation| match operation {
-                                Child => ProofOperation::Child,
-                                Parent => ProofOperation::Parent,
-                                Push(Hash(hash)) => ProofOperation::NodeHash(hash.to_vec()),
-                                Push(KV(key, value)) => {
-                                    ProofOperation::KeyValuePair(key.into(), value.into())
-                                }
-                                Push(KVHash(hash)) => ProofOperation::KeyValueHash(hash.to_vec()),
+            match self.persistent_store {
+                InnerStorage::V1(_) => self
+                    .persistent_store
+                    .prove(Query::from(merk_v1::proofs::query::Query::from(
+                        keys.into_iter()
+                            .map(merk_v1::proofs::query::QueryItem::Key)
+                            .collect::<Vec<_>>(),
+                    )))
+                    .and_then(|proof| {
+                        merk_v1::proofs::Decoder::new(proof.as_slice())
+                            .map(|fallible_operation| {
+                                fallible_operation.map(|operation| match operation {
+                                    merk_v1::proofs::Op::Child => ProofOperation::Child,
+                                    merk_v1::proofs::Op::Parent => ProofOperation::Parent,
+                                    merk_v1::proofs::Op::Push(merk_v1::proofs::Node::Hash(
+                                        hash,
+                                    )) => ProofOperation::NodeHash(hash.to_vec()),
+                                    merk_v1::proofs::Op::Push(merk_v1::proofs::Node::KV(
+                                        key,
+                                        value,
+                                    )) => ProofOperation::KeyValuePair(key.into(), value.into()),
+                                    merk_v1::proofs::Op::Push(merk_v1::proofs::Node::KVHash(
+                                        hash,
+                                    )) => ProofOperation::KeyValueHash(hash.to_vec()),
+                                })
                             })
-                        })
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .map_err(|error| ManyError::unknown(error.to_string()))
+                            .collect::<Result<Vec<_>, _>>()
+                            .map_err(Into::into)
+                    }),
+                InnerStorage::V2(_) => self
+                    .persistent_store
+                    .prove(Query::from(merk_v2::proofs::query::Query::from(
+                        keys.into_iter()
+                            .map(merk_v2::proofs::query::QueryItem::Key)
+                            .collect::<Vec<_>>(),
+                    )))
+                    .and_then(|proof| {
+                        merk_v2::proofs::Decoder::new(proof.as_slice())
+                            .map(|fallible_operation| {
+                                fallible_operation.map(|operation| match operation {
+                                    merk_v2::proofs::Op::Child => ProofOperation::Child,
+                                    merk_v2::proofs::Op::Parent => ProofOperation::Parent,
+                                    merk_v2::proofs::Op::Push(merk_v2::proofs::Node::Hash(
+                                        hash,
+                                    )) => ProofOperation::NodeHash(hash.to_vec()),
+                                    merk_v2::proofs::Op::Push(merk_v2::proofs::Node::KV(
+                                        key,
+                                        value,
+                                    )) => ProofOperation::KeyValuePair(key.into(), value.into()),
+                                    merk_v2::proofs::Op::Push(merk_v2::proofs::Node::KVHash(
+                                        hash,
+                                    )) => ProofOperation::KeyValueHash(hash.to_vec()),
+                                })
+                            })
+                            .collect::<Result<Vec<_>, _>>()
+                            .map_err(Into::into)
+                    }),
+            }
+            .map_err(|error| ManyError::unknown(error.to_string()))
         })
     }
 }

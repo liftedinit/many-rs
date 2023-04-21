@@ -191,7 +191,7 @@ impl KvStoreModuleBackend for KvStoreModuleImpl {
     fn get(&self, _sender: &Address, args: GetArgs) -> Result<GetReturns, ManyError> {
         let value = self.storage.get(&args.key)?;
         Ok(GetReturns {
-            value: value.map(|x| x.into()),
+            value: value.map(Into::into),
         })
     }
 

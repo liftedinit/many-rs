@@ -1,11 +1,13 @@
-use crate::error;
-use crate::storage::iterator::LedgerIterator;
-use crate::storage::LedgerStorage;
-use many_error::ManyError;
-use many_modules::events;
-use many_modules::events::EventId;
-use many_types::{CborRange, SortOrder};
-use merk::Op;
+use {
+    super::{InnerStorage, Operation},
+    crate::error,
+    crate::storage::iterator::LedgerIterator,
+    crate::storage::LedgerStorage,
+    many_error::ManyError,
+    many_modules::events,
+    many_modules::events::EventId,
+    many_types::{CborRange, SortOrder},
+};
 
 pub(crate) const EVENTS_ROOT: &[u8] = b"/events/";
 pub(crate) const EVENT_COUNT_ROOT: &[u8] = b"/events_count";
@@ -57,18 +59,36 @@ impl LedgerStorage {
             content,
         };
 
-        self.persistent_store
-            .apply(&[
+        self.persistent_store.apply(&match self.persistent_store {
+            InnerStorage::V1(_) => [
                 (
                     key_for_event(event.id.clone()),
-                    Op::Put(minicbor::to_vec(&event).map_err(ManyError::serialization_error)?),
+                    Operation::from(merk_v1::Op::Put(
+                        minicbor::to_vec(&event).map_err(ManyError::serialization_error)?,
+                    )),
                 ),
                 (
                     EVENT_COUNT_ROOT.to_vec(),
-                    Op::Put((current_nb_events + 1).to_be_bytes().to_vec()),
+                    Operation::from(merk_v1::Op::Put(
+                        (current_nb_events + 1).to_be_bytes().to_vec(),
+                    )),
                 ),
-            ])
-            .map_err(error::storage_apply_failed)?;
+            ],
+            InnerStorage::V2(_) => [
+                (
+                    key_for_event(event.id.clone()),
+                    Operation::from(merk_v2::Op::Put(
+                        minicbor::to_vec(&event).map_err(ManyError::serialization_error)?,
+                    )),
+                ),
+                (
+                    EVENT_COUNT_ROOT.to_vec(),
+                    Operation::from(merk_v2::Op::Put(
+                        (current_nb_events + 1).to_be_bytes().to_vec(),
+                    )),
+                ),
+            ],
+        })?;
 
         self.maybe_commit()
     }

@@ -1,10 +1,12 @@
-use super::KvStoreStorage;
-use many_modules::events;
-use many_types::{CborRange, SortOrder};
-use merk::tree::Tree;
-use merk::{rocksdb, Op};
-use std::collections::Bound;
-use std::ops::RangeBounds;
+use {
+    super::{InnerStorage, KvStoreStorage},
+    many_modules::events,
+    many_types::{CborRange, SortOrder},
+    merk_v2::tree::Tree,
+    merk_v2::{rocksdb, Op},
+    std::collections::Bound,
+    std::ops::RangeBounds,
+};
 
 const EVENTS_ROOT: &[u8] = b"/events/";
 
@@ -83,7 +85,7 @@ pub struct KvStoreIterator<'a> {
 
 impl<'a> KvStoreIterator<'a> {
     pub fn scoped_by_id(
-        merk: &'a merk::Merk,
+        merk: &'a InnerStorage,
         range: CborRange<events::EventId>,
         order: SortOrder,
     ) -> Self {
@@ -117,7 +119,7 @@ impl<'a> KvStoreIterator<'a> {
 }
 
 impl<'a> Iterator for KvStoreIterator<'a> {
-    type Item = Result<(Box<[u8]>, Vec<u8>), merk::rocksdb::Error>;
+    type Item = Result<(Box<[u8]>, Vec<u8>), merk_v2::rocksdb::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|item| {

@@ -1,25 +1,27 @@
-use crate::error;
-use crate::migration::tokens::TOKEN_MIGRATION;
-use crate::storage::iterator::LedgerIterator;
-use crate::storage::{
-    key_for_account_balance, key_for_subresource_counter, LedgerStorage, IDENTITY_ROOT,
-    SYMBOLS_ROOT,
+use {
+    super::{InnerStorage, Operation},
+    crate::error,
+    crate::migration::tokens::TOKEN_MIGRATION,
+    crate::storage::iterator::LedgerIterator,
+    crate::storage::{
+        key_for_account_balance, key_for_subresource_counter, LedgerStorage, IDENTITY_ROOT,
+        SYMBOLS_ROOT,
+    },
+    itertools::Itertools,
+    many_error::ManyError,
+    many_identity::Address,
+    many_modules::events::EventInfo,
+    many_modules::ledger::extended_info::{ExtendedInfoKey, TokenExtendedInfo},
+    many_modules::ledger::{
+        TokenAddExtendedInfoArgs, TokenAddExtendedInfoReturns, TokenCreateArgs, TokenCreateReturns,
+        TokenInfoArgs, TokenInfoReturns, TokenRemoveExtendedInfoArgs,
+        TokenRemoveExtendedInfoReturns, TokenUpdateArgs, TokenUpdateReturns,
+    },
+    many_types::ledger::{Symbol, TokenAmount, TokenInfo, TokenInfoSummary, TokenInfoSupply},
+    many_types::{AttributeRelatedIndex, Either, SortOrder},
+    std::collections::{BTreeMap, BTreeSet},
+    std::str::FromStr,
 };
-use itertools::Itertools;
-use many_error::ManyError;
-use many_identity::Address;
-use many_modules::events::EventInfo;
-use many_modules::ledger::extended_info::{ExtendedInfoKey, TokenExtendedInfo};
-use many_modules::ledger::{
-    TokenAddExtendedInfoArgs, TokenAddExtendedInfoReturns, TokenCreateArgs, TokenCreateReturns,
-    TokenInfoArgs, TokenInfoReturns, TokenRemoveExtendedInfoArgs, TokenRemoveExtendedInfoReturns,
-    TokenUpdateArgs, TokenUpdateReturns,
-};
-use many_types::ledger::{Symbol, TokenAmount, TokenInfo, TokenInfoSummary, TokenInfoSupply};
-use many_types::{AttributeRelatedIndex, Either, SortOrder};
-use merk::{BatchEntry, Op};
-use std::collections::{BTreeMap, BTreeSet};
-use std::str::FromStr;
 
 pub const SYMBOLS_ROOT_DASH: &str = const_format::concatcp!(SYMBOLS_ROOT, "/");
 pub const TOKEN_IDENTITY_ROOT: &str = "/config/token_identity";
@@ -99,60 +101,112 @@ impl LedgerStorage {
                 .ok_or_else(|| ManyError::unknown("Symbols metadata needs to be provided"))?; // TODO: Custom error
             let total_supply = LedgerStorage::_total_supply(initial_balances)?;
 
-            for symbol in symbols.keys() {
-                if !symbols_meta.contains_key(symbol) {
-                    return Err(ManyError::unknown(format!(
+            symbols
+                .keys()
+                .map(|symbol| match symbol {
+                    _ if !symbols_meta.contains_key(symbol) => Err(ManyError::unknown(format!(
                         "Symbol {symbol} missing metadata"
-                    ))); // TODO: Custom error
-                }
-
-                if !total_supply.contains_key(symbol) {
-                    return Err(ManyError::unknown(format!(
+                    ))),
+                    _ if !total_supply.contains_key(symbol) => Err(ManyError::unknown(format!(
                         "Symbol {symbol} missing total supply"
-                    ))); // TODO: Custom error
-                }
-            }
+                    ))),
+                    _ => Ok(()),
+                })
+                .collect::<Result<Vec<_>, _>>()?;
 
-            let mut batch: Vec<BatchEntry> = Vec::new();
-            for (k, meta) in symbols_meta.into_iter() {
-                let total_supply = total_supply[&k].clone(); // Safe
-                let ticker = symbols[&k].clone(); // Safe
-                let info = LedgerStorage::_token_info(k, ticker, meta, total_supply.clone());
+            let mut batch = symbols_meta
+                .into_iter()
+                .map(|(k, meta)| {
+                    let total_supply = total_supply[&k].clone(); // Safe
+                    let ticker = symbols[&k].clone(); // Safe
+                    let info = LedgerStorage::_token_info(k, ticker, meta, total_supply);
 
-                batch.push((
-                    key_for_ext_info(&k),
-                    Op::Put(
-                        minicbor::to_vec(TokenExtendedInfo::default())
-                            .map_err(ManyError::serialization_error)?,
-                    ),
-                ));
-                batch.push((
-                    key_for_symbol(&k).into(),
-                    Op::Put(minicbor::to_vec(info).map_err(ManyError::serialization_error)?),
-                ));
-            }
+                    match self.persistent_store {
+                        InnerStorage::V1(_) => minicbor::to_vec(TokenExtendedInfo::default())
+                            .map_err(ManyError::serialization_error)
+                            .map(|value| {
+                                (
+                                    key_for_ext_info(&k),
+                                    Operation::from(merk_v1::Op::Put(value)),
+                                )
+                            })
+                            .and_then(|entry| {
+                                minicbor::to_vec(info)
+                                    .map_err(ManyError::serialization_error)
+                                    .map(|value| {
+                                        vec![
+                                            entry,
+                                            (
+                                                key_for_symbol(&k).into(),
+                                                Operation::from(merk_v1::Op::Put(value)),
+                                            ),
+                                        ]
+                                    })
+                            }),
+                        InnerStorage::V2(_) => minicbor::to_vec(TokenExtendedInfo::default())
+                            .map_err(ManyError::serialization_error)
+                            .map(|value| {
+                                (
+                                    key_for_ext_info(&k),
+                                    Operation::from(merk_v2::Op::Put(value)),
+                                )
+                            })
+                            .and_then(|entry| {
+                                minicbor::to_vec(info)
+                                    .map_err(ManyError::serialization_error)
+                                    .map(|value| {
+                                        vec![
+                                            entry,
+                                            (
+                                                key_for_symbol(&k).into(),
+                                                Operation::from(merk_v2::Op::Put(value)),
+                                            ),
+                                        ]
+                                    })
+                            }),
+                    }
+                })
+                .collect::<Result<Vec<Vec<_>>, _>>()?
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>();
             batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
-            self.persistent_store
-                .apply(batch.as_slice())
-                .map_err(error::storage_apply_failed)?;
+            self.persistent_store.apply(batch.as_slice())?;
 
             let token_identity = token_identity.unwrap_or(self.get_identity(IDENTITY_ROOT)?);
-            let batch: Vec<BatchEntry> = vec![
-                (
-                    key_for_subresource_counter(
-                        &token_identity,
-                        self.migrations.is_active(&TOKEN_MIGRATION),
+            let batch = match self.persistent_store {
+                InnerStorage::V1(_) => vec![
+                    (
+                        key_for_subresource_counter(
+                            &token_identity,
+                            self.migrations.is_active(&TOKEN_MIGRATION),
+                        ),
+                        Operation::from(merk_v1::Op::Put(
+                            token_next_subresource.unwrap_or(0).to_be_bytes().to_vec(),
+                        )),
                     ),
-                    Op::Put(token_next_subresource.unwrap_or(0).to_be_bytes().to_vec()),
-                ),
-                (
-                    TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
-                    Op::Put(token_identity.to_vec()),
-                ),
-            ];
-            self.persistent_store
-                .apply(batch.as_slice())
-                .map_err(error::storage_apply_failed)?;
+                    (
+                        TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v1::Op::Put(token_identity.to_vec())),
+                    ),
+                ],
+                InnerStorage::V2(_) => vec![
+                    (
+                        key_for_subresource_counter(
+                            &token_identity,
+                            self.migrations.is_active(&TOKEN_MIGRATION),
+                        ),
+                        Operation::from(merk_v2::Op::Put(
+                            token_next_subresource.unwrap_or(0).to_be_bytes().to_vec(),
+                        )),
+                    ),
+                    (
+                        TOKEN_IDENTITY_ROOT.as_bytes().to_vec(),
+                        Operation::from(merk_v2::Op::Put(token_identity.to_vec())),
+                    ),
+                ],
+            };
+            self.persistent_store.apply(batch.as_slice())?;
 
             self.commit_storage()?;
         }
@@ -225,10 +279,17 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 symbols_key.clone(),
-                Op::Put(minicbor::to_vec(&symbols).map_err(ManyError::serialization_error)?),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                        minicbor::to_vec(&symbols).map_err(ManyError::serialization_error)?,
+                    )),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                        minicbor::to_vec(&symbols).map_err(ManyError::serialization_error)?,
+                    )),
+                },
             )])
-            .map_err(error::storage_apply_failed)
             .map(|_| vec![symbols_key])
+            .map_err(Into::into)
     }
 
     pub fn create_token(
@@ -254,13 +315,19 @@ impl LedgerStorage {
         keys.extend(update_symbol_keys.into_iter().collect::<Vec<_>>());
 
         // Initialize the total supply following the initial token distribution, if any
-        let mut batch: Vec<BatchEntry> = Vec::new();
+        let mut batch = Vec::new();
         let total_supply = if let Some(ref initial_distribution) = initial_distribution {
             let mut total_supply = TokenAmount::zero();
             for (k, v) in initial_distribution {
                 let key = key_for_account_balance(k, &symbol);
                 keys.push(key.clone());
-                batch.push((key, Op::Put(v.to_vec())));
+                batch.push((
+                    key,
+                    match self.persistent_store {
+                        InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(v.to_vec())),
+                        InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(v.to_vec())),
+                    },
+                ));
                 total_supply += v.clone();
             }
             total_supply
@@ -286,7 +353,14 @@ impl LedgerStorage {
         keys.push(symbol_key.clone().into_bytes());
         batch.push((
             symbol_key.into(),
-            Op::Put(minicbor::to_vec(&info).map_err(ManyError::serialization_error)?),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                )),
+            },
         ));
 
         let ext_info_key = key_for_ext_info(&symbol);
@@ -296,7 +370,14 @@ impl LedgerStorage {
             .map_or(TokenExtendedInfo::default(), |e| e);
         batch.push((
             ext_info_key,
-            Op::Put(minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+            },
         ));
 
         self.log_event(EventInfo::TokenCreate {
@@ -313,9 +394,7 @@ impl LedgerStorage {
         // while the `merk` Ops are sorted by String
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
-        self.persistent_store
-            .apply(batch.as_slice())
-            .map_err(error::storage_apply_failed)?;
+        self.persistent_store.apply(batch.as_slice())?;
 
         self.maybe_commit()
             .map(|_| (TokenCreateReturns { info }, keys))
@@ -405,12 +484,17 @@ impl LedgerStorage {
                 },
             };
 
-            self.persistent_store
-                .apply(&[(
-                    symbol_key.into(),
-                    Op::Put(minicbor::to_vec(&info).map_err(ManyError::serialization_error)?),
-                )])
-                .map_err(error::storage_apply_failed)?;
+            self.persistent_store.apply(&[(
+                symbol_key.into(),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                        minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                    )),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                        minicbor::to_vec(&info).map_err(ManyError::serialization_error)?,
+                    )),
+                },
+            )])?;
 
             self.log_event(EventInfo::TokenUpdate {
                 symbol,
@@ -460,12 +544,17 @@ impl LedgerStorage {
             indices.push(AttributeRelatedIndex::from(ExtendedInfoKey::VisualLogo));
         }
 
-        self.persistent_store
-            .apply(&[(
-                ext_info_key.clone(),
-                Op::Put(minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?),
-            )])
-            .map_err(error::storage_apply_failed)?;
+        self.persistent_store.apply(&[(
+            ext_info_key.clone(),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+            },
+        )])?;
 
         self.log_event(EventInfo::TokenAddExtendedInfo {
             symbol,
@@ -503,12 +592,17 @@ impl LedgerStorage {
             }
         }
 
-        self.persistent_store
-            .apply(&[(
-                ext_info_key.clone(),
-                Op::Put(minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?),
-            )])
-            .map_err(error::storage_apply_failed)?;
+        self.persistent_store.apply(&[(
+            ext_info_key.clone(),
+            match self.persistent_store {
+                InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+                InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                    minicbor::to_vec(&ext_info).map_err(ManyError::serialization_error)?,
+                )),
+            },
+        )])?;
 
         self.log_event(EventInfo::TokenRemoveExtendedInfo {
             symbol,

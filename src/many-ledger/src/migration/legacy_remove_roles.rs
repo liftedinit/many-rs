@@ -1,10 +1,13 @@
-use crate::migration::MIGRATIONS;
-use linkme::distributed_slice;
-use many_error::ManyError;
-use many_migration::InnerMigration;
+use {
+    crate::{migration::MIGRATIONS, storage::InnerStorage},
+    linkme::distributed_slice,
+    many_error::ManyError,
+    many_migration::InnerMigration,
+    std::path::PathBuf,
+};
 
 #[distributed_slice(MIGRATIONS)]
-pub static LEGACY_REMOVE_ROLES_TRIGGER: InnerMigration<merk::Merk, ManyError> =
+pub static LEGACY_REMOVE_ROLES_TRIGGER: InnerMigration<InnerStorage, ManyError, PathBuf> =
     InnerMigration::new_trigger(
         true,
         "LegacyRemoveRoles",

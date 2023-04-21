@@ -1,29 +1,28 @@
-use crate::error;
-use crate::error::storage_commit_failed;
-use crate::migration::MIGRATIONS;
-use crate::storage::iterator::LedgerIterator;
-use crate::storage::multisig::MultisigTransactionStorage;
-use crate::storage::InnerStorage;
-use linkme::distributed_slice;
-use many_error::ManyError;
-use many_migration::InnerMigration;
-use many_modules::account::features::multisig::InfoReturn;
-use many_modules::events::{EventInfo, EventLog};
-use many_types::{Memo, SortOrder};
-use merk::Op;
-use serde_json::Value;
-use std::borrow::BorrowMut;
-use std::collections::HashMap;
+use {
+    crate::error::storage_commit_failed,
+    crate::migration::MIGRATIONS,
+    crate::storage::iterator::LedgerIterator,
+    crate::storage::multisig::MultisigTransactionStorage,
+    crate::storage::{InnerStorage, Operation},
+    linkme::distributed_slice,
+    many_error::ManyError,
+    many_migration::InnerMigration,
+    many_modules::account::features::multisig::InfoReturn,
+    many_modules::events::{EventInfo, EventLog},
+    many_types::{Memo, SortOrder},
+    serde_json::Value,
+    std::borrow::BorrowMut,
+    std::collections::HashMap,
+    std::path::PathBuf,
+};
 
 fn iter_through_events(
     storage: &InnerStorage,
 ) -> impl Iterator<Item = Result<(Vec<u8>, EventLog), ManyError>> + '_ {
     LedgerIterator::all_events(storage).map(|r| match r {
-        Ok((k, v)) => {
-            let log = minicbor::decode::<EventLog>(v.as_slice())
-                .map_err(ManyError::deserialization_error)?;
-            Ok((k.into(), log))
-        }
+        Ok((k, v)) => minicbor::decode::<EventLog>(v.as_slice())
+            .map_err(ManyError::deserialization_error)
+            .map(|log| Ok((k.into(), log)))?,
         Err(e) => Err(ManyError::unknown(e)),
     })
 }
@@ -32,11 +31,9 @@ fn iter_through_multisig_storage(
     storage: &InnerStorage,
 ) -> impl Iterator<Item = Result<(Vec<u8>, MultisigTransactionStorage), ManyError>> + '_ {
     LedgerIterator::all_multisig(storage, SortOrder::Ascending).map(|r| match r {
-        Ok((k, v)) => {
-            let log = minicbor::decode::<MultisigTransactionStorage>(v.as_slice())
-                .map_err(ManyError::deserialization_error)?;
-            Ok((k.into(), log))
-        }
+        Ok((k, v)) => minicbor::decode::<MultisigTransactionStorage>(v.as_slice())
+            .map_err(ManyError::deserialization_error)
+            .map(|log| Ok((k.into(), log)))?,
         Err(e) => Err(ManyError::unknown(e)),
     })
 }
@@ -93,8 +90,15 @@ fn update_multisig_submit_events(storage: &mut InnerStorage) -> Result<(), ManyE
                 };
                 batch.push((
                     key,
-                    Op::Put(minicbor::to_vec(new_log).map_err(ManyError::serialization_error)?),
-                ));
+                    match storage {
+                        InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                            minicbor::to_vec(new_log).map_err(ManyError::serialization_error)?,
+                        )),
+                        InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                            minicbor::to_vec(new_log).map_err(ManyError::serialization_error)?,
+                        )),
+                    },
+                ))
             }
         }
     }
@@ -102,11 +106,11 @@ fn update_multisig_submit_events(storage: &mut InnerStorage) -> Result<(), ManyE
     // The iterator is already sorted when going through rocksdb.
     // Since we only filter and map above, the keys in batch will always
     // be sorted at this point.
+    storage.apply(batch.as_slice())?;
     storage
-        .apply(batch.as_slice())
-        .map_err(error::storage_apply_failed)?;
-    storage.commit(&[]).map_err(storage_commit_failed)?;
-    Ok(())
+        .commit(&[])
+        .map_err(storage_commit_failed)
+        .map(|_| ())
 }
 
 fn update_multisig_storage(storage: &mut InnerStorage) -> Result<(), ManyError> {
@@ -153,30 +157,34 @@ fn update_multisig_storage(storage: &mut InnerStorage) -> Result<(), ManyError> 
 
             batch.push((
                 key,
-                Op::Put(minicbor::to_vec(new_multisig).map_err(ManyError::serialization_error)?),
-            ));
+                match storage {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                        minicbor::to_vec(new_multisig).map_err(ManyError::serialization_error)?,
+                    )),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                        minicbor::to_vec(new_multisig).map_err(ManyError::serialization_error)?,
+                    )),
+                },
+            ))
         }
     }
 
     // The iterator is already sorted when going through rocksdb.
     // Since we only filter and map above, the keys in batch will always
     // be sorted at this point.
-    storage
-        .apply(batch.as_slice())
-        .map_err(error::storage_apply_failed)?;
-    storage.commit(&[]).map_err(storage_commit_failed)?;
-    Ok(())
+    storage.apply(batch.as_slice())?;
+    storage.commit(&[]).map_err(storage_commit_failed)
 }
 
 fn initialize(storage: &mut InnerStorage, _: &HashMap<String, Value>) -> Result<(), ManyError> {
     update_multisig_submit_events(storage.borrow_mut())?;
-    update_multisig_storage(storage)?;
-    Ok(())
+    update_multisig_storage(storage)
 }
 
 #[distributed_slice(MIGRATIONS)]
-pub static MEMO_MIGRATION: InnerMigration<InnerStorage, ManyError> = InnerMigration::new_initialize(
-    initialize,
-    "Memo Migration",
-    "Move the database from legacy memo and data to the new memo data type.",
-);
+pub static MEMO_MIGRATION: InnerMigration<InnerStorage, ManyError, PathBuf> =
+    InnerMigration::new_initialize(
+        initialize,
+        "Memo Migration",
+        "Move the database from legacy memo and data to the new memo data type.",
+    );

@@ -5,7 +5,10 @@ use many_migration::{
     InnerMigration, Metadata, Migration, MigrationConfig, MigrationSet, MigrationType,
 };
 use serde_json::Value;
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::PathBuf,
+};
 
 type Storage = BTreeMap<StorageKey, u64>;
 
@@ -16,7 +19,7 @@ enum StorageKey {
 }
 
 #[distributed_slice]
-static SOME_MANY_RS_MIGRATIONS: [InnerMigration<Storage, String>] = [..];
+static SOME_MANY_RS_MIGRATIONS: [InnerMigration<Storage, String, PathBuf>] = [..];
 
 fn _initialize(s: &mut Storage, _: &HashMap<String, Value>) -> Result<(), String> {
     s.insert(StorageKey::Init, 1);
@@ -54,32 +57,34 @@ fn _hotfix(data: &[u8]) -> Option<Vec<u8>> {
 }
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static A: InnerMigration<Storage, String> =
+static A: InnerMigration<Storage, String, PathBuf> =
     InnerMigration::new_initialize(_initialize, "A", "A desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static B: InnerMigration<Storage, String> = InnerMigration::new_update(_update, "B", "B desc");
+static B: InnerMigration<Storage, String, PathBuf> =
+    InnerMigration::new_update(_update, "B", "B desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static C: InnerMigration<Storage, String> =
+static C: InnerMigration<Storage, String, PathBuf> =
     InnerMigration::new_initialize_update(_initialize, _update, "C", "C desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static D: InnerMigration<Storage, String> = InnerMigration::new_hotfix(_hotfix, "D", "D desc");
+static D: InnerMigration<Storage, String, PathBuf> =
+    InnerMigration::new_hotfix(_hotfix, "D", "D desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static E: InnerMigration<Storage, String> =
+static E: InnerMigration<Storage, String, PathBuf> =
     InnerMigration::new_initialize(_initialize_extra, "E", "E desc");
 
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
-static F: InnerMigration<Storage, String> =
+static F: InnerMigration<Storage, String, PathBuf> =
     InnerMigration::new_update(_update_extra, "F", "F desc");
 
 /// Enable all migrations from the registry EXCEPT the hotfix.
 /// Should not be used outside of tests.
-pub fn load_enable_all_regular_migrations<T, E>(
-    registry: &[InnerMigration<T, E>],
-) -> MigrationSet<T, E> {
+pub fn load_enable_all_regular_migrations<T, E: core::fmt::Debug, P: Clone>(
+    registry: &[InnerMigration<T, E, P>],
+) -> MigrationSet<T, P, E> {
     // Keep a default of block height 1 for backward compatibility.
     let metadata = Metadata {
         block_height: 1,
@@ -109,18 +114,24 @@ fn initialize() {
     let mut storage = Storage::new();
 
     // Should not run when block height == 0
-    migrations["A"].initialize(&mut storage, 0).unwrap();
+    migrations["A"]
+        .initialize(&mut storage, 0, [""].iter().collect::<PathBuf>())
+        .unwrap();
     assert!(storage.is_empty());
 
     // Migration should run when block height == 1
-    migrations["A"].initialize(&mut storage, 1).unwrap();
+    migrations["A"]
+        .initialize(&mut storage, 1, [""].iter().collect::<PathBuf>())
+        .unwrap();
     assert!(!storage.is_empty());
     assert_eq!(storage.len(), 1);
     assert!(storage.contains_key(&StorageKey::Init));
     assert_eq!(storage[&StorageKey::Init], 1);
 
     // Should not do anything after it ran once
-    migrations["A"].initialize(&mut storage, 2).unwrap();
+    migrations["A"]
+        .initialize(&mut storage, 2, [""].iter().collect::<PathBuf>())
+        .unwrap();
     assert_eq!(storage.len(), 1);
 }
 
@@ -141,7 +152,9 @@ fn initialize_extra() {
     assert!(migrations.contains_key("E"));
     let mut storage = Storage::new();
 
-    migrations["E"].initialize(&mut storage, 2).unwrap();
+    migrations["E"]
+        .initialize(&mut storage, 2, [""].iter().collect::<PathBuf>())
+        .unwrap();
     assert_eq!(storage[&StorageKey::Init], 42);
 }
 
@@ -204,7 +217,9 @@ fn initialize_update() {
     let mut storage = Storage::from_iter([(StorageKey::Counter, 0)]);
 
     for i in 0..4 {
-        migrations["C"].initialize(&mut storage, i).unwrap();
+        migrations["C"]
+            .initialize(&mut storage, i, [""].iter().collect::<PathBuf>())
+            .unwrap();
         match i {
             0 => assert_eq!(storage.len(), 1),
             1 => {
@@ -371,17 +386,23 @@ fn basic() {
     let mut storage = Storage::new();
     storage.insert(StorageKey::Counter, 0);
 
-    migration_set.update_at_height(&mut storage, 1).unwrap();
+    migration_set
+        .update_at_height(&mut storage, 1, [""].iter().collect::<PathBuf>())
+        .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 1);
 
-    migration_set.update_at_height(&mut storage, 2).unwrap();
+    migration_set
+        .update_at_height(&mut storage, 2, [""].iter().collect::<PathBuf>())
+        .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);
 
-    migration_set.update_at_height(&mut storage, 3).unwrap();
+    migration_set
+        .update_at_height(&mut storage, 3, [""].iter().collect::<PathBuf>())
+        .unwrap();
     assert_eq!(migration_set.values().count(), 3);
     assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
     assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);

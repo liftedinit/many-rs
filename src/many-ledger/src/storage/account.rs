@@ -1,20 +1,21 @@
-use crate::error;
-use crate::migration::legacy_remove_roles::LEGACY_REMOVE_ROLES_TRIGGER;
-use crate::migration::tokens::TOKEN_MIGRATION;
-use crate::module::account::{validate_account, verify_account_role};
-use crate::storage::multisig::{
-    MULTISIG_DEFAULT_EXECUTE_AUTOMATICALLY, MULTISIG_DEFAULT_TIMEOUT_IN_SECS,
-    MULTISIG_MAXIMUM_TIMEOUT_IN_SECS,
+use {
+    super::{InnerStorage, Operation},
+    crate::error,
+    crate::migration::tokens::TOKEN_MIGRATION,
+    crate::module::account::{validate_account, verify_account_role},
+    crate::storage::multisig::{
+        MULTISIG_DEFAULT_EXECUTE_AUTOMATICALLY, MULTISIG_DEFAULT_TIMEOUT_IN_SECS,
+        MULTISIG_MAXIMUM_TIMEOUT_IN_SECS,
+    },
+    crate::storage::{LedgerStorage, IDENTITY_ROOT},
+    many_error::ManyError,
+    many_identity::Address,
+    many_modules::account::features::{FeatureId, FeatureInfo, FeatureSet},
+    many_modules::account::Role,
+    many_modules::{account, events},
+    many_types::Either,
+    std::collections::{BTreeMap, BTreeSet},
 };
-use crate::storage::{LedgerStorage, IDENTITY_ROOT};
-use many_error::ManyError;
-use many_identity::Address;
-use many_modules::account::features::{FeatureId, FeatureInfo, FeatureSet};
-use many_modules::account::Role;
-use many_modules::{account, events};
-use many_types::Either;
-use merk::Op;
-use std::collections::{BTreeMap, BTreeSet};
 
 pub const ACCOUNT_IDENTITY_ROOT: &str = "/config/account_identity";
 pub const ACCOUNT_SUBRESOURCE_ID_ROOT: &str = "/config/account_id";
@@ -59,12 +60,13 @@ impl LedgerStorage {
     ) -> Result<Self, ManyError> {
         if self.migrations.is_active(&TOKEN_MIGRATION) {
             let identity = identity.unwrap_or(self.get_identity(IDENTITY_ROOT)?);
-            self.persistent_store
-                .apply(&[(
-                    ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
-                    Op::Put(identity.to_vec()),
-                )])
-                .map_err(error::storage_apply_failed)?;
+            self.persistent_store.apply(&[(
+                ACCOUNT_IDENTITY_ROOT.as_bytes().to_vec(),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(identity.to_vec())),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(identity.to_vec())),
+                },
+            )])?;
         }
 
         if let Some(accounts) = accounts {
@@ -237,16 +239,7 @@ impl LedgerStorage {
 
         for (id, roles) in &args.roles {
             for r in roles {
-                if self.migrations.is_active(&LEGACY_REMOVE_ROLES_TRIGGER) {
-                    // Remove the role form the account
-                    account.remove_role(id, *r);
-                    // But don't remove the entry if the role list is empty
-                    if account.get_roles(id).is_empty() {
-                        account.roles.insert(*id, BTreeSet::new());
-                    }
-                } else {
-                    account.remove_role(id, *r);
-                }
+                account.remove_role(id, *r);
             }
         }
 
@@ -325,7 +318,14 @@ impl LedgerStorage {
         self.persistent_store
             .apply(&[(
                 key.clone(),
-                Op::Put(minicbor::to_vec(account).map_err(ManyError::serialization_error)?),
+                match self.persistent_store {
+                    InnerStorage::V1(_) => Operation::from(merk_v1::Op::Put(
+                        minicbor::to_vec(account).map_err(ManyError::serialization_error)?,
+                    )),
+                    InnerStorage::V2(_) => Operation::from(merk_v2::Op::Put(
+                        minicbor::to_vec(account).map_err(ManyError::serialization_error)?,
+                    )),
+                },
             )])
             .map_err(|e| ManyError::unknown(e.to_string()))?;
 

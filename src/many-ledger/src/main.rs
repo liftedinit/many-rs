@@ -1,31 +1,35 @@
 #![feature(used_with_arg)]
 
-use clap::Parser;
-use many_cli_helpers::CommonCliFlags;
-use many_identity::verifiers::AnonymousVerifier;
-use many_identity::{Address, Identity};
-use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
-use many_identity_webauthn::WebAuthnVerifier;
-use many_migration::MigrationConfig;
-use many_modules::account::features::Feature;
-use many_modules::{abci_backend, account, data, events, idstore, ledger};
-use many_protocol::ManyUrl;
-use many_server::transport::http::HttpServer;
-use many_server::ManyServer;
-use std::collections::BTreeSet;
-use std::net::SocketAddr;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-use tracing::{debug, info, warn};
-
-use crate::allow_addrs::AllowAddrsModule;
+use {
+    crate::{
+        json::InitialStateJson,
+        migration::MIGRATIONS,
+        module::allow_addrs::AllowAddrsModule,
+        module::{account::AccountFeatureModule, LedgerModuleImpl},
+    },
+    clap::Parser,
+    derive_more::{From, TryInto},
+    many_cli_helpers::CommonCliFlags,
+    many_error::ManyError,
+    many_identity::verifiers::AnonymousVerifier,
+    many_identity::{Address, Identity},
+    many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier},
+    many_identity_webauthn::WebAuthnVerifier,
+    many_migration::MigrationConfig,
+    many_modules::account::features::Feature,
+    many_modules::{abci_backend, account, data, events, idstore, ledger},
+    many_protocol::ManyUrl,
+    many_server::transport::http::HttpServer,
+    many_server::ManyServer,
+    std::collections::BTreeSet,
+    std::net::SocketAddr,
+    std::path::PathBuf,
+    std::sync::{Arc, Mutex},
+    tracing::{debug, info, warn},
+};
 
 #[cfg(feature = "webauthn_testing")]
-use crate::idstore_webauthn::IdStoreWebAuthnModule;
-use crate::json::InitialStateJson;
-use crate::migration::MIGRATIONS;
-use crate::module::account::AccountFeatureModule;
-use module::*;
+use {crate::idstore_webauthn::IdStoreWebAuthnModule, module::*};
 
 mod error;
 mod json;
@@ -106,7 +110,18 @@ struct Opts {
     allow_addrs: Option<PathBuf>,
 }
 
-fn main() {
+#[derive(Debug, From, TryInto)]
+enum Error {
+    Anyhow(anyhow::Error),
+    Io(std::io::Error),
+    Json(json5::Error),
+    Many(ManyError),
+    Message(String),
+    ParseInt(std::num::ParseIntError),
+    Serde(serde_json::Error),
+}
+
+fn main() -> Result<(), Error> {
     let Opts {
         common_flags,
         pem,
@@ -122,7 +137,7 @@ fn main() {
         ..
     } = Opts::parse();
 
-    common_flags.init_logging().unwrap();
+    common_flags.init_logging()?;
 
     debug!("{:?}", Opts::parse());
     info!(
@@ -135,13 +150,12 @@ fn main() {
             println!("Name: {}", migration.name());
             println!("Description: {}", migration.description());
         }
-        return;
+        return Ok(());
     }
 
-    // Safe unwrap.
     // At this point the Options should contain a value.
-    let pem = pem.unwrap();
-    let persistent = persistent.unwrap();
+    let pem = pem.ok_or("Identity value should be present".to_string())?;
+    let persistent = persistent.ok_or("Persistent value should be present".to_string())?;
 
     if clean {
         // Delete the persistent storage.
@@ -149,28 +163,60 @@ fn main() {
         match std::fs::remove_dir_all(persistent.as_path()) {
             Ok(_) => {}
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => {
-                panic!("Error: {e}")
-            }
+            Err(e) => Err(format!("Error: {e}"))?,
         }
     } else if persistent.exists() {
         // Initial state is ignored.
         state = None;
     }
 
-    let pem = std::fs::read_to_string(pem).expect("Could not read PEM file.");
-    let key = CoseKeyIdentity::from_pem(pem).expect("Could not generate identity from PEM file.");
+    let pem = std::fs::read_to_string(pem)?;
+    let key = CoseKeyIdentity::from_pem(pem)?;
     info!(address = key.address().to_string().as_str());
 
-    let state: Option<InitialStateJson> =
-        state.map(|p| InitialStateJson::read(p).expect("Could not read state file."));
+    let state = state
+        .map(|p| InitialStateJson::read(p).map_err(|error| error.to_string()))
+        .transpose()?;
 
     info!("Loading migrations from {migrations_config:?}");
-    let maybe_migrations = migrations_config.map(|file| {
-        let content = std::fs::read_to_string(file)
-            .expect("Could not read file passed to --migrations_config");
-        let config: MigrationConfig = serde_json::from_str(&content).unwrap();
-        config.strict()
+    let maybe_migrations = migrations_config
+        .map(|file| {
+            let content = std::fs::read_to_string(file)?;
+            let config: MigrationConfig = serde_json::from_str(&content)?;
+            Ok::<_, Error>(config.strict())
+        })
+        .transpose()?;
+    let maybe_migrations = maybe_migrations.map(|config| {
+        config
+            .migrations()
+            .map(|migration| {
+                let (name, mut metadata) = migration.clone().into();
+                if name == "Hash Migration" {
+                    (
+                        "Hash Migration".to_string(),
+                        many_migration::Metadata {
+                            block_height: metadata.block_height,
+                            upper_block_height: metadata.upper_block_height,
+                            disabled: metadata.disabled,
+                            issue: metadata.issue,
+                            extra: {
+                                persistent
+                                    .to_str()
+                                    .and_then(|persistent| serde_json::from_str(persistent).ok())
+                                    .and_then(|persistent| {
+                                        metadata.extra.insert("ledger_db_path".into(), persistent)
+                                    });
+                                metadata.extra
+                            },
+                        },
+                    )
+                        .into()
+                } else {
+                    migration
+                }
+            })
+            .collect::<Vec<_>>()
+            .into()
     });
 
     let module_impl = if persistent.exists() {
@@ -195,12 +241,11 @@ fn main() {
             }
         }
 
-        LedgerModuleImpl::load(maybe_migrations, persistent, abci).unwrap()
+        LedgerModuleImpl::load(maybe_migrations, persistent, abci)?
     } else if let Some(state) = state {
         #[cfg(feature = "balance_testing")]
         {
-            let mut module_impl =
-                LedgerModuleImpl::new(state, maybe_migrations, persistent, abci).unwrap();
+            let mut module_impl = LedgerModuleImpl::new(state, maybe_migrations, persistent, abci)?;
 
             use std::str::FromStr;
 
@@ -212,26 +257,25 @@ fn main() {
             for balance in balance_only_for_testing.unwrap_or_default() {
                 let args: Vec<&str> = balance.splitn(3, ':').collect();
                 let (identity, amount, symbol) = (
-                    args.first().unwrap(),
-                    args.get(1).expect("No amount."),
-                    args.get(2).expect("No symbol."),
+                    args.first()
+                        .ok_or("Missing arguments for balance testing".to_string())?,
+                    args.get(1).ok_or("No amount.".to_string())?,
+                    args.get(2).ok_or("No symbol.".to_string())?,
                 );
 
-                module_impl
-                    .set_balance_only_for_testing(
-                        Address::from_str(identity).expect("Invalid identity."),
-                        amount.parse::<u64>().expect("Invalid amount."),
-                        Address::from_str(symbol).expect("Invalid symbol."),
-                    )
-                    .expect("Unable to set balance for testing.");
+                module_impl.set_balance_only_for_testing(
+                    Address::from_str(identity)?,
+                    amount.parse::<u64>()?,
+                    Address::from_str(symbol)?,
+                )?;
             }
             module_impl
         }
 
         #[cfg(not(feature = "balance_testing"))]
-        LedgerModuleImpl::new(state, maybe_migrations, persistent, abci).unwrap()
+        LedgerModuleImpl::new(state, maybe_migrations, persistent, abci)?
     } else {
-        panic!("Persistent store or staging file not found.")
+        Err("Persistent store or staging file not found.".to_string())?
     };
     let module_impl = Arc::new(Mutex::new(module_impl));
 
@@ -247,12 +291,13 @@ fn main() {
     );
 
     {
-        let mut s = many.lock().unwrap();
+        let mut s = many
+            .lock()
+            .map_err(|_| "Could not acquire server lock".to_string())?;
         s.add_module(ledger::LedgerModule::new(module_impl.clone()));
         let ledger_command_module = ledger::LedgerCommandsModule::new(module_impl.clone());
         if let Some(path) = allow_addrs {
-            let allow_addrs: BTreeSet<Address> =
-                json5::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+            let allow_addrs: BTreeSet<Address> = json5::from_str(&std::fs::read_to_string(path)?)?;
             s.add_module(AllowAddrsModule {
                 inner: ledger_command_module,
                 allow_addrs,
@@ -307,6 +352,6 @@ fn main() {
     signal_hook::flag::register(signal_hook::consts::SIGINT, many_server.term_signal())
         .expect("Could not register signal handler");
 
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    runtime.block_on(many_server.bind(addr)).unwrap();
+    let runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(many_server.bind(addr)).map_err(Into::into)
 }

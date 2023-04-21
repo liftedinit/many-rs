@@ -1,40 +1,41 @@
 pub mod cucumber;
 
-use async_channel::unbounded;
-use coset::CborSerializable;
-use itertools::Itertools;
-use many_error::ManyError;
-use many_identity::testing::identity;
-use many_identity::{Address, Identity};
-use many_identity_dsa::ed25519::generate_random_ed25519_identity;
-use many_ledger::json::InitialStateJson;
-use many_ledger::module::LedgerModuleImpl;
-use many_migration::{InnerMigration, MigrationConfig};
-use many_modules::abci_backend::{AbciBlock, ManyAbciModuleBackend};
-use many_modules::account::features::multisig::{
-    AccountMultisigModuleBackend, ExecuteArgs, InfoReturn,
-};
-use many_modules::account::features::FeatureInfo;
-use many_modules::account::AccountModuleBackend;
-use many_modules::idstore::{CredentialId, PublicKey};
-use many_modules::ledger::extended_info::visual_logo::VisualTokenLogo;
-use many_modules::ledger::extended_info::TokenExtendedInfo;
-use many_modules::ledger::{
-    BalanceArgs, LedgerCommandsModuleBackend, LedgerModuleBackend, TokenCreateArgs,
-};
-use many_modules::{account, events, ledger};
-use many_protocol::{context::Context, RequestMessage, ResponseMessage};
-use many_types::ledger::{
-    LedgerTokensAddressMap, Symbol, TokenAmount, TokenInfoSummary, TokenMaybeOwner,
-};
-use many_types::Memo;
-use merk::Merk;
-use minicbor::bytes::ByteVec;
-use once_cell::sync::Lazy;
-use proptest::prelude::*;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    str::FromStr,
+use {
+    async_channel::unbounded,
+    coset::CborSerializable,
+    itertools::Itertools,
+    many_error::ManyError,
+    many_identity::testing::identity,
+    many_identity::{Address, Identity},
+    many_identity_dsa::ed25519::generate_random_ed25519_identity,
+    many_ledger::{json::InitialStateJson, module::LedgerModuleImpl, storage::InnerStorage},
+    many_migration::{InnerMigration, MigrationConfig},
+    many_modules::abci_backend::{AbciBlock, ManyAbciModuleBackend},
+    many_modules::account::features::multisig::{
+        AccountMultisigModuleBackend, ExecuteArgs, InfoReturn,
+    },
+    many_modules::account::features::FeatureInfo,
+    many_modules::account::AccountModuleBackend,
+    many_modules::idstore::{CredentialId, PublicKey},
+    many_modules::ledger::extended_info::visual_logo::VisualTokenLogo,
+    many_modules::ledger::extended_info::TokenExtendedInfo,
+    many_modules::ledger::{
+        BalanceArgs, LedgerCommandsModuleBackend, LedgerModuleBackend, TokenCreateArgs,
+    },
+    many_modules::{account, events, ledger},
+    many_protocol::{context::Context, RequestMessage, ResponseMessage},
+    many_types::ledger::{
+        LedgerTokensAddressMap, Symbol, TokenAmount, TokenInfoSummary, TokenMaybeOwner,
+    },
+    many_types::Memo,
+    minicbor::bytes::ByteVec,
+    once_cell::sync::Lazy,
+    proptest::prelude::*,
+    std::{
+        collections::{BTreeMap, BTreeSet},
+        path::PathBuf,
+        str::FromStr,
+    },
 };
 
 pub fn default_token_create_args(
@@ -68,7 +69,7 @@ pub fn default_token_create_args(
 }
 
 pub struct MigrationHarness {
-    inner: &'static InnerMigration<merk::Merk, ManyError>,
+    inner: &'static InnerMigration<InnerStorage, ManyError, PathBuf>,
     block_height: u64,
     enabled: bool,
 }
@@ -89,8 +90,18 @@ impl MigrationHarness {
     }
 }
 
-impl From<(u64, &'static InnerMigration<merk::Merk, ManyError>)> for MigrationHarness {
-    fn from((block_height, inner): (u64, &'static InnerMigration<Merk, ManyError>)) -> Self {
+impl
+    From<(
+        u64,
+        &'static InnerMigration<InnerStorage, ManyError, PathBuf>,
+    )> for MigrationHarness
+{
+    fn from(
+        (block_height, inner): (
+            u64,
+            &'static InnerMigration<InnerStorage, ManyError, PathBuf>,
+        ),
+    ) -> Self {
         MigrationHarness {
             inner,
             block_height,
@@ -99,9 +110,19 @@ impl From<(u64, &'static InnerMigration<merk::Merk, ManyError>)> for MigrationHa
     }
 }
 
-impl From<(u64, &'static InnerMigration<merk::Merk, ManyError>, bool)> for MigrationHarness {
+impl
+    From<(
+        u64,
+        &'static InnerMigration<InnerStorage, ManyError, PathBuf>,
+        bool,
+    )> for MigrationHarness
+{
     fn from(
-        (block_height, inner, enabled): (u64, &'static InnerMigration<Merk, ManyError>, bool),
+        (block_height, inner, enabled): (
+            u64,
+            &'static InnerMigration<InnerStorage, ManyError, PathBuf>,
+            bool,
+        ),
     ) -> Self {
         MigrationHarness {
             inner,

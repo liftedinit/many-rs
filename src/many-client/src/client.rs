@@ -5,18 +5,21 @@ pub mod ledger;
 
 pub use ledger::LedgerClient;
 
-use coset::{CoseSign1, TaggedCborSerializable};
-use many_identity::verifiers::AnonymousVerifier;
-use many_identity::{verifiers, Identity};
-use many_identity_dsa::CoseKeyVerifier;
-use many_modules::base::Status;
-use many_protocol::{
-    encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
+use {
+    coset::{CoseSign1, TaggedCborSerializable},
+    futures_util::future::TryFutureExt,
+    many_identity::verifiers::AnonymousVerifier,
+    many_identity::{verifiers, Identity},
+    many_identity_dsa::CoseKeyVerifier,
+    many_modules::base::Status,
+    many_protocol::{
+        encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
+    },
+    many_server::{Address, ManyError},
+    minicbor::Encode,
+    reqwest::{IntoUrl, Url},
+    std::fmt::{Debug, Formatter},
 };
-use many_server::{Address, ManyError};
-use minicbor::Encode;
-use reqwest::{IntoUrl, Url};
-use std::fmt::{Debug, Formatter};
 
 #[derive(Clone)]
 pub struct ManyClient<I: Identity> {
@@ -43,14 +46,15 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
 
     let client = reqwest::Client::new();
     tracing::debug!("request {}", hex::encode(&bytes));
-    let response = client
+    let bytes = client
         .post(url)
         .body(bytes)
         .send()
-        .await
-        .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
-    let body = response.bytes().await.unwrap();
-    let bytes = body.to_vec();
+        .and_then(|response| async move { response.error_for_status() })
+        .and_then(|response| response.bytes())
+        .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))
+        .await?
+        .to_vec();
     tracing::debug!("reply {}", hex::encode(&bytes));
     CoseSign1::from_tagged_slice(&bytes)
         .map_err(|e| ManyError::deserialization_error(e.to_string()))
@@ -72,7 +76,7 @@ impl<I: Identity> ManyClient<I> {
         &self,
         message: RequestMessage,
     ) -> Result<ResponseMessage, ManyError> {
-        let cose = encode_cose_sign1_from_request(message, &self.identity).unwrap();
+        let cose = encode_cose_sign1_from_request(message, &self.identity)?;
         let cose_sign1 = send_envelope(self.url.clone(), cose).await?;
 
         ResponseMessage::decode_and_verify(&cose_sign1, &self.verifier)
@@ -129,10 +133,7 @@ impl<I: Identity> ManyClient<I> {
     }
 
     pub async fn status(&self) -> Result<Status, ManyError> {
-        let response = self.call_("status", ()).await?;
-
-        let status = minicbor::decode(response.as_slice())
-            .map_err(|e| ManyError::deserialization_error(e.to_string()))?;
-        Ok(status)
+        minicbor::decode(self.call_("status", ()).await?.as_slice())
+            .map_err(|e| ManyError::deserialization_error(e.to_string()))
     }
 }

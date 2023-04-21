@@ -4,7 +4,7 @@ use many_error::ManyError;
 use many_identity::Address;
 use many_modules::{account, events};
 use many_types::Either;
-use merk::Op;
+use merk_v2::Op;
 
 fn key_for_account(id: &Address) -> Vec<u8> {
     format!("/accounts/{id}").into_bytes()
