@@ -78,7 +78,7 @@ local tendermint(i, user) = {
     volumes: [
         "./node" + i + "/tendermint/:/tendermint"
     ],
-    ports: [ "" + (26600 + i) + ":26600" ],
+    ports: [ "" + (26600 + i) + ":26657" ],
 };
 
 function(nb_nodes=4, user=1000, id_with_balances="", allow_addrs=false, enable_migrations=false, abci_migrations=false) {
