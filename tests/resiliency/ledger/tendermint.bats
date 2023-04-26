@@ -44,7 +44,7 @@ function teardown() {
 
     # Send the transaction directly to tendermint to bypass the MANY server
     # code (like it would be done if we used the mempool directly).
-    curl "http://localhost:26601/broadcast_tx_sync?tx=0x$msg_hex"
+    curl "http://localhost:26601/broadcast_tx_commit?tx=0x$msg_hex" >&3
 
     # It should not have executed.
     check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
