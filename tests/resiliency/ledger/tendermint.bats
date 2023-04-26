@@ -47,7 +47,9 @@ function teardown() {
     curl "http://localhost:26601/broadcast_tx_sync?tx=0x$msg_hex"
     curl "http://localhost:26602/broadcast_tx_sync?tx=0x$msg_hex"
 
-    # It should not have run.
+    wait_for_block 10
+
+    # It should not have executed.
     check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
     check_consistency --pem=1 --balance=1 --id="$(identity 3)" 8000
 }
