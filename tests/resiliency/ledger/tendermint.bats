@@ -31,7 +31,9 @@ function teardown() {
 
 @test "$SUITE: will check transactions for timestamp" {
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000000 MFX
+    call_ledger --pem=1 --port=8000 send "$(identity 3)" 1 MFX
     check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
+    check_consistency --pem=1 --balance=1 --id="$(identity 3)" 8000
 
     # Create a transaction in hexadecimal with a very old timestamp and
     msg_hex="$(
@@ -47,5 +49,5 @@ function teardown() {
 
     # It should not have run.
     check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
-    check_consistency --pem=1 --balance=0 --id="$(identity 3)" 8000
+    check_consistency --pem=1 --balance=1 --id="$(identity 3)" 8000
 }
