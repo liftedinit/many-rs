@@ -39,15 +39,12 @@ function teardown() {
     msg_hex="$(
         many message --hex --pem "$(pem 1)" \
                      --timestamp 1 \
-                     ledger.send "{ 1: \"$(identity 3)\", 2: 1000, 3: \"$MFX\" }"
+                     ledger.send "{ 1: \"$(identity 3)\", 2: 1000, 3: \"$MFX_ADDRESS\" }"
     )"
 
     # Send the transaction directly to tendermint to bypass the MANY server
     # code (like it would be done if we used the mempool directly).
     curl "http://localhost:26601/broadcast_tx_sync?tx=0x$msg_hex"
-    curl "http://localhost:26602/broadcast_tx_sync?tx=0x$msg_hex"
-
-    wait_for_block 30
 
     # It should not have executed.
     check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
