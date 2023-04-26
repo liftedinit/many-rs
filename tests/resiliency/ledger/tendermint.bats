@@ -35,7 +35,7 @@ function teardown() {
 
     # Create a transaction in hexadecimal with a very old timestamp and
     msg_hex="$(
-        many message --hex --pem ~/Sources/temp/id1.pem \
+        many message --hex --pem "$(pem 1)" \
                      --timestamp 1 \
                      ledger.send "{ 1: \"$(identity 3)\", 2: 1000, 3: \"$MFX\" }"
     )"
