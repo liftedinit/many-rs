@@ -58,7 +58,7 @@ function teardown() {
     curl "http://localhost:26600/broadcast_tx_commit?tx=0x$msg_hex" >&3 || true
 
     echo "Waiting for the valid transaction to be processed..." >&3
-    # It should not have executed.
+    # It should have executed.
     check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
     check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
 
@@ -71,7 +71,7 @@ function teardown() {
     curl "http://localhost:26600/broadcast_tx_commit?tx=0x$msg_hex" >&3 || true
 
     echo "Waiting for the invalid transaction to be rejected..." >&3
-    # It should not have executed.
-    check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
-    check_consistency --pem=1 --balance=1 --id="$(identity 3)" 8000
+    # It should not have executed and should be the same balances above.
+    check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
+    check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
 }
