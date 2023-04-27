@@ -36,15 +36,14 @@ function teardown() {
     check_consistency --pem=1 --balance=1 --id="$(identity 3)" 8000
 
     # Create a transaction in hexadecimal with a very old timestamp and
-    msg_hex="$(
-        many message --hex --pem "$(pem 1)" \
-                     --timestamp 1 \
-                     ledger.send "{ 1: \"$(identity 3)\", 2: 1000, 3: \"$MFX_ADDRESS\" }"
-    )"
+    msg_hex="$(many message --hex --pem "$(pem 1)" --timestamp 1 ledger.send "{ 1: \"$(identity 3)\", 2: 1000, 3: \"$MFX_ADDRESS\" }")"
+    echo message: $msg_hex >&3
 
     # Send the transaction directly to tendermint to bypass the MANY server
     # code (like it would be done if we used the mempool directly).
-    curl "http://localhost:26601/broadcast_tx_commit?tx=0x$msg_hex" >&3
+    curl "http://localhost:26601/broadcast_tx_commit?tx=0x$msg_hex" >&3 || true
+
+    echo checking consistency >&3
 
     # It should not have executed.
     check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
