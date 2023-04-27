@@ -44,6 +44,7 @@ function teardown() {
     curl "http://localhost:26601/broadcast_tx_commit?tx=0x$msg_hex" >&3 || true
 
     echo checking consistency >&3
+    wait_for_block 20
 
     # It should not have executed.
     check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
