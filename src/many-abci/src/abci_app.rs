@@ -33,6 +33,7 @@ pub struct AbciApp {
 
     /// We need interior mutability, safely.
     migrations: Arc<RwLock<AbciAppMigrations>>,
+    block_time: Arc<RwLock<Option<u64>>>,
 }
 
 impl AbciApp {
@@ -76,6 +77,7 @@ impl AbciApp {
             many_url,
             many_client,
             migrations: Arc::new(migrations),
+            block_time: Arc::new(RwLock::new(None)),
         })
     }
 }
@@ -170,6 +172,10 @@ impl Application for AbciApp {
         }
 
         let block = AbciBlock { time };
+        self.block_time
+            .write()
+            .map(|mut block_time| *block_time = time)
+            .unwrap_or_else(|_| error!("Block time: Could not acquire lock"));
         let _ = self.many_client.call_("abci.beginBlock", block);
         ResponseBeginBlock { events: vec![] }
     }
@@ -188,12 +194,35 @@ impl Application for AbciApp {
                 })
             })
             .and_then(|message| {
-                Timestamp::now()
-                    .as_system_time()
-                    .and_then(|now| message.validate_time(now, MANYABCI_DEFAULT_TIMEOUT))
+                self.block_time
+                    .read()
                     .map_err(|_| ResponseCheckTx {
                         code: 6,
                         ..Default::default()
+                    })
+                    .and_then(|time| {
+                        time.map(Timestamp::new)
+                            .transpose()
+                            .map_err(|_| ResponseCheckTx {
+                                code: 7,
+                                ..Default::default()
+                            })
+                    })
+                    .transpose()
+                    .unwrap_or_else(|| Ok(Timestamp::now()))
+                    .and_then(|now| {
+                        now.as_system_time().map_err(|_| ResponseCheckTx {
+                            code: 8,
+                            ..Default::default()
+                        })
+                    })
+                    .and_then(|now| {
+                        message
+                            .validate_time(now, MANYABCI_DEFAULT_TIMEOUT)
+                            .map_err(|_| ResponseCheckTx {
+                                code: 9,
+                                ..Default::default()
+                            })
                     })
             })
             .map(|_| Default::default())
