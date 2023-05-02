@@ -578,7 +578,8 @@ async fn main() {
                     }
                 }
             } else {
-                let message: RequestMessage = RequestMessageBuilder::default()
+                let mut builder = RequestMessageBuilder::default();
+                builder
                     .version(1)
                     .from(from_identity.address())
                     .to(to_identity)
@@ -591,9 +592,12 @@ async fn main() {
                         }
                         .into_iter()
                         .collect(),
-                    )
-                    .build()
-                    .unwrap();
+                    );
+                if let Some(ts) = timestamp {
+                    builder.timestamp(Timestamp::from_system_time(ts).unwrap());
+                }
+
+                let message = builder.build().unwrap();
 
                 let cose = encode_cose_sign1_from_request(message, &from_identity).unwrap();
                 let bytes = cose.to_vec().unwrap();
