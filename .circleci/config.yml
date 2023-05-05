@@ -222,7 +222,7 @@ jobs:
             B=(${A[@]/#///})
             C=(${B[@]//kvstore\//kvstore:bats-resiliency-kvstore_})
             D=(${C[@]//.bats/})
-            echo "export D=($D)" >> "$BASH_ENV"
+            echo "export D=(${D[@]})" >> "$BASH_ENV"
 
             bazel test --test_output=errors --config=remote-cache ${D[@]}
       - run:
@@ -266,7 +266,7 @@ jobs:
             B=(${A[@]/#///})
             C=(${B[@]//ledger\//ledger:bats-resiliency-ledger_})
             D=(${C[@]//.bats/})
-            echo "export D=($D)" >> "$BASH_ENV"
+            echo "export D=(${D[@]})" >> "$BASH_ENV"
             
             bazel test --test_output=errors --config=remote-cache --config=bats-resiliency-ledger ${D[@]}
       - run:
