@@ -222,9 +222,13 @@ jobs:
             B=(${A[@]/#///})
             C=(${B[@]//kvstore\//kvstore:bats-resiliency-kvstore_})
             D=(${C[@]//.bats/})
+            echo "export D=(${D[@]})" >> "$BASH_ENV"
 
             bazel test --test_output=errors --config=remote-cache ${D[@]}
-            
+      - run:
+          name: collect test reports
+          when: always
+          command: |
             # Collect all test reports
             # NOTE: The combinaison of `xargs` and `sh -c` is insecure.
             #       The risks are acceptable on CI.
@@ -262,9 +266,13 @@ jobs:
             B=(${A[@]/#///})
             C=(${B[@]//ledger\//ledger:bats-resiliency-ledger_})
             D=(${C[@]//.bats/})
+            echo "export D=(${D[@]})" >> "$BASH_ENV"
             
             bazel test --test_output=errors --config=remote-cache --config=bats-resiliency-ledger ${D[@]}
-            
+      - run:
+          name: collect test reports
+          when: always
+          command: |
             # Collect all test reports
             # NOTE: The combinaison of `xargs` and `sh -c` is insecure.
             #       The risks are acceptable on CI.
