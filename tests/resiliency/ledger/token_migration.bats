@@ -179,10 +179,12 @@ function teardown() {
         assert_output --partial "name: \"Manifest Network Token\""
     done
 
+    cd "$GIT_ROOT/docker/" || exit 1
     make -f $MAKEFILE stop-single-node-0
     wait_for_block 40
-    make -f $MAKEFILE start-single-node-0
+    make -f $MAKEFILE start-single-node-detached-0
+    wait_for_server 8000
 
     call_ledger --pem=1 --port=8000 token info ${MFX_ADDRESS}
-    assert_output --partial "Invalid method name"
+    assert_output --partial "name: \"Manifest Network Token\""
 }
