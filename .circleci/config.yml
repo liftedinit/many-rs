@@ -50,6 +50,8 @@ jobs:
                     --config=all-features \
                     --config=clippy \
                     --config=rustfmt \
+                    --repo_env=CC=clang \
+                    --linkopt=-fuse-ld=lld \
                     --test_output=errors \
                     --test_env=PKCS11_SOFTHSM2_MODULE \
                     --test_env=SOFTHSM2_CONF \
@@ -67,6 +69,8 @@ jobs:
                     --test_output=errors \
                     --config=remote-cache \
                     --config=all-features \
+                    --repo_env=CC=clang \
+                    --linkopt=-fuse-ld=lld \
                     -- //... -//src/many-identity-hsm:many-identity-hsm-test
 
   # Run e2e bats tests using the binaries build from the previous step.
@@ -88,12 +92,33 @@ jobs:
       - run:
           name: running tests
           command: |
-              bazel test --test_output=errors --config=all-features --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
-              bazel test --test_output=errors --config=all-features --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
+              bazel test \ 
+                --repo_env=CC=clang \
+                --linkopt=-fuse-ld=lld \
+                --test_output=errors \
+                --config=all-features \
+                --config=remote-cache \
+                //tests/e2e/kvstore:bats-e2e-kvstore
+              bazel test \
+                --repo_env=CC=clang \
+                --linkopt=-fuse-ld=lld \
+                --test_output=errors \
+                --config=all-features \
+                --config=remote-cache \
+                //tests/e2e/ledger:bats-e2e-ledger
             
               # --disable_token_sender_check needs to be disabled for the token tests
-              bazel test --test_output=errors --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
-
+              bazel test \
+                --repo_env=CC=clang \
+                --linkopt=-fuse-ld=lld \
+                --test_output=errors \
+                --balance_testing \
+                --migration_testing \
+                --config=remote-cache \
+                //tests/e2e/ledger:bats-e2e-ledger-tokens
+      - run:
+          name: collect test reports
+          command: |
               # Collect all test reports
               # NOTE: The combinaison of `xargs` and `sh -c` is insecure.
               #       The risks are acceptable on CI.
@@ -122,6 +147,8 @@ jobs:
               --config=all-features \
               --test_env=PKCS11_SOFTHSM2_MODULE \
               --test_env=SOFTHSM2_CONF \
+              --repo_env=CC=clang \
+              --linkopt=-fuse-ld=lld \
               --combined_report=lcov \
               -- //...
       - codecov/upload:
@@ -224,7 +251,11 @@ jobs:
             D=(${C[@]//.bats/})
             echo "export D=(${D[@]})" >> "$BASH_ENV"
 
-            bazel test --test_output=errors --config=remote-cache ${D[@]}
+            bazel test \
+              --repo_env=CC=clang \
+              --linkopt=-fuse-ld=lld \
+              --test_output=errors \
+              --config=remote-cache ${D[@]}
       - run:
           name: collect test reports
           when: always
@@ -250,7 +281,12 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: bazel test --test_output=errors --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
+          command: bazel test \
+            --repo_env=CC=clang \
+            --linkopt=-fuse-ld=lld \
+            --test_output=errors \
+            --config=remote-cache \
+            //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
 
   # Perform ledger resiliency testing
   ledger_resiliency_tests:
@@ -268,7 +304,12 @@ jobs:
             D=(${C[@]//.bats/})
             echo "export D=(${D[@]})" >> "$BASH_ENV"
             
-            bazel test --test_output=errors --config=remote-cache --config=bats-resiliency-ledger ${D[@]}
+            bazel test \ 
+              --repo_env=CC=clang \
+              --linkopt=-fuse-ld=lld \
+              --test_output=errors \
+              --config=remote-cache \
+              --config=bats-resiliency-ledger ${D[@]}
       - run:
           name: collect test reports
           when: always
@@ -294,7 +335,13 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: bazel test --test_output=errors --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
+          command: bazel test \
+            --repo_env=CC=clang \
+            --linkopt=-fuse-ld=lld \
+            --test_output=errors \
+            --config=remote-cache \
+            --config=bats-resiliency-ledger \
+            //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
 
   # Push a tag to GitHub
   tag:
@@ -336,18 +383,9 @@ commands:
                 name: installing << parameters.os >> dependencies
                 command: |
                   sudo DEBIAN_FRONTEND=noninteractive apt -y update
-                  sudo DEBIAN_FRONTEND=noninteractive apt -y install clang libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev bsdextrautils
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install clang lld libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev bsdextrautils
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
-            - run:
-                name: installing Bazel build dependencies
-                command: |
-                  # GCC 12 is needed to build `librocksdb-sys` with the `-Wno-error=coverage-invalid-line-number` CXXFLAGS (Bazel)
-                  sudo DEBIAN_FRONTEND=noninteractive apt -y install gcc-12 g++-12
-                  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 11
-                  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 11
-                  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
-                  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
             - run:
                 name: installing bazelisk
                 command: |
@@ -378,7 +416,12 @@ commands:
       - run:
           name: build release
           command: |
-            bazel build -c opt --linkopt=-Wl,--strip-all --config=remote-cache //:many-rs-tar
+            bazel build \
+              -c opt \
+              --repo_env=CC=clang \
+              --linkopt=-fuse-ld=lld,-Wl,--strip-all \
+              --config=remote-cache \
+              //:many-rs-tar
             bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_<< parameters.release_id >>_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
       - run:
           name: creating release shasum
