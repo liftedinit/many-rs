@@ -548,7 +548,7 @@ mod module_tests {
             let account_map = Arc::clone(&account_map);
             move |_, args| {
                 let mut account_map = account_map.write().unwrap();
-                let mut account = account_map
+                let account = account_map
                     .get_mut(&args.account)
                     .ok_or_else(|| errors::unknown_account(args.account))?;
                 account.description = Some(args.description);

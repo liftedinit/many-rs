@@ -442,11 +442,11 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             .map_or_else(|| attr.span(), |_| tr.ident.span()),
     );
 
-    let vis = tr.vis.clone();
+    let vis = tr.vis;
     let trait_ident = if attrs.name.is_none() {
         Ident::new(&format!("{struct_name}Backend"), tr.ident.span())
     } else {
-        tr.ident.clone()
+        tr.ident
     };
 
     let attr_id = attrs.id.iter();
