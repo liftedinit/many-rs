@@ -44,8 +44,7 @@ jobs:
             - run:
                 name: rustfmt, clippy, build and tests and doc tests (linux)
                 command: |
-                  bazel test \
-                    --jobs=8 \
+                  bazel test --jobs=8 \
                     --config=remote-cache \
                     --config=all-features \
                     --config=clippy \
@@ -64,8 +63,7 @@ jobs:
                 name: tests and doc tests (macos)
                 # Exclude HSM tests as we are not configured in MacOS for them.
                 command: |
-                  bazel test \
-                    --jobs=4 \
+                  bazel test --jobs=4 \
                     --test_output=errors \
                     --config=remote-cache \
                     --config=all-features \
@@ -92,30 +90,24 @@ jobs:
       - run:
           name: running tests
           command: |
-              bazel test \ 
-                --repo_env=CC=clang \
+              bazel test --repo_env=CC=clang \
                 --linkopt=-fuse-ld=lld \
                 --test_output=errors \
                 --config=all-features \
-                --config=remote-cache \
-                //tests/e2e/kvstore:bats-e2e-kvstore
-              bazel test \
-                --repo_env=CC=clang \
+                --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
+              bazel test --repo_env=CC=clang \
                 --linkopt=-fuse-ld=lld \
                 --test_output=errors \
                 --config=all-features \
-                --config=remote-cache \
-                //tests/e2e/ledger:bats-e2e-ledger
+                --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
             
               # --disable_token_sender_check needs to be disabled for the token tests
-              bazel test \
-                --repo_env=CC=clang \
+              bazel test --repo_env=CC=clang \
                 --linkopt=-fuse-ld=lld \
                 --test_output=errors \
                 --balance_testing \
                 --migration_testing \
-                --config=remote-cache \
-                //tests/e2e/ledger:bats-e2e-ledger-tokens
+                --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
       - run:
           name: collect test reports
           command: |
@@ -141,8 +133,7 @@ jobs:
       - run:
           name: coverage
           command: |
-            bazel coverage \
-              --jobs=8 \
+            bazel coverage --jobs=8 \
               --config=remote-cache \
               --config=all-features \
               --test_env=PKCS11_SOFTHSM2_MODULE \
@@ -251,8 +242,7 @@ jobs:
             D=(${C[@]//.bats/})
             echo "export D=(${D[@]})" >> "$BASH_ENV"
 
-            bazel test \
-              --repo_env=CC=clang \
+            bazel test --repo_env=CC=clang \
               --linkopt=-fuse-ld=lld \
               --test_output=errors \
               --config=remote-cache ${D[@]}
@@ -281,8 +271,7 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: bazel test \
-            --repo_env=CC=clang \
+          command: bazel test --repo_env=CC=clang \
             --linkopt=-fuse-ld=lld \
             --test_output=errors \
             --config=remote-cache \
@@ -304,8 +293,7 @@ jobs:
             D=(${C[@]//.bats/})
             echo "export D=(${D[@]})" >> "$BASH_ENV"
             
-            bazel test \ 
-              --repo_env=CC=clang \
+            bazel test --repo_env=CC=clang \
               --linkopt=-fuse-ld=lld \
               --test_output=errors \
               --config=remote-cache \
@@ -335,8 +323,7 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: bazel test \
-            --repo_env=CC=clang \
+          command: bazel test --repo_env=CC=clang \
             --linkopt=-fuse-ld=lld \
             --test_output=errors \
             --config=remote-cache \
@@ -416,10 +403,10 @@ commands:
       - run:
           name: build release
           command: |
-            bazel build \
-              -c opt \
+            bazel build -c opt \
               --repo_env=CC=clang \
-              --linkopt=-fuse-ld=lld,-Wl,--strip-all \
+              --linkopt=-Wl,--strip-all \
+              --linkopt=-fuse-ld=lld \
               --config=remote-cache \
               //:many-rs-tar
             bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_<< parameters.release_id >>_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
