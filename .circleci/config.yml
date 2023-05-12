@@ -26,6 +26,8 @@ MANY_HSM_CONFIG: &many_hsm_config
   - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
   - SOFTHSM2_CONF: /tmp/softhsm2.conf
 
+BAZEL_LINUX_LINKOPT: "--repo_env=CC=clang --linkopt=-fuse-ld=lld"
+
 jobs:
   # Perform lint and tests. Push the compiled binaries to the next step.
   lint-test-build:
@@ -49,8 +51,7 @@ jobs:
                     --config=all-features \
                     --config=clippy \
                     --config=rustfmt \
-                    --repo_env=CC=clang \
-                    --linkopt=-fuse-ld=lld \
+                    {{ BAZEL_LINUX_LINKOPT }} \
                     --test_output=errors \
                     --test_env=PKCS11_SOFTHSM2_MODULE \
                     --test_env=SOFTHSM2_CONF \
@@ -85,29 +86,24 @@ jobs:
       - run:
           name: install cbor-diag
           command: cargo install --force cbor-diag-cli
-      - run:
-          name: running tests
-          command: |
-              bazel test --repo_env=CC=clang \
-                --linkopt=-fuse-ld=lld \
-                --test_output=errors \
-                --config=all-features \
-                --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
-              bazel test --repo_env=CC=clang \
-                --linkopt=-fuse-ld=lld \
-                --test_output=errors \
-                --config=all-features \
-                --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
-            
-              # --disable_token_sender_check needs to be disabled for the token tests
-              bazel test --repo_env=CC=clang \
-                --linkopt=-fuse-ld=lld \
-                --test_output=errors \
-                --balance_testing \
-                --migration_testing \
-                --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
+      - when:
+          condition:
+            equal: [ "macos", << parameters.os >> ]
+          steps:
+            - run_bats_e2e_tests:
+                os: << parameters.os >>
+                args: ""
+      - when:
+          condition:
+            not:
+              equal: [ "macos", << parameters.os >> ]
+          steps:
+            - run_bats_e2e_tests:
+                os: << parameters.os >>
+                args: "{{ BAZEL_LINUX_LINKOPT }}"
       - run:
           name: collect test reports
+          when: always
           command: |
               # Collect all test reports
               # NOTE: The combinaison of `xargs` and `sh -c` is insecure.
@@ -136,8 +132,7 @@ jobs:
               --config=all-features \
               --test_env=PKCS11_SOFTHSM2_MODULE \
               --test_env=SOFTHSM2_CONF \
-              --repo_env=CC=clang \
-              --linkopt=-fuse-ld=lld \
+              {{ BAZEL_LINUX_LINKOPT }} \
               --combined_report=lcov \
               -- //...
       - codecov/upload:
@@ -221,16 +216,13 @@ jobs:
           name: publish nightly docker images
           command: |
               bazel run --jobs=$(nproc) \
-                --repo_env=CC=clang \
-                --linkopt=-fuse-ld=lld \
+                {{ BAZEL_LINUX_LINKOPT }} \
                 --config=remote-cache //docker:many-abci-push-docker 
               bazel run --jobs=$(nproc) \
-                --repo_env=CC=clang \
-                --linkopt=-fuse-ld=lld \
+                {{ BAZEL_LINUX_LINKOPT }} \
                 --config=remote-cache //docker:many-kvstore-push-docker
               bazel run --jobs=$(nproc) \
-                --repo_env=CC=clang \
-                --linkopt=-fuse-ld=lld \
+                {{ BAZEL_LINUX_LINKOPT }} \
                 --config=remote-cache //docker:many-ledger-push-docker
 
   # Perform kvstore resiliency testing
@@ -249,8 +241,7 @@ jobs:
             D=(${C[@]//.bats/})
             echo "export D=(${D[@]})" >> "$BASH_ENV"
 
-            bazel test --repo_env=CC=clang \
-              --linkopt=-fuse-ld=lld \
+            bazel test {{ BAZEL_LINUX_LINKOPT }} \
               --test_output=errors \
               --config=remote-cache ${D[@]}
       - run:
@@ -278,8 +269,7 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: bazel test --repo_env=CC=clang \
-            --linkopt=-fuse-ld=lld \
+          command: bazel test {{ BAZEL_LINUX_LINKOPT }} \
             --test_output=errors \
             --config=remote-cache \
             //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
@@ -300,8 +290,7 @@ jobs:
             D=(${C[@]//.bats/})
             echo "export D=(${D[@]})" >> "$BASH_ENV"
             
-            bazel test --repo_env=CC=clang \
-              --linkopt=-fuse-ld=lld \
+            bazel test {{ BAZEL_LINUX_LINKOPT }} \
               --test_output=errors \
               --config=remote-cache \
               --config=bats-resiliency-ledger ${D[@]}
@@ -330,8 +319,7 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: bazel test --repo_env=CC=clang \
-            --linkopt=-fuse-ld=lld \
+          command: bazel test {{ BAZEL_LINUX_LINKOPT }} \
             --test_output=errors \
             --config=remote-cache \
             --config=bats-resiliency-ledger \
@@ -411,15 +399,41 @@ commands:
           name: build release
           command: |
             bazel build -c opt \
-              --repo_env=CC=clang \
               --linkopt=-Wl,--strip-all \
-              --linkopt=-fuse-ld=lld \
+              {{ BAZEL_LINUX_LINKOPT }} \
               --config=remote-cache \
               //:many-rs-tar
             bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_<< parameters.release_id >>_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
       - run:
           name: creating release shasum
           command: shasum artifacts/many-rs_<< parameters.release_id >>_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_<< parameters.release_id >>_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
+
+  run_bats_e2e_tests:
+    description: run bats e2e tests
+    parameters:
+      os:
+        type: string
+      args:
+        type: string
+    steps:
+      - run:
+          name: running bats e2e tests
+          command: |
+            bazel test << parameters.args >> \
+              --test_output=errors \
+              --config=all-features \
+              --config=remote-cache //tests/e2e/kvstore<:bats-e2e-kvstore
+            bazel test << parameters.args >> \
+              --test_output=errors \
+              --config=all-features \
+              --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
+            
+            # --disable_token_sender_check needs to be disabled for the token tests
+            bazel test << parameters.args >> \
+              --test_output=errors \
+              --balance_testing \
+              --migration_testing \
+              --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
 
 parameters:
   run_resiliency:
