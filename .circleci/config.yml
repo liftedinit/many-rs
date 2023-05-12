@@ -67,8 +67,6 @@ jobs:
                     --test_output=errors \
                     --config=remote-cache \
                     --config=all-features \
-                    --repo_env=CC=clang \
-                    --linkopt=-fuse-ld=lld \
                     -- //... -//src/many-identity-hsm:many-identity-hsm-test
 
   # Run e2e bats tests using the binaries build from the previous step.
@@ -222,9 +220,18 @@ jobs:
       - run:
           name: publish nightly docker images
           command: |
-              bazel run --jobs=$(nproc) --config=remote-cache //docker:many-abci-push-docker 
-              bazel run --jobs=$(nproc) --config=remote-cache //docker:many-kvstore-push-docker
-              bazel run --jobs=$(nproc) --config=remote-cache //docker:many-ledger-push-docker
+              bazel run --jobs=$(nproc) \
+                --repo_env=CC=clang \
+                --linkopt=-fuse-ld=lld \
+                --config=remote-cache //docker:many-abci-push-docker 
+              bazel run --jobs=$(nproc) \
+                --repo_env=CC=clang \
+                --linkopt=-fuse-ld=lld \
+                --config=remote-cache //docker:many-kvstore-push-docker
+              bazel run --jobs=$(nproc) \
+                --repo_env=CC=clang \
+                --linkopt=-fuse-ld=lld \
+                --config=remote-cache //docker:many-ledger-push-docker
 
   # Perform kvstore resiliency testing
   kvstore_resiliency_tests:
@@ -532,10 +539,10 @@ workflows:
     jobs:
       - audit
   nightly_docker_and_resiliency_tests:
-    when:
-      and:
-        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-        - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
+    #when:
+    #  and:
+    #    - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    #    - equal: [ "Nightly Docker and Resiliency Tests", << pipeline.schedule.name >> ]
     jobs:
       - publish_nightly_docker:
           pre-steps:
@@ -610,10 +617,10 @@ workflows:
           test_name: << pipeline.parameters.test_name >>
 
   nightly_macos:
-    when:
-      and:
-        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
+    #when:
+    #  and:
+    #    - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    #    - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
     jobs:
       - lint-test-build:
           pre-steps:
