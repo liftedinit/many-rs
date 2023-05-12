@@ -26,7 +26,7 @@ MANY_HSM_CONFIG: &many_hsm_config
   - PKCS11_SOFTHSM2_MODULE: /usr/lib/softhsm/libsofthsm2.so
   - SOFTHSM2_CONF: /tmp/softhsm2.conf
 
-BAZEL_LINUX_LINKOPT: "--repo_env=CC=clang --linkopt=-fuse-ld=lld"
+BAZEL_LINUX_LINKOPT: &bazel_linux_linkopt "--repo_env=CC=clang --linkopt=-fuse-ld=lld"
 
 jobs:
   # Perform lint and tests. Push the compiled binaries to the next step.
@@ -34,6 +34,9 @@ jobs:
     parameters:
       os:
         type: string
+      bazel_extra_args:
+        type: string
+        default: *bazel_linux_linkopt
     executor: << parameters.os >>
     environment:
       *many_hsm_config
@@ -51,10 +54,10 @@ jobs:
                     --config=all-features \
                     --config=clippy \
                     --config=rustfmt \
-                    {{ BAZEL_LINUX_LINKOPT }} \
                     --test_output=errors \
                     --test_env=PKCS11_SOFTHSM2_MODULE \
                     --test_env=SOFTHSM2_CONF \
+                    << parameters.bazel_extra_args >> \
                     -- //...
       - when:
           condition:
@@ -75,6 +78,9 @@ jobs:
     parameters:
       os:
         type: string
+      bazel_extra_args:
+        type: string
+        default: *bazel_linux_linkopt
     executor: << parameters.os >>
     steps:
       - checkout
@@ -92,7 +98,7 @@ jobs:
           steps:
             - run_bats_e2e_tests:
                 os: << parameters.os >>
-                args: ""
+                bazel_extra_args: ""
       - when:
           condition:
             not:
@@ -100,7 +106,6 @@ jobs:
           steps:
             - run_bats_e2e_tests:
                 os: << parameters.os >>
-                args: "{{ BAZEL_LINUX_LINKOPT }}"
       - run:
           name: collect test reports
           when: always
@@ -119,6 +124,9 @@ jobs:
     parameters:
       os:
         type: string
+      bazel_extra_args:
+        type: string
+        default: *bazel_linux_linkopt
     executor: << parameters.os >>
     environment:
       *many_hsm_config
@@ -132,8 +140,8 @@ jobs:
               --config=all-features \
               --test_env=PKCS11_SOFTHSM2_MODULE \
               --test_env=SOFTHSM2_CONF \
-              {{ BAZEL_LINUX_LINKOPT }} \
               --combined_report=lcov \
+              << parameters.bazel_extra_args >> \
               -- //...
       - codecov/upload:
           file: bazel-out/_coverage/_coverage_report.dat
@@ -209,6 +217,10 @@ jobs:
   # Publish nightly Docker images. Used in resiliency tests.
   publish_nightly_docker:
     executor: linux2204_machine
+    parameters:
+      bazel_extra_args:
+        type: string
+        default: *bazel_linux_linkopt
     steps:
       - docker/check
       - checkout
@@ -216,18 +228,22 @@ jobs:
           name: publish nightly docker images
           command: |
               bazel run --jobs=$(nproc) \
-                {{ BAZEL_LINUX_LINKOPT }} \
+                << parameters.bazel_extra_args >> \
                 --config=remote-cache //docker:many-abci-push-docker 
               bazel run --jobs=$(nproc) \
-                {{ BAZEL_LINUX_LINKOPT }} \
+                << parameters.bazel_extra_args >> \
                 --config=remote-cache //docker:many-kvstore-push-docker
               bazel run --jobs=$(nproc) \
-                {{ BAZEL_LINUX_LINKOPT }} \
+                << parameters.bazel_extra_args >> \
                 --config=remote-cache //docker:many-ledger-push-docker
 
   # Perform kvstore resiliency testing
   kvstore_resiliency_tests:
     executor: linux2204_machine
+    parameters:
+      bazel_extra_args:
+        type: string
+        default: *bazel_linux_linkopt
     parallelism: 4
     steps:
       - checkout
@@ -241,8 +257,7 @@ jobs:
             D=(${C[@]//.bats/})
             echo "export D=(${D[@]})" >> "$BASH_ENV"
 
-            bazel test {{ BAZEL_LINUX_LINKOPT }} \
-              --test_output=errors \
+            bazel test << parameters.bazel_extra_args >> --test_output=errors \
               --config=remote-cache ${D[@]}
       - run:
           name: collect test reports
@@ -265,18 +280,24 @@ jobs:
       test_name:
         type: string
         default: ""
+      bazel_extra_args:
+        type: string
+        default: *bazel_linux_linkopt
     steps:
       - checkout
       - run:
           name: running single tests
-          command: bazel test {{ BAZEL_LINUX_LINKOPT }} \
-            --test_output=errors \
+          command: bazel test << parameters.bazel_extra_args >> --test_output=errors \
             --config=remote-cache \
             //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
 
   # Perform ledger resiliency testing
   ledger_resiliency_tests:
     executor: linux2204_machine
+    parameters:
+      bazel_extra_args:
+        type: string
+        default: *bazel_linux_linkopt
     parallelism: 4
     steps:
       - checkout
@@ -290,8 +311,7 @@ jobs:
             D=(${C[@]//.bats/})
             echo "export D=(${D[@]})" >> "$BASH_ENV"
             
-            bazel test {{ BAZEL_LINUX_LINKOPT }} \
-              --test_output=errors \
+            bazel test << parameters.bazel_extra_args >> --test_output=errors \
               --config=remote-cache \
               --config=bats-resiliency-ledger ${D[@]}
       - run:
@@ -315,12 +335,14 @@ jobs:
       test_name:
         type: string
         default: ""
+      bazel_extra_args:
+        type: string
+        default: *bazel_linux_linkopt
     steps:
       - checkout
       - run:
           name: running single tests
-          command: bazel test {{ BAZEL_LINUX_LINKOPT }} \
-            --test_output=errors \
+          command: bazel test << parameters.bazel_extra_args >> --test_output=errors \
             --config=remote-cache \
             --config=bats-resiliency-ledger \
             //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
@@ -392,6 +414,9 @@ commands:
       release_id:
         type: string
         default: dev
+      bazel_extra_args:
+        type: string
+        default: *bazel_linux_linkopt
     steps:
       - detect/init
       - run: mkdir -p artifacts
@@ -400,7 +425,7 @@ commands:
           command: |
             bazel build -c opt \
               --linkopt=-Wl,--strip-all \
-              {{ BAZEL_LINUX_LINKOPT }} \
+              << parameters.bazel_extra_args >> \
               --config=remote-cache \
               //:many-rs-tar
             bazel cquery :many-rs-tar --output=files -c opt | xargs -n 1 -I % mv % artifacts/many-rs_<< parameters.release_id >>_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz
@@ -413,24 +438,22 @@ commands:
     parameters:
       os:
         type: string
-      args:
+      bazel_extra_args:
         type: string
+        default: *bazel_linux_linkopt
     steps:
       - run:
           name: running bats e2e tests
           command: |
-            bazel test << parameters.args >> \
-              --test_output=errors \
+            bazel test << parameters.bazel_extra_args >> --test_output=errors \
               --config=all-features \
               --config=remote-cache //tests/e2e/kvstore<:bats-e2e-kvstore
-            bazel test << parameters.args >> \
-              --test_output=errors \
+            bazel test << parameters.bazel_extra_args >> --test_output=errors \
               --config=all-features \
               --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
             
             # --disable_token_sender_check needs to be disabled for the token tests
-            bazel test << parameters.args >> \
-              --test_output=errors \
+            bazel test << parameters.bazel_extra_args >> --test_output=errors \
               --balance_testing \
               --migration_testing \
               --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
