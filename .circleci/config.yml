@@ -323,6 +323,8 @@ jobs:
             #       The risks are acceptable on CI.
             find ./bats-reports -name '*.xml' -print0 | \
               xargs -0 -I {} sh -c 'xmlstarlet ed -i "/testsuites/testsuite/testcase" -t attr -n file -v tests/resiliency/ledger/$(xmlstarlet sel -t -v "//testsuites/testsuite/@name" {}) {}'
+            
+            find ./bats-reports -name '*.xml' -print0 | xargs -0 cat
       - store_test_results:
           path: bats-reports
 
