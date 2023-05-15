@@ -447,7 +447,7 @@ commands:
           command: |
             bazel test << parameters.bazel_extra_args >> --test_output=errors \
               --config=all-features \
-              --config=remote-cache //tests/e2e/kvstore<:bats-e2e-kvstore
+              --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
             bazel test << parameters.bazel_extra_args >> --test_output=errors \
               --config=all-features \
               --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
