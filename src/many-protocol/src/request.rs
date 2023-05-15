@@ -1,4 +1,6 @@
+use coset::CoseSign1;
 use derive_builder::Builder;
+use many_error::ManyError;
 use many_identity::Address;
 use many_types::attributes::{Attribute, AttributeSet};
 use many_types::Timestamp;
@@ -6,6 +8,8 @@ use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use num_derive::{FromPrimitive, ToPrimitive};
+use std::convert::TryFrom;
+use std::time::SystemTime;
 
 #[derive(FromPrimitive, ToPrimitive)]
 #[repr(i8)]
@@ -65,6 +69,30 @@ impl std::fmt::Debug for RequestMessage {
     }
 }
 
+impl TryFrom<CoseSign1> for RequestMessage {
+    type Error = ManyError;
+
+    fn try_from(envelope: CoseSign1) -> Result<Self, Self::Error> {
+        envelope
+            .payload
+            .as_ref()
+            .ok_or_else(ManyError::empty_envelope)
+            .and_then(|payload| Self::from_bytes(payload).map_err(ManyError::deserialization_error))
+    }
+}
+
+impl<'a> TryFrom<&'a CoseSign1> for RequestMessage {
+    type Error = ManyError;
+
+    fn try_from(envelope: &'a CoseSign1) -> Result<Self, Self::Error> {
+        envelope
+            .payload
+            .as_ref()
+            .ok_or_else(ManyError::empty_envelope)
+            .and_then(|payload| Self::from_bytes(payload).map_err(ManyError::deserialization_error))
+    }
+}
+
 impl RequestMessage {
     pub fn with_method(mut self, method: String) -> Self {
         self.method = method;
@@ -96,6 +124,35 @@ impl RequestMessage {
 
     pub fn from(&self) -> Address {
         self.from.unwrap_or_default()
+    }
+
+    /// Validate that the timestamp of a message is within a timeout, either in the future
+    /// or the past.
+    pub fn validate_time(&self, now: SystemTime, timeout_in_secs: u64) -> Result<(), ManyError> {
+        if timeout_in_secs == 0 {
+            return Err(ManyError::timestamp_out_of_range());
+        }
+        let ts = self
+            .timestamp
+            .ok_or_else(|| ManyError::required_field_missing("timestamp".to_string()))?
+            .as_system_time()?;
+
+        // Get the absolute time difference.
+        let (early, later) = if ts < now { (ts, now) } else { (now, ts) };
+        let diff = later
+            .duration_since(early)
+            .map_err(|_| ManyError::timestamp_out_of_range())?;
+
+        if diff.as_secs() >= timeout_in_secs {
+            tracing::error!(
+                "ERR: Timestamp outside of timeout: {} >= {}",
+                diff.as_secs(),
+                timeout_in_secs
+            );
+            return Err(ManyError::timestamp_out_of_range());
+        }
+
+        Ok(())
     }
 }
 

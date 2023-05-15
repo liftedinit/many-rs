@@ -22,13 +22,8 @@ pub fn decode_request_from_cose_sign1(
         return Err(ManyError::invalid_from_identity());
     }
 
-    let payload = envelope
-        .payload
-        .as_ref()
-        .ok_or_else(ManyError::empty_envelope)?;
-    let message = RequestMessage::from_bytes(payload).map_err(ManyError::deserialization_error)?;
-
     // Check the `from` field.
+    let message: RequestMessage = envelope.try_into()?;
     let message_from = message.from.unwrap_or_default();
     if !from_id.matches(&message_from) || message_from.is_illegal() {
         Err(ManyError::invalid_from_identity())
