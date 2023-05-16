@@ -86,20 +86,18 @@ function teardown() {
 
     # Create a VALID transaction in hexadecimal.
     msg_hex="$(many message --hex --pem "$(pem 2)" ledger.send "{ 1: \"$(identity 3)\", 2: 1000, 3: \"$MFX_ADDRESS\" }")"
-    echo valid 1: $msg_hex >&3
 
     # Send the transaction to MANY-ABCI. It should succeed.
-    many message --server http://localhost:8000 --from-hex="$msg_hex"
+    many message --server http://localhost:8000 --from-hex="$msg_hex" 2>&3 >&3
 
-    echo "Waiting for the valid transaction to be processed..." >&3
     check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
     check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
 
     # Send the same transaction to MANY-ABCI, again. It should FAIL because it's
     # a duplicate.
-    run many message --server http://localhost:8000 --from-hex="$msg_hex"
+    run many message --server http://localhost:8000 --from-hex="$msg_hex" 2>&3 >&3
+    assert_output --partial "tx already exists in cache"
 
-    echo "Waiting for the invalid transaction to be processed..." >&3
     check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
     check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
 
@@ -118,9 +116,9 @@ function teardown() {
     check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
 
     # Send the same transaction to MANY-ABCI again. It should NOT succeed.
-    many message --server http://localhost:8000 --from-hex="$msg_hex"
+    run many message --server http://localhost:8000 --from-hex="$msg_hex" 2>&3 >&3
+    assert_failure
 
-    echo "Waiting for the valid transaction to be processed..." >&3
     check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
     check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
 }
