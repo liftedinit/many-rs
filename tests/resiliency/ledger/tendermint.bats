@@ -77,6 +77,8 @@ function teardown() {
 }
 
 @test "$SUITE: will check duplicated transaction hash in checkTx" {
+    cd "$GIT_ROOT/docker/" || exit 1
+
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000000 MFX
     call_ledger --pem=1 --port=8000 send "$(identity 3)" 1 MFX
     check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
