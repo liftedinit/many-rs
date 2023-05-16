@@ -29,13 +29,13 @@ function teardown() {
     stop_background_run
 }
 
-@test "$SUITE: will check transactions for timestamp" {
+@test "$SUITE: will check transactions for timestamp in checkTx" {
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000000 MFX
     call_ledger --pem=1 --port=8000 send "$(identity 3)" 1 MFX
     check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
     check_consistency --pem=1 --balance=1 --id="$(identity 3)" 8000
 
-    # Create a transaction in hexadecimal with a very old timestamp and
+    # Create a transaction in hexadecimal with a very old timestamp
     msg_hex="$(many message --hex --pem "$(pem 2)" --timestamp 1 ledger.send "{ 1: \"$(identity 3)\", 2: 1000, 3: \"$MFX_ADDRESS\" }")"
     echo invalid: $msg_hex >&3
 
@@ -72,6 +72,53 @@ function teardown() {
 
     echo "Waiting for the invalid transaction to be rejected..." >&3
     # It should not have executed and should be the same balances above.
+    check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
+    check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
+}
+
+@test "$SUITE: will check duplicated transaction hash in checkTx" {
+    call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000000 MFX
+    call_ledger --pem=1 --port=8000 send "$(identity 3)" 1 MFX
+    check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
+    check_consistency --pem=1 --balance=1 --id="$(identity 3)" 8000
+
+    # Create a VALID transaction in hexadecimal.
+    msg_hex="$(many message --hex --pem "$(pem 2)" ledger.send "{ 1: \"$(identity 3)\", 2: 1000, 3: \"$MFX_ADDRESS\" }")"
+    echo valid 1: $msg_hex >&3
+
+    # Send the transaction to MANY-ABCI. It should succeed.
+    many message --server http://localhost:8000 --from-hex="$msg_hex"
+
+    echo "Waiting for the valid transaction to be processed..." >&3
+    check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
+    check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
+
+    # Send the same transaction to MANY-ABCI, again. It should FAIL because it's
+    # a duplicate.
+    run many message --server http://localhost:8000 --from-hex="$msg_hex"
+
+    echo "Waiting for the invalid transaction to be processed..." >&3
+    check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
+    check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
+
+    # Shut down and restart all nodes.
+    make -f $MAKEFILE stop-nodes
+
+    make -f $MAKEFILE start-nodes-detached || {
+      echo '# Could not start nodes...' >&3
+      exit 1
+    }
+
+    # Give the 4th node some time to boot
+    wait_for_server 8000 8001 8002 8003
+
+    check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
+    check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
+
+    # Send the same transaction to MANY-ABCI again. It should NOT succeed.
+    many message --server http://localhost:8000 --from-hex="$msg_hex"
+
+    echo "Waiting for the valid transaction to be processed..." >&3
     check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
     check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
 }
