@@ -1,7 +1,7 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
+MAKEFILE="Makefile.ledger"
 START_BALANCE=100000000000
 MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
-MAKEFILE="Makefile.ledger"
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -77,8 +77,6 @@ function teardown() {
 }
 
 @test "$SUITE: will check duplicated transaction hash in checkTx" {
-    cd "$GIT_ROOT/docker/" || exit 1
-
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000000 MFX
     call_ledger --pem=1 --port=8000 send "$(identity 3)" 1 MFX
     check_consistency --pem=1 --balance=1000000 --id="$(identity 2)" 8000
@@ -100,6 +98,9 @@ function teardown() {
 
     check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
     check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
+
+    cd "$GIT_ROOT/docker/" || exit 1
+    pwd >&3
 
     # Shut down and restart all nodes.
     make -f $MAKEFILE stop-nodes
