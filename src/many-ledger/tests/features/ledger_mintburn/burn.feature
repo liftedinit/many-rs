@@ -15,12 +15,25 @@ Scenario: Burn tokens
 	And the memo is "Barfoo"
 
 @tokens
-Scenario: Burn tokens as random/anonymous
+Scenario: Burn tokens as random/anonymous, token owner present
 	Given a default token owned by myself
 	And a distribution of 12 tokens to id 2
 	And a distribution of 23 tokens to id 3
 	Then burning as random fails with invalid sender
 	Then burning as anonymous fails with invalid sender
+	Then id 1 has 123 tokens
+	And id 2 has 456 tokens
+	And id 3 has 789 tokens
+	And the circulating supply is 1368 tokens
+	And the total supply is 1368 tokens
+
+@tokens
+Scenario: Burn tokens as random/anonymous, token owner absent
+	Given a default token owned by no one
+	And a distribution of 12 tokens to id 2
+	And a distribution of 23 tokens to id 3
+	Then burning as random fails with no token owner
+	Then burning as anonymous fails with no token owner
 	Then id 1 has 123 tokens
 	And id 2 has 456 tokens
 	And id 3 has 789 tokens
