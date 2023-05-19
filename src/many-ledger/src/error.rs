@@ -38,6 +38,7 @@ define_attribute_many_error!(
         3: pub fn missing_funds(symbol, amount, balance) => "Unable to burn, missing funds: {amount} > {balance} {symbol}.",
         4: pub fn unable_to_distribute_zero(symbol) => "The mint/burn distribution contains zero for {symbol}.",
         5: pub fn partial_burn_disabled() => "Partial burns are disabled.",
+        6: pub fn no_token_owner() => "Token doesn't have an owner."
     }
 );
 
