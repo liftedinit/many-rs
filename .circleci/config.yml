@@ -466,11 +466,11 @@ commands:
               --config=all-features \
               --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
             
-            # --disable_token_sender_check needs to be disabled for the token tests
+            # --disable_token_sender_check needs to be disabled for the token sender check test
             bazel test << parameters.bazel_extra_args >> --test_output=errors \
               --balance_testing \
               --migration_testing \
-              --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
+              --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-token-sender-check
 
 parameters:
   run_resiliency:
