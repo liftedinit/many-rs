@@ -35,6 +35,7 @@ many-migration = { path = "../many-migration", version = "0.1.1" } # managed by 
 many-modules = { path = "../many-modules", version = "0.1.1" } # managed by release.sh
 many-protocol = { path = "../many-protocol", version = "0.1.1" } # managed by release.sh
 many-server = { path = "../many-server", version = "0.1.1" } # managed by release.sh
+many-server-cache = { path = "../many-server-cache", version = "0.1.1" } # managed by release.sh
 many-types = { path = "../many-types", version = "0.1.1" } # managed by release.sh
 num-integer = "0.1.45"
 reqwest = "0.11.11"

@@ -61,7 +61,7 @@ pub fn many_client(attr: TokenStream, input: TokenStream) -> TokenStream {
         let q = quote! {
             pub #method {
                 let response = self.0.call_(#server_method, #args_var).await?;
-                minicbor::decode(&response).map_err(many_server::ManyError::deserialization_error)
+                minicbor::decode(&response).map_err(many_error::ManyError::deserialization_error)
             }
         };
         Ok(q.into_token_stream())

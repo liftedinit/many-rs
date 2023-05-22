@@ -25,11 +25,12 @@ fn get_abci_info_(client: &ManyClient<AnonymousIdentity>) -> Result<AbciInfo, Ma
         .and_then(|payload| minicbor::decode(&payload).map_err(ManyError::deserialization_error))
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AbciApp {
     app_name: String,
     many_client: ManyClient<AnonymousIdentity>,
     many_url: Url,
+    cache: Arc<dyn many_server_cache::RequestCacheBackend>,
 
     /// We need interior mutability, safely.
     migrations: Arc<RwLock<AbciAppMigrations>>,
@@ -76,9 +77,37 @@ impl AbciApp {
             app_name,
             many_url,
             many_client,
+            cache: Arc::new(()),
             migrations: Arc::new(migrations),
             block_time: Arc::new(RwLock::new(None)),
         })
+    }
+
+    pub fn with_cache<C: many_server_cache::RequestCacheBackend + 'static>(
+        mut self,
+        cache: C,
+    ) -> Self {
+        self.cache = Arc::new(cache);
+        self
+    }
+
+    fn do_check_tx(&self, request: RequestCheckTx) -> Result<ResponseCheckTx, (u32, String)> {
+        use many_types::Timestamp;
+        let cose = CoseSign1::from_slice(&request.tx).map_err(|log| (4, log.to_string()))?;
+        let message = RequestMessage::try_from(cose).map_err(|log| (5, log.to_string()))?;
+
+        let time = self.block_time.read().map_err(|log| (6, log.to_string()))?;
+        let now = time
+            .as_ref()
+            .map_or_else(|| Ok(Timestamp::now()), |x| Timestamp::new(*x))
+            .map_err(|e| (7, e.to_string()))?;
+
+        let now = now.as_system_time().map_err(|log| (8, log.to_string()))?;
+
+        message
+            .validate_time(now, MANYABCI_DEFAULT_TIMEOUT)
+            .map_err(|log| (9, log.to_string()))?;
+        Ok(Default::default())
     }
 }
 
@@ -181,52 +210,14 @@ impl Application for AbciApp {
     }
 
     fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
-        use many_types::Timestamp;
-        CoseSign1::from_slice(&request.tx)
-            .map_err(|_| ResponseCheckTx {
-                code: 4,
+        self.do_check_tx(request).unwrap_or_else(|(code, log)| {
+            debug!("check_tx failed: ({}) {}", code, log);
+            ResponseCheckTx {
+                code,
+                log,
                 ..Default::default()
-            })
-            .and_then(|cose| {
-                RequestMessage::try_from(cose).map_err(|_| ResponseCheckTx {
-                    code: 5,
-                    ..Default::default()
-                })
-            })
-            .and_then(|message| {
-                self.block_time
-                    .read()
-                    .map_err(|_| ResponseCheckTx {
-                        code: 6,
-                        ..Default::default()
-                    })
-                    .and_then(|time| {
-                        time.map(Timestamp::new)
-                            .transpose()
-                            .map_err(|_| ResponseCheckTx {
-                                code: 7,
-                                ..Default::default()
-                            })
-                    })
-                    .transpose()
-                    .unwrap_or_else(|| Ok(Timestamp::now()))
-                    .and_then(|now| {
-                        now.as_system_time().map_err(|_| ResponseCheckTx {
-                            code: 8,
-                            ..Default::default()
-                        })
-                    })
-                    .and_then(|now| {
-                        message
-                            .validate_time(now, MANYABCI_DEFAULT_TIMEOUT)
-                            .map_err(|_| ResponseCheckTx {
-                                code: 9,
-                                ..Default::default()
-                            })
-                    })
-            })
-            .map(|_| Default::default())
-            .unwrap_or_else(|error| error)
+            }
+        })
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {

@@ -1,8 +1,8 @@
 use many_client_macros::many_client;
+use many_error::ManyError;
 pub use many_identity::Identity;
 use many_modules::base::HeartbeatReturn;
 pub use many_modules::base::{Endpoints, Status};
-use many_server::ManyError;
 
 use crate::ManyClient;
 

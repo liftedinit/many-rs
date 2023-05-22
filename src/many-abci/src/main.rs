@@ -6,10 +6,12 @@ use many_identity::verifiers::AnonymousVerifier;
 use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
 use many_identity_webauthn::WebAuthnVerifier;
+use many_migration::MigrationConfig;
 use many_modules::{base, blockchain, r#async};
 use many_protocol::ManyUrl;
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
+use many_server_cache::SharedRocksDbCacheBackend;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -24,7 +26,6 @@ mod module;
 
 use abci_app::AbciApp;
 use many_app::AbciModuleMany;
-use many_migration::MigrationConfig;
 use module::AbciBlockchainModuleImpl;
 
 #[derive(Debug, Parser)]
@@ -73,6 +74,11 @@ struct Opts {
     /// is given.
     #[clap(long, short)]
     migrations_config: Option<PathBuf>,
+
+    /// Database path to the cache. If unspecified, the server will not
+    /// verify transactions for duplicate requests.
+    #[clap(long)]
+    cache_db: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -88,6 +94,7 @@ async fn main() {
         allow_origin,
         allow_addrs,
         migrations_config,
+        cache_db,
     } = Opts::parse();
 
     common_flags.init_logging().unwrap();
@@ -134,11 +141,15 @@ async fn main() {
         std::thread::sleep(std::time::Duration::from_secs(1));
     };
 
-    let abci_app = tokio::task::spawn_blocking(move || {
+    let rocksdb_cache = cache_db.map(|p| SharedRocksDbCacheBackend::new(p));
+    let mut abci_app = tokio::task::spawn_blocking(move || {
         AbciApp::create(many_app, Address::anonymous(), maybe_migrations).unwrap()
     })
     .await
     .unwrap();
+    if let Some(rocksdb_cache) = &rocksdb_cache {
+        abci_app = abci_app.with_cache(rocksdb_cache.clone());
+    }
 
     let abci_server = ServerBuilder::new(abci_read_buf_size)
         .bind(abci, abci_app)
@@ -192,6 +203,12 @@ async fn main() {
         s.add_module(blockchain::BlockchainModule::new(blockchain_impl.clone()));
         s.add_module(r#async::AsyncModule::new(blockchain_impl));
         s.set_fallback_module(backend);
+
+        if let Some(cache_db) = rocksdb_cache {
+            s.add_validator(many_server_cache::RequestCacheValidator::new(
+                cache_db.clone(),
+            ));
+        }
     }
 
     let mut many_server = HttpServer::new(server);

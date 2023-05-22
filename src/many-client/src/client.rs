@@ -6,14 +6,14 @@ pub mod ledger;
 pub use ledger::LedgerClient;
 
 use coset::{CoseSign1, TaggedCborSerializable};
+use many_error::ManyError;
 use many_identity::verifiers::AnonymousVerifier;
-use many_identity::{verifiers, Identity};
+use many_identity::{verifiers, Address, Identity};
 use many_identity_dsa::CoseKeyVerifier;
 use many_modules::base::Status;
 use many_protocol::{
     encode_cose_sign1_from_request, RequestMessage, RequestMessageBuilder, ResponseMessage,
 };
-use many_server::{Address, ManyError};
 use minicbor::Encode;
 use reqwest::{IntoUrl, Url};
 use std::fmt::{Debug, Formatter};

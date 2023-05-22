@@ -4,13 +4,17 @@ CONFIG_ROOT="$(mktemp -d)"
 source "$(dirname "${BASH_SOURCE[0]}")/token.bash"
 
 function start_ledger() {
+    local root
     local persistent
     local state
     local clean
+    local cache_db
     local background_output
-    persistent="$(mktemp -d)"
+    root="$(mktemp -d)"
+    persistent="$root/ledger.db"
     state="$GIT_ROOT/staging/ledger_state.json5"
     clean="--clean"
+    cache_db=""
     background_output="Running accept thread"
 
     while (( $# > 0 )); do
@@ -19,6 +23,7 @@ function start_ledger() {
             --state=*) state="${1#--state=}"; shift ;;
             --no-clean) clean=""; shift ;;
             --background_output=*) background_output="${1#--background_output=}"; shift ;;
+            --cache) shift; cache_db="$root/request_cache.db"; continue ;;
             --) shift; break ;;
             *) break ;;
         esac
@@ -27,6 +32,7 @@ function start_ledger() {
     run_in_background many-ledger \
         -v \
         $clean \
+        $cache_db \
         --persistent "$persistent" \
         --state "$state" \
         "$@"

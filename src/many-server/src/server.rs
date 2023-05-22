@@ -1,4 +1,5 @@
 use crate::transport::LowLevelManyRequestHandler;
+use crate::RequestValidator;
 use async_trait::async_trait;
 use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
@@ -6,6 +7,7 @@ use many_identity::{Identity, Verifier};
 use many_modules::{base, ManyModule, ManyModuleInfo};
 use many_protocol::{RequestMessage, ResponseMessage};
 use many_types::attributes::Attribute;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
@@ -24,7 +26,8 @@ pub struct ManyServer {
     modules: Vec<Arc<dyn ManyModule + Send>>,
     method_cache: BTreeSet<String>,
     identity: Box<dyn Identity>,
-    verifier: Box<dyn Verifier>,
+    identity_verifier: Box<dyn Verifier>,
+    validator: RefCell<Box<dyn RequestValidator + Send>>,
     public_key: Option<CoseKey>,
     name: String,
     version: Option<String>,
@@ -73,7 +76,8 @@ impl ManyServer {
             modules: vec![],
             name: name.to_string(),
             identity: Box::new(identity),
-            verifier: Box::new(verifier),
+            identity_verifier: Box::new(verifier),
+            validator: RefCell::new(Box::new(())),
             public_key,
             timeout: MANYSERVER_DEFAULT_TIMEOUT,
             fallback: None,
@@ -99,6 +103,15 @@ impl ManyServer {
         M: LowLevelManyRequestHandler + base::BaseModuleBackend + 'static,
     {
         self.fallback = Some(Arc::new(module));
+        self
+    }
+
+    pub fn add_validator(
+        &mut self,
+        validator: impl RequestValidator + Send + 'static,
+    ) -> &mut Self {
+        let previous = self.validator.replace(Box::new(()));
+        self.validator = RefCell::new(Box::new((previous, validator)));
         self
     }
 
@@ -251,7 +264,16 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
     async fn execute(&self, envelope: CoseSign1) -> Result<CoseSign1, String> {
         let request = {
             let this = self.lock().unwrap();
-            many_protocol::decode_request_from_cose_sign1(&envelope, &this.verifier)
+            {
+                let validator = this.validator.borrow();
+
+                validator.validate_envelope(&envelope).and_then(|_| {
+                    many_protocol::decode_request_from_cose_sign1(
+                        &envelope,
+                        &this.identity_verifier,
+                    )
+                })
+            }
         };
         let mut id = None;
 
@@ -267,9 +289,10 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                     .as_ref()
                     .map_or_else(|| Ok(SystemTime::now()), |f| f())?;
 
-                id = message.id;
-
+                this.validator.borrow().validate_request(&message)?;
                 message.validate_time(now, this.timeout)?;
+
+                id = message.id;
 
                 this.validate_id(&message)?;
 
@@ -286,13 +309,24 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
         match response {
             Ok((address, message, maybe_module, fallback)) => match (maybe_module, fallback) {
                 (Some(m), _) => {
-                    let mut response = match m.execute(message).await {
+                    let mut response = match m.execute(message.clone()).await {
                         Ok(response) => response,
                         Err(many_err) => ResponseMessage::error(address, id, many_err),
                     };
                     response.from = address;
 
                     let this = self.lock().unwrap();
+                    let _ = this
+                        .validator
+                        .borrow_mut()
+                        .message_executed(&envelope, &message, &mut response)
+                        .map_err(|e| {
+                            // So this is awkward. The execution succeeded, but the after execution
+                            // hook failed. We should probably return an error here, but we can't.
+                            // We log and hope we notice.
+                            tracing::error!("Error during message_executed: {}", e.to_string());
+                            ()
+                        });
                     many_protocol::encode_cose_sign1_from_response(response, &this.identity)
                         .map_err(|e| e.to_string())
                 }
