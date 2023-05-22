@@ -141,6 +141,7 @@ function teardown() {
         refute_output --partial "Some memo"
     done
 
+    # Mint tokens as the token identity
     call_ledger --pem=1 --port=8000 token mint ${SYMBOL} ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
     for port in 8000 8001 8002 8003; do
         call_ledger --port=${port} token info "${SYMBOL}"
@@ -148,11 +149,28 @@ function teardown() {
         assert_output --regexp "circulating:.*(.*579,.*)"
     done
 
+    # Burn tokens as the token identity
     call_ledger --pem=1 --port=8000 token burn ${SYMBOL} ''\''{"'$(identity 2)'": 122, "'$(identity 3)'": 455}'\''' --error-on-under-burn
     for port in 8000 8001 8002 8003; do
         call_ledger --port=${port} token info "${SYMBOL}"
         assert_output --regexp "total:.*(.*2,.*)"
         assert_output --regexp "circulating:.*(.*2,.*)"
+    done
+
+    # Mint tokens as the token owner
+    call_ledger --pem=2 --port=8000 token mint ${SYMBOL} ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
+    for port in 8000 8001 8002 8003; do
+        call_ledger --port=${port} token info "${SYMBOL}"
+        assert_output --regexp "total:.*(.*581,.*)"
+        assert_output --regexp "circulating:.*(.*581,.*)"
+    done
+
+    # Burn tokens as the token owner
+    call_ledger --pem=2 --port=8000 token burn ${SYMBOL} ''\''{"'$(identity 2)'": 122, "'$(identity 3)'": 455}'\''' --error-on-under-burn
+    for port in 8000 8001 8002 8003; do
+        call_ledger --port=${port} token info "${SYMBOL}"
+        assert_output --regexp "total:.*(.*4,.*)"
+        assert_output --regexp "circulating:.*(.*4,.*)"
     done
 }
 

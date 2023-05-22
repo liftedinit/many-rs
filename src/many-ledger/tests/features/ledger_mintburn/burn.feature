@@ -15,11 +15,10 @@ Scenario: Burn tokens
 	And the memo is "Barfoo"
 
 @tokens
-Scenario: Burn tokens as myself/random/anonymous
+Scenario: Burn tokens as random/anonymous, token owner present
 	Given a default token owned by myself
 	And a distribution of 12 tokens to id 2
 	And a distribution of 23 tokens to id 3
-	Then burning as myself fails with invalid sender
 	Then burning as random fails with invalid sender
 	Then burning as anonymous fails with invalid sender
 	Then id 1 has 123 tokens
@@ -27,6 +26,33 @@ Scenario: Burn tokens as myself/random/anonymous
 	And id 3 has 789 tokens
 	And the circulating supply is 1368 tokens
 	And the total supply is 1368 tokens
+
+@tokens
+Scenario: Burn tokens as random/anonymous, token owner absent
+	Given a default token owned by no one
+	And a distribution of 12 tokens to id 2
+	And a distribution of 23 tokens to id 3
+	Then burning as random fails with no token owner
+	Then burning as anonymous fails with no token owner
+	Then id 1 has 123 tokens
+	And id 2 has 456 tokens
+	And id 3 has 789 tokens
+	And the circulating supply is 1368 tokens
+	And the total supply is 1368 tokens
+
+@tokens
+Scenario: Burn tokens as token owner
+	Given a default token owned by myself
+	And a distribution of 12 tokens to id 2
+	And a distribution of 23 tokens to id 3
+	And a memo "Barfoo"
+	When I burn the tokens as myself
+	Then id 1 has 123 tokens
+	And id 2 has 444 tokens
+	And id 3 has 766 tokens
+	And the circulating supply is 1333 tokens
+	And the total supply is 1333 tokens
+	And the memo is "Barfoo"
 
 @tokens
 Scenario: Unable to burn zero

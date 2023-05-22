@@ -34,13 +34,8 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
             distribution,
             memo,
         } = args;
-        // Only the token identity is able to mint tokens
-        verify_tokens_sender(
-            sender,
-            self.storage
-                .get_identity(crate::storage::ledger_tokens::TOKEN_IDENTITY_ROOT)
-                .or_else(|_| self.storage.get_identity(crate::storage::IDENTITY_ROOT))?,
-        )?;
+
+        self.verify_mint_burn_identity(sender, &symbol)?;
 
         check_symbol_exists(&symbol, self.storage.get_symbols()?)?;
 
@@ -72,13 +67,8 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
             memo,
             error_on_under_burn,
         } = args;
-        // Only the token identity is able to burn tokens
-        verify_tokens_sender(
-            sender,
-            self.storage
-                .get_identity(crate::storage::ledger_tokens::TOKEN_IDENTITY_ROOT)
-                .or_else(|_| self.storage.get_identity(crate::storage::IDENTITY_ROOT))?,
-        )?;
+
+        self.verify_mint_burn_identity(sender, &symbol)?;
 
         check_symbol_exists(&symbol, self.storage.get_symbols()?)?;
 
@@ -100,5 +90,28 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
                 memo,
             })
             .map(|_| TokenBurnReturns { distribution })
+    }
+}
+
+impl LedgerModuleImpl {
+    /// Only the token identity, the server identity or the token owner is allowed to mint/burn
+    fn verify_mint_burn_identity(
+        &mut self,
+        sender: &Address,
+        symbol: &Symbol,
+    ) -> Result<(), ManyError> {
+        // Are we the token identity or the server identity?
+        verify_tokens_sender(
+            sender,
+            self.storage
+                .get_identity(crate::storage::ledger_tokens::TOKEN_IDENTITY_ROOT)
+                .or_else(|_| self.storage.get_identity(crate::storage::IDENTITY_ROOT))?,
+        )
+        // Are we the token owner?
+        .or_else(|_| match self.storage.get_owner(symbol) {
+            Ok((Some(token_owner), _)) => verify_tokens_sender(sender, token_owner),
+            _ => Err(error::no_token_owner()),
+        })?;
+        Ok(())
     }
 }

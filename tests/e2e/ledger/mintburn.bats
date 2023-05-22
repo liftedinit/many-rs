@@ -32,6 +32,9 @@ function setup() {
     # Use token identity subresource 0 as the first token symbol
     sed -i.bak 's/token_next_subresource: 2/token_next_subresource: 0/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
+    # Set a token owner
+    sed -i.bak 's/owner: null/owner: "'"$(identity 5)"'"/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
+
     # Skip hash check
     sed -i.bak 's/hash/\/\/hash/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
@@ -45,8 +48,18 @@ function teardown() {
     stop_background_run
 }
 
-@test "$SUITE: can mint token" {
+@test "$SUITE: can mint token as token identity" {
     call_ledger --pem=1 --port=8000 token mint MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
+    check_consistency --pem=2 --balance=123 8000
+    check_consistency --pem=3 --balance=456 8000
+
+    call_ledger --port=8000 token info ${MFX_ADDRESS}
+    assert_output --regexp "total:.*(.*2000000579,.*)"
+    assert_output --regexp "circulating:.*(.*2000000579,.*)"
+}
+
+@test "$SUITE: can mint token as token owner" {
+    call_ledger --pem=5 --port=8000 token mint MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
     check_consistency --pem=2 --balance=123 8000
     check_consistency --pem=3 --balance=456 8000
 
@@ -68,7 +81,7 @@ function teardown() {
     check_consistency --balance=0 --id=mah2yupaotgppckhdb57vl54vmh7idujleerpwegq53ie7oqaz 8000
 }
 
-@test "$SUITE: can burn token" {
+@test "$SUITE: can burn token as token identity" {
     call_ledger --pem=1 --port=8000 send $(identity 2) 123 MFX
     call_ledger --pem=1 --port=8000 send $(identity 3) 456 MFX
     call_ledger --pem=1 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\''' --error-on-under-burn
@@ -81,7 +94,21 @@ function teardown() {
     assert_output --regexp "circulating:.*(.*1999999421,.*)"
 }
 
-@test "$SUITE: only token identity can mint" {
+
+@test "$SUITE: can burn token as token owner" {
+    call_ledger --pem=1 --port=8000 send $(identity 2) 123 MFX
+    call_ledger --pem=1 --port=8000 send $(identity 3) 456 MFX
+    call_ledger --pem=5 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\''' --error-on-under-burn
+    sleep 2
+    check_consistency --pem=2 --balance=0 8000
+    check_consistency --pem=3 --balance=0 8000
+
+    call_ledger --port=8000 token info ${MFX_ADDRESS}
+    assert_output --regexp "total:.*(.*1999999421,.*)"
+    assert_output --regexp "circulating:.*(.*1999999421,.*)"
+}
+
+@test "$SUITE: random/anonymous identity can't mint" {
     call_ledger --pem=2 --port=8000 token mint MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
     assert_output --partial "Unauthorised Token endpoints sender."
 
@@ -92,7 +119,7 @@ function teardown() {
     assert_output --partial "Unauthorised Token endpoints sender."
 }
 
-@test "$SUITE: only token identity can burn" {
+@test "$SUITE: random/anonymous identity can't burn" {
     call_ledger --pem=1 --port=8000 send $(identity 2) 123 MFX
     call_ledger --pem=1 --port=8000 send $(identity 3) 456 MFX
     call_ledger --pem=2 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\''' --error-on-under-burn
