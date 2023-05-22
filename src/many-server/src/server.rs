@@ -325,7 +325,6 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                             // hook failed. We should probably return an error here, but we can't.
                             // We log and hope we notice.
                             tracing::error!("Error during message_executed: {}", e.to_string());
-                            ()
                         });
                     many_protocol::encode_cose_sign1_from_response(response, &this.identity)
                         .map_err(|e| e.to_string())

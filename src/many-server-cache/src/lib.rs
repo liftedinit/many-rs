@@ -94,10 +94,10 @@ impl RocksDbCacheBackend {
 
 impl RequestCacheBackend for RocksDbCacheBackend {
     fn has(&self, key: &[u8]) -> bool {
-        self.db.get(&key).unwrap().is_some()
+        self.db.get(key).unwrap().is_some()
     }
     fn put(&mut self, key: &[u8]) {
-        self.db.put(&key, b"").unwrap();
+        self.db.put(key, b"").unwrap();
     }
 }
 

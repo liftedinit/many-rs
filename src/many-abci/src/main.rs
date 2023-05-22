@@ -141,7 +141,7 @@ async fn main() {
         std::thread::sleep(std::time::Duration::from_secs(1));
     };
 
-    let rocksdb_cache = cache_db.map(|p| SharedRocksDbCacheBackend::new(p));
+    let rocksdb_cache = cache_db.map(SharedRocksDbCacheBackend::new);
     let mut abci_app = tokio::task::spawn_blocking(move || {
         AbciApp::create(many_app, Address::anonymous(), maybe_migrations).unwrap()
     })
@@ -205,9 +205,7 @@ async fn main() {
         s.set_fallback_module(backend);
 
         if let Some(cache_db) = rocksdb_cache {
-            s.add_validator(many_server_cache::RequestCacheValidator::new(
-                cache_db.clone(),
-            ));
+            s.add_validator(many_server_cache::RequestCacheValidator::new(cache_db));
         }
     }
 
