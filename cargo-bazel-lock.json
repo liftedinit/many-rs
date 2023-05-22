@@ -1,5 +1,5 @@
 {
-  "checksum": "27770ad12f67d5ee623bdda3628c5b1b2f3ddb47f7bde375b0da5ffeca2ca924",
+  "checksum": "3bef3034e31002f9b1f9c64e1387770f8e2625f5abe9a91e2a095a7972692ac3",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -3133,12 +3133,6 @@
         "compile_data_glob": [
           "**"
         ],
-        "crate_features": {
-          "common": [
-            "static"
-          ],
-          "selects": {}
-        },
         "deps": {
           "common": [
             {
@@ -11927,25 +11921,13 @@
         ],
         "crate_features": {
           "common": [
-            "bzip2",
-            "bzip2-sys",
             "default",
-            "libz-sys",
-            "lz4",
-            "snappy",
-            "static",
-            "zlib",
-            "zstd",
-            "zstd-sys"
+            "static"
           ],
           "selects": {}
         },
         "deps": {
           "common": [
-            {
-              "id": "bzip2-sys 0.1.11+1.0.8",
-              "target": "bzip2_sys"
-            },
             {
               "id": "libc 0.2.144",
               "target": "libc"
@@ -11953,14 +11935,6 @@
             {
               "id": "librocksdb-sys 0.8.3+7.4.4",
               "target": "build_script_build"
-            },
-            {
-              "id": "libz-sys 1.1.9",
-              "target": "libz_sys"
-            },
-            {
-              "id": "zstd-sys 2.0.8+zstd.1.5.5",
-              "target": "zstd_sys"
             }
           ],
           "selects": {}
@@ -12151,8 +12125,7 @@
         ],
         "crate_features": {
           "common": [
-            "libc",
-            "static"
+            "libc"
           ],
           "selects": {}
         },
@@ -19970,17 +19943,6 @@
         "compile_data_glob": [
           "**"
         ],
-        "crate_features": {
-          "common": [
-            "bzip2",
-            "default",
-            "lz4",
-            "snappy",
-            "zlib",
-            "zstd"
-          ],
-          "selects": {}
-        },
         "deps": {
           "common": [
             {
@@ -29356,85 +29318,6 @@
         "version": "1.4.2"
       },
       "license": "Apache-2.0 OR MIT"
-    },
-    "zstd-sys 2.0.8+zstd.1.5.5": {
-      "name": "zstd-sys",
-      "version": "2.0.8+zstd.1.5.5",
-      "repository": {
-        "Http": {
-          "url": "https://crates.io/api/v1/crates/zstd-sys/2.0.8+zstd.1.5.5/download",
-          "sha256": "5556e6ee25d32df2586c098bbfa278803692a20d0ab9565e049480d52707ec8c"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "zstd_sys",
-            "crate_root": "src/lib.rs",
-            "srcs": [
-              "**/*.rs"
-            ]
-          }
-        },
-        {
-          "BuildScript": {
-            "crate_name": "build_script_build",
-            "crate_root": "build.rs",
-            "srcs": [
-              "**/*.rs"
-            ]
-          }
-        }
-      ],
-      "library_target_name": "zstd_sys",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "default",
-            "legacy",
-            "zdict_builder"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "libc 0.2.144",
-              "target": "libc"
-            },
-            {
-              "id": "zstd-sys 2.0.8+zstd.1.5.5",
-              "target": "build_script_build"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "2.0.8+zstd.1.5.5"
-      },
-      "build_script_attrs": {
-        "data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "cc 1.0.79",
-              "target": "cc"
-            },
-            {
-              "id": "pkg-config 0.3.27",
-              "target": "pkg_config"
-            }
-          ],
-          "selects": {}
-        },
-        "links": "zstd"
-      },
-      "license": "MIT/Apache-2.0"
     }
   },
   "binary_crates": [],

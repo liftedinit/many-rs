@@ -77,6 +77,7 @@ rust_binary(
         "//src/many-modules",
         "//src/many-protocol",
         "//src/many-server",
+        "//src/many-server-cache",
         "//src/many-types",
     ],
 )
@@ -107,6 +108,7 @@ rust_library(
         "//src/many-modules:many-modules-for-test",
         "//src/many-protocol:many-protocol-for-test",
         "//src/many-server:many-server-for-test",
+        "//src/many-server-cache",
         "//src/many-types:many-types-for-test",
     ],
 )

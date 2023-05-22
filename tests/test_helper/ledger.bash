@@ -23,7 +23,7 @@ function start_ledger() {
             --state=*) state="${1#--state=}"; shift ;;
             --no-clean) clean=""; shift ;;
             --background_output=*) background_output="${1#--background_output=}"; shift ;;
-            --cache) shift; cache_db="$root/request_cache.db"; continue ;;
+            --cache) cache_db="--cache-db=$root/request_cache.db"; shift ;;
             --) shift; break ;;
             *) break ;;
         esac

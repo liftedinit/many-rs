@@ -14,6 +14,7 @@ rust_library(
         normal = True,
     ) + [
         "//src/many-error",
+        "//src/many-protocol",
         "//src/many-server",
     ],
 )
