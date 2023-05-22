@@ -1,5 +1,6 @@
 use coset::CoseSign1;
 use many_error::ManyError;
+use many_protocol::{RequestMessage, ResponseMessage};
 use many_server::RequestValidator;
 use sha2::Digest;
 use std::collections::HashSet;
@@ -65,8 +66,8 @@ impl<T: RequestCacheBackend> RequestValidator for RequestCacheValidator<T> {
     fn message_executed(
         &mut self,
         envelope: &CoseSign1,
-        _request: &many_protocol::request::RequestMessage,
-        _response: &mut many_protocol::response::ResponseMessage,
+        _request: &RequestMessage,
+        _response: &mut ResponseMessage,
     ) -> Result<(), ManyError> {
         let payload = envelope
             .payload
