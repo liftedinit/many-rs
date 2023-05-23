@@ -284,7 +284,7 @@ impl Application for AbciApp {
                     if let Err(_e) = self
                         .cache
                         .write()
-                        .and_then(|mut validator| Ok(validator.message_executed(&cose, &response)))
+                        .map(|mut validator| validator.message_executed(&cose, &response))
                     {
                         return ResponseDeliverTx {
                             code: 2,
