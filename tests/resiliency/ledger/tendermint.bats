@@ -94,7 +94,7 @@ function teardown() {
     # Send the same transaction to MANY-ABCI, again. It should FAIL because it's
     # a duplicate.
     run many message --server http://localhost:8000 --from-hex="$msg_hex" 2>&3 >&3
-    assert_output --partial "tx already exists in cache"
+    assert_output --partial "This message was already processed"
 
     check_consistency --pem=1 --balance=999000 --id="$(identity 2)" 8000
     check_consistency --pem=1 --balance=1001 --id="$(identity 3)" 8000
