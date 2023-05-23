@@ -20,9 +20,10 @@ lazy_static::lazy_static!(
 
 enum ManyAbciErrorCodes {
     Success = 0,
+    // The message was not successfully sent to the backend.
     TransportError = 1,
-    BackendError = 2,
-    FrontendError = 3,
+    // An error happened in the ABCI layer itself (serialization, etc).
+    FrontendError = 2,
 }
 
 pub const MANYABCI_DEFAULT_TIMEOUT: u64 = 300;
@@ -289,7 +290,7 @@ impl Application for AbciApp {
 
                 {
                     let cache = self.cache.write();
-                    if let Err(e) = cache {
+                    if let Err(_e) = cache {
                         return ResponseDeliverTx {
                             code: ManyAbciErrorCodes::FrontendError as u32,
                             ..Default::default()
