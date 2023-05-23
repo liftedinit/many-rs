@@ -152,6 +152,7 @@ main() {
         TMHOME="$root_dir/kvstore" tendermint init validator
 
         toml_set "$root_dir/ledger/config/config.toml" mempool.cache_size "0"
+        toml_set "$root_dir/kvstore/config/config.toml" mempool.cache_size "0"
 
         toml_set "$root_dir/ledger/config/config.toml" consensus.create_empty_blocks "false"
         toml_set "$root_dir/ledger/config/config.toml" consensus.create_empty_blocks_interval "20s"

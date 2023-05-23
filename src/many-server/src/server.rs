@@ -355,6 +355,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
 #[cfg(test)]
 mod tests {
     use semver::{BuildMetadata, Prerelease, Version};
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::RwLock;
     use std::time::Duration;
 
@@ -545,5 +546,95 @@ mod tests {
         let response =
             decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
         assert!(response.data.is_ok());
+    }
+
+    #[test]
+    fn server_validates_envelope() {
+        fn create_request(timestamp: SystemTime, nonce: u8) -> CoseSign1 {
+            let request: RequestMessage = RequestMessageBuilder::default()
+                .method("status".to_string())
+                .timestamp(Timestamp::from_system_time(timestamp).unwrap())
+                .nonce(nonce.to_le_bytes().to_vec())
+                .build()
+                .unwrap();
+            encode_cose_sign1_from_request(request, &AnonymousIdentity).unwrap()
+        }
+
+        let server = ManyServer::test(AnonymousIdentity);
+        let timestamp = SystemTime::now();
+
+        struct Validator(AtomicBool);
+        impl RequestValidator for Arc<Validator> {
+            fn validate_envelope(&self, _envelope: &CoseSign1) -> Result<(), ManyError> {
+                if self.0.load(Ordering::Relaxed) {
+                    Ok(())
+                } else {
+                    Err(ManyError::unknown("test validator failed"))
+                }
+            }
+        }
+
+        let validator = Arc::new(Validator(AtomicBool::new(true)));
+
+        {
+            let mut server = server.lock().unwrap();
+            server.add_validator(validator.clone());
+        }
+
+        let response_e = smol::block_on(server.execute(create_request(timestamp, 0))).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        assert!(response.data.is_ok());
+
+        validator.0.store(false, Ordering::Relaxed);
+        let response_e = smol::block_on(server.execute(create_request(timestamp, 0))).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        assert!(response.data.is_err());
+    }
+
+    #[test]
+    fn server_validates_request() {
+        fn create_request(timestamp: SystemTime, nonce: u8) -> CoseSign1 {
+            let request: RequestMessage = RequestMessageBuilder::default()
+                .method("status".to_string())
+                .timestamp(Timestamp::from_system_time(timestamp).unwrap())
+                .nonce(nonce.to_le_bytes().to_vec())
+                .build()
+                .unwrap();
+            encode_cose_sign1_from_request(request, &AnonymousIdentity).unwrap()
+        }
+
+        let server = ManyServer::test(AnonymousIdentity);
+        let timestamp = SystemTime::now();
+
+        struct Validator(AtomicBool);
+        impl RequestValidator for Arc<Validator> {
+            fn validate_request(&self, _request: &RequestMessage) -> Result<(), ManyError> {
+                if self.0.load(Ordering::Relaxed) {
+                    Ok(())
+                } else {
+                    Err(ManyError::unknown("test validator failed"))
+                }
+            }
+        }
+
+        let validator = Arc::new(Validator(AtomicBool::new(true)));
+
+        {
+            let mut server = server.lock().unwrap();
+            server.add_validator(validator.clone());
+        }
+
+        let response_e = smol::block_on(server.execute(create_request(timestamp, 0))).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        assert!(response.data.is_ok());
+
+        validator.0.store(false, Ordering::Relaxed);
+        let response_e = smol::block_on(server.execute(create_request(timestamp, 0))).unwrap();
+        let response =
+            decode_response_from_cose_sign1(&response_e, None, &AcceptAllVerifier).unwrap();
+        assert!(response.data.is_err());
     }
 }
