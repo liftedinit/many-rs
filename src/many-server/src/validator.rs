@@ -17,8 +17,7 @@ pub trait RequestValidator {
     fn message_executed(
         &mut self,
         _request_envelope: &CoseSign1,
-        _request: &RequestMessage,
-        _response: &mut ResponseMessage,
+        _response: &ResponseMessage,
     ) -> Result<(), ManyError> {
         Ok(())
     }
@@ -36,11 +35,9 @@ impl<A: RequestValidator + ?Sized> RequestValidator for Box<A> {
     fn message_executed(
         &mut self,
         request_envelope: &CoseSign1,
-        request: &RequestMessage,
-        response: &mut ResponseMessage,
+        response: &ResponseMessage,
     ) -> Result<(), ManyError> {
-        self.as_mut()
-            .message_executed(request_envelope, request, response)
+        self.as_mut().message_executed(request_envelope, response)
     }
 }
 
@@ -60,10 +57,9 @@ where
     fn message_executed(
         &mut self,
         envelope: &CoseSign1,
-        request: &RequestMessage,
-        response: &mut ResponseMessage,
+        response: &ResponseMessage,
     ) -> Result<(), ManyError> {
-        self.0.message_executed(envelope, request, response)?;
-        self.1.message_executed(envelope, request, response)
+        self.0.message_executed(envelope, response)?;
+        self.1.message_executed(envelope, response)
     }
 }

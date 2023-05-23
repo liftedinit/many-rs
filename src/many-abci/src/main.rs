@@ -11,7 +11,7 @@ use many_modules::{base, blockchain, r#async};
 use many_protocol::ManyUrl;
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
-use many_server_cache::SharedRocksDbCacheBackend;
+use many_server_cache::{RequestCacheValidator, SharedRocksDbCacheBackend};
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -148,7 +148,7 @@ async fn main() {
     .await
     .unwrap();
     if let Some(rocksdb_cache) = &rocksdb_cache {
-        abci_app = abci_app.with_cache(rocksdb_cache.clone());
+        abci_app = abci_app.with_cache(RequestCacheValidator::new(rocksdb_cache.clone()));
     }
 
     let abci_server = ServerBuilder::new(abci_read_buf_size)

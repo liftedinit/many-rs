@@ -319,7 +319,7 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                     let _ = this
                         .validator
                         .borrow_mut()
-                        .message_executed(&envelope, &message, &mut response)
+                        .message_executed(&envelope, &response)
                         .map_err(|e| {
                             // So this is awkward. The execution succeeded, but the after execution
                             // hook failed. We should probably return an error here, but we can't.

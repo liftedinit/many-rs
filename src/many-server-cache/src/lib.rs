@@ -1,6 +1,6 @@
 use coset::CoseSign1;
 use many_error::ManyError;
-use many_protocol::{RequestMessage, ResponseMessage};
+use many_protocol::ResponseMessage;
 use many_server::RequestValidator;
 use sha2::Digest;
 use std::collections::HashSet;
@@ -66,8 +66,7 @@ impl<T: RequestCacheBackend> RequestValidator for RequestCacheValidator<T> {
     fn message_executed(
         &mut self,
         envelope: &CoseSign1,
-        _request: &RequestMessage,
-        _response: &mut ResponseMessage,
+        _response: &ResponseMessage,
     ) -> Result<(), ManyError> {
         let payload = envelope
             .payload
@@ -87,6 +86,7 @@ pub struct RocksDbCacheBackend {
 
 impl RocksDbCacheBackend {
     pub fn new(path: impl AsRef<Path>) -> Self {
+        eprintln!("RocksDbCacheBackend::new {:?}", path.as_ref());
         let db = rocksdb::DB::open_default(path).unwrap();
         Self { db }
     }
@@ -97,7 +97,9 @@ impl RequestCacheBackend for RocksDbCacheBackend {
         self.db.get(key).unwrap().is_some()
     }
     fn put(&mut self, key: &[u8]) {
-        self.db.put(key, b"").unwrap();
+        let mut batch = rocksdb::WriteBatch::default();
+        batch.put(key, b"");
+        self.db.write(batch).unwrap();
     }
 }
 
@@ -108,6 +110,7 @@ pub struct SharedRocksDbCacheBackend {
 
 impl SharedRocksDbCacheBackend {
     pub fn new(path: impl AsRef<Path>) -> Self {
+        eprintln!("SharedRocksDbCacheBackend::new {:?}", path.as_ref());
         Self {
             inner: Arc::new(RwLock::new(RocksDbCacheBackend::new(path))),
         }

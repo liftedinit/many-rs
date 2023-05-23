@@ -7,6 +7,7 @@ use many_identity::{Address, AnonymousIdentity};
 use many_migration::MigrationConfig;
 use many_modules::abci_backend::{AbciBlock, AbciCommitInfo, AbciInfo};
 use many_protocol::{RequestMessage, ResponseMessage};
+use many_server::RequestValidator;
 use reqwest::{IntoUrl, Url};
 use std::sync::{Arc, RwLock};
 use tendermint_abci::Application;
@@ -30,7 +31,7 @@ pub struct AbciApp {
     app_name: String,
     many_client: ManyClient<AnonymousIdentity>,
     many_url: Url,
-    cache: Arc<dyn many_server_cache::RequestCacheBackend>,
+    cache: Arc<RwLock<dyn RequestValidator + Send + Sync>>,
 
     /// We need interior mutability, safely.
     migrations: Arc<RwLock<AbciAppMigrations>>,
@@ -77,25 +78,37 @@ impl AbciApp {
             app_name,
             many_url,
             many_client,
-            cache: Arc::new(()),
+            cache: Arc::new(RwLock::new(())),
             migrations: Arc::new(migrations),
             block_time: Arc::new(RwLock::new(None)),
         })
     }
 
-    pub fn with_cache<C: many_server_cache::RequestCacheBackend + 'static>(
-        mut self,
-        cache: C,
-    ) -> Self {
-        self.cache = Arc::new(cache);
+    pub fn with_cache<C: RequestValidator + Send + Sync + 'static>(mut self, cache: C) -> Self {
+        self.cache = Arc::new(RwLock::new(cache));
         self
     }
 
     fn do_check_tx(&self, request: RequestCheckTx) -> Result<ResponseCheckTx, (u32, String)> {
         use many_types::Timestamp;
         let cose = CoseSign1::from_slice(&request.tx).map_err(|log| (4, log.to_string()))?;
-        let message = RequestMessage::try_from(cose).map_err(|log| (5, log.to_string()))?;
+        let message = RequestMessage::try_from(&cose).map_err(|log| (5, log.to_string()))?;
 
+        // Run the same validator as the server would.
+        {
+            let validator = self.cache.read().map_err(|log| (999, log.to_string()))?;
+            // Validate the envelope.
+            if validator.validate_envelope(&cose).is_err() {
+                return Err((10, "Transaction already in cache".to_string()));
+            }
+
+            // Validate the message.
+            validator
+                .validate_request(&message)
+                .map_err(|log| (6, log.to_string()))?;
+        }
+
+        // Check the time of the transaction.
         let time = self.block_time.read().map_err(|log| (6, log.to_string()))?;
         let now = time
             .as_ref()
@@ -233,7 +246,7 @@ impl Application for AbciApp {
         };
         match block_on(many_client::client::send_envelope(
             self.many_url.clone(),
-            cose,
+            cose.clone(),
         )) {
             Ok(cose_sign) => {
                 let payload = cose_sign.payload.unwrap_or_default();
@@ -263,6 +276,19 @@ impl Application for AbciApp {
                                 }
                             }
                             x => x,
+                        };
+                    }
+                }
+
+                {
+                    if let Err(_e) = self
+                        .cache
+                        .write()
+                        .and_then(|mut validator| Ok(validator.message_executed(&cose, &response)))
+                    {
+                        return ResponseDeliverTx {
+                            code: 2,
+                            ..Default::default()
                         };
                     }
                 }
