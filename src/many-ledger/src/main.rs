@@ -108,7 +108,7 @@ struct Opts {
 
     /// Database path to the request cache to validate duplicate messages.
     /// If unspecified, the server will not verify transactions for duplicate
-    /// requests.
+    /// messages.
     #[clap(long)]
     cache_db: Option<PathBuf>,
 }
