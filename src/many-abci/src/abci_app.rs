@@ -18,6 +18,13 @@ lazy_static::lazy_static!(
     static ref EPOCH: many_types::Timestamp = many_types::Timestamp::new(0).unwrap();
 );
 
+enum ManyAbciErrorCodes {
+    Success = 0,
+    TransportError = 1,
+    BackendError = 2,
+    FrontendError = 3,
+}
+
 pub const MANYABCI_DEFAULT_TIMEOUT: u64 = 300;
 
 fn get_abci_info_(client: &ManyClient<AnonymousIdentity>) -> Result<AbciInfo, ManyError> {
@@ -157,7 +164,7 @@ impl Application for AbciApp {
             Ok(x) => x,
             Err(err) => {
                 return ResponseQuery {
-                    code: 2,
+                    code: ManyAbciErrorCodes::FrontendError as u32,
                     log: err.to_string(),
                     ..Default::default()
                 }
@@ -171,7 +178,7 @@ impl Application for AbciApp {
 
             Err(err) => {
                 return ResponseQuery {
-                    code: 3,
+                    code: ManyAbciErrorCodes::TransportError as u32,
                     log: err.to_string(),
                     ..Default::default()
                 }
@@ -180,12 +187,12 @@ impl Application for AbciApp {
 
         match value.to_vec() {
             Ok(value) => ResponseQuery {
-                code: 0,
+                code: ManyAbciErrorCodes::Success as u32,
                 value: value.into(),
                 ..Default::default()
             },
             Err(err) => ResponseQuery {
-                code: 1,
+                code: ManyAbciErrorCodes::FrontendError as u32,
                 log: err.to_string(),
                 ..Default::default()
             },
@@ -238,7 +245,7 @@ impl Application for AbciApp {
             Ok(x) => x,
             Err(err) => {
                 return ResponseDeliverTx {
-                    code: 2,
+                    code: ManyAbciErrorCodes::FrontendError as u32,
                     log: err.to_string(),
                     ..Default::default()
                 }
@@ -281,34 +288,35 @@ impl Application for AbciApp {
                 }
 
                 {
-                    if let Err(_e) = self
-                        .cache
-                        .write()
-                        .map(|mut validator| validator.message_executed(&cose, &response))
-                    {
+                    let cache = self.cache.write();
+                    if let Err(e) = cache {
                         return ResponseDeliverTx {
-                            code: 2,
+                            code: ManyAbciErrorCodes::FrontendError as u32,
                             ..Default::default()
                         };
+                    }
+                    if let Err(e) = cache.unwrap().message_executed(&cose, &response) {
+                        // We log those errors, but the message already executed,
+                        // so we don't return an error.
+                        tracing::error!("message_executed failed: {e}");
                     }
                 }
 
                 if let Ok(data) = response.to_bytes() {
                     ResponseDeliverTx {
-                        code: 0,
+                        code: ManyAbciErrorCodes::Success as u32,
                         data: data.into(),
                         ..Default::default()
                     }
                 } else {
                     ResponseDeliverTx {
-                        code: 3,
+                        code: ManyAbciErrorCodes::FrontendError as u32,
                         ..Default::default()
                     }
                 }
             }
             Err(err) => ResponseDeliverTx {
-                code: 1,
-                data: vec![].into(),
+                code: ManyAbciErrorCodes::TransportError as u32,
                 log: err.to_string(),
                 ..Default::default()
             },

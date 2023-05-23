@@ -86,7 +86,6 @@ pub struct RocksDbCacheBackend {
 
 impl RocksDbCacheBackend {
     pub fn new(path: impl AsRef<Path>) -> Self {
-        eprintln!("RocksDbCacheBackend::new {:?}", path.as_ref());
         let db = rocksdb::DB::open_default(path).unwrap();
         Self { db }
     }
@@ -110,7 +109,6 @@ pub struct SharedRocksDbCacheBackend {
 
 impl SharedRocksDbCacheBackend {
     pub fn new(path: impl AsRef<Path>) -> Self {
-        eprintln!("SharedRocksDbCacheBackend::new {:?}", path.as_ref());
         Self {
             inner: Arc::new(RwLock::new(RocksDbCacheBackend::new(path))),
         }
