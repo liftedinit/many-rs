@@ -2,10 +2,14 @@ PEM_ROOT="$(mktemp -d)"
 CONFIG_ROOT="$(mktemp -d)"
 
 function start_kvstore() {
+    local root
     local persistent
     local state
     local clean
-    persistent="$(mktemp -d)"
+    local cache_db
+    root="$(mktemp -d)"
+    persistent="$root/kvstore.db"
+    cache_db=""
     state="$GIT_ROOT/staging/kvstore_state.json5"
     clean="--clean"
 
@@ -14,6 +18,7 @@ function start_kvstore() {
             --persistent=*) persistent="${1#--persistent=}"; shift ;;
             --state=*) state="${1#--state=}"; shift ;;
             --no-clean) clean=""; shift ;;
+            --cache) cache_db="--cache-db=$root/request_cache.db"; shift ;;
             --) shift; break ;;
             *) break ;;
         esac
@@ -22,6 +27,7 @@ function start_kvstore() {
     run_in_background many-kvstore \
         -v \
         $clean \
+        $cache_db \
         --persistent "$persistent" \
         --state "$state" \
         "$@"

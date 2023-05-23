@@ -1,5 +1,5 @@
 {
-  "checksum": "3bef3034e31002f9b1f9c64e1387770f8e2625f5abe9a91e2a095a7972692ac3",
+  "checksum": "96a33d793591314b171c9035f8271f861aae1880d2c86d2ac6fd210f301e0488",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -2299,7 +2299,7 @@
               "target": "quote"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             },
             {
@@ -2410,7 +2410,7 @@
               "target": "quote"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             },
             {
@@ -2918,13 +2918,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "bumpalo 3.12.2": {
+    "bumpalo 3.13.0": {
       "name": "bumpalo",
-      "version": "3.12.2",
+      "version": "3.13.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/bumpalo/3.12.2/download",
-          "sha256": "3c6ed94e98ecff0c12dd1b04c15ec0d7d9458ca8fe806cea6f12954efe74c63b"
+          "url": "https://crates.io/api/v1/crates/bumpalo/3.13.0/download",
+          "sha256": "a3e2c3daef883ecc1b5d58c15adae93470a91d425f3532ba1695849656af3fc1"
         }
       },
       "targets": [
@@ -2950,7 +2950,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "3.12.2"
+        "version": "3.13.0"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -5391,7 +5391,7 @@
               "target": "once_cell"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             },
             {
@@ -5483,7 +5483,7 @@
               "target": "quote"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             },
             {
@@ -5551,7 +5551,7 @@
               "target": "nom_locate"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             },
             {
@@ -8989,7 +8989,7 @@
               "target": "log"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             }
           ],
@@ -10549,7 +10549,7 @@
               "target": "memchr"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             },
             {
@@ -10733,7 +10733,7 @@
               "target": "number_prefix"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             }
           ],
@@ -11505,7 +11505,7 @@
               "target": "num_bigint"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             },
             {
@@ -12920,7 +12920,7 @@
               "target": "rand"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             },
             {
@@ -13052,7 +13052,7 @@
               "target": "num_traits"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             }
           ],
@@ -14036,7 +14036,7 @@
               "target": "coset"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             },
             {
@@ -14369,7 +14369,7 @@
               "target": "once_cell"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             },
             {
@@ -18188,7 +18188,7 @@
               "target": "predicates_core"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             }
           ],
@@ -19439,13 +19439,13 @@
       },
       "license": "MIT"
     },
-    "regex 1.8.1": {
+    "regex 1.8.2": {
       "name": "regex",
-      "version": "1.8.1",
+      "version": "1.8.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/regex/1.8.1/download",
-          "sha256": "af83e617f331cc6ae2da5443c602dfa5af81e517212d9d611a5b3ba1777b5370"
+          "url": "https://crates.io/api/v1/crates/regex/1.8.2/download",
+          "sha256": "d1a59b5d8e97dee33696bf13c5ba8ab85341c002922fba050069326b9c498974"
         }
       },
       "targets": [
@@ -19497,14 +19497,14 @@
               "target": "memchr"
             },
             {
-              "id": "regex-syntax 0.7.1",
+              "id": "regex-syntax 0.7.2",
               "target": "regex_syntax"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.8.1"
+        "version": "1.8.2"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -19552,13 +19552,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "regex-syntax 0.7.1": {
+    "regex-syntax 0.7.2": {
       "name": "regex-syntax",
-      "version": "0.7.1",
+      "version": "0.7.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/regex-syntax/0.7.1/download",
-          "sha256": "a5996294f19bd3aae0453a862ad728f60e6600695733dd5df01da90c54363a3c"
+          "url": "https://crates.io/api/v1/crates/regex-syntax/0.7.2/download",
+          "sha256": "436b050e76ed2903236f032a59761c1eb99e1b0aead2c257922771dab1fc8c78"
         }
       },
       "targets": [
@@ -19593,7 +19593,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.7.1"
+        "version": "0.7.2"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -25949,7 +25949,7 @@
               "target": "hashbrown"
             },
             {
-              "id": "regex 1.8.1",
+              "id": "regex 1.8.2",
               "target": "regex"
             }
           ],
@@ -26854,7 +26854,7 @@
         "deps": {
           "common": [
             {
-              "id": "bumpalo 3.12.2",
+              "id": "bumpalo 3.13.0",
               "target": "bumpalo"
             },
             {

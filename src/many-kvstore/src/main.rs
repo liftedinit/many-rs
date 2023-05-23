@@ -7,6 +7,7 @@ use many_modules::account::features::Feature;
 use many_modules::{abci_backend, account, events, kvstore};
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
+use many_server_cache::{RequestCacheValidator, RocksDbCacheBackend};
 use std::collections::BTreeSet;
 use std::net::SocketAddr;
 use std::path::PathBuf;
