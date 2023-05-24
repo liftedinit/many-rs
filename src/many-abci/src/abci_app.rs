@@ -100,9 +100,9 @@ impl AbciApp {
         self
     }
 
-    fn do_check_tx(&self, request: RequestCheckTx) -> Result<ResponseCheckTx, String> {
+    fn do_check_tx(&self, tx: impl AsRef<[u8]>) -> Result<(), String> {
         use many_types::Timestamp;
-        let cose = CoseSign1::from_slice(&request.tx).map_err(|log| log.to_string())?;
+        let cose = CoseSign1::from_slice(tx.as_ref()).map_err(|log| log.to_string())?;
         let message = RequestMessage::try_from(&cose).map_err(|log| log.to_string())?;
 
         // Run the same validator as the server would.
@@ -131,7 +131,7 @@ impl AbciApp {
         message
             .validate_time(now, MANYABCI_DEFAULT_TIMEOUT)
             .map_err(|log| log.to_string())?;
-        Ok(Default::default())
+        Ok(())
     }
 }
 
@@ -234,17 +234,28 @@ impl Application for AbciApp {
     }
 
     fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
-        self.do_check_tx(request).unwrap_or_else(|log| {
-            debug!("check_tx failed: {}", log);
-            ResponseCheckTx {
-                code: ManyAbciErrorCodes::CheckError as u32,
-                log,
-                ..Default::default()
-            }
-        })
+        self.do_check_tx(&request.tx)
+            .and_then(|_| Ok(Default::default()))
+            .unwrap_or_else(|log| {
+                debug!("check_tx failed: {}", log);
+                ResponseCheckTx {
+                    code: ManyAbciErrorCodes::CheckError as u32,
+                    log,
+                    ..Default::default()
+                }
+            })
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
+        if let Err(log) = self.do_check_tx(&request.tx) {
+            debug!("deliver_tx failed check: {}", log);
+            return ResponseDeliverTx {
+                code: ManyAbciErrorCodes::CheckError as u32,
+                log,
+                ..Default::default()
+            };
+        }
+
         let cose = match CoseSign1::from_slice(&request.tx) {
             Ok(x) => x,
             Err(err) => {
