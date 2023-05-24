@@ -235,7 +235,7 @@ impl Application for AbciApp {
 
     fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
         self.do_check_tx(&request.tx)
-            .and_then(|_| Ok(Default::default()))
+            .map(|_| Default::default())
             .unwrap_or_else(|log| {
                 debug!("check_tx failed: {}", log);
                 ResponseCheckTx {
