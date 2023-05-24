@@ -36,13 +36,15 @@ update_toml_key() {
 usage() {
   cat <<END_OF_USAGE 1>&2
 
-Usage: $0 -f CONFIG_FILE [-i IP_ADDRESS_RANGE] [-p PORT] <start> <end>
+Usage: $0 -f CONFIG_FILE [-i IP_ADDRESS_RANGE] [-p PORT] [-m SIZE] <start> <end>
 
     -c CONFIG_ROOT       A path to the config root containing the config.toml and
                          node_key.json, with \"%\" replaced by the node id.
     -i IP_ADDRESS_RANGE  An IP Address start for nodes, which replaces
                          \"%\" with the node id. Default \"10.254.254.%\".
     -p PORT              The port instances are listening to, default 26656.
+    -m SIZE              A number representing the size of the mempool cache.
+                         By default will not override the value in config.toml.
 
 END_OF_USAGE
   exit 1
@@ -51,6 +53,7 @@ END_OF_USAGE
 ip_range=10.254.254.%
 port=26656
 config_root=""
+mempool_cache_size=""
 while getopts ":i:p:c:r:" opt; do
     case "${opt}" in
         i)  ip_range="${OPTARG}"
@@ -61,6 +64,8 @@ while getopts ":i:p:c:r:" opt; do
         c)  config_root="${OPTARG}"
             ;;
         r)  tm_root="${OPTARG}"
+            ;;
+        m)  mempool_cache_size="${OPTARG}"
             ;;
         *)  usage
             ;;
@@ -108,6 +113,11 @@ for node in $(seq 0 "$NB_NODES"); do
   update_toml_key "$config_toml_path" consensus timeout_commit "\"2s\""
   update_toml_key "$config_toml_path" consensus timeout_precommit "\"2s\""
   update_toml_key "$config_toml_path" p2p max_packet_msg_payload_size "1400"
+
+  if [ "$mempool_cache_size" ]; then
+      update_toml_key "$config_toml_path" mempool cache_size "$mempool_cache_size"
+  fi
+
   # update_toml_key "$config_toml_path" p2p bootstrap-peers "\"$peers\""
 done
 
