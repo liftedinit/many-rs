@@ -24,6 +24,9 @@ enum ManyAbciErrorCodes {
     TransportError = 1,
     // An error happened in the ABCI layer itself (serialization, etc).
     FrontendError = 2,
+    // An error happened while validating the transaction (without trying to
+    // execute it).
+    CheckError = 3,
 }
 
 pub const MANYABCI_DEFAULT_TIMEOUT: u64 = 300;
@@ -97,37 +100,37 @@ impl AbciApp {
         self
     }
 
-    fn do_check_tx(&self, request: RequestCheckTx) -> Result<ResponseCheckTx, (u32, String)> {
+    fn do_check_tx(&self, request: RequestCheckTx) -> Result<ResponseCheckTx, String> {
         use many_types::Timestamp;
-        let cose = CoseSign1::from_slice(&request.tx).map_err(|log| (4, log.to_string()))?;
-        let message = RequestMessage::try_from(&cose).map_err(|log| (5, log.to_string()))?;
+        let cose = CoseSign1::from_slice(&request.tx).map_err(|log| log.to_string())?;
+        let message = RequestMessage::try_from(&cose).map_err(|log| log.to_string())?;
 
         // Run the same validator as the server would.
         {
-            let validator = self.cache.read().map_err(|log| (999, log.to_string()))?;
+            let validator = self.cache.read().map_err(|log| log.to_string())?;
             // Validate the envelope.
             if validator.validate_envelope(&cose).is_err() {
-                return Err((10, "Transaction already in cache".to_string()));
+                return Err("Transaction already in cache".to_string());
             }
 
             // Validate the message.
             validator
                 .validate_request(&message)
-                .map_err(|log| (6, log.to_string()))?;
+                .map_err(|log| log.to_string())?;
         }
 
         // Check the time of the transaction.
-        let time = self.block_time.read().map_err(|log| (6, log.to_string()))?;
+        let time = self.block_time.read().map_err(|log| log.to_string())?;
         let now = time
             .as_ref()
             .map_or_else(|| Ok(Timestamp::now()), |x| Timestamp::new(*x))
-            .map_err(|e| (7, e.to_string()))?;
+            .map_err(|e| e.to_string())?;
 
-        let now = now.as_system_time().map_err(|log| (8, log.to_string()))?;
+        let now = now.as_system_time().map_err(|log| log.to_string())?;
 
         message
             .validate_time(now, MANYABCI_DEFAULT_TIMEOUT)
-            .map_err(|log| (9, log.to_string()))?;
+            .map_err(|log| log.to_string())?;
         Ok(Default::default())
     }
 }
@@ -231,10 +234,10 @@ impl Application for AbciApp {
     }
 
     fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
-        self.do_check_tx(request).unwrap_or_else(|(code, log)| {
-            debug!("check_tx failed: ({}) {}", code, log);
+        self.do_check_tx(request).unwrap_or_else(|log| {
+            debug!("check_tx failed: {}", log);
             ResponseCheckTx {
-                code,
+                code: ManyAbciErrorCodes::CheckError as u32,
                 log,
                 ..Default::default()
             }
