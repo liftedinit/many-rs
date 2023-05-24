@@ -14,7 +14,9 @@ function setup() {
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
-      make -f $MAKEFILE start-nodes-detached MEMPOOL_CACHE_ZERO=true ID_WITH_BALANCES="$(identity 1):1000000" || {
+      make -f $MAKEFILE start-nodes-detached \
+                MEMPOOL_CACHE_ZERO=true \
+                ID_WITH_BALANCES="$(identity 1):1000000" || {
         echo Could not start nodes... >&3
         exit 1
       }

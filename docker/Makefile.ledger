@@ -12,9 +12,9 @@ ifdef ABCI_MIGRATIONS
 	ENABLE_ABCI_MIGRATIONS := true
 endif
 
-DISABLE_MEMPOOL_CACHE := false
+MEMPOOL_CACHE_ARGUMENT := ""
 ifdef MEMPOOL_CACHE_ZERO
-	DISABLE_MEMPOOL_CACHE := true
+	MEMPOOL_CACHE_ARGUMENT := "-m 0"
 endif
 
 include Makefile.common
@@ -61,7 +61,7 @@ genfiles-ledger/generate-tendermint-e2e-config:
 		make -f Makefile.ledger genfiles-ledger/node$$I; \
 		(( I = I + 1 )); \
 	done
-	bash update_config.sh -c "genfiles-ledger/node%/tendermint/config" -r "$$PWD/genfiles-ledger/node%/tendermint" -i tendermint-% $(NB_NODES) $($DISABLE_MEMPOOL_CACHE && echo "-m 0")
+	bash update_config.sh -c "genfiles-ledger/node%/tendermint/config" -r "$$PWD/genfiles-ledger/node%/tendermint" -i tendermint-% $(MEMPOOL_CACHE_ARGUMENT) $(NB_NODES)
 	mkdir -p $(dir $@) && touch $@
 
 genfiles-ledger/node%: genfiles-common/tendermint-docker genfiles-common/openssl-docker
