@@ -54,7 +54,7 @@ ip_range=10.254.254.%
 port=26656
 config_root=""
 mempool_cache_size=""
-while getopts ":i:p:c:r:" opt; do
+while getopts ":i:p:c:r:m:" opt; do
     case "${opt}" in
         i)  ip_range="${OPTARG}"
             ;;
