@@ -102,10 +102,6 @@ function teardown() {
     create_token --error=anon --port=8000
 }
 
-@test "$SUITE: can't create as identity 2" {
-    create_token --pem=2 --error=invalid_sender --port=8000
-}
-
 @test "$SUITE: can update token" {
     create_token --pem=1 --port=8000
 

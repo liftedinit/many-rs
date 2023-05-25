@@ -9,7 +9,7 @@ bats_test_suite(
     name = "bats-e2e-ledger",
     srcs = glob(
         include = ["*.bats"],
-        exclude = ["tokens.bats"],
+        exclude = ["token_migration_sender_verification.bats"],
     ),
     tags = [
         "exclusive",
@@ -29,12 +29,12 @@ bats_test_suite(
     ],
 )
 
-# TODO: Transition.
+# TODO: Toggle this test based on the presence of the --disable_token_sender_check flag
 # Can't run with --disable_token_sender_check
 bats_test(
-    name = "bats-e2e-ledger-tokens",
+    name = "bats-e2e-ledger-token-sender-check",
     srcs = [
-        "tokens.bats",
+        "token_migration_sender_verification.bats",
     ],
     tags = [
         "exclusive",
