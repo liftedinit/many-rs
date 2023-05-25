@@ -95,7 +95,7 @@ impl AbciApp {
         })
     }
 
-    pub fn with_cache<C: RequestValidator + Send + Sync + 'static>(mut self, cache: C) -> Self {
+    pub fn with_validator<C: RequestValidator + Send + Sync + 'static>(mut self, cache: C) -> Self {
         self.cache = Arc::new(RwLock::new(cache));
         self
     }

@@ -148,7 +148,7 @@ async fn main() {
     .await
     .unwrap();
     if let Some(rocksdb_cache) = &rocksdb_cache {
-        abci_app = abci_app.with_cache(RequestCacheValidator::new(rocksdb_cache.clone()));
+        abci_app = abci_app.with_validator(RequestCacheValidator::new(rocksdb_cache.clone()));
     }
 
     let abci_server = ServerBuilder::new(abci_read_buf_size)
@@ -203,10 +203,6 @@ async fn main() {
         s.add_module(blockchain::BlockchainModule::new(blockchain_impl.clone()));
         s.add_module(r#async::AsyncModule::new(blockchain_impl));
         s.set_fallback_module(backend);
-
-        if let Some(cache_db) = rocksdb_cache {
-            s.add_validator(many_server_cache::RequestCacheValidator::new(cache_db));
-        }
     }
 
     let mut many_server = HttpServer::new(server);
