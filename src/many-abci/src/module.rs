@@ -130,7 +130,11 @@ impl<C: Client + Sync> AbciBlockchainModuleImpl<C> {
                         tx: tx_request,
                         tx_result,
                         ..
-                    } = match self.client.tx(tendermint_rpc::abci::transaction::Hash::new(hash), true).await {
+                    } = match self
+                        .client
+                        .tx(tendermint_rpc::abci::transaction::Hash::new(hash), true)
+                        .await
+                    {
                         Ok(response) => response,
                         // Cannot get more details than response error when the hash is not found.
                         Err(Error(ErrorDetail::Response(_), _tracer)) => return Ok(None),
