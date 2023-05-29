@@ -110,6 +110,7 @@ impl AbciApp {
             let validator = self.cache.read().map_err(|log| log.to_string())?;
             // Validate the envelope.
             if validator.validate_envelope(&cose).is_err() {
+                error!("Transaction already in cache.");
                 return Err("Transaction already in cache".to_string());
             }
 
@@ -237,7 +238,7 @@ impl Application for AbciApp {
         self.do_check_tx(&request.tx)
             .map(|_| Default::default())
             .unwrap_or_else(|log| {
-                debug!("check_tx failed: {}", log);
+                error!("check_tx failed: {}", log);
                 ResponseCheckTx {
                     code: ManyAbciErrorCodes::CheckError as u32,
                     log,
@@ -248,7 +249,7 @@ impl Application for AbciApp {
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         if let Err(log) = self.do_check_tx(&request.tx) {
-            debug!("deliver_tx failed check: {}", log);
+            error!("deliver_tx failed check: {}", log);
             return ResponseDeliverTx {
                 code: ManyAbciErrorCodes::CheckError as u32,
                 log,
@@ -310,6 +311,7 @@ impl Application for AbciApp {
                             ..Default::default()
                         };
                     }
+                    error!("Writing entry to cache");
                     if let Err(e) = cache.unwrap().message_executed(&cose, &response) {
                         // We log those errors, but the message already executed,
                         // so we don't return an error.

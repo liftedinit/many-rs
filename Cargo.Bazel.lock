@@ -2903,11 +2903,13 @@ name = "many-server-cache"
 version = "0.1.1"
 dependencies = [
  "coset",
+ "hex",
  "many-error",
  "many-protocol",
  "many-server",
  "rocksdb",
  "sha2 0.10.6",
+ "tracing",
 ]
 
 [[package]]

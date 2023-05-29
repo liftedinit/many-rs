@@ -57,6 +57,7 @@ impl<T: RequestCacheBackend> RequestValidator for RequestCacheValidator<T> {
         let hash = hasher.finalize();
 
         if self.backend.has(hash.as_ref()) {
+            tracing::error!("DUPLICATED MESSAGE");
             Err(ManyError::duplicated_message())
         } else {
             Ok(())
@@ -75,6 +76,7 @@ impl<T: RequestCacheBackend> RequestValidator for RequestCacheValidator<T> {
         let mut hasher = sha2::Sha512::default();
         hasher.update(payload);
         let hash = hasher.finalize();
+        tracing::error!("WRITING TO CACHE: {}", hex::encode(&hash));
         self.backend.put(hash.as_ref());
         Ok(())
     }

@@ -41,7 +41,7 @@ local abci(i, user, allow_addrs, abci_migrations) = {
     ],
     user: "" + user,
     command: [
-        "--verbose", "--verbose",
+//        "--verbose", "--verbose",
         "--many", "0.0.0.0:8000",
         "--many-app", "http://ledger-" + i + ":8000",
         "--many-pem", "/genfiles/abci.pem",

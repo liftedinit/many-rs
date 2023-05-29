@@ -2908,6 +2908,7 @@ dependencies = [
  "many-server",
  "rocksdb",
  "sha2 0.10.6",
+ "tracing",
 ]
 
 [[package]]
