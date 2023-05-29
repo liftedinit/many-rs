@@ -23,7 +23,7 @@ many-identity-webauthn = { path = "../many-identity-webauthn", version = "0.1.1"
 many-modules = { path = "../many-modules", version = "0.1.1" } # managed by release.sh
 many-protocol = { path = "../many-protocol", version = "0.1.1" } # managed by release.sh
 many-server = { path = "../many-server", version = "0.1.1" } # managed by release.sh
-cbor-diag = "0.1"
+cbor-diag = "0.1.12"
 
 [dev-dependencies]
 cucumber = { version = "0.19.1", features = ["libtest"] }

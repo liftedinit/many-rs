@@ -28,7 +28,7 @@ strum = "0.24.1"
 strum_macros = "0.24.3"
 
 [dev-dependencies]
-cbor-diag = "0.1.11"
+cbor-diag = "0.1.12"
 many-identity = { path = "../many-identity", features = ["raw", "testing"], version = "0.1.1" } # managed by release.sh
 many-identity-dsa = { path = "../many-identity-dsa", features = ["ed25519", "testing"], version = "0.1.1" } # managed by release.sh
 mockall = "0.11.4"

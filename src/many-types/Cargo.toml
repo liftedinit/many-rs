@@ -26,7 +26,7 @@ proptest = { version = "1.2.0", optional = true }
 serde = "1.0.163"
 
 [dev-dependencies]
-cbor-diag = "0.1.11"
+cbor-diag = "0.1.12"
 many-types = { path = ".", features = ["proptest"], version = "0.1.1" } # managed by release.sh
 serde_test = "1.0.163"
 
