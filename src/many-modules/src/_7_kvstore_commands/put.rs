@@ -7,7 +7,7 @@ use minicbor::{Decode, Encode};
 // `merk` doesn't support key size > 255 bytes.
 // Storage delimiter is 1 byte.
 const KVSTORE_KEY_MAX_SIZE: usize = 254;
-const KVSTORE_VALUE_MAX_SIZE: usize = 512000; // 512KiB
+const KVSTORE_VALUE_MAX_SIZE: usize = 524288; // 512KiB
 
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
