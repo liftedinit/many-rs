@@ -36,6 +36,8 @@ local abci(i, user, allow_addrs, abci_migrations) = {
     image: "bazel/src/many-abci:many-abci-image",
     ports: [ (8000 + i) + ":8000" ],
     volumes: [
+        // TODO: have a volume specifically created for the cache db.
+        // Right now we reuse the same volume as the ledger db.
         "./node" + i + "/persistent-ledger:/persistent",
         "./node" + i + ":/genfiles:ro",
     ],
