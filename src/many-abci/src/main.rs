@@ -26,6 +26,7 @@ mod module;
 
 use abci_app::AbciApp;
 use many_app::AbciModuleMany;
+use many_server::validator::ValidateOnlyRequestValidator;
 use module::AbciBlockchainModuleImpl;
 
 #[derive(Debug, Parser)]
@@ -203,6 +204,17 @@ async fn main() {
         s.add_module(blockchain::BlockchainModule::new(blockchain_impl.clone()));
         s.add_module(r#async::AsyncModule::new(blockchain_impl));
         s.set_fallback_module(backend);
+
+        if let Some(rocksdb_cache) = &rocksdb_cache {
+            // The message is executed by the _server_ itself after it's been
+            // added to tendermint.
+            // So we don't want to use `message_executed` in the server,
+            // as we might still have to check those again, and the cache is
+            // updated only after the message has been sent to the MANY backend.
+            s.add_validator(ValidateOnlyRequestValidator::new(
+                RequestCacheValidator::new(rocksdb_cache.clone()),
+            ));
+        }
     }
 
     let mut many_server = HttpServer::new(server);

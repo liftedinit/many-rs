@@ -23,6 +23,25 @@ pub trait RequestValidator {
     }
 }
 
+/// A RequestValidator that does not run message_executed(), but only validate
+/// the envelope and request.
+pub struct ValidateOnlyRequestValidator<T: RequestValidator>(T);
+
+impl<T: RequestValidator> ValidateOnlyRequestValidator<T> {
+    pub fn new(backend: T) -> Self {
+        ValidateOnlyRequestValidator(backend)
+    }
+}
+
+impl<T: RequestValidator> RequestValidator for ValidateOnlyRequestValidator<T> {
+    fn validate_envelope(&self, envelope: &CoseSign1) -> Result<(), ManyError> {
+        self.0.validate_envelope(envelope)
+    }
+    fn validate_request(&self, request: &RequestMessage) -> Result<(), ManyError> {
+        self.0.validate_request(request)
+    }
+}
+
 impl RequestValidator for () {}
 
 impl<A: RequestValidator + ?Sized> RequestValidator for Box<A> {
