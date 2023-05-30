@@ -70,3 +70,25 @@ function check_consistency() {
         assert_output --partial "$expected_value"
     done
 }
+
+function check_consistency_value_from_file() {
+    local pem_arg
+    local key
+    local expected_value
+
+    while (( $# > 0 )); do
+      case "$1" in
+        --pem=*) pem_arg=${1}; shift ;;
+        --key=*) key=${1#--key=}; shift ;;
+        --file=*) expected_value=${1#--file=}; shift;;
+        --) shift; break ;;
+        *) break ;;
+      esac
+    done
+
+    for port in "$@"; do
+        # Named parameters that can be empty need to be located after those who can't
+        call_kvstore --port="$port" "$pem_arg" get "$key"
+        assert_output --partial "$(cat expected_value)"
+    done
+}
