@@ -10,6 +10,8 @@ local abci(i, user, allow_addrs) = {
     image: "bazel/src/many-abci:many-abci-image",
     ports: [ (8000 + i) + ":8000" ],
     volumes: [
+        // TODO: have a volume specifically created for the cache db.
+        // Right now we reuse the same volume as the kvstore db.
         "./node" + i + "/persistent-kvstore:/persistent",
         "./node" + i + ":/genfiles:ro",
     ],

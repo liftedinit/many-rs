@@ -26,7 +26,13 @@ function setup() {
 }
 
 function teardown() {
-    stop_background_run
+    (
+      cd "$GIT_ROOT/docker/" || exit 1
+      make -f $MAKEFILE stop-nodes
+    ) 2> /dev/null
+
+    # Fix for BATS verbose run/test output gathering
+    cd "$GIT_ROOT/tests/resiliency/ledger" || exit 1
 }
 
 @test "$SUITE: will check transactions for timestamp in checkTx" {
