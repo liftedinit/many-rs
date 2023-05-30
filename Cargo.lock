@@ -2967,7 +2967,7 @@ dependencies = [
 [[package]]
 name = "merk"
 version = "2.0.0-ll"
-source = "git+https://github.com/liftedinit/merk.git?rev=1c781a3aa3eb7f015740d5e89a1754ba31a9fe52#1c781a3aa3eb7f015740d5e89a1754ba31a9fe52"
+source = "git+https://github.com/liftedinit/merk.git?rev=532eb097ec50f3553c5294971c152b4e7c7d4731#532eb097ec50f3553c5294971c152b4e7c7d4731"
 dependencies = [
  "byteorder",
  "colored",
