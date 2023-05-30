@@ -1418,6 +1418,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "failure"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d32e9bd16cc02eae7db7ef620b392808b89f6a5e16bb3497d159c6b92a0f4f86"
+dependencies = [
+ "backtrace",
+ "failure_derive",
+]
+
+[[package]]
+name = "failure_derive"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "synstructure",
+]
+
+[[package]]
 name = "fastrand"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2023,7 +2045,7 @@ version = "0.1.1"
 dependencies = [
  "base64 0.21.0",
  "clap 3.2.25",
- "merk",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1#857bf81963d9282ab03438da5013e1f816bd9da1)",
  "serde",
  "serde_derive",
  "serde_json",
@@ -2264,7 +2286,7 @@ dependencies = [
  "hex",
  "many-modules",
  "many-types",
- "merk",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1#857bf81963d9282ab03438da5013e1f816bd9da1)",
  "minicbor",
 ]
 
@@ -2668,7 +2690,7 @@ dependencies = [
  "many-protocol",
  "many-server",
  "many-types",
- "merk",
+ "merk 2.0.0-ll (git+https://github.com/liftedinit/merk.git?rev=532eb097ec50f3553c5294971c152b4e7c7d4731#532eb097ec50f3553c5294971c152b4e7c7d4731)",
  "minicbor",
  "num-bigint",
  "once_cell",
@@ -2712,7 +2734,7 @@ dependencies = [
  "many-protocol",
  "many-server",
  "many-types",
- "merk",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1#857bf81963d9282ab03438da5013e1f816bd9da1)",
  "minicbor",
  "num-bigint",
  "num-traits",
@@ -2755,7 +2777,7 @@ dependencies = [
  "many-modules",
  "many-protocol",
  "many-types",
- "merk",
+ "merk 2.0.0 (git+https://github.com/liftedinit/merk.git?rev=857bf81963d9282ab03438da5013e1f816bd9da1#857bf81963d9282ab03438da5013e1f816bd9da1)",
  "minicbor",
  "once_cell",
  "proptest",
@@ -2940,6 +2962,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "merk"
+version = "2.0.0-ll"
+source = "git+https://github.com/liftedinit/merk.git?rev=532eb097ec50f3553c5294971c152b4e7c7d4731#532eb097ec50f3553c5294971c152b4e7c7d4731"
+dependencies = [
+ "byteorder",
+ "colored",
+ "ed",
+ "failure",
+ "hex",
+ "num_cpus",
+ "rand 0.8.5",
+ "rocksdb",
+ "sha2 0.10.6",
+ "thiserror",
+ "time",
 ]
 
 [[package]]
