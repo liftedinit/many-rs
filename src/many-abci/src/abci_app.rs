@@ -304,7 +304,7 @@ impl Application for AbciApp {
 
                 {
                     let cache = self.cache.write();
-                    if let Err(_) = cache {
+                    if cache.is_err() {
                         return ResponseDeliverTx {
                             code: ManyAbciErrorCodes::FrontendError as u32,
                             ..Default::default()
