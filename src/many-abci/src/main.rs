@@ -79,7 +79,7 @@ struct Opts {
     /// Database path to the cache. If unspecified, the server will not
     /// verify transactions for duplicate requests.
     #[clap(long)]
-    cache_db: Option<PathBuf>,
+    cache_db: PathBuf,
 }
 
 #[tokio::main]
@@ -142,15 +142,17 @@ async fn main() {
         std::thread::sleep(std::time::Duration::from_secs(1));
     };
 
-    let rocksdb_cache = cache_db.map(SharedRocksDbCacheBackend::new);
-    let mut abci_app = tokio::task::spawn_blocking(move || {
-        AbciApp::create(many_app, Address::anonymous(), maybe_migrations).unwrap()
-    })
-    .await
-    .unwrap();
-    if let Some(rocksdb_cache) = &rocksdb_cache {
-        abci_app = abci_app.with_validator(RequestCacheValidator::new(rocksdb_cache.clone()));
-    }
+    let rocksdb_cache = SharedRocksDbCacheBackend::new(cache_db);
+    let abci_app = {
+        let rocksdb_cache = rocksdb_cache.clone();
+        tokio::task::spawn_blocking(move || {
+            AbciApp::create(many_app, Address::anonymous(), maybe_migrations)
+                .unwrap()
+                .with_validator(RequestCacheValidator::new(rocksdb_cache))
+        })
+        .await
+        .unwrap()
+    };
 
     let abci_server = ServerBuilder::new(abci_read_buf_size)
         .bind(abci, abci_app)
@@ -205,16 +207,14 @@ async fn main() {
         s.add_module(r#async::AsyncModule::new(blockchain_impl));
         s.set_fallback_module(backend);
 
-        if let Some(rocksdb_cache) = &rocksdb_cache {
-            // The message is executed by the _server_ itself after it's been
-            // added to tendermint.
-            // So we don't want to use `message_executed` in the server,
-            // as we might still have to check those again, and the cache is
-            // updated only after the message has been sent to the MANY backend.
-            s.add_validator(ValidateOnlyRequestValidator::new(
-                RequestCacheValidator::new(rocksdb_cache.clone()),
-            ));
-        }
+        // The message is executed by the _server_ itself after it's been
+        // added to tendermint.
+        // So we don't want to use `message_executed` in the server,
+        // as we might still have to check those again, and the cache is
+        // updated only after the message has been sent to the MANY backend.
+        s.add_validator(ValidateOnlyRequestValidator::new(
+            RequestCacheValidator::new(rocksdb_cache.clone()),
+        ));
     }
 
     let mut many_server = HttpServer::new(server);
