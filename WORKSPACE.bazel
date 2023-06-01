@@ -73,6 +73,7 @@ crates_repository(
         "//src/many-modules:Cargo.toml",
         "//src/many-protocol:Cargo.toml",
         "//src/many-server:Cargo.toml",
+        "//src/many-server-cache:Cargo.toml",
         "//src/many-types:Cargo.toml",
         "//src/many:Cargo.toml",
     ],

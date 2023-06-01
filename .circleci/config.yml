@@ -294,9 +294,9 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: bazel test << parameters.bazel_linkopt >> --test_output=errors \
-            --config=remote-cache \
-            //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
+          # This command MUST BE ON A SINGLE LINE. Bazel for some reason does not support multiline
+          # commands.
+          command: bazel test << parameters.bazel_linkopt >> --test_output=errors --config=remote-cache //tests/resiliency/kvstore:bats-resiliency-kvstore_<< parameters.test_name >>
 
   # Perform ledger resiliency testing
   ledger_resiliency_tests:
@@ -356,10 +356,9 @@ jobs:
       - checkout
       - run:
           name: running single tests
-          command: bazel test << parameters.bazel_linkopt >> --test_output=errors \
-            --config=remote-cache \
-            --config=bats-resiliency-ledger \
-            //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
+          # This command MUST BE ON A SINGLE LINE. Bazel for some reason does not support multiline
+          # commands.
+          command: bazel test << parameters.bazel_linkopt >> --test_output=errors --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
 
   # Push a tag to GitHub
   tag:
