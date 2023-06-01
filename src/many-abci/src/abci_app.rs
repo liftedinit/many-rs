@@ -24,9 +24,26 @@ enum ManyAbciErrorCodes {
     TransportError = 1,
     // An error happened in the ABCI layer itself (serialization, etc).
     FrontendError = 2,
-    // An error happened while validating the transaction (without trying to
-    // execute it).
-    CheckError = 3,
+}
+
+enum ManyAbciCheckErrorCodes {
+    Success = 0,
+    CoseDeserializeError = 4,
+    MessageDeserializeError = 5,
+    RwLockPoisonedError = 6,
+    TimestampError = 7,
+    CannotGetSystemTimeError = 8,
+    TimestampOutsideOfRangeError = 9,
+    ValidationError = 10,
+}
+
+enum ManyAbciDeliverErrorCodes {
+    Success = 0,
+
+    TransportRequestError = 1,
+    CoseDeserializeError = 2,
+    TransportResponseError = 3,
+    RwLockPoisonedError = 11,
 }
 
 pub const MANYABCI_DEFAULT_TIMEOUT: u64 = 300;
@@ -100,37 +117,70 @@ impl AbciApp {
         self
     }
 
-    fn do_check_tx(&self, tx: impl AsRef<[u8]>) -> Result<(), String> {
+    fn do_check_tx(&self, tx: impl AsRef<[u8]>) -> Result<(), (ManyAbciCheckErrorCodes, String)> {
         use many_types::Timestamp;
-        let cose = CoseSign1::from_slice(tx.as_ref()).map_err(|log| log.to_string())?;
-        let message = RequestMessage::try_from(&cose).map_err(|log| log.to_string())?;
+        let cose = CoseSign1::from_slice(tx.as_ref()).map_err(|log| {
+            (
+                ManyAbciCheckErrorCodes::CoseDeserializeError,
+                log.to_string(),
+            )
+        })?;
+        let message = RequestMessage::try_from(&cose).map_err(|log| {
+            (
+                ManyAbciCheckErrorCodes::MessageDeserializeError,
+                log.to_string(),
+            )
+        })?;
 
         // Run the same validator as the server would.
         {
-            let validator = self.cache.read().map_err(|log| log.to_string())?;
+            let validator = self.cache.read().map_err(|log| {
+                (
+                    ManyAbciCheckErrorCodes::RwLockPoisonedError,
+                    log.to_string(),
+                )
+            })?;
             // Validate the envelope.
             if validator.validate_envelope(&cose).is_err() {
-                return Err("Transaction already in cache".to_string());
+                return Err((
+                    ManyAbciCheckErrorCodes::ValidationError,
+                    "Transaction already in cache".to_string(),
+                ));
             }
 
             // Validate the message.
             validator
                 .validate_request(&message)
-                .map_err(|log| log.to_string())?;
+                .map_err(|log| (ManyAbciCheckErrorCodes::ValidationError, log.to_string()))?;
         }
 
         // Check the time of the transaction.
-        let time = self.block_time.read().map_err(|log| log.to_string())?;
+        let time = self.block_time.read().map_err(|log| {
+            (
+                ManyAbciCheckErrorCodes::RwLockPoisonedError,
+                log.to_string(),
+            )
+        })?;
         let now = time
             .as_ref()
             .map_or_else(|| Ok(Timestamp::now()), |x| Timestamp::new(*x))
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| (ManyAbciCheckErrorCodes::TimestampError, e.to_string()))?;
 
-        let now = now.as_system_time().map_err(|log| log.to_string())?;
+        let now = now.as_system_time().map_err(|log| {
+            (
+                ManyAbciCheckErrorCodes::CannotGetSystemTimeError,
+                log.to_string(),
+            )
+        })?;
 
         message
             .validate_time(now, MANYABCI_DEFAULT_TIMEOUT)
-            .map_err(|log| log.to_string())?;
+            .map_err(|log| {
+                (
+                    ManyAbciCheckErrorCodes::TimestampOutsideOfRangeError,
+                    log.to_string(),
+                )
+            })?;
         Ok(())
     }
 }
@@ -235,11 +285,14 @@ impl Application for AbciApp {
 
     fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
         self.do_check_tx(&request.tx)
-            .map(|_| Default::default())
-            .unwrap_or_else(|log| {
+            .map(|_| ResponseCheckTx {
+                code: ManyAbciCheckErrorCodes::Success as u32,
+                ..Default::default()
+            })
+            .unwrap_or_else(|(code, log)| {
                 debug!("check_tx failed: {}", log);
                 ResponseCheckTx {
-                    code: ManyAbciErrorCodes::CheckError as u32,
+                    code: code as u32,
                     log,
                     ..Default::default()
                 }
@@ -251,7 +304,7 @@ impl Application for AbciApp {
             Ok(x) => x,
             Err(err) => {
                 return ResponseDeliverTx {
-                    code: ManyAbciErrorCodes::FrontendError as u32,
+                    code: ManyAbciDeliverErrorCodes::CoseDeserializeError as u32,
                     log: err.to_string(),
                     ..Default::default()
                 }
@@ -297,7 +350,7 @@ impl Application for AbciApp {
                     let cache = self.cache.write();
                     if cache.is_err() {
                         return ResponseDeliverTx {
-                            code: ManyAbciErrorCodes::FrontendError as u32,
+                            code: ManyAbciDeliverErrorCodes::RwLockPoisonedError as u32,
                             ..Default::default()
                         };
                     }
@@ -314,19 +367,19 @@ impl Application for AbciApp {
 
                 if let Ok(data) = response.to_bytes() {
                     ResponseDeliverTx {
-                        code: ManyAbciErrorCodes::Success as u32,
+                        code: ManyAbciDeliverErrorCodes::Success as u32,
                         data: data.into(),
                         ..Default::default()
                     }
                 } else {
                     ResponseDeliverTx {
-                        code: ManyAbciErrorCodes::FrontendError as u32,
+                        code: ManyAbciDeliverErrorCodes::TransportResponseError as u32,
                         ..Default::default()
                     }
                 }
             }
             Err(err) => ResponseDeliverTx {
-                code: ManyAbciErrorCodes::TransportError as u32,
+                code: ManyAbciDeliverErrorCodes::TransportRequestError as u32,
                 log: err.to_string(),
                 ..Default::default()
             },

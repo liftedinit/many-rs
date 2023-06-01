@@ -321,10 +321,13 @@ impl LowLevelManyRequestHandler for Arc<Mutex<ManyServer>> {
                         .borrow_mut()
                         .message_executed(&envelope, &response)
                         .map_err(|e| {
-                            // So this is awkward. The execution succeeded, but the after execution
-                            // hook failed. We should probably return an error here, but we can't.
-                            // We log and hope we notice.
-                            tracing::error!("Error during message_executed: {}", e.to_string());
+                            // There's nothing we can do here, since the backend has
+                            // already executed the message and updated its test.
+                            panic!(
+                                "message_executed failed: {e}\n\
+                                The backend and tendermint states might be inconsistent \
+                                and would need to revert to a previous block."
+                            );
                         });
                     many_protocol::encode_cose_sign1_from_response(response, &this.identity)
                         .map_err(|e| e.to_string())

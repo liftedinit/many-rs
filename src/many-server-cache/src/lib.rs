@@ -3,7 +3,6 @@ use many_error::ManyError;
 use many_protocol::ResponseMessage;
 use many_server::RequestValidator;
 use sha2::Digest;
-use std::collections::HashSet;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
@@ -121,18 +120,5 @@ impl RequestCacheBackend for SharedRocksDbCacheBackend {
     }
     fn put(&mut self, key: &[u8]) {
         self.inner.write().unwrap().put(key)
-    }
-}
-
-#[derive(Clone)]
-pub struct InMemoryCacheBackend(HashSet<Vec<u8>>);
-
-impl RequestCacheBackend for InMemoryCacheBackend {
-    fn has(&self, request: &[u8]) -> bool {
-        self.0.contains(request)
-    }
-
-    fn put(&mut self, request: &[u8]) {
-        self.0.insert(request.to_vec());
     }
 }
