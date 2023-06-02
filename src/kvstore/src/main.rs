@@ -3,6 +3,7 @@ use many_client::client::blocking::ManyClient;
 use many_error::{ManyError, Reason};
 use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::CoseKeyIdentity;
+use many_modules::kvstore::list::{ListArgs, ListReturns};
 use many_modules::kvstore::TransferArgs;
 use many_modules::r#async::{StatusArgs, StatusReturn};
 use many_modules::{kvstore, r#async};
@@ -14,7 +15,6 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{debug, error, info};
 use tracing_subscriber::filter::LevelFilter;
-use many_modules::kvstore::list::{ListArgs, ListReturns};
 
 #[derive(clap::ArgEnum, Clone, Debug)]
 enum LogStrategy {
@@ -263,7 +263,11 @@ fn transfer(
     Ok(())
 }
 
-fn list(client: ManyClient<impl Identity>, order: Option<SortOrder>, hex_key: bool) -> Result<(), ManyError> {
+fn list(
+    client: ManyClient<impl Identity>,
+    order: Option<SortOrder>,
+    hex_key: bool,
+) -> Result<(), ManyError> {
     let args = ListArgs { order };
     let response = client.call("kvstore.list", args)?;
     let payload = wait_response(client, response)?;
@@ -463,9 +467,7 @@ fn main() {
             };
             transfer(client, alt_owner, key, new_owner)
         }
-        SubCommand::List(ListOpt{ order, hex_key }) => {
-            list(client, order, hex_key)
-        }
+        SubCommand::List(ListOpt { order, hex_key }) => list(client, order, hex_key),
     };
 
     if let Err(err) = result {
