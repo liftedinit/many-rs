@@ -22,11 +22,11 @@ rust_library(
     deps = all_crate_deps(
         normal = True,
     ) + [
+        "//src/many-error",
         "//src/many-identity",
         "//src/many-identity-dsa",
         "//src/many-modules",
         "//src/many-protocol",
-        "//src/many-server",
         "//src/many-types",
     ],
 )
@@ -45,11 +45,11 @@ rust_library(
         normal = True,
         normal_dev = True,
     ) + [
+        "//src/many-error",
         "//src/many-identity:many-identity-for-test",
         "//src/many-identity-dsa:many-identity-dsa-for-test",
         "//src/many-modules:many-modules-for-test",
         "//src/many-protocol:many-protocol-for-test",
-        "//src/many-server:many-server-for-test",
         "//src/many-types:many-types-for-test",
     ],
 )

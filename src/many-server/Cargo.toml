@@ -53,8 +53,4 @@ smol = "1.2.5"
 
 [features]
 default = []
-client = []
-raw = []
 testing = []
-# Whether to trace ManyError creation, which can be useful for debugging.
-trace_error_creation = ["backtrace"]
