@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.1.2-rc.1] - 2023-06-02
+## [0.1.2-rc.2] - 2023-06-02
 
 ### Bug Fixes
 
@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - Collect bats test report on failure ([#366](https://github.com/liftedinit/many-rs/issues/366))
 - Add a cache to prevent duplicated messages ([#370](https://github.com/liftedinit/many-rs/issues/370))
 - Git cliff tag pattern ([#384](https://github.com/liftedinit/many-rs/issues/384))
+- Release trigger pattern ([#385](https://github.com/liftedinit/many-rs/issues/385))
 
 ### CI
 

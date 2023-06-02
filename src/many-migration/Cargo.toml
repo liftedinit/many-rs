@@ -1,6 +1,6 @@
 [package]
 name = "many-migration"
-version = "0.1.2-rc.1" # managed by release.sh
+version = "0.1.2-rc.2" # managed by release.sh
 edition = "2021"
 description = "Storage/Transaction migration framework."
 license-file = "../../LICENSE"
@@ -11,7 +11,7 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-many-error = { path = "../many-error", version = "0.1.2-rc.1" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.2-rc.2" } # managed by release.sh
 minicbor = { version = "0.19.1", features = ["derive"] }
 serde = { version = "1.0.147", features = ["derive"] }
 serde_json = "1.0.87"

@@ -12,7 +12,7 @@ package(default_visibility = [
 exports_files([".git"])
 
 ## PACKAGE CONFIGURATION ##
-VERSION = "0.1.2-rc.1"  # managed by release.sh
+VERSION = "0.1.2-rc.2"  # managed by release.sh
 
 # Exposes the value of the compilation mode to the package naming.
 # Used below for the `package_file_name` in the `pkg_tar` rule.
