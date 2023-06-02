@@ -7,13 +7,14 @@ use many_modules::kvstore::TransferArgs;
 use many_modules::r#async::{StatusArgs, StatusReturn};
 use many_modules::{kvstore, r#async};
 use many_protocol::ResponseMessage;
-use many_types::Either;
+use many_types::{Either, SortOrder};
 use std::collections::BTreeMap;
 use std::io::Read;
 use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{debug, error, info};
 use tracing_subscriber::filter::LevelFilter;
+use many_modules::kvstore::list::{ListArgs, ListReturns};
 
 #[derive(clap::ArgEnum, Clone, Debug)]
 enum LogStrategy {
@@ -72,6 +73,9 @@ enum SubCommand {
 
     /// Transfer ownership of a key.
     Transfer(TransferOpt),
+
+    /// List key owned by sender
+    List(ListOpt),
 }
 
 #[derive(Debug, Parser)]
@@ -141,6 +145,17 @@ struct TransferOpt {
 
     /// The new owner of the key to transfer to.
     new_owner: Address,
+}
+
+#[derive(Debug, Parser)]
+struct ListOpt {
+    /// The order in which to list the keys
+    #[clap(long)]
+    order: Option<SortOrder>,
+
+    /// Use this flag if the keys are hexadecimal
+    #[clap(long)]
+    hex_key: bool,
 }
 
 fn get(client: ManyClient<impl Identity>, key: &[u8], hex: bool) -> Result<(), ManyError> {
@@ -246,6 +261,31 @@ fn transfer(
     let payload = wait_response(client, response)?;
     println!("{}", minicbor::display(&payload));
     Ok(())
+}
+
+fn list(client: ManyClient<impl Identity>, order: Option<SortOrder>, hex_key: bool) -> Result<(), ManyError> {
+    let args = ListArgs { order };
+    let response = client.call("kvstore.list", args)?;
+    let payload = wait_response(client, response)?;
+    if payload.is_empty() {
+        Err(ManyError::unexpected_empty_response())
+    } else {
+        let result: ListReturns =
+            minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
+
+        let keys = result.keys;
+
+        for key in keys {
+            if hex_key {
+                println!("{}", hex::encode(key.as_slice()));
+            } else {
+                let key = String::from_utf8(key.into()).map_err(ManyError::unknown)?;
+                println!("{key}");
+            }
+        }
+
+        Ok(())
+    }
 }
 
 pub(crate) fn wait_response(
@@ -422,6 +462,9 @@ fn main() {
                 key.into_bytes()
             };
             transfer(client, alt_owner, key, new_owner)
+        }
+        SubCommand::List(ListOpt{ order, hex_key }) => {
+            list(client, order, hex_key)
         }
     };
 
