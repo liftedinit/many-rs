@@ -3,7 +3,7 @@ use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::AbciCommitInfo;
 use many_modules::events::EventInfo;
-use many_types::{Either, ProofOperation, Timestamp};
+use many_types::{Either, ProofOperation, SortOrder, Timestamp};
 use merk::{
     proofs::{
         Decoder,
@@ -18,8 +18,10 @@ use std::path::Path;
 
 mod account;
 mod event;
+pub mod iterator;
 
 use crate::error;
+use crate::storage::iterator::KvStoreIterator;
 use event::EventId;
 
 const KVSTORE_ROOT: &[u8] = b"s";
@@ -234,6 +236,22 @@ impl KvStoreStorage {
             }
         }
         self._get(key, KVSTORE_ROOT)
+    }
+
+    pub fn list<'a>(
+        &'a self,
+        owner: &'a Address,
+        order: SortOrder,
+    ) -> impl Iterator<Item = Vec<u8>> + 'a {
+        KvStoreIterator::all_keys(&self.persistent_store, order).filter_map(move |item| {
+            let (k, v) = item.ok()?;
+            let meta: KvStoreMetadata = minicbor::decode(&v).ok()?;
+            if &meta.owner == owner {
+                Some(k.into_vec())
+            } else {
+                None
+            }
+        })
     }
 
     pub fn get_metadata(&self, key: &[u8]) -> Result<Option<Vec<u8>>, ManyError> {

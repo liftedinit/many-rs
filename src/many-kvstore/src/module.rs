@@ -9,6 +9,7 @@ use many_modules::abci_backend::{
     ManyAbciModuleBackend,
 };
 use many_modules::account::Role;
+use many_modules::kvstore::list::{ListArgs, ListReturns};
 use many_modules::kvstore::{
     DisableArgs, DisableReturn, GetArgs, GetReturns, InfoArg, InfoReturns,
     KvStoreCommandsModuleBackend, KvStoreModuleBackend, KvStoreTransferModuleBackend, PutArgs,
@@ -203,6 +204,16 @@ impl KvStoreModuleBackend for KvStoreModuleImpl {
                 .ok_or_else(error::key_not_found)?,
         )
         .map_err(|e| ManyError::deserialization_error(e.to_string()))
+    }
+
+    fn list(&self, sender: &Address, args: ListArgs) -> Result<ListReturns, ManyError> {
+        Ok(ListReturns {
+            keys: self
+                .storage
+                .list(sender, args.order.unwrap_or_default())
+                .map(|item| item.into_iter().skip(1).collect::<Vec<_>>().into()) // Skip the delimiter
+                .collect(),
+        })
     }
 }
 
