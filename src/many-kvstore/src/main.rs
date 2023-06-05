@@ -7,6 +7,7 @@ use many_modules::account::features::Feature;
 use many_modules::{abci_backend, account, events, kvstore};
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
+use many_server_cache::{RequestCacheValidator, RocksDbCacheBackend};
 use std::collections::BTreeSet;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -54,6 +55,12 @@ struct Opts {
     /// Any addresses will be able to execute queries, e.g., balance, get, ...
     #[clap(long)]
     allow_addrs: Option<PathBuf>,
+
+    /// Database path to the request cache to validate duplicate messages.
+    /// If unspecified, the server will not verify transactions for duplicate
+    /// messages.
+    #[clap(long)]
+    cache_db: Option<PathBuf>,
 }
 
 fn main() {
@@ -66,6 +73,7 @@ fn main() {
         persistent,
         clean,
         allow_addrs,
+        cache_db,
     } = Opts::parse();
 
     common_flags.init_logging().unwrap();
@@ -142,6 +150,10 @@ fn main() {
         if abci {
             s.set_timeout(u64::MAX);
             s.add_module(abci_backend::AbciModule::new(module));
+        }
+
+        if let Some(p) = cache_db {
+            s.add_validator(RequestCacheValidator::new(RocksDbCacheBackend::new(p)));
         }
     }
     let mut many_server = HttpServer::new(many);

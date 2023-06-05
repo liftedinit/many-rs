@@ -1,7 +1,7 @@
 use many_client_macros::many_client;
+use many_error::ManyError;
 pub use many_identity::Identity;
 pub use many_modules::ledger::{BalanceArgs, BalanceReturns, InfoReturns, SendArgs, SendReturns};
-use many_server::ManyError;
 pub use many_types::ledger::{Symbol, TokenAmount};
 
 use crate::ManyClient;

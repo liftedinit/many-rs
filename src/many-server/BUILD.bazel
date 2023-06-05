@@ -9,6 +9,7 @@ package(default_visibility = [
     "//src/many-ledger:__subpackages__",
     "//src/many-mock:__pkg__",
     "//src/many-protocol:__pkg__",
+    "//src/many-server-cache:__pkg__",
 ])
 
 rust_library(

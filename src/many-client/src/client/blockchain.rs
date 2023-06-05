@@ -1,9 +1,9 @@
 use many_client_macros::many_client;
+use many_error::ManyError;
 pub use many_identity::Identity;
 pub use many_modules::blockchain::{
     BlockArgs, BlockReturns, InfoReturns, TransactionArgs, TransactionReturns,
 };
-use many_server::ManyError;
 pub use many_types::blockchain::{
     Block, BlockIdentifier, SingleBlockQuery, SingleTransactionQuery,
 };
