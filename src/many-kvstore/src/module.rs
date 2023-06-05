@@ -208,8 +208,12 @@ impl KvStoreModuleBackend for KvStoreModuleImpl {
 
 impl KvStoreCommandsModuleBackend for KvStoreModuleImpl {
     fn put(&mut self, sender: &Address, args: PutArgs) -> Result<PutReturn, ManyError> {
-        let key: Vec<u8> = args.key.into();
-        let owner = if let Some(alternative_owner) = args.alternative_owner {
+        let PutArgs {
+            key,
+            value,
+            alternative_owner,
+        } = args;
+        let owner = if let Some(alternative_owner) = alternative_owner {
             self.validate_alternative_owner(
                 sender,
                 &alternative_owner,
@@ -220,22 +224,26 @@ impl KvStoreCommandsModuleBackend for KvStoreModuleImpl {
             *sender
         };
 
-        self.verify_acl(&owner, key.clone())?;
+        self.verify_acl(&owner, &key)?;
 
         let meta = KvStoreMetadata {
             owner,
             disabled: Some(Either::Left(false)),
         };
-        self.storage.put(&meta, &key, args.value.into())?;
+        self.storage.put(&meta, &key, value.into())?;
         Ok(PutReturn {})
     }
 
     fn disable(&mut self, sender: &Address, args: DisableArgs) -> Result<DisableReturn, ManyError> {
-        if self.storage.get(&args.key)?.is_none() {
+        let DisableArgs {
+            key,
+            alternative_owner,
+            reason,
+        } = args;
+        if self.storage.get(&key)?.is_none() {
             return Err(error::cannot_disable_empty_key());
         }
-        let key: Vec<u8> = args.key.into();
-        let owner = if let Some(ref alternative_owner) = args.alternative_owner {
+        let owner = if let Some(ref alternative_owner) = alternative_owner {
             self.validate_alternative_owner(
                 sender,
                 alternative_owner,
@@ -246,9 +254,9 @@ impl KvStoreCommandsModuleBackend for KvStoreModuleImpl {
             sender
         };
 
-        self.verify_acl(owner, key.clone())?;
+        self.verify_acl(owner, &key)?;
 
-        let maybe_reason = if let Some(reason) = args.reason {
+        let maybe_reason = if let Some(reason) = reason {
             Either::Right(reason)
         } else {
             Either::Left(true)
@@ -297,7 +305,7 @@ impl KvStoreTransferModuleBackend for KvStoreModuleImpl {
             sender
         };
 
-        self.verify_acl(owner, key.clone())?;
+        self.verify_acl(owner, &key)?;
 
         // We allow transferring a disabled key, and keep the same reason.
         let meta = KvStoreMetadata {

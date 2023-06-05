@@ -37,6 +37,7 @@ rust_binary(
         "//src/many-modules",
         "//src/many-protocol",
         "//src/many-server",
+        "//src/many-server-cache",
         "//src/many-types",
     ],
 )
@@ -62,6 +63,7 @@ rust_library(
         "//src/many-modules",
         "//src/many-protocol",
         "//src/many-server",
+        "//src/many-server-cache",
         "//src/many-types",
     ],
 )
@@ -89,6 +91,7 @@ rust_image(
         "//src/many-modules",
         "//src/many-protocol",
         "//src/many-server",
+        "//src/many-server-cache",
         "//src/many-types",
     ],
 )

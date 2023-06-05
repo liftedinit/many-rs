@@ -4,8 +4,10 @@ use minicbor::bytes::ByteVec;
 use minicbor::data::Type;
 use minicbor::{Decode, Encode};
 
-const KVSTORE_KEY_MAX_SIZE: usize = 248; // size is u8 but storage is in "/store/" (7 bytes long);
-const KVSTORE_VALUE_MAX_SIZE: usize = 64000; // 64kB
+// `merk` doesn't support key size > 255 bytes.
+// Storage delimiter is 1 byte.
+const KVSTORE_KEY_MAX_SIZE: usize = 254;
+const KVSTORE_VALUE_MAX_SIZE: usize = 524288; // 512KiB
 
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]

@@ -27,6 +27,7 @@ members = [
     "src/many-modules",
     "src/many-protocol",
     "src/many-server",
+    "src/many-server-cache",
     "src/many-types",
 ]
 

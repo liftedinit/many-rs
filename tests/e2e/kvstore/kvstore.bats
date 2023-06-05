@@ -24,6 +24,45 @@ function teardown() {
   assert_output --partial "foobar"
 }
 
+@test "$SUITE: can put 254 bytes key" {
+  local key
+  key=$(openssl rand -hex 254)
+  call_kvstore --pem=1 --port=8000 put --hex-key "$key" "foobar"
+  call_kvstore --pem=1 --port=8000 get --hex-key "$key"
+  assert_output --partial "foobar"
+}
+
+@test "$SUITE: can't put 255 bytes key" {
+  local key
+  key=$(openssl rand -hex 255)
+  call_kvstore --pem=1 --port=8000 put --hex-key "$key" "foobar"
+  call_kvstore --pem=1 --port=8000 get --hex-key "$key"
+  refute_output --partial "foobar"
+}
+
+@test "$SUITE: can put 512KiB values" {
+  dd if=/dev/urandom of=upload_test_512 bs=524288 count=1
+  cat upload_test_512 | call_kvstore --pem=1 --port=8000 put --stdin "foo"
+  call_kvstore --pem=1 --port=8000 get "foo"
+  assert_output --partial "$(cat upload_test_512)"
+}
+
+@test "$SUITE: can't put 512KiB + 1 values" {
+  dd if=/dev/urandom of=upload_test_512_1 bs=524289 count=1
+  cat upload_test_512_1 | call_kvstore --pem=1 --port=8000 put --stdin "foo"
+  call_kvstore --pem=1 --port=8000 get "foo"
+  refute_output --partial "foo"
+}
+
+@test "$SUITE: can put 254 bytes key with 512KiB values" {
+  local key
+  key=$(openssl rand -hex 254)
+  dd if=/dev/urandom of=upload_test_512 bs=524288 count=1
+  cat upload_test_512 | call_kvstore --pem=1 --port=8000 put --stdin --hex-key "$key"
+  call_kvstore --pem=1 --port=8000 get --hex-key "$key"
+  assert_output --partial "$(cat upload_test_512)"
+}
+
 @test "$SUITE: can put and query data" {
   call_kvstore --pem=1 --port=8000 put "010203" "foobar"
   call_kvstore --pem=1 --port=8000 query "010203"
