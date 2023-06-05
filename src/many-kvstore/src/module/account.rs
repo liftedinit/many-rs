@@ -310,9 +310,9 @@ impl KvStoreModuleImpl {
     }
 
     /// Verify if user is permitted to access the value at the given key
-    pub(crate) fn verify_acl(&self, sender: &Address, key: Vec<u8>) -> Result<(), ManyError> {
+    pub(crate) fn verify_acl(&self, sender: &Address, key: &[u8]) -> Result<(), ManyError> {
         // Get ACL, if it exists
-        if let Some(meta_cbor) = self.storage.get_metadata(&key)? {
+        if let Some(meta_cbor) = self.storage.get_metadata(key)? {
             // Decode ACL
             let meta: KvStoreMetadata = minicbor::decode(&meta_cbor)
                 .map_err(|e| ManyError::deserialization_error(e.to_string()))?;

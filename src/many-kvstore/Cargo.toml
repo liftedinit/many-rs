@@ -17,7 +17,7 @@ doc = false
 async-trait = "0.1.51"
 clap = { version = "3.2.23", features = ["derive"] }
 coset = "0.3"
-merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
+merk = { git = "https://github.com/liftedinit/merk.git", rev = "532eb097ec50f3553c5294971c152b4e7c7d4731" }
 hex = { version = "0.4.3", features = ["serde"] }
 json5 = "0.4.1"
 lazy_static = "1.4.0"

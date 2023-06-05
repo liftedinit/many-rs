@@ -1,5 +1,5 @@
 {
-  "checksum": "05cf26f59a8264088e1c656fca5dbc0e9b6a847dab22c728adb5a74840a3524d",
+  "checksum": "716e92aa1fab9811c77cd00c3f749d1afdf209af50779fa3fb73c7a90f152745",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -7366,6 +7366,133 @@
       },
       "license": "MIT OR Apache-2.0"
     },
+    "failure 0.1.8": {
+      "name": "failure",
+      "version": "0.1.8",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/failure/0.1.8/download",
+          "sha256": "d32e9bd16cc02eae7db7ef620b392808b89f6a5e16bb3497d159c6b92a0f4f86"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "failure",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "failure",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "backtrace",
+            "default",
+            "derive",
+            "failure_derive",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "backtrace 0.3.67",
+              "target": "backtrace"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "failure_derive 0.1.8",
+              "target": "failure_derive"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.1.8"
+      },
+      "license": "MIT OR Apache-2.0"
+    },
+    "failure_derive 0.1.8": {
+      "name": "failure_derive",
+      "version": "0.1.8",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/failure_derive/0.1.8/download",
+          "sha256": "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "failure_derive",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "failure_derive",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "failure_derive 0.1.8",
+              "target": "build_script_build"
+            },
+            {
+              "id": "proc-macro2 1.0.58",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.27",
+              "target": "quote"
+            },
+            {
+              "id": "syn 1.0.109",
+              "target": "syn"
+            },
+            {
+              "id": "synstructure 0.12.6",
+              "target": "synstructure"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "0.1.8"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "MIT OR Apache-2.0"
+    },
     "fastrand 1.9.0": {
       "name": "fastrand",
       "version": "1.9.0",
@@ -13506,7 +13633,7 @@
               "target": "build_script_build"
             },
             {
-              "id": "merk 2.0.0",
+              "id": "merk 2.0.0-ll",
               "target": "merk"
             },
             {
@@ -14798,6 +14925,104 @@
         },
         "edition": "2018",
         "version": "2.0.0"
+      },
+      "license": "MIT"
+    },
+    "merk 2.0.0-ll": {
+      "name": "merk",
+      "version": "2.0.0-ll",
+      "repository": {
+        "Git": {
+          "remote": "https://github.com/liftedinit/merk.git",
+          "commitish": {
+            "Rev": "532eb097ec50f3553c5294971c152b4e7c7d4731"
+          }
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "merk",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "merk",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "byteorder",
+            "colored",
+            "default",
+            "ed",
+            "failure",
+            "full",
+            "hex",
+            "num_cpus",
+            "rand",
+            "rocksdb",
+            "time",
+            "verify"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "byteorder 1.4.3",
+              "target": "byteorder"
+            },
+            {
+              "id": "colored 2.0.0",
+              "target": "colored"
+            },
+            {
+              "id": "ed 0.3.0",
+              "target": "ed"
+            },
+            {
+              "id": "failure 0.1.8",
+              "target": "failure"
+            },
+            {
+              "id": "hex 0.4.3",
+              "target": "hex"
+            },
+            {
+              "id": "num_cpus 1.15.0",
+              "target": "num_cpus"
+            },
+            {
+              "id": "rand 0.8.5",
+              "target": "rand"
+            },
+            {
+              "id": "rocksdb 0.19.0",
+              "target": "rocksdb"
+            },
+            {
+              "id": "sha2 0.10.6",
+              "target": "sha2"
+            },
+            {
+              "id": "thiserror 1.0.40",
+              "target": "thiserror"
+            },
+            {
+              "id": "time 0.3.21",
+              "target": "time"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "2.0.0-ll"
       },
       "license": "MIT"
     },
