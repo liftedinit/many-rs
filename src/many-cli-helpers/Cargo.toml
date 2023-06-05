@@ -11,11 +11,11 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.69"
-clap = { version = "3.2.23", features = ["derive"] }
-log-panics = { version = "2", features = ["with-backtrace"]}
+anyhow = "1.0.71"
+clap = { version = "3.2.25", features = ["derive"] }
+log-panics = { version = "2.1.0", features = ["with-backtrace"]}
 many-error = { path = "../many-error", version = "0.1.2-rc.2" } # managed by release.sh
 minicbor = { version = "0.19.1", features = ["derive", "std", "half"] }
-syslog-tracing = "0.1.0"
+syslog-tracing = "0.2.0"
 tracing = "0.1.37"
-tracing-subscriber = "0.3.16"
+tracing-subscriber = "0.3.17"
