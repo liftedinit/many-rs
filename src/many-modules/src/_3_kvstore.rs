@@ -7,7 +7,10 @@ use mockall::{automock, predicate::*};
 
 pub mod get;
 pub mod info;
+pub mod list;
 pub mod query;
+use crate::_3_kvstore::list::ListArgs;
+use crate::kvstore::list::ListReturns;
 pub use get::*;
 pub use info::*;
 pub use query::*;
@@ -18,6 +21,7 @@ pub trait KvStoreModuleBackend: Send {
     fn info(&self, sender: &Address, args: InfoArg) -> Result<InfoReturns, ManyError>;
     fn get(&self, sender: &Address, args: GetArgs) -> Result<GetReturns, ManyError>;
     fn query(&self, sender: &Address, args: QueryArgs) -> Result<QueryReturns, ManyError>;
+    fn list(&self, sender: &Address, args: ListArgs) -> Result<ListReturns, ManyError>;
 }
 
 #[cfg(test)]
@@ -93,5 +97,21 @@ mod tests {
         .unwrap();
 
         assert_eq!(query_returns.owner, identity(666));
+    }
+
+    #[test]
+    fn list() {
+        let mut mock = MockKvStoreModuleBackend::new();
+        mock.expect_list().times(1).returning(|_id, _args| {
+            Ok(ListReturns {
+                keys: vec![vec![1].into(), vec![2].into()],
+            })
+        });
+        let module = super::KvStoreModule::new(Arc::new(Mutex::new(mock)));
+
+        let list_returns: ListReturns =
+            minicbor::decode(&call_module(1, &module, "kvstore.list", "{}").unwrap()).unwrap();
+
+        assert_eq!(list_returns.keys, vec![vec![1].into(), vec![2].into()]);
     }
 }
