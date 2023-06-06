@@ -1,0 +1,34 @@
+load("@bazel_bats//:rules.bzl", "bats_test_suite")
+
+# Run the entire test suite with
+#   $ bazel test //tests/resiliency/kvstore:bats-resiliency-kvstore
+# or a single test with
+#   $ bazel test //tests/resiliency/kvstore:bats-resiliency-kvstore_FILE_NAME_MINUS_EXT
+# E.g.
+#   $ bazel test //tests/resiliency/kvstore:bats-resiliency-kvstore_abci-allow-addrs
+bats_test_suite(
+    name = "bats-resiliency-kvstore",
+    timeout = "long",
+    srcs = glob(include = ["*.bats"]),
+    data = [
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-kvstore:many-kvstore-image.tar",
+    ],
+    tags = [
+        "exclusive",
+        "manual",
+    ],
+    uses_bats_assert = True,
+    bats_args = ["--formatter", "tap", "--report-formatter", "junit", "--output", "."],
+    deps = [
+        "//docker:docker-kvstore-deps",
+        "//src/kvstore",
+        "//src/many",
+        "//src/many-abci",
+        "//src/many-kvstore",
+        "//tests:bats-helpers",
+    ],
+)

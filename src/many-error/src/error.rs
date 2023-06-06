@@ -276,6 +276,10 @@ impl ManyError {
         Self(Reason::new(code, message, arguments))
     }
 
+    pub fn with_code(self, code: ManyErrorCode) -> Self {
+        Self(self.0.with_code(code))
+    }
+
     #[inline]
     pub const fn attribute_specific(
         code: i32,
@@ -309,6 +313,8 @@ impl Display for ManyError {
     }
 }
 
+// TODO: The fact that ManyErrorCode is constructed as a macro makes this annoying, instead of just deriving Default.
+#[allow(clippy::derivable_impls)]
 impl Default for ManyErrorCode {
     #[inline]
     fn default() -> Self {

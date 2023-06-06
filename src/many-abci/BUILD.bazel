@@ -1,0 +1,94 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test", "rust_test_suite")
+load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
+load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
+
+package(default_visibility = [
+    "//:__pkg__",
+    "//docker:__pkg__",
+    "//tests/resiliency:__subpackages__",
+])
+
+cargo_build_script(
+    name = "build_script",
+    srcs = ["build.rs"],
+    data = ["//:.git"],
+    deps = all_crate_deps(build = True),
+)
+
+rust_binary(
+    name = "many-abci",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":build_script",
+        "//src/many-client",
+        "//src/many-cli-helpers",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-migration",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
+    ],
+)
+
+rust_library(
+    name = "many-abci-lib",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_abci",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        "//src/many-client",
+        "//src/many-cli-helpers",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-migration",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
+    ],
+)
+
+rust_image(
+    name = "many-abci-image",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    base = "//:ubuntu_image",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    tags = ["manual"],
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":build_script",
+        "//src/many-client",
+        "//src/many-cli-helpers",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-migration",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
+    ],
+)

@@ -19,15 +19,15 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, PoisonError, RwLock, RwLockReadGuard};
 
 macro_rules! decl_type {
-    ( ($index_name: ident, $info_name: ident) => ( $short: literal, $index: tt, counter ) ) => {
-        pub const $index_name: DataIndex = DataIndex::from($index);
+    ( ($index_name: ident, $info_name: ident) => ( $short: literal, [ $first: literal, $( $index: literal ),* ], counter ) ) => {
+        pub const $index_name: DataIndex = DataIndex::new($first) $(.with_index($index) )*;
         pub const $info_name: DataInfo = DataInfo {
             r#type: DataType::Counter,
             shortname: std::borrow::Cow::Borrowed($short),
         };
     };
-    ( ($index_name: ident, $info_name: ident) => ( $short: literal, $index: tt, gauge_int ) ) => {
-        pub const $index_name: DataIndex = DataIndex::from($index);
+    ( ($index_name: ident, $info_name: ident) => ( $short: literal, [ $first: literal, $( $index: literal ),* ], gauge_int ) ) => {
+        pub const $index_name: DataIndex = DataIndex::new($first) $(.with_index($index) )*;
         pub const $info_name: DataInfo = DataInfo {
             r#type: DataType::GaugeInt,
             shortname: std::borrow::Cow::Borrowed($short),
@@ -80,9 +80,9 @@ impl DataIndex {
     }
 }
 
-impl<T> const From<T> for DataIndex
+impl<T> From<T> for DataIndex
 where
-    T: ~const Into<AttributeRelatedIndex>,
+    T: Into<AttributeRelatedIndex>,
 {
     fn from(index: T) -> Self {
         Self(index.into())
@@ -296,9 +296,10 @@ impl Encode<BTreeSet<DataIndex>> for DataSet {
         e: &mut Encoder<W>,
         ctx: &mut BTreeSet<DataIndex>,
     ) -> Result<(), encode::Error<W::Error>> {
-        e.map(ctx.len() as u64)?;
-
         let it = self.values.iter().filter(|(k, _)| ctx.contains(*k));
+        let count = it.clone().count();
+        e.map(count as u64)?;
+
         for (k, v) in it {
             let v = v.read().unwrap_or_else(|x| x.into_inner()).clone();
             e.encode(k)?.encode(v)?;
@@ -404,6 +405,15 @@ impl<'b> Decode<'b, ()> for DataValue {
     }
 }
 
+impl Into<BigInt> for DataValue {
+    fn into(self) -> BigInt {
+        match self {
+            DataValue::Counter(v) => v.into(),
+            DataValue::GaugeInt(v) => v,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
 pub struct DataInfo {
     #[n(0)]
@@ -493,10 +503,10 @@ mod tests {
             .to_bytes();
 
         let mut ds = DataSet::default().with_known_types().unwrap();
-
-        assert!(ds
+        let err = ds
             .decode_merge(&mut Decoder::new(&query_return), false)
-            .is_err());
+            .unwrap_err();
+        assert_eq!(err.code(), many_error::ManyErrorCode::DeserializationError);
     }
 
     #[test]
@@ -528,5 +538,9 @@ mod tests {
         // Let's try again with the set of indices we have in the input buffer.
         let bytes = minicbor::to_vec_with(&ds, &mut BTreeSet::from([TOTAL_COUNT_INDEX])).unwrap();
         assert_eq!(&query_return, &bytes);
+
+        // Let's try again with an unknown index.
+        let bytes = minicbor::to_vec_with(&ds, &mut BTreeSet::from([DataIndex::new(1)])).unwrap();
+        assert_eq!(&vec![160], &bytes); // Empty map.
     }
 }

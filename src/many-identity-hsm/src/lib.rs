@@ -329,7 +329,7 @@ impl HsmIdentity {
         );
         let public_key = many_identity_dsa::ecdsa::public_key(&key)?
             .ok_or_else(|| ManyError::unknown("Could not load key."))?;
-        let address = cose::address_unchecked(&public_key)?;
+        let address = unsafe { cose::address_unchecked(&public_key) }?;
         Ok(Self { address, key })
     }
 }
@@ -387,8 +387,8 @@ mod tests {
         object::{KeyType, ObjectHandle},
         session::SessionState,
     };
+    use p256::ecdsa::signature::Verifier;
     use sha2::Digest;
-    use signature::{Signature, Verifier};
 
     use super::*;
 
@@ -629,7 +629,7 @@ mod tests {
         let points =
             p256::EncodedPoint::from_bytes(ec_points).expect("Unable to create p256::EncodedPoint");
         let verify_key = p256::ecdsa::VerifyingKey::from_encoded_point(&points).unwrap();
-        let p256_signature = p256::ecdsa::Signature::from_bytes(&hsm_signature).unwrap();
+        let p256_signature = p256::ecdsa::Signature::try_from(hsm_signature.as_slice()).unwrap();
         verify_key
             .verify(MSG.as_bytes(), &p256_signature)
             .expect("Unable to verify signature");

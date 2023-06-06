@@ -1,0 +1,93 @@
+load("@io_bazel_rules_docker//container:image.bzl", "container_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+
+package(default_visibility = [
+    "//:__pkg__",
+    "//tests/resiliency:__subpackages__",
+])
+
+filegroup(
+    name = "docker-images",
+    srcs = [
+        "//src/many-abci:many-abci-image",
+        "//src/many-kvstore:many-kvstore-image",
+        "//src/many-ledger:many-ledger-image",
+    ],
+    tags = ["manual"],
+)
+
+filegroup(
+    name = "docker-kvstore-deps",
+    srcs = [
+        "Makefile",
+        "Makefile.common",
+        "Makefile.kvstore",
+        "docker-compose-kvstore.jsonnet",
+        "generate-allow-addrs.sh",
+        "update_config.sh",
+        "//staging:kvstore-staging",
+    ],
+)
+
+filegroup(
+    name = "docker-ledger-deps",
+    srcs = [
+        "Makefile",
+        "Makefile.common",
+        "Makefile.ledger",
+        "docker-compose-ledger.jsonnet",
+        "generate-allow-addrs.sh",
+        "update_config.sh",
+        "//staging:abci-ledger-migrations",
+        "//staging:ledger-migrations",
+        "//staging:ledger-staging",
+    ],
+)
+
+container_image(
+    name = "tendermint_image",
+    base = "@tendermint//image",
+    tags = ["manual"],
+)
+
+container_image(
+    name = "openssl_image",
+    base = "@openssl//image",
+    tags = ["manual"],
+)
+
+container_image(
+    name = "jsonnet_image",
+    base = "@jsonnet//image",
+    tags = ["manual"],
+)
+
+container_push(
+    name = "many-abci-push-docker",
+    format = "Docker",
+    image = "//src/many-abci:many-abci-image",
+    registry = "index.docker.io",
+    repository = "lifted/many-abci",
+    tag = "nightly",
+    tags = ["manual"],
+)
+
+container_push(
+    name = "many-ledger-push-docker",
+    format = "Docker",
+    image = "//src/many-ledger:many-ledger-image",
+    registry = "index.docker.io",
+    repository = "lifted/many-ledger",
+    tag = "nightly",
+    tags = ["manual"],
+)
+
+container_push(
+    name = "many-kvstore-push-docker",
+    format = "Docker",
+    image = "//src/many-kvstore:many-kvstore-image",
+    registry = "index.docker.io",
+    repository = "lifted/many-kvstore",
+    tag = "nightly",
+    tags = ["manual"],
+)

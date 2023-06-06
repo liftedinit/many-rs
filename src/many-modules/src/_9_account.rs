@@ -1,7 +1,9 @@
+use crate::events::AddressContainer;
 use crate::EmptyReturn;
 use many_error::{ManyError, Reason};
 use many_identity::Address;
 use many_macros::many_module;
+use many_protocol::context::Context;
 use many_types::{Either, VecOrSingle};
 use minicbor::{decode, encode, Decode, Decoder, Encode, Encoder};
 use std::collections::{BTreeMap, BTreeSet};
@@ -32,6 +34,13 @@ pub enum Role {
     CanMultisigApprove,
     CanKvStorePut,
     CanKvStoreDisable,
+    CanKvStoreTransfer,
+    CanTokensCreate,
+    CanTokensMint,
+    CanTokensBurn,
+    CanTokensUpdate,
+    CanTokensAddExtendedInfo,
+    CanTokensRemoveExtendedInfo,
 }
 
 impl PartialEq<&str> for Role {
@@ -76,15 +85,13 @@ impl<'it> Iterator for AccountMapIterator<'it> {
     type Item = (Address, &'it Account);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.1.next().map(|(k, v)| {
-            (
-                self.0
-                    .with_subresource_id_unchecked((*k).try_into().unwrap()),
-                v,
-            )
-        })
+        self.1
+            .next()
+            .map(|(k, v)| (self.0.with_subresource_id(*k).unwrap(), v))
     }
 }
+
+pub type AddressRoleMap = BTreeMap<Address, BTreeSet<Role>>;
 
 /// A map of Subresource IDs to account. It should have a non-anonymous identity as the identity,
 /// and the inner map will contains subresource identities as keys.
@@ -172,7 +179,7 @@ pub struct Account {
     pub description: Option<String>,
 
     #[n(1)]
-    pub roles: BTreeMap<Address, BTreeSet<Role>>,
+    pub roles: AddressRoleMap,
 
     #[n(2)]
     pub features: features::FeatureSet,
@@ -216,7 +223,7 @@ impl Account {
     pub fn features(&self) -> &features::FeatureSet {
         &self.features
     }
-    pub fn roles(&self) -> &BTreeMap<Address, BTreeSet<Role>> {
+    pub fn roles(&self) -> &AddressRoleMap {
         &self.roles
     }
 
@@ -285,10 +292,16 @@ pub struct CreateArgs {
     pub description: Option<String>,
 
     #[n(1)]
-    pub roles: Option<BTreeMap<Address, BTreeSet<Role>>>,
+    pub roles: Option<AddressRoleMap>,
 
     #[n(2)]
     pub features: features::FeatureSet,
+}
+
+impl AddressContainer for CreateArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        self.roles.addresses()
+    }
 }
 
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
@@ -306,6 +319,12 @@ pub struct SetDescriptionArgs {
 
     #[n(1)]
     pub description: String,
+}
+
+impl AddressContainer for SetDescriptionArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        BTreeSet::from([self.account])
+    }
 }
 
 pub type SetDescriptionReturn = EmptyReturn;
@@ -338,7 +357,7 @@ pub struct GetRolesArgs {
 #[cbor(map)]
 pub struct GetRolesReturn {
     #[n(0)]
-    pub roles: BTreeMap<Address, BTreeSet<Role>>,
+    pub roles: AddressRoleMap,
 }
 
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
@@ -348,7 +367,15 @@ pub struct AddRolesArgs {
     pub account: Address,
 
     #[n(1)]
-    pub roles: BTreeMap<Address, BTreeSet<Role>>,
+    pub roles: AddressRoleMap,
+}
+
+impl AddressContainer for AddRolesArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        let mut set = BTreeSet::from([self.account]);
+        set.extend(self.roles.addresses());
+        set
+    }
 }
 
 pub type AddRolesReturn = EmptyReturn;
@@ -360,7 +387,15 @@ pub struct RemoveRolesArgs {
     pub account: Address,
 
     #[n(1)]
-    pub roles: BTreeMap<Address, BTreeSet<Role>>,
+    pub roles: AddressRoleMap,
+}
+
+impl AddressContainer for RemoveRolesArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        let mut set = BTreeSet::from([self.account]);
+        set.extend(self.roles.addresses());
+        set
+    }
 }
 
 pub type RemoveRolesReturn = EmptyReturn;
@@ -379,7 +414,7 @@ pub struct InfoReturn {
     pub description: Option<String>,
 
     #[n(1)]
-    pub roles: BTreeMap<Address, BTreeSet<Role>>,
+    pub roles: AddressRoleMap,
 
     #[n(2)]
     pub features: features::FeatureSet,
@@ -395,6 +430,12 @@ pub struct DisableArgs {
     pub account: Address,
 }
 
+impl AddressContainer for DisableArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        BTreeSet::from([self.account])
+    }
+}
+
 pub type DisableReturn = EmptyReturn;
 
 #[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
@@ -404,10 +445,18 @@ pub struct AddFeaturesArgs {
     pub account: Address,
 
     #[n(1)]
-    pub roles: Option<BTreeMap<Address, BTreeSet<Role>>>,
+    pub roles: Option<AddressRoleMap>,
 
     #[n(2)]
     pub features: features::FeatureSet,
+}
+
+impl AddressContainer for AddFeaturesArgs {
+    fn addresses(&self) -> BTreeSet<Address> {
+        let mut set = BTreeSet::from([self.account]);
+        set.extend(self.roles.addresses());
+        set
+    }
 }
 
 pub type AddFeaturesReturn = EmptyReturn;
@@ -430,10 +479,16 @@ pub trait AccountModuleBackend: Send {
         &self,
         sender: &Address,
         args: ListRolesArgs,
+        context: Context,
     ) -> Result<ListRolesReturn, ManyError>;
 
     /// Get roles associated with an identity for an account.
-    fn get_roles(&self, sender: &Address, args: GetRolesArgs) -> Result<GetRolesReturn, ManyError>;
+    fn get_roles(
+        &self,
+        sender: &Address,
+        args: GetRolesArgs,
+        context: Context,
+    ) -> Result<GetRolesReturn, ManyError>;
 
     /// Add roles to identities for an account.
     fn add_roles(
@@ -450,7 +505,12 @@ pub trait AccountModuleBackend: Send {
     ) -> Result<RemoveRolesReturn, ManyError>;
 
     /// Returns the information related to an account.
-    fn info(&self, sender: &Address, args: InfoArgs) -> Result<InfoReturn, ManyError>;
+    fn info(
+        &self,
+        sender: &Address,
+        args: InfoArgs,
+        context: Context,
+    ) -> Result<InfoReturn, ManyError>;
 
     /// Disable or delete an account.
     fn disable(&mut self, sender: &Address, args: DisableArgs) -> Result<DisableReturn, ManyError>;
@@ -488,7 +548,7 @@ mod module_tests {
             let account_map = Arc::clone(&account_map);
             move |_, args| {
                 let mut account_map = account_map.write().unwrap();
-                let mut account = account_map
+                let account = account_map
                     .get_mut(&args.account)
                     .ok_or_else(|| errors::unknown_account(args.account))?;
                 account.description = Some(args.description);
@@ -497,7 +557,7 @@ mod module_tests {
         });
         mock.expect_info().returning({
             let account_map = Arc::clone(&account_map);
-            move |_, args| {
+            move |_, args, _| {
                 let account_map = account_map.write().unwrap();
                 let account = account_map
                     .get(&args.account)
@@ -512,7 +572,7 @@ mod module_tests {
         });
         mock.expect_list_roles().returning({
             let account_map = Arc::clone(&account_map);
-            move |_, args| {
+            move |_, args, _| {
                 let account_map = account_map.write().unwrap();
                 let _ = account_map
                     .get(&args.account)
@@ -619,13 +679,9 @@ mod module_tests {
             BTreeSet::from_iter(vec![Role::Owner, Role::CanLedgerTransact].into_iter()),
         );
 
-        assert!(call_module(
-            2,
-            &module,
-            "account.disable",
-            format!(r#"{{ 0: "{id}" }}"#),
-        )
-        .is_err());
+        assert!(
+            call_module(2, &module, "account.disable", format!(r#"{{ 0: "{id}" }}"#),).is_err()
+        );
         assert!(call_module(
             1,
             &module,
@@ -634,13 +690,7 @@ mod module_tests {
         )
         .is_err());
 
-        assert!(call_module(
-            1,
-            &module,
-            "account.disable",
-            format!(r#"{{ 0: "{id}" }}"#),
-        )
-        .is_ok());
+        assert!(call_module(1, &module, "account.disable", format!(r#"{{ 0: "{id}" }}"#),).is_ok());
 
         let account_map = account_map.read().unwrap();
         assert!(account_map.inner.is_empty());

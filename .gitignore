@@ -106,7 +106,10 @@ dist
 .DS_Store
 .idea/
 target/
-src/many-modules/proptest-regressions
+result*
 bazel-*
 rust-project.json
 genhtml/
+.ijwb
+user.bazelrc
+.husky/

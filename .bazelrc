@@ -1,8 +1,23 @@
 # Taken from the Bazel `rules_rust` Github repository
+build --@rules_rust//rust/toolchain/channel=nightly
+
+# Feature flag alias
+build --flag_alias=balance_testing=//src/many-ledger:balance_testing
+build --flag_alias=migration_testing=//src/many-ledger:migration_testing
+build --flag_alias=webauthn_testing=//src/many-ledger:webauthn_testing
+build --flag_alias=disable_token_sender_check=//src/many-ledger:disable_token_sender_check
+
+build:all-features --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check
+
+test:bats-resiliency-ledger --balance_testing --migration_testing
 
 # Enable rustfmt for all targets in the workspace
 build:rustfmt --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect
 build:rustfmt --output_groups=+rustfmt_checks
+
+# Enable rustfmt check for all targets in the workspace
+build:rustfmt-check --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect
+build:rustfmt-check --output_groups=rustfmt_checks
 
 # Enable clippy for all targets in the workspace
 build:clippy --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect
@@ -10,6 +25,15 @@ build:clippy --output_groups=+clippy_checks
 
 # Enable rust-analyzer project json for all targets in the workspace
 build:rust-analyzer @rules_rust//tools/rust_analyzer:gen_rust_project
+run:rust-analyzer @rules_rust//tools/rust_analyzer:gen_rust_project
+
+# Use BuildBuddy cache without any account
+build:remote-cache --bes_results_url=https://app.buildbuddy.io/invocation/
+build:remote-cache --bes_backend=grpcs://remote.buildbuddy.io
+build:remote-cache --remote_cache=grpcs://remote.buildbuddy.io
+build:remote-cache --remote_timeout=3600
+build:remote-cache --experimental_remote_cache_compression
+build:remote-cache --experimental_remote_build_event_upload=minimal
 
 # This import should always be last to allow users to override
 # settings for local development.

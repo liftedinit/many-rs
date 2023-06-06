@@ -2,11 +2,11 @@ use crate::impls::check_key;
 use coset::cbor::value::Value;
 use coset::iana::{EnumI64, OkpKeyParameter};
 use coset::{CoseKey, CoseSign1, CoseSign1Builder, Label};
+use ed25519::pkcs8::PrivateKeyInfo;
+use ed25519_dalek::ed25519::signature::{Signature, Signer, Verifier as _};
 use ed25519_dalek::Keypair;
 use many_error::ManyError;
 use many_identity::{cose, Address, Identity, Verifier};
-use pkcs8::der::Document;
-use signature::{Signature, Signer};
 use std::collections::BTreeSet;
 
 /// Build an EdDSA CoseKey
@@ -124,7 +124,7 @@ impl Ed25519IdentityInner {
     pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
         let public_key = public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Invalid key."))?;
         let key_pair = key_pair(cose_key)?;
-        let address = cose::address_unchecked(&public_key)?;
+        let address = unsafe { cose::address_unchecked(&public_key) }?;
 
         Ok(Self {
             address,
@@ -183,19 +183,20 @@ impl Ed25519Identity {
     }
 
     pub fn from_pem<P: AsRef<str>>(pem: P) -> Result<Self, ManyError> {
-        let doc = pkcs8::PrivateKeyDocument::from_pem(pem.as_ref()).unwrap();
-        let decoded = doc.decode();
+        let (_, doc) =
+            ed25519::pkcs8::Document::from_pem(pem.as_ref()).map_err(ManyError::unknown)?;
+        let pk: PrivateKeyInfo = doc.decode_msg().map_err(ManyError::unknown)?;
 
         // Ed25519 OID
-        if decoded.algorithm.oid != pkcs8::ObjectIdentifier::new("1.3.101.112") {
+        if pk.algorithm.oid != "1.3.101.112".parse().unwrap() {
             return Err(ManyError::unknown(format!(
                 "Invalid OID: {}",
-                decoded.algorithm.oid
+                pk.algorithm.oid
             )));
         }
 
         // Remove the 0420 header that's in all private keys in pkcs8 for some reason.
-        let sk = ed25519_dalek::SecretKey::from_bytes(&decoded.private_key[2..])
+        let sk = ed25519_dalek::SecretKey::from_bytes(&pk.private_key[2..])
             .map_err(ManyError::unknown)?;
         let pk: ed25519_dalek::PublicKey = (&sk).into();
         let keypair: Keypair = Keypair {
@@ -243,16 +244,17 @@ pub struct Ed25519Verifier {
 
 impl Ed25519Verifier {
     pub fn verify_signature(&self, signature: &[u8], data: &[u8]) -> Result<(), ManyError> {
-        let sig = ed25519::Signature::from_bytes(signature)
+        let sig = ed25519_dalek::Signature::try_from(signature)
             .map_err(ManyError::could_not_verify_signature)?;
-        signature::Verifier::verify(&self.public_key, data, &sig)
+        self.public_key
+            .verify(data, &sig)
             .map_err(ManyError::could_not_verify_signature)
     }
 
     pub fn from_key(cose_key: &CoseKey) -> Result<Self, ManyError> {
         let public_key =
             public_key(cose_key)?.ok_or_else(|| ManyError::unknown("Key not ed25519."))?;
-        let address = cose::address_unchecked(&public_key)?;
+        let address = unsafe { cose::address_unchecked(&public_key) }?;
 
         check_key(
             &public_key,
@@ -348,7 +350,7 @@ pub mod tests {
             "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
         );
         assert_eq!(
-            cose::address_unchecked(&id.public_key()).unwrap(),
+            unsafe { cose::address_unchecked(&id.public_key()).unwrap() },
             "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
         );
     }

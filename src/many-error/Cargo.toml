@@ -1,13 +1,18 @@
 [package]
 name = "many-error"
-version = "0.1.0"
+version = "0.1.1" # managed by release.sh
 edition = "2021"
+description = "Error and Reason types, as defined by the specification."
+license-file = "../../LICENSE"
+homepage = "https://liftedinit.org/"
+repository = "https://github.com/liftedinit/many-rs.git"
+authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 backtrace = { version = "0.3.66", optional = true }
-minicbor = { version = "0.18.0", optional = true, features = ["alloc"] }
+minicbor = { version = "0.19.1", optional = true, features = ["alloc"] }
 num-derive = "0.3.3"
 num-traits = "0.2.14"
 regex = "1.6.0"

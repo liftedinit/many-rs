@@ -2,6 +2,7 @@ load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = [
+    "//src/ledger:__pkg__",
     "//src/many:__pkg__",
 ])
 
@@ -18,7 +19,6 @@ rust_library(
         "//src/many-error",
         "//src/many-identity",
         "//src/many-identity-dsa",
-        "//src/many-protocol",
     ],
 )
 
@@ -38,7 +38,6 @@ rust_library(
         "//src/many-error",
         "//src/many-identity:many-identity-for-test",
         "//src/many-identity-dsa:many-identity-dsa-for-test",
-        "//src/many-protocol:many-protocol-for-test",
     ],
 )
 

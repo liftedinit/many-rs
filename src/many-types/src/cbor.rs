@@ -1,8 +1,30 @@
+use base64::{engine::general_purpose, Engine as _};
 use minicbor::data::{Tag, Type};
-use minicbor::encode::Write;
+use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CborNull;
+
+impl<C> Encode<C> for CborNull {
+    fn encode<W: Write>(
+        &self,
+        e: &mut Encoder<W>,
+        _: &mut C,
+    ) -> Result<(), minicbor::encode::Error<W::Error>> {
+        e.null()?;
+        Ok(())
+    }
+}
+
+impl<'b, C> Decode<'b, C> for CborNull {
+    fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
+        d.null()?;
+        Ok(CborNull)
+    }
+}
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum CborAny {
@@ -14,11 +36,13 @@ pub enum CborAny {
     Array(Vec<CborAny>),
     Map(BTreeMap<CborAny, CborAny>),
     Tagged(Tag, Box<CborAny>),
+    Null,
 }
 
 impl CborAny {
     pub fn as_u64(&self) -> Option<u64> {
         match self {
+            // Must be positive.
             Self::Int(i) if i >= &0 => Some(*i as u64),
             _ => None,
         }
@@ -42,16 +66,13 @@ impl Debug for CborAny {
             CborAny::Array(a) => write!(f, "{a:?}"),
             CborAny::Map(m) => write!(f, "{m:?}"),
             CborAny::Tagged(t, v) => write!(f, "tagged({t:?}, {v:?})"),
+            CborAny::Null => write!(f, "Null"),
         }
     }
 }
 
 impl<C> Encode<C> for CborAny {
-    fn encode<W: Write>(
-        &self,
-        e: &mut Encoder<W>,
-        _: &mut C,
-    ) -> Result<(), minicbor::encode::Error<W::Error>> {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         match self {
             CborAny::Undefined() => {
                 e.undefined()?;
@@ -79,6 +100,9 @@ impl<C> Encode<C> for CborAny {
             }
             CborAny::Tagged(t, v) => {
                 e.tag(*t)?.encode(v)?;
+            }
+            CborAny::Null => {
+                e.null()?;
             }
         }
 
@@ -110,24 +134,108 @@ impl<'d, C> Decode<'d, C> for CborAny {
                     minicbor::decode::Error,
                 >>()?))
             }
-            Type::Tag => {
-                let tag = d.tag()?;
-                let value: CborAny = d.decode()?;
-                Ok(CborAny::Tagged(tag, Box::new(value)))
+            Type::Tag => Ok(CborAny::Tagged(d.tag()?, Box::new(d.decode()?))),
+            Type::Null => {
+                d.skip()?;
+                Ok(CborAny::Null)
             }
             x => Err(minicbor::decode::Error::type_mismatch(x)),
         }
     }
 }
 
-#[cfg(feature = "proptest")]
+/// Encode/Decode cbor in a Base64 String instead of its CBOR value. `T` must be
+/// transformable to (Deref) and from (FromIterator<u8>) a byte array.
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct Base64Encoder<T>(pub T);
+
+impl<T> Base64Encoder<T> {
+    pub fn new(value: T) -> Self {
+        value.into()
+    }
+}
+
+impl<T> From<T> for Base64Encoder<T> {
+    fn from(value: T) -> Self {
+        Self(value)
+    }
+}
+
+impl<R, T: AsRef<R>> AsRef<R> for Base64Encoder<T> {
+    fn as_ref(&self) -> &R {
+        self.0.as_ref()
+    }
+}
+
+impl<C, T: std::ops::Deref<Target = [u8]>> Encode<C> for Base64Encoder<T> {
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
+        e.str(&general_purpose::STANDARD.encode(self.0.as_ref()))?;
+        Ok(())
+    }
+}
+
+impl<'d, C, T: FromIterator<u8>> Decode<'d, C> for Base64Encoder<T> {
+    fn decode(d: &mut Decoder<'d>, _: &mut C) -> Result<Self, minicbor::decode::Error> {
+        let b64 = d.str()?;
+        let bytes = general_purpose::STANDARD
+            .decode(b64)
+            .map_err(|e| minicbor::decode::Error::message(e.to_string()))?;
+
+        Ok(Self(T::from_iter(bytes.into_iter())))
+    }
+}
+
+/// A structure that wraps a T in a CBOR ByteString.
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+pub struct WrappedCbor<T>(T);
+
+impl<T> From<T> for WrappedCbor<T> {
+    fn from(value: T) -> Self {
+        Self(value)
+    }
+}
+
+impl<C, T> Encode<C> for WrappedCbor<T>
+where
+    T: Encode<C>,
+{
+    fn encode<W: Write>(&self, e: &mut Encoder<W>, ctx: &mut C) -> Result<(), Error<W::Error>> {
+        let bytes = minicbor::to_vec_with(&self.0, ctx).unwrap();
+        e.bytes(&bytes)?;
+        Ok(())
+    }
+}
+
+impl<'d, C, T: Decode<'d, C> + Sized> Decode<'d, C> for WrappedCbor<T>
+where
+    Self: 'd,
+{
+    fn decode(d: &mut Decoder<'d>, ctx: &mut C) -> Result<Self, minicbor::decode::Error> {
+        let bytes = d.bytes()?;
+        let t: T = minicbor::decode_with(bytes, ctx)?;
+        Ok(Self(t))
+    }
+}
+
+#[cfg(test)]
 pub mod tests {
-    use super::CborAny;
+    use super::*;
     use proptest::prelude::*;
+
+    #[test]
+    fn cbor_null() {
+        let null = CborNull;
+        let enc = minicbor::to_vec(null).unwrap();
+        // f6 (22) == null
+        // See https://www.rfc-editor.org/rfc/rfc8949.html#fpnoconttbl2
+        assert_eq!(hex::encode(enc), "f6");
+    }
 
     /// Generate arbitraty CborAny value.
     ///
     /// Recursive structures depth, size and branch size are limited
+    #[cfg(feature = "proptest")]
     pub fn arb_cbor() -> impl Strategy<Value = CborAny> {
         let leaf = prop_oneof![
             any::<bool>().prop_map(CborAny::Bool),
@@ -142,5 +250,39 @@ pub mod tests {
                 proptest::collection::btree_map(inner.clone(), inner, 0..10).prop_map(CborAny::Map),
             ]
         })
+    }
+}
+
+#[test]
+fn base64_encoder_works() {
+    let value: Vec<u8> = vec![1, 2, 3];
+    let v = Base64Encoder::from(value.clone());
+
+    let bytes = minicbor::to_vec(v).unwrap();
+    // Read a string from it.
+    let str: &str = minicbor::decode(&bytes).unwrap();
+
+    let v2: Base64Encoder<Vec<u8>> = minicbor::decode(&bytes).unwrap();
+
+    assert_eq!(value, v2.0);
+    assert_eq!(str, "AQID");
+}
+
+#[cfg(feature = "proptest")]
+proptest::proptest! {
+    // No need to waste time on these tests.
+    #![proptest_config(proptest::prelude::ProptestConfig::with_cases(10))]
+
+    #[test]
+    fn wrapped_cbor_works(value in tests::arb_cbor()) {
+        let wrapped = WrappedCbor::from(value);
+
+        let bytes = minicbor::to_vec(&wrapped).unwrap();
+        let wrapped2 = minicbor::decode::<WrappedCbor<CborAny>>(&bytes).unwrap();
+
+        assert_eq!(wrapped, wrapped2);
+        // Check that bytes are actually a bstr.
+        let d = minicbor::Decoder::new(&bytes);
+        assert_eq!(d.datatype().unwrap(), minicbor::data::Type::Bytes);
     }
 }

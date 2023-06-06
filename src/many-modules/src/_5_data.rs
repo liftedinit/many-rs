@@ -7,6 +7,7 @@ pub use info::*;
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
+use many_protocol::context::Context;
 pub use query::*;
 pub use types::*;
 
@@ -16,13 +17,24 @@ use mockall::{automock, predicate::*};
 #[many_module(name = DataModule, id = 5, namespace = data, many_modules_crate = crate)]
 #[cfg_attr(test, automock)]
 pub trait DataModuleBackend: Send {
-    fn info(&self, sender: &Address, args: DataInfoArgs) -> Result<DataInfoReturns, ManyError>;
+    fn info(
+        &self,
+        sender: &Address,
+        args: DataInfoArgs,
+        context: Context,
+    ) -> Result<DataInfoReturns, ManyError>;
     fn get_info(
         &self,
         sender: &Address,
         args: DataGetInfoArgs,
+        context: Context,
     ) -> Result<DataGetInfoReturns, ManyError>;
-    fn query(&self, sender: &Address, args: DataQueryArgs) -> Result<DataQueryReturns, ManyError>;
+    fn query(
+        &self,
+        sender: &Address,
+        args: DataQueryArgs,
+        context: Context,
+    ) -> Result<DataQueryReturns, ManyError>;
 }
 
 #[cfg(test)]

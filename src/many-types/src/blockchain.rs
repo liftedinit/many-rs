@@ -84,7 +84,10 @@ pub struct Transaction {
     pub id: TransactionIdentifier,
 
     #[cbor(n(1), with = "minicbor::bytes")]
-    pub content: Option<Vec<u8>>,
+    pub request: Option<Vec<u8>>,
+
+    #[cbor(n(2), with = "minicbor::bytes")]
+    pub response: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Clone, Decode, Encode, PartialEq, Eq)]
@@ -96,7 +99,7 @@ pub struct Block {
     #[n(1)]
     pub parent: BlockIdentifier,
 
-    #[n(2)]
+    #[cbor(n(2), with = "minicbor::bytes")]
     pub app_hash: Option<Vec<u8>>,
 
     #[n(3)]

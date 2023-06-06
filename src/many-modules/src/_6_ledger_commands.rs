@@ -36,12 +36,13 @@ mod tests {
             amount: TokenAmount::from(512u16),
             symbol: Address::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz")
                 .unwrap(),
+            memo: None,
         };
         let mut mock = MockLedgerCommandsModuleBackend::new();
         mock.expect_send()
             .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
             .times(1)
-            .returning(|_sender, _args| Ok(SendReturns {}));
+            .returning(|_, _| Ok(SendReturns {}));
         let module = super::LedgerCommandsModule::new(Arc::new(Mutex::new(mock)));
 
         let _: SendReturns = minicbor::decode(

@@ -1,0 +1,19 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = [
+    "//:__pkg__",
+    "//tests/e2e/ledger:__pkg__",
+])
+
+rust_binary(
+    name = "idstore-export",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ),
+)

@@ -2,26 +2,43 @@
 
 use linkme::distributed_slice;
 use many_migration::{
-    load_enable_all_regular_migrations, load_migrations, InnerMigration, Migration, Status,
+    InnerMigration, Metadata, Migration, MigrationConfig, MigrationSet, MigrationType,
 };
+use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
-use std::str::FromStr;
 
-type Storage = BTreeMap<String, String>;
+type Storage = BTreeMap<StorageKey, u64>;
+
+#[derive(Ord, PartialOrd, Eq, PartialEq)]
+enum StorageKey {
+    Init = 0,
+    Counter = 1,
+}
 
 #[distributed_slice]
-static SOME_MANY_RS_MIGRATIONS: [InnerMigration<'static, Storage, String>] = [..];
+static SOME_MANY_RS_MIGRATIONS: [InnerMigration<Storage, String>] = [..];
 
-fn _initialize(s: &mut Storage) -> Result<(), String> {
-    s.insert("Init".to_string(), "Okay".to_string());
+fn _initialize(s: &mut Storage, _: &HashMap<String, Value>) -> Result<(), String> {
+    s.insert(StorageKey::Init, 1);
     Ok(())
 }
 
-fn _update(s: &mut Storage) -> Result<(), String> {
-    if let Some(counter) = s.get("Counter") {
-        let mut counter = u8::from_str(counter).unwrap();
-        counter += 1;
-        s.insert("Counter".to_string(), counter.to_string());
+fn _initialize_extra(s: &mut Storage, extra: &HashMap<String, Value>) -> Result<(), String> {
+    s.insert(StorageKey::Init, extra.get("n").unwrap().as_u64().unwrap());
+    Ok(())
+}
+
+fn _update(s: &mut Storage, _: &HashMap<String, Value>) -> Result<(), String> {
+    if let Some(counter) = s.get_mut(&StorageKey::Counter) {
+        *counter += 1;
+        return Ok(());
+    }
+    Err("Counter entry not found".to_string())
+}
+
+fn _update_extra(s: &mut Storage, extra: &HashMap<String, Value>) -> Result<(), String> {
+    if let Some(counter) = s.get_mut(&StorageKey::Counter) {
+        *counter += extra.get("n").unwrap().as_u64().unwrap();
         return Ok(());
     }
     Err("Counter entry not found".to_string())
@@ -50,6 +67,40 @@ static C: InnerMigration<Storage, String> =
 #[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
 static D: InnerMigration<Storage, String> = InnerMigration::new_hotfix(_hotfix, "D", "D desc");
 
+#[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
+static E: InnerMigration<Storage, String> =
+    InnerMigration::new_initialize(_initialize_extra, "E", "E desc");
+
+#[distributed_slice(SOME_MANY_RS_MIGRATIONS)]
+static F: InnerMigration<Storage, String> =
+    InnerMigration::new_update(_update_extra, "F", "F desc");
+
+/// Enable all migrations from the registry EXCEPT the hotfix.
+/// Should not be used outside of tests.
+pub fn load_enable_all_regular_migrations<T, E>(
+    registry: &[InnerMigration<T, E>],
+) -> MigrationSet<T, E> {
+    // Keep a default of block height 1 for backward compatibility.
+    let metadata = Metadata {
+        block_height: 1,
+        ..Metadata::default()
+    };
+
+    let mut set = MigrationSet::empty().unwrap();
+    for m in registry.iter() {
+        let mut migration = Migration::new(m, metadata.clone());
+        match m.r#type() {
+            MigrationType::Regular(_) => migration.enable(),
+            MigrationType::Hotfix(_) => migration.disable(),
+            _ => migration.disable(),
+        }
+
+        set.insert(migration);
+    }
+
+    set
+}
+
 #[test]
 fn initialize() {
     let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
@@ -65,12 +116,33 @@ fn initialize() {
     migrations["A"].initialize(&mut storage, 1).unwrap();
     assert!(!storage.is_empty());
     assert_eq!(storage.len(), 1);
-    assert!(storage.contains_key("Init"));
-    assert_eq!(storage.get("Init").unwrap(), "Okay");
+    assert!(storage.contains_key(&StorageKey::Init));
+    assert_eq!(storage[&StorageKey::Init], 1);
 
     // Should not do anything after it ran once
     migrations["A"].initialize(&mut storage, 2).unwrap();
     assert_eq!(storage.len(), 1);
+}
+
+#[test]
+fn initialize_extra() {
+    let content = r#"{
+    "migrations": [
+            {
+                "name": "E",
+                "block_height": 2,
+                "n": 42
+            }
+        ]
+    }"#;
+
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
+    assert!(migrations.contains_key("E"));
+    let mut storage = Storage::new();
+
+    migrations["E"].initialize(&mut storage, 2).unwrap();
+    assert_eq!(storage[&StorageKey::Init], 42);
 }
 
 #[test]
@@ -79,20 +151,48 @@ fn update() {
     assert!(migrations.contains_key("B"));
 
     let mut storage = Storage::new();
-    storage.insert("Counter".to_string(), "0".to_string());
+    storage.insert(StorageKey::Counter, 0);
 
     // Should not run when block height == 0
     migrations["B"].update(&mut storage, 0).unwrap();
-    assert_eq!(storage["Counter"], "0".to_string());
+    assert_eq!(storage[&StorageKey::Counter], 0);
 
     // Should not run when block height == 1
     migrations["B"].update(&mut storage, 1).unwrap();
-    assert_eq!(storage["Counter"], "0".to_string());
+    assert_eq!(storage[&StorageKey::Counter], 0);
 
     // Should run when block height is > 1
     for i in 2..10 {
         migrations["B"].update(&mut storage, 2).unwrap();
-        assert_eq!(storage["Counter"], (i - 1).to_string());
+        assert_eq!(storage[&StorageKey::Counter], i - 1);
+    }
+}
+
+#[test]
+fn update_extra() {
+    let content = r#"{
+    "migrations": [
+            {
+                "name": "F",
+                "block_height": 22,
+                "n": 5
+            }
+        ]
+    }"#;
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
+    assert!(migrations.contains_key("F"));
+    let mut storage = Storage::from_iter([(StorageKey::Counter, 0)]);
+
+    for i in 20..26 {
+        migrations["F"].update(&mut storage, i).unwrap();
+        match i {
+            20 | 21 | 22 => assert_eq!(storage[&StorageKey::Counter], 0),
+            23 => assert_eq!(storage[&StorageKey::Counter], 5),
+            24 => assert_eq!(storage[&StorageKey::Counter], 10),
+            25 => assert_eq!(storage[&StorageKey::Counter], 15),
+            _ => unimplemented!(),
+        }
     }
 }
 
@@ -101,8 +201,7 @@ fn initialize_update() {
     let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     assert!(migrations.contains_key("C"));
 
-    let mut storage = Storage::new();
-    storage.insert("Counter".to_string(), "0".to_string());
+    let mut storage = Storage::from_iter([(StorageKey::Counter, 0)]);
 
     for i in 0..4 {
         migrations["C"].initialize(&mut storage, i).unwrap();
@@ -110,8 +209,8 @@ fn initialize_update() {
             0 => assert_eq!(storage.len(), 1),
             1 => {
                 assert_eq!(storage.len(), 2);
-                assert!(storage.contains_key("Init"));
-                assert_eq!(storage.get("Init").unwrap(), "Okay");
+                assert!(storage.contains_key(&StorageKey::Init));
+                assert_eq!(storage[&StorageKey::Init], 1);
             }
             2 => assert_eq!(storage.len(), 2),
             3 => assert_eq!(storage.len(), 2),
@@ -123,19 +222,19 @@ fn initialize_update() {
         match i {
             0 => {
                 assert_eq!(storage.len(), 1);
-                assert_eq!(storage["Counter"], "0".to_string());
+                assert_eq!(storage[&StorageKey::Counter], 0);
             }
             1 => {
                 assert_eq!(storage.len(), 2);
-                assert_eq!(storage["Counter"], "0".to_string());
+                assert_eq!(storage[&StorageKey::Counter], 0);
             }
             2 => {
                 assert_eq!(storage.len(), 2);
-                assert_eq!(storage["Counter"], "1".to_string());
+                assert_eq!(storage[&StorageKey::Counter], 1);
             }
             3 => {
                 assert_eq!(storage.len(), 2);
-                assert_eq!(storage["Counter"], "2".to_string());
+                assert_eq!(storage[&StorageKey::Counter], 2);
             }
             _ => unimplemented!(),
         }
@@ -144,15 +243,16 @@ fn initialize_update() {
 
 #[test]
 fn hotfix() {
-    let content = r#"
-    [
-        {
-            "type": "D",
-            "block_height": 2
-        }
-    ]
-    "#;
-    let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
+    let content = r#"{
+    "migrations": [
+            {
+                "name": "D",
+                "block_height": 2
+            }
+        ]
+    }"#;
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
     assert!(migrations.contains_key("D"));
 
     let data = [1u8; 8];
@@ -209,17 +309,17 @@ fn metadata() {
         assert_eq!(metadata.extra, HashMap::new());
     }
 
-    let content = r#"
-    [
+    let content = r#"{ "migrations": [
         {
-            "type": "D",
+            "name": "D",
             "block_height": 200,
             "issue": "foobar",
             "xtra": "Oh!"
         }
-    ]
+    ]}
     "#;
-    let migrations = load_migrations(&SOME_MANY_RS_MIGRATIONS, content).unwrap();
+    let config: MigrationConfig = serde_json::from_str(content).unwrap();
+    let migrations = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
     let metadata = migrations["D"].metadata();
     assert_eq!(metadata.block_height, 200);
     assert_eq!(metadata.issue, Some("foobar".to_string()));
@@ -234,30 +334,174 @@ fn status() {
     let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
     for i in ["A", "B", "C", "D"] {
         let migration = &migrations[i];
-        let status = migration.status();
+        let enabled = migration.is_enabled();
 
         match i {
-            "A" | "B" | "C" => assert_eq!(status, &Status::Enabled),
-            "D" => assert_eq!(status, &Status::Disabled),
+            "A" | "B" | "C" => assert!(enabled),
+            "D" => assert!(!enabled),
             _ => unimplemented!(),
         }
     }
 }
 
 #[test]
-fn encode_decode() {
-    let migrations = load_enable_all_regular_migrations(&SOME_MANY_RS_MIGRATIONS);
-    let cbor = minicbor::to_vec(&migrations).unwrap();
+fn empty_config() {
+    let migration_set =
+        MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, MigrationConfig::default(), 1).unwrap();
+    assert_eq!(migration_set.values().count(), 0);
+}
 
-    let result: BTreeMap<&str, Migration<Storage, String>> =
-        minicbor::decode_with(&cbor, &mut SOME_MANY_RS_MIGRATIONS.clone()).unwrap();
-    for ((orig_name, orig_mig), (res_name, res_mig)) in
-        result.into_iter().zip(migrations.into_iter())
-    {
-        assert_eq!(orig_name, res_name);
-        assert_eq!(orig_mig.name(), res_mig.name());
-        assert_eq!(orig_mig.description(), res_mig.description());
-        assert_eq!(orig_mig.metadata(), res_mig.metadata());
-        assert_eq!(orig_mig.status(), res_mig.status());
+#[test]
+fn basic() {
+    let mut migration_set = MigrationSet::load(
+        &SOME_MANY_RS_MIGRATIONS,
+        [
+            (&A, Metadata::enabled(1)),
+            (&B, Metadata::enabled(2)),
+            (&C, Metadata::disabled(1)),
+        ]
+        .into(),
+        0,
+    )
+    .unwrap();
+    assert_eq!(migration_set.values().count(), 3);
+    assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
+    assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 0);
+
+    let mut storage = Storage::new();
+    storage.insert(StorageKey::Counter, 0);
+
+    migration_set.update_at_height(&mut storage, 1).unwrap();
+    assert_eq!(migration_set.values().count(), 3);
+    assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
+    assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 1);
+
+    migration_set.update_at_height(&mut storage, 2).unwrap();
+    assert_eq!(migration_set.values().count(), 3);
+    assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
+    assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);
+
+    migration_set.update_at_height(&mut storage, 3).unwrap();
+    assert_eq!(migration_set.values().count(), 3);
+    assert_eq!(migration_set.values().filter(|x| x.is_enabled()).count(), 2);
+    assert_eq!(migration_set.values().filter(|x| x.is_active()).count(), 2);
+}
+
+#[test]
+fn hotfix_basic() {
+    let migration_set = MigrationSet::load(
+        &SOME_MANY_RS_MIGRATIONS,
+        [(&A, Metadata::enabled(1)), (&D, Metadata::enabled(2))].into(),
+        0,
+    )
+    .unwrap();
+
+    let data = [1u8; 8];
+    for i in 0..4 {
+        let maybe_new_data = migration_set.hotfix("D", &data, i).unwrap();
+
+        match i {
+            0..=1 | 3 => assert!(maybe_new_data.is_none()),
+            2 => {
+                assert!(maybe_new_data.is_some());
+                assert_eq!(maybe_new_data.unwrap(), vec![1, 1, 1, 1]);
+            }
+            _ => unimplemented!(),
+        }
     }
+}
+
+#[test]
+fn migration_config() {
+    let config = MigrationConfig::default()
+        .with_migration_opts(&A, Metadata::enabled(5))
+        .with_migration(&B)
+        .with_migration_opts(&C, Metadata::disabled(100));
+
+    assert_eq!(
+        config,
+        [
+            (&A, Metadata::enabled(5)),
+            (&B, Metadata::enabled(0)),
+            (&C, Metadata::disabled(100))
+        ]
+        .into()
+    );
+
+    let migration_set = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap();
+    assert!(migration_set.is_enabled(&A));
+    assert!(!migration_set.is_active(&A));
+    assert!(migration_set.is_enabled(&B));
+    assert!(migration_set.is_active(&B));
+    assert!(!migration_set.is_enabled(&C));
+    assert!(!migration_set.is_active(&C));
+}
+
+#[test]
+fn migration_config_at_height() {
+    let config = MigrationConfig::default()
+        .with_migration_opts(&A, Metadata::enabled(5))
+        .with_migration(&B)
+        .with_migration_opts(&C, Metadata::disabled(100));
+
+    assert_eq!(
+        config,
+        [
+            (&A, Metadata::enabled(5)),
+            (&B, Metadata::enabled(0)),
+            (&C, Metadata::disabled(100))
+        ]
+        .into()
+    );
+
+    let migration_set = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config.clone(), 1).unwrap();
+    assert!(migration_set.is_enabled(&A));
+    assert!(!migration_set.is_active(&A));
+    assert!(migration_set.is_enabled(&B));
+    assert!(migration_set.is_active(&B));
+    assert!(!migration_set.is_enabled(&C));
+    assert!(!migration_set.is_active(&C));
+
+    let migration_set = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config.clone(), 105).unwrap();
+    assert!(migration_set.is_enabled(&A));
+    assert!(migration_set.is_active(&A));
+    assert!(migration_set.is_enabled(&B));
+    assert!(migration_set.is_active(&B));
+    assert!(!migration_set.is_enabled(&C));
+    assert!(!migration_set.is_active(&C));
+
+    let migration_set = MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 5).unwrap();
+    assert!(migration_set.is_enabled(&A));
+    assert!(migration_set.is_active(&A));
+    assert!(migration_set.is_enabled(&B));
+    assert!(migration_set.is_active(&B));
+    assert!(!migration_set.is_enabled(&C));
+    assert!(!migration_set.is_active(&C));
+}
+
+#[test]
+fn strict_config_one() {
+    let config = MigrationConfig::default()
+        .with_migration_opts(&A, Metadata::enabled(5))
+        .with_migration(&B)
+        .with_migration_opts(&C, Metadata::disabled(100))
+        .strict();
+
+    assert_eq!(
+        MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap_err(),
+        r#"Migration Config is missing migrations ["D", "E", "F"]"#.to_string(),
+    );
+}
+
+#[test]
+fn strict_config_many() {
+    let config = MigrationConfig::default()
+        .with_migration_opts(&A, Metadata::enabled(5))
+        .with_migration(&B)
+        .strict();
+
+    assert_eq!(
+        MigrationSet::load(&SOME_MANY_RS_MIGRATIONS, config, 0).unwrap_err(),
+        r#"Migration Config is missing migrations ["C", "D", "E", "F"]"#.to_string()
+    );
 }

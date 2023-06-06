@@ -1,0 +1,217 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test", "rust_test_suite")
+load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("//:rules.bzl", "rustc_flags_file")
+load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
+
+package(default_visibility = [
+    "//:__pkg__",
+    "//docker:__pkg__",
+    "//src/many-ledger/test-utils:__pkg__",
+    "//tests/e2e/ledger:__pkg__",
+    "//tests/resiliency/ledger:__pkg__",
+])
+
+bool_flag(
+    name = "balance_testing",
+    build_setting_default = False,
+)
+
+bool_flag(
+    name = "migration_testing",
+    build_setting_default = False,
+)
+
+bool_flag(
+    name = "webauthn_testing",
+    build_setting_default = False,
+)
+
+bool_flag(
+    name = "disable_token_sender_check",
+    build_setting_default = False,
+)
+
+rustc_flags_file(
+    name = "flags_file",
+    flags = [
+        ":balance_testing",
+        ":migration_testing",
+        ":webauthn_testing",
+        ":disable_token_sender_check",
+    ],
+)
+
+cargo_build_script(
+    name = "build_script",
+    srcs = ["build.rs"],
+    data = ["//:.git"],
+    deps = all_crate_deps(build = True),
+)
+
+rust_binary(
+    name = "many-ledger",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    compile_data = [
+        ":flags_file",
+    ],
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    rustc_flags = [
+        "--verbose",
+        "@$(location :flags_file)",
+    ],
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":build_script",
+        "//src/many-cli-helpers",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-migration",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
+    ],
+)
+
+rust_library(
+    name = "many-ledger-lib-for-test",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_features = [
+        "balance_testing",
+        "migration_testing",
+        "disable_token_sender_check",
+    ],
+    crate_name = "many_ledger",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        "//src/many-error",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-identity-dsa:many-identity-dsa-for-test",
+        "//src/many-identity-webauthn:many-identity-webauthn-for-test",
+        "//src/many-migration:many-migration-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-protocol:many-protocol-for-test",
+        "//src/many-server:many-server-for-test",
+        "//src/many-types:many-types-for-test",
+    ],
+)
+
+rust_test(
+    name = "many-ledger-test",
+    crate = ":many-ledger-lib-for-test",
+    data = ["//staging:ledger-staging"],
+)
+
+rust_test_suite(
+    name = "many-ledger-test-suite",
+    srcs = glob(
+        include = ["tests/*.rs"],
+        exclude = [
+            "tests/ledger_tokens/*.rs",
+        ],
+    ),
+    compile_data = [
+        "tests/migration_/mod.rs",
+        "tests/migration_/memo.rs",
+    ],
+    crate_features = ["balance_testing"],
+    data = ["//staging:ledger-staging"],
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        ":many-ledger-lib-for-test",
+        "//src/many-error",
+        "//src/many-ledger/test-utils:many-ledger-test-utils-lib",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-migration:many-migration-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-protocol:many-protocol-for-test",
+        "//src/many-types:many-types-for-test",
+    ],
+)
+
+rust_test_suite(
+    name = "many-ledger-test-cucumber-suite",
+    srcs = glob(
+        include = [
+            "tests/ledger_tokens/*.rs",
+            "tests/ledger_mintburn/*.rs",
+        ],
+    ),
+    crate_features = ["balance_testing"],
+    data = [
+        "//staging:ledger-staging",
+    ] + glob(include = ["tests/features/**/*.feature"]),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ) + [
+        "//src/many-ledger/test-macros:many-ledger-test-macros-lib",
+    ],
+    use_libtest_harness = False,
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        ":many-ledger-lib-for-test",
+        "//src/many-error",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-protocol:many-protocol-for-test",
+        "//src/many-types:many-types-for-test",
+        "//src/many-ledger/test-utils:many-ledger-test-utils-lib",
+    ],
+)
+
+rust_image(
+    name = "many-ledger-image",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    base = "//:ubuntu_image",
+    compile_data = [
+        ":flags_file",
+    ],
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    rustc_flags = [
+        "--verbose",
+        "@$(location :flags_file)",
+    ],
+    tags = ["manual"],
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":build_script",
+        "//src/many-cli-helpers",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-migration",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-types",
+    ],
+)

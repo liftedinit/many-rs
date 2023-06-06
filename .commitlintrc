@@ -1,0 +1,4 @@
+# Configuration file for commitlint
+# https://github.com/conventional-changelog/commitlint
+extends:
+  - '@commitlint/config-conventional'

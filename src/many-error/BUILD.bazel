@@ -2,16 +2,7 @@ load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = [
-    "//src/many:__pkg__",
-    "//src/many-identity:__pkg__",
-    "//src/many-identity-dsa:__pkg__",
-    "//src/many-identity-hsm:__pkg__",
-    "//src/many-identity-webauthn:__pkg__",
-    "//src/many-mock:__pkg__",
-    "//src/many-modules:__pkg__",
-    "//src/many-protocol:__pkg__",
-    "//src/many-server:__pkg__",
-    "//src/many-types:__pkg__",
+    "//src:__subpackages__",
 ])
 
 rust_library(

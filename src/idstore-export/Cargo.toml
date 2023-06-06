@@ -1,0 +1,21 @@
+[package]
+name = "idstore-export"
+version = "0.1.1" # managed by release.sh
+edition = "2021"
+description = "Export IdStore credentials from storage."
+license-file = "../../LICENSE"
+homepage = "https://liftedinit.org/"
+repository = "https://github.com/liftedinit/many-rs.git"
+authors = ["The Lifted Initiative <crates@liftedinit.org>"]
+
+[[bin]]
+name = "idstore-export"
+doc = false
+
+[dependencies]
+base64 = "0.21.0"
+clap = { version = "3.2.23", features = ["derive"] }
+merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
+serde = "1.0.137"
+serde_derive = "1.0.137"
+serde_json = "1.0.81"

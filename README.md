@@ -3,9 +3,14 @@
 [![coverage](https://img.shields.io/codecov/c/gh/liftedinit/many-rs)](https://app.codecov.io/gh/liftedinit/many-rs)
 [![license](https://img.shields.io/github/license/liftedinit/many-rs)](https://github.com/liftedinit/many-rs/blob/main/LICENSE)
 
-Rust libraries for the [MANY protocol](https://github.com/many-protocol).
+A collection of applications and libraries for the [MANY protocol](https://github.com/many-protocol).
 
 Features
+- A ledger client/server
+- A key-value store client/server
+- An application blockchain interface (ABCI)
+- A http proxy
+- A 4-nodes end-to-end Docker demo
 - MANY module interfaces
 - MANY common types
 - MANY message and transport layers
@@ -13,87 +18,116 @@ Features
 - Hardware Security Module
 - CLI developer's tools
 
-# References
+# Requirements
+- [Bazelisk](https://github.com/bazelbuild/bazelisk) or [Bazel](https://bazel.build/versions/6.0.0/install) >= 6.0.0
+- (macOS) [Brew](https://brew.sh/)
 
-- Concise Binary Object Representation (CBOR): [RFC 8949](https://www.rfc-editor.org/rfc/rfc8949.html)
-- CBOR Object Signing and Encryption (COSE): [RFC 8152](https://datatracker.ietf.org/doc/html/rfc8152)
-- Platform-independent API to cryptographic tokens: [PKCS #11](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html)
+# Build
 
-# Developer tools
+1. Install build dependencies
+    ```shell
+    # Ubuntu/Debian
+    $ sudo apt update && sudo apt install build-essential clang libssl-dev libsofthsm2 libudev-dev 
+        libusb-1.0-0-dev bsdextrautils
+    
+    # macOS
+    $ brew update
+    $ brew install git bazelisk
+    ```
+1. Build
+    ```shell
+    $ git clone https://github.com/liftedinit/many-rs.git
+    $ cd many-rs
+    $ bazel build //...
+    ```
+1. Tests
+    ```shell
+    # Unit/integration tests
+    $ bazel test //...
+   
+    # E2E integration tests
+    $ bazel test --config=all-features //tests/e2e/kvstore:bats-e2e-kvstore
+    $ bazel test --config=all-features //tests/e2e/ledger:bats-e2e-ledger
+    $ bazel test --balance_testing --migration_testing --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-tokens
+   
+    # Resiliency integration tests (Linux only - requires Docker)
+    $ bazel test //tests/resiliency/kvstore:bats-resiliency-kvstore 
+    $ bazel test --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
+    ```
 
-- CBOR playground: [CBOR.me](https://cbor.me)
-- CBOR diagnostic utilities: [cbor-diag](https://github.com/cabo/cbor-diag)
-- Software Hardware Security Module (HSM): [SoftHSM2](https://github.com/opendnssec/SoftHSMv2)
+# Usage example
+Below are some examples of how to use the different CLI.
 
-# Crates
+## Ledger cluster 
+```shell
+# Create a 4-nodes Ledger cluster. Requires local Docker. Linux only
+$ bazel run //:start-ledger-cluster
+
+# Create a 4-nodes Ledger cluster in the background
+$ bazel run //:start-ledger-cluster-detached
+
+# Stop the ledger cluster
+$ bazel run //:stop-ledger-cluster 
+```
+
+## Balance
+```shell
+# Query the local ledger cluster
+$ bazel run //src/ledger -- --pem $(pwd)/keys/id1.pem balance
+  1000000000 MFX (mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz)
+```
+
+## Send tokens
+```shell
+# Send tokens from id1.pem to id2.pem
+$ bazel run //src/ledger -- --pem $(pwd)/keys/id1.pem send mahukzwuwgt3porn6q4vq4xu3mwy5gyskhouryzbscq7wb2iow 10000 MFX
+2023-03-13T19:07:20.120255Z  INFO ledger: Async token: a560d5409a18ae493ce457bb4008da0afc3d383c2a505979a963c26398f51fc9
+  Waiting for async response
+null
+
+# Check the balance of the new ID
+$ bazel run //src/ledger -- --pem $(pwd)/keys/id2.pem balance
+       10000 MFX (mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz)
+```
+
+## Print the MANY ID of a key file
+```shell
+$ bazel run //src/many -- id $(pwd)/keys/id1.pem
+maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp
+```
+
+## Retrieve the status of a running MANY server
+```shell
+$ bazel run //src/many -- message --server https://alberto.app/api 'status' '{}'
+{_
+    0: 1,
+    1: "AbciModule(many-ledger)",
+    2: h'a5010103270481022006215820e5cd546d5292af5d9f0ffd54b57ff555c51b91a249b9cf544010a3c01cfa75a2',
+    3: 10000_1(h'01378dd9916915fb276116ff4bc13c04a4e413f663e04b710199c46021'),
+    4: [0, 1, 2, 4, 6, 8, 9, 1002_1],
+    5: "0.1.0",
+    7: 300_1,
+}
+```
+
+# Developers
+## Contributing
+Read our [Contributing Guidelines](https://github.com/liftedinit/.github/blob/main/docs/CONTRIBUTING.md)
+## Crates
 
 Here's a list of crates published by this repository and their purposes.
 You can visit their crates entries (linked below) for more information.
 
-The dependency graph between the crates in this repository looks like this:
-
-<!-- To generate this graph, see the `scripts/deps.sh` script. -->
-
-```mermaid
-graph TD;
-  many-identity --> many-client;
-  many-identity-dsa --> many-client;
-  many-modules --> many-client;
-  many-protocol --> many-client;
-  many-server --> many-client;
-  many-error --> many-identity-dsa;
-  many-identity --> many-identity-dsa;
-  many-error --> many-identity-hsm;
-  many-identity --> many-identity-hsm;
-  many-identity-dsa --> many-identity-hsm;
-  many-protocol --> many-identity-hsm;
-  many-error --> many-identity-webauthn;
-  many-identity --> many-identity-webauthn;
-  many-identity-dsa --> many-identity-webauthn;
-  many-protocol --> many-identity-webauthn;
-  many-error --> many-identity;
-  many-client --> many-mock;
-  many-error --> many-mock;
-  many-identity --> many-mock;
-  many-identity-dsa --> many-mock;
-  many-identity-webauthn --> many-mock;
-  many-modules --> many-mock;
-  many-protocol --> many-mock;
-  many-server --> many-mock;
-  many-error --> many-modules;
-  many-identity --> many-modules;
-  many-identity-dsa --> many-modules;
-  many-macros --> many-modules;
-  many-protocol --> many-modules;
-  many-types --> many-modules;
-  many-error --> many-protocol;
-  many-identity --> many-protocol;
-  many-types --> many-protocol;
-  many-error --> many-server;
-  many-identity --> many-server;
-  many-identity-dsa --> many-server;
-  many-macros --> many-server;
-  many-modules --> many-server;
-  many-protocol --> many-server;
-  many-types --> many-server;
-  many-error --> many-types;
-  many-identity --> many-types;
-  many-client --> many;
-  many-error --> many;
-  many-identity --> many;
-  many-identity-dsa --> many;
-  many-identity-hsm --> many;
-  many-mock --> many;
-  many-modules --> many;
-  many-protocol --> many;
-  many-server --> many;
-  many-types --> many;
-```
+### Published to crates.io
 
 * `many`([crates](https://crates.io/crate/many), [docs](https://docs.rs/many))
     – Contains the CLI tool to contact and diagnose MANY servers.
 * `many-client`([crates](https://crates.io/crate/many-client), [docs](https://docs.rs/many-client))
   – Types and methods to talk to the MANY network.
+* `many-client-macros`([crates](https://crates.io/crate/many-client-macros), [docs](https://docs.rs/many-client-macros))
+    – `many-client` procedural macro
+* `many-cli-helpers`([crate](https://crates.io/crate/many-cli-helpers), [docs](https://docs.rs/many-cli-helpers))) 
+    – Common CLI flags
 * `many-error`([crates](https://crates.io/crate/many-error), [docs](https://docs.rs/many-error))
     – Error and Reason types, as defined by the specification.
 * `many-identity`([crates](https://crates.io/crate/many-identity), [docs](https://docs.rs/many-identity))
@@ -109,6 +143,8 @@ graph TD;
       See the [Lifted WebAuthn Auth Paper](https://coda.io/@hans-larsen/lifted-webauthn-auth).
 * `many-macros`([crates](https://crates.io/crate/many-macros), [docs](https://docs.rs/many-macros))
     – Contains macros to help with server and module declaration and implementations.
+* `many-migration`([crates](https://crates.io/crate/many-migration), [docs](https://docs.rs/many-migration))
+  – Storage/Transaction migration framework.
 * `many-mock`([crates](https://crates.io/crate/many-mock), [docs](https://docs.rs/many-mock))
     – Utility types for creating mocked MANY servers.
 * `many-modules`([crates](https://crates.io/crate/many-modules), [docs](https://docs.rs/many-modules))
@@ -121,81 +157,57 @@ graph TD;
 * `many-types`([crates](https://crates.io/crate/many-types), [docs](https://docs.rs/many-types))
   – General types related to CBOR encoding, or to the specification.
 
-# Installation
-
-1. Update your package database
+## Using Bazel
+### Remote cache
 ```shell
-# Ubuntu
-$ sudo apt update
-
-# CentOS
-$ sudo yum update
-
-# Archlinux
-$ sudo pacman -Syu
-```
-2. Install Rust using [rustup](https://rustup.rs/)
-```shell
-$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-$ source $HOME/.cargo/env
-```
-3. Install build dependencies
-```shell
-# Ubuntu
-$ sudo apt install build-essential pkg-config clang libssl-dev libsofthsm2
-
-# CentOS
-$ sudo yum install clang gcc softhsm git pkgconf
-
-# Archlinux
-$ sudo pacman -S clang gcc softhsm git pkgconf
-
-# macOS
-$ git # and follow the instructions
-```
-4. Build `many-rs`
-```shell
-$ git clone https://github.com/liftedinit/many-rs.git
-$ cd many-rs
-$ cargo build
-```
-5. Run tests
-```shell
-$ cargo test
+# Use BuildBuddy remote cache
+$ bazel build --config=remote-cache //...
 ```
 
-# Usage example
-Below are some examples of how to use the `many` CLI.
-
-## Retrieve the MANY ID of a key
+### Code formatting
 ```shell
-# Generate a new Ed25519 key
-$ openssl genpkey -algorithm Ed25519 -out id1.pem
+# Check code formatting
+$ bazel build --config=rustfmt-check //...
 
-# Print the MANY ID of the key
-$ ./target/debug/many id id1.pem
-mafdzlw6ktmpncikho6wwswzej7rpja7fgtbn33xzwkfngdygc
+# Apply format changes using
+$ bazel run @rules_rust//:rustfmt
 ```
 
-## Retrieve the status of a running MANY server
+### Lint
 ```shell
-$ ./target/debug/many message --server https://alberto.app/api 'status' '{}'
-{_
-    0: 1,
-    1: "AbciModule(many-ledger)",
-    2: h'a5010103270481022006215820e5cd546d5292af5d9f0ffd54b57ff555c51b91a249b9cf544010a3c01cfa75a2',
-    3: 10000_1(h'01378dd9916915fb276116ff4bc13c04a4e413f663e04b710199c46021'),
-    4: [0, 1, 2, 4, 6, 8, 9, 1002_1],
-    5: "0.1.0",
-    7: 300_1,
-}
+# Clippy
+$ bazel build --config=clippy //...
 ```
 
-# Contributing
+## Generating new keys
+### ECDSA
+```shell
+$ ssh-keygen -a 100 -q -P "" -m pkcs8 -t ecdsa -f key_name.pem
+```
 
-1. Read our [Contributing Guidelines](https://github.com/liftedinit/.github/blob/main/docs/CONTRIBUTING.md)
-2. Fork the project (https://github.com/liftedinit/many-rs/fork)
-3. Create a feature branch (`git checkout -b feature/fooBar`)
-4. Commit your changes (`git commit -am 'Add some fooBar'`)
-5. Push to the branch (`git push origin feature/fooBar`)
-6. Create a new Pull Request (https://github.com/liftedinit/many-rs/pull/new)
+### Ed25519
+```shell
+# Requires openssl@3 on macOS
+$ openssl genpkey -algorithm Ed25519 -out key_name.pem
+```
+
+## References
+
+- Concise Binary Object Representation (CBOR): [RFC 8949](https://www.rfc-editor.org/rfc/rfc8949.html)
+- CBOR Object Signing and Encryption (COSE): [RFC 8152](https://datatracker.ietf.org/doc/html/rfc8152)
+- Platform-independent API to cryptographic tokens: [PKCS #11](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html)
+- Blockchain application platform: [Tendermint](https://docs.tendermint.com/master/)
+- Persistent key-value store: [RocksDB](https://rocksdb.org/)
+- Concise Binary Object Representation (CBOR): [RFC 8949](https://www.rfc-editor.org/rfc/rfc8949.html)
+- CBOR Object Signing and Encryption (COSE): [RFC 8152](https://datatracker.ietf.org/doc/html/rfc8152)
+- Platform-independent API to cryptographic tokens: [PKCS #11](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html)
+
+
+## Tools
+
+- CBOR playground: [CBOR.me](https://cbor.me)
+- CBOR diagnostic utilities: [cbor-diag](https://github.com/cabo/cbor-diag)
+- Software Hardware Security Module (HSM): [SoftHSM2](https://github.com/opendnssec/SoftHSMv2)
+- Bash automated testing system: [bats-core](https://github.com/bats-core/bats-core)
+- Container engine: [Docker](https://www.docker.com/)
+- The MANY libraries: [many-rs](https://github.com/liftedinit/many-rs)

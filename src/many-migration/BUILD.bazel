@@ -1,6 +1,11 @@
 load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test_suite")
 
+package(default_visibility = [
+    "//src/many-abci:__subpackages__",
+    "//src/many-ledger:__subpackages__",
+])
+
 rust_library(
     name = "many-migration",
     srcs = glob(include = ["src/**/*.rs"]),
@@ -9,8 +14,11 @@ rust_library(
     ),
     deps = all_crate_deps(
         normal = True,
-    ),
+    ) + [
+        "//src/many-error",
+    ],
 )
+
 rust_library(
     name = "many-migration-for-test",
     srcs = glob(include = ["src/**/*.rs"]),
@@ -23,7 +31,9 @@ rust_library(
     deps = all_crate_deps(
         normal = True,
         normal_dev = True,
-    ),
+    ) + [
+        "//src/many-error",
+    ],
 )
 
 rust_test_suite(

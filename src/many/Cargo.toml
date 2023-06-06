@@ -1,6 +1,6 @@
 [package]
 name = "many"
-version = "0.1.0"
+version = "0.1.1" # managed by release.sh
 edition = "2021"
 description = "CLI tool to communicate with the MANY protocol network."
 license-file = "../../LICENSE"
@@ -13,28 +13,30 @@ name = "many"
 path = "src/main.rs"
 
 [dependencies]
-many-client = { path = "../many-client", version = "0.1.0" }
-many-error = { path = "../many-error", version = "0.1.0" }
-many-identity = { path = "../many-identity", version = "0.1.0", features = ["coset"] }
-many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.0", features = ["ecdsa", "ed25519"] }
-many-identity-hsm = { path = "../many-identity-hsm", version = "0.1.0" }
-many-mock = { path = "../many-mock", version = "0.1.0" }
-many-modules = { path = "../many-modules", version = "0.1.0" }
-many-protocol = { path = "../many-protocol", version = "0.1.0" }
-many-types = { path = "../many-types", version = "0.1.0" }
-many-server = { path = "../many-server", version = "0.1.0" }
+many-cli-helpers = { path = "../many-cli-helpers", version = "0.1.1" } # managed by release.sh
+many-client = { path = "../many-client", version = "0.1.1" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.1" } # managed by release.sh
+many-identity = { path = "../many-identity", features = ["coset"], version = "0.1.1" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa", "ed25519"], version = "0.1.1" } # managed by release.sh
+many-identity-hsm = { path = "../many-identity-hsm", version = "0.1.1" } # managed by release.sh
+many-identity-webauthn = { path = "../many-identity-webauthn", features = ["identity"], version = "0.1.1" } # managed by release.sh
+many-mock = { path = "../many-mock", version = "0.1.1" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.1.1" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.1" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.1" } # managed by release.sh
+many-server = { path = "../many-server", version = "0.1.1" } # managed by release.sh
 anyhow = "1.0.57"
 async-recursion = "1.0"
 atty = "0.2.14"
-base64 = "0.13.0"
+base64 = "0.21.0"
 cbor-diag = "0.1.9"
-clap = { version = "3.0.14", features = [ "derive" ] }
+clap = { version = "3.2.23", features = [ "derive" ] }
 coset = "0.3"
 hex = "0.4.3"
-minicbor = { version = "0.18.0", features = ["derive", "half", "std"] }
+minicbor = { version = "0.19.1", features = ["derive", "half", "std"] }
 rand = "0.8.5"
-rpassword = "6.0"
+rpassword = "7.2.0"
 tracing = "0.1.29"
 tracing-subscriber = "0.3.15"
-tokio = { version = "1.12.0", features = [ "full" ] }
+tokio = { version = "1.24.1", features = [ "full" ] }
 url = "2.2.2"

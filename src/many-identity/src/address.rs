@@ -24,15 +24,19 @@ pub type PublicKeyHash = [u8; SHA_OUTPUT_SIZE];
 #[must_use]
 pub struct SubresourceId(pub(crate) u32);
 
+impl SubresourceId {
+    /// The discriminant for an address with this subresource ID.
+    /// This will be in the range of 0x80..=0xFF.
+    pub const fn discriminant(&self) -> u8 {
+        0x80 + ((self.0 & 0x7F00_0000) >> 24) as u8
+    }
+}
+
 impl TryInto<SubresourceId> for i16 {
     type Error = ManyError;
 
     fn try_into(self) -> Result<SubresourceId, Self::Error> {
-        if self < 0 {
-            Err(ManyError::invalid_identity_subid())
-        } else {
-            Ok(SubresourceId(self as u32))
-        }
+        (self as i32).try_into()
     }
 }
 
@@ -93,17 +97,32 @@ impl From<SubresourceId> for u32 {
 pub struct Address(InnerAddress);
 
 impl Address {
+    pub const ANONYMOUS: Self = Self::anonymous();
+    pub const ILLEGAL: Self = Self::illegal();
+
+    #[inline]
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, ManyError> {
         InnerAddress::try_from(bytes).map(Self)
     }
 
+    #[inline]
     pub const fn anonymous() -> Self {
         Self(InnerAddress::anonymous())
     }
 
     #[inline]
+    pub const fn illegal() -> Self {
+        Self(InnerAddress::illegal())
+    }
+
+    #[inline]
     pub const fn is_anonymous(&self) -> bool {
         self.0.is_anonymous()
+    }
+
+    #[inline]
+    pub const fn is_illegal(&self) -> bool {
+        self.0.is_illegal()
     }
 
     #[inline]
@@ -126,16 +145,28 @@ impl Address {
         &self,
         subid: I,
     ) -> Result<Self, ManyError> {
-        Ok(self.with_subresource_id_unchecked(subid.try_into()?))
+        if let Some(h) = self.0.hash() {
+            Ok(Self(InnerAddress::subresource_unchecked(
+                h,
+                subid.try_into()?,
+            )))
+        } else {
+            Err(ManyError::invalid_identity_kind(self.0.bytes[0]))
+        }
     }
 
     #[inline]
-    pub const fn with_subresource_id_unchecked(&self, subid: SubresourceId) -> Self {
+    pub fn into_public_key(self) -> Result<Self, ManyError> {
         if let Some(h) = self.0.hash() {
-            Self(InnerAddress::subresource_unchecked(h, subid))
+            Ok(Self::public_key_unchecked(h))
         } else {
-            Self::anonymous()
+            Err(ManyError::invalid_identity_kind(self.0.bytes[0]))
         }
+    }
+
+    #[inline]
+    pub fn public_key(&self) -> Result<Self, ManyError> {
+        (*self).into_public_key()
     }
 
     #[inline]
@@ -150,7 +181,7 @@ impl Address {
 
     #[inline]
     pub const fn can_be_dest(&self) -> bool {
-        self.is_public_key() || self.is_subresource()
+        self.is_public_key() || self.is_subresource() || self.is_illegal()
     }
 
     #[inline]
@@ -168,6 +199,8 @@ impl Address {
     pub fn matches(&self, other: &Address) -> bool {
         if self.is_anonymous() {
             other.is_anonymous()
+        } else if self.is_illegal() {
+            other.is_illegal()
         } else {
             // Extract public key hash of both.
             self.0.hash() == other.0.hash()
@@ -184,7 +217,7 @@ impl Address {
     /// many-identity-dsa) or in the testing utilities available here to create
     /// a bogus address.
     #[inline(always)]
-    pub fn public_key_unchecked(hash: PublicKeyHash) -> Self {
+    pub(crate) const fn public_key_unchecked(hash: PublicKeyHash) -> Self {
         Self(InnerAddress::public_key(hash))
     }
 }
@@ -219,6 +252,8 @@ impl Debug for Address {
         f.debug_tuple("Identity")
             .field(&if self.is_anonymous() {
                 "anonymous".to_string()
+            } else if self.is_illegal() {
+                "illegal".to_string()
             } else if self.is_public_key() {
                 "public-key".to_string()
             } else if self.is_subresource() {
@@ -255,6 +290,14 @@ impl TryFrom<String> for Address {
     type Error = ManyError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
+        InnerAddress::try_from(value.as_str()).map(Self)
+    }
+}
+
+impl TryFrom<&str> for Address {
+    type Error = ManyError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         InnerAddress::try_from(value).map(Self)
     }
 }
@@ -281,23 +324,34 @@ struct InnerAddress {
     bytes: [u8; MAX_IDENTITY_BYTE_LEN],
 }
 
+const DISCRIMINANT_ANONYMOUS: u8 = 0;
+const DISCRIMINANT_PUBLIC_KEY: u8 = 1;
+const DISCRIMINANT_ILLEGAL: u8 = 2;
+// DISCRIMINANT_SUBRESOURCE_ID is useless here as it cannot be used in pattern matching.
+
 // Identity needs to be bound to 32 bytes maximum.
 static_assertions::assert_eq_size!([u8; MAX_IDENTITY_BYTE_LEN], InnerAddress);
-static_assertions::const_assert_eq!(InnerAddress::anonymous().to_byte_array()[0], 0);
+const _1: () = assert!(InnerAddress::anonymous().to_byte_array()[0] == DISCRIMINANT_ANONYMOUS);
+const _2: () = assert!(InnerAddress::illegal().to_byte_array()[0] == DISCRIMINANT_ILLEGAL);
 
 impl PartialEq for InnerAddress {
     fn eq(&self, other: &Self) -> bool {
-        match (&self.bytes[0], &other.bytes[0]) {
+        match (self.bytes[0], other.bytes[0]) {
             // Anonymous
-            (0, 0) => true,
+            (DISCRIMINANT_ANONYMOUS, DISCRIMINANT_ANONYMOUS) => true,
 
             // Public Key
-            (1, 1) => self.bytes[1..=SHA_OUTPUT_SIZE] == other.bytes[1..=SHA_OUTPUT_SIZE],
+            (DISCRIMINANT_PUBLIC_KEY, DISCRIMINANT_PUBLIC_KEY) => {
+                self.bytes[1..=SHA_OUTPUT_SIZE] == other.bytes[1..=SHA_OUTPUT_SIZE]
+            }
 
-            // Subresource
+            // Illegal
+            (DISCRIMINANT_ILLEGAL, DISCRIMINANT_ILLEGAL) => true,
+
+            // Subresource.
             (x @ 0x80..=0xFF, y @ 0x80..=0xFF) if x == y => self.bytes[1..] == other.bytes[1..],
 
-            // Anything else if by default inequal.
+            // Anything else is by default inequal.
             (_, _) => false,
         }
     }
@@ -312,13 +366,19 @@ impl Default for InnerAddress {
 impl InnerAddress {
     pub const fn anonymous() -> Self {
         Self {
-            bytes: [0; MAX_IDENTITY_BYTE_LEN],
+            bytes: [DISCRIMINANT_ANONYMOUS; MAX_IDENTITY_BYTE_LEN],
+        }
+    }
+
+    pub const fn illegal() -> Self {
+        Self {
+            bytes: [DISCRIMINANT_ILLEGAL; MAX_IDENTITY_BYTE_LEN],
         }
     }
 
     pub const fn public_key(hash: [u8; SHA_OUTPUT_SIZE]) -> Self {
         let mut bytes = [0; MAX_IDENTITY_BYTE_LEN];
-        bytes[0] = 1;
+        bytes[0] = DISCRIMINANT_PUBLIC_KEY;
         let mut len = SHA_OUTPUT_SIZE;
         while len > 0 {
             len -= 1;
@@ -331,14 +391,14 @@ impl InnerAddress {
         hash: [u8; SHA_OUTPUT_SIZE],
         id: SubresourceId,
     ) -> Self {
-        let id = id.0;
-
         // Get a public key and add the resource id.
         let mut bytes = Self::public_key(hash).bytes;
-        bytes[0] = 0x80 + ((id & 0x7F00_0000) >> 24) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 1)] = ((id & 0x00FF_0000) >> 16) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 2)] = ((id & 0x0000_FF00) >> 8) as u8;
-        bytes[(SHA_OUTPUT_SIZE + 3)] = (id & 0x0000_00FF) as u8;
+        bytes[0] = id.discriminant();
+
+        let id = id.0;
+        bytes[SHA_OUTPUT_SIZE + 1] = ((id & 0x00FF_0000) >> 16) as u8;
+        bytes[SHA_OUTPUT_SIZE + 2] = ((id & 0x0000_FF00) >> 8) as u8;
+        bytes[SHA_OUTPUT_SIZE + 3] = (id & 0x0000_00FF) as u8;
         Self { bytes }
     }
 
@@ -349,20 +409,27 @@ impl InnerAddress {
         }
 
         match bytes[0] {
-            0 => {
+            DISCRIMINANT_ANONYMOUS => {
                 if bytes.len() > 1 {
                     Err(ManyError::invalid_identity())
                 } else {
                     Ok(Self::anonymous())
                 }
             }
-            1 => {
+            DISCRIMINANT_PUBLIC_KEY => {
                 if bytes.len() != 29 {
                     Err(ManyError::invalid_identity())
                 } else {
                     let mut slice = [0; 28];
                     slice.copy_from_slice(&bytes[1..29]);
                     Ok(Self::public_key(slice))
+                }
+            }
+            DISCRIMINANT_ILLEGAL => {
+                if bytes.len() > 1 {
+                    Err(ManyError::invalid_identity())
+                } else {
+                    Ok(Self::illegal())
                 }
             }
             hi @ 0x80..=0xff => {
@@ -398,7 +465,8 @@ impl InnerAddress {
             Ok(Self::anonymous())
         } else {
             let data = &value[..value.len() - 2][1..];
-            let data = base32::decode(base32::Alphabet::RFC4648 { padding: false }, data).unwrap();
+            let data = base32::decode(base32::Alphabet::RFC4648 { padding: false }, data)
+                .ok_or_else(ManyError::invalid_identity)?;
             let result = Self::try_from(data.as_slice())?;
 
             if result.to_string() != value {
@@ -418,17 +486,18 @@ impl InnerAddress {
         // This makes sure we actually have a Vec<u8> that's smaller than 32 bytes if
         // it can be.
         match self.bytes[0] {
-            0 => vec![0],
-            1 => {
+            DISCRIMINANT_ANONYMOUS => vec![DISCRIMINANT_ANONYMOUS],
+            DISCRIMINANT_PUBLIC_KEY => {
                 let pk = &self.bytes[1..=SHA_OUTPUT_SIZE];
                 vec![
-                    1,
+                    DISCRIMINANT_PUBLIC_KEY,
                     pk[ 0], pk[ 1], pk[ 2], pk[ 3], pk[ 4], pk[ 5], pk[ 6], pk[ 7],
                     pk[ 8], pk[ 9], pk[10], pk[11], pk[12], pk[13], pk[14], pk[15],
                     pk[16], pk[17], pk[18], pk[19], pk[20], pk[21], pk[22], pk[23],
                     pk[24], pk[25], pk[26], pk[27],
                 ]
             }
+            DISCRIMINANT_ILLEGAL => vec![DISCRIMINANT_ILLEGAL],
             0x80..=0xFF => {
                 self.bytes.to_vec()
             }
@@ -437,10 +506,13 @@ impl InnerAddress {
     }
 
     pub const fn is_anonymous(&self) -> bool {
-        self.bytes[0] == 0
+        self.bytes[0] == DISCRIMINANT_ANONYMOUS
+    }
+    pub const fn is_illegal(&self) -> bool {
+        self.bytes[0] == DISCRIMINANT_ILLEGAL
     }
     pub const fn is_public_key(&self) -> bool {
-        self.bytes[0] == 1
+        self.bytes[0] == DISCRIMINANT_PUBLIC_KEY
     }
     pub const fn is_subresource(&self) -> bool {
         matches!(self.bytes[0], 0x80..=0xFF)
@@ -500,11 +572,11 @@ impl std::fmt::Display for InnerAddress {
     }
 }
 
-impl TryFrom<String> for InnerAddress {
+impl TryFrom<&str> for InnerAddress {
     type Error = ManyError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        InnerAddress::from_str(value.as_str())
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        InnerAddress::from_str(value)
     }
 }
 
@@ -518,6 +590,7 @@ impl TryFrom<&[u8]> for InnerAddress {
 
 #[cfg(test)]
 pub mod tests {
+    use super::DISCRIMINANT_ANONYMOUS;
     use crate::testing::identity;
     use crate::Address;
     use serde_test::{assert_tokens, Configure, Token};
@@ -538,6 +611,16 @@ pub mod tests {
     }
 
     #[test]
+    fn eq() {
+        assert_eq!(Address::from_str("maa").unwrap(), "maa");
+        assert_eq!(
+            Address::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys").unwrap(),
+            "mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys"
+        );
+        assert_eq!(Address::illegal(), "maiyg");
+    }
+
+    #[test]
     fn byte_array_conversion() {
         let a = Address::anonymous();
         let b = identity(1);
@@ -554,6 +637,18 @@ pub mod tests {
     }
 
     #[test]
+    fn into_public_key() {
+        let a =
+            Address::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap();
+
+        assert!(!a.is_public_key());
+        let b = a.into_public_key().unwrap();
+        assert!(b.is_public_key());
+        assert!(Address::anonymous().into_public_key().is_err());
+        assert!(Address::illegal().into_public_key().is_err());
+    }
+
+    #[test]
     fn textual_format_1() {
         let a = Address::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys").unwrap();
         let b = Address::from_bytes(
@@ -561,6 +656,8 @@ pub mod tests {
         )
         .unwrap();
 
+        assert!(a.is_public_key());
+        assert!(b.is_public_key());
         assert_eq!(a, b);
     }
 
@@ -574,6 +671,37 @@ pub mod tests {
         )
         .unwrap();
 
+        assert!(a.is_subresource());
+        assert!(b.is_subresource());
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn neq_textual_format_1() {
+        let a = Address::from_str("mahek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqys").unwrap();
+        let b =
+            Address::from_str("mqdek5lid7ek7ckhq7j77nfwgk3vkspnyppm2u467ne5mwiqaaaaqim").unwrap();
+
+        assert_ne!(a, b);
+        assert_eq!(a, b.into_public_key().unwrap());
+    }
+
+    #[test]
+    fn textual_format_anonymous() {
+        let a = Address::from_str("maa").unwrap();
+        assert!(a.is_anonymous());
+        let b = Address::from_str("maaaa").unwrap();
+        assert!(b.is_anonymous());
+        let c = Address::from_bytes(&hex::decode("00").unwrap()).unwrap();
+        assert_eq!(a, b);
+        assert_eq!(b, c);
+    }
+
+    #[test]
+    fn textual_format_illegal() {
+        let a = Address::from_str("maiyg").unwrap();
+        assert!(a.is_illegal());
+        let b = Address::from_bytes(&hex::decode("02").unwrap()).unwrap();
         assert_eq!(a, b);
     }
 
@@ -594,8 +722,44 @@ pub mod tests {
         )
         .unwrap();
 
+        assert!(a.is_subresource());
+        assert!(b.is_subresource());
+        assert!(c.is_subresource());
+
         assert_eq!(a, b);
         assert_eq!(b.with_subresource_id(2).unwrap(), c);
+
+        assert_eq!(a.subresource_id(), Some(1));
+        assert_eq!(b.subresource_id(), Some(1));
+        assert_eq!(c.subresource_id(), Some(2));
+    }
+
+    #[test]
+    fn subresource_id() {
+        let a = Address::from_bytes(
+            &hex::decode("81c8aead03f915f128f0fa7ff696c656eaa93db87bd9aa73df693acb22234567")
+                .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(a.subresource_id(), Some(0x01234567));
+        assert_eq!(a.public_key().unwrap().subresource_id(), None);
+        assert_eq!(Address::anonymous().subresource_id(), None);
+        assert_eq!(Address::illegal().subresource_id(), None);
+    }
+
+    #[test]
+    fn matches() {
+        let a =
+            Address::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap();
+        let b = a.public_key().unwrap();
+
+        assert_ne!(a, b);
+        assert!(a.matches(&b));
+        assert!(b.matches(&a));
+
+        assert!(!Address::anonymous().matches(&a));
+        assert!(!Address::illegal().matches(&a));
     }
 
     proptest::proptest! {
@@ -618,7 +782,7 @@ pub mod tests {
     fn serde_anonymous() {
         let id = Address::anonymous();
         assert_tokens(&id.readable(), &[Token::String("maa")]);
-        assert_tokens(&id.compact(), &[Token::Bytes(&[0])]);
+        assert_tokens(&id.compact(), &[Token::Bytes(&[DISCRIMINANT_ANONYMOUS])]);
     }
 
     #[test]
@@ -626,5 +790,11 @@ pub mod tests {
         assert!(Address::from_str("m").is_err());
         assert!(Address::from_str("ma").is_err());
         assert!(Address::from_str("maa").is_ok());
+        assert!(Address::from_str("maaa").is_err());
+        assert!(Address::from_str("maaaa").is_ok());
+        assert!(Address::from_str(
+            "maa010203040506070809101112131415161718192021222324252627282930"
+        )
+        .is_err());
     }
 }

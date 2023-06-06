@@ -2,7 +2,7 @@ use crate::events;
 use many_types::SortOrder;
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Debug, Encode, Decode, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Encode, Decode, Eq, PartialEq)]
 #[cbor(map)]
 pub struct ListArgs {
     #[n(0)]

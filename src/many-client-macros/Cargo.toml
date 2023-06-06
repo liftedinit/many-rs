@@ -1,7 +1,12 @@
 [package]
 name = "many-client-macros"
-version = "0.1.0"
+version = "0.1.1" # managed by release.sh
 edition = "2021"
+description = "`many-client` procedural macro."
+license-file = "../../LICENSE"
+homepage = "https://liftedinit.org/"
+repository = "https://github.com/liftedinit/many-rs.git"
+authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,6 +14,6 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-syn = "1.0"
-quote = "1.0"
-proc-macro2 = "1.0"
+syn = { version = "2.0.12", features = ["full", "extra-traits"] }
+quote = "1.0.26"
+proc-macro2 = "1.0.54"

@@ -1,6 +1,15 @@
 [workspace]
+resolver = "2"
+
 members = [
+    "src/http_proxy",
+    "src/idstore-export",
+    "src/kvstore",
+    "src/ledger",
+    "src/ledger-db",
     "src/many",
+    "src/many-abci",
+    "src/many-cli-helpers",
     "src/many-client",
     "src/many-client-macros",
     "src/many-error",
@@ -8,6 +17,10 @@ members = [
     "src/many-identity-dsa",
     "src/many-identity-hsm",
     "src/many-identity-webauthn",
+    "src/many-kvstore",
+    "src/many-ledger",
+    "src/many-ledger/test-macros",
+    "src/many-ledger/test-utils",
     "src/many-macros",
     "src/many-migration",
     "src/many-mock",
@@ -16,3 +29,16 @@ members = [
     "src/many-server",
     "src/many-types",
 ]
+
+[profile.release]
+strip = true  # Strip debug info from release build
+lto = true  # Perform "fat" LTO
+codegen-units = 1 # Improve the performance of the generated code at the cost of compile time
+incremental = false
+
+[profile.dev]
+incremental = false
+
+[patch.crates-io]
+ciborium = { git = "https://github.com/enarx/ciborium", rev = "2ca375e6b33d1ade5a5798792278b35a807b748e" }
+ciborium-io = { git = "https://github.com/enarx/ciborium", rev = "2ca375e6b33d1ade5a5798792278b35a807b748e" }

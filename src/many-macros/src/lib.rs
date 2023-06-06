@@ -6,7 +6,7 @@ use serde_tokenstream::from_tokenstream;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{FnArg, Pat, PatType, ReturnType, Token, TraitItem, TraitItemMethod, Type, TypePath};
+use syn::{FnArg, Pat, PatType, ReturnType, Token, TraitItem, TraitItemFn, Type, TypePath};
 
 #[derive(Deserialize)]
 struct ManyModuleAttributes {
@@ -82,12 +82,13 @@ struct Endpoint {
     pub is_mut: bool,
     pub sender: Option<(Box<Pat>, Box<Type>)>,
     pub arg: Option<(Box<Pat>, Box<Type>)>,
+    pub context: Option<(Box<Pat>, Box<Type>)>,
     pub ret_type: Box<Type>,
     pub block: Option<syn::Block>,
 }
 
 impl Endpoint {
-    pub fn new(item: &TraitItemMethod) -> syn::Result<Self> {
+    pub fn new(item: &TraitItemFn) -> syn::Result<Self> {
         let signature = &item.sig;
 
         let func = signature.ident.clone();
@@ -95,6 +96,7 @@ impl Endpoint {
         let is_async = signature.asyncness.is_some();
 
         let sender: Option<(Box<Pat>, Box<Type>)>;
+        let context: Option<(Box<Pat>, Box<Type>)>;
         let arg: Option<(Box<Pat>, Box<Type>)>;
         let mut ret_type: Option<Box<Type>> = None;
 
@@ -116,8 +118,9 @@ impl Endpoint {
 
         let maybe_identity = inputs.next();
         let maybe_argument = inputs.next();
+        let maybe_context = inputs.next();
 
-        match (maybe_identity, maybe_argument) {
+        match (maybe_identity, maybe_argument, maybe_context) {
             (
                 Some(FnArg::Typed(PatType {
                     ty: id_ty,
@@ -125,22 +128,43 @@ impl Endpoint {
                     ..
                 })),
                 Some(FnArg::Typed(PatType { ty, pat, .. })),
+                Some(FnArg::Typed(PatType {
+                    ty: ctx_ty,
+                    pat: ctx_pat,
+                    ..
+                })),
             ) => {
                 sender = Some((id_pat.clone(), id_ty.clone()));
                 arg = Some((pat.clone(), ty.clone()));
+                context = Some((ctx_pat.clone(), ctx_ty.clone()));
             }
-            (Some(FnArg::Typed(PatType { ty, pat, .. })), None) => {
+            (
+                Some(FnArg::Typed(PatType {
+                    ty: id_ty,
+                    pat: id_pat,
+                    ..
+                })),
+                Some(FnArg::Typed(PatType { ty, pat, .. })),
+                None,
+            ) => {
+                sender = Some((id_pat.clone(), id_ty.clone()));
+                arg = Some((pat.clone(), ty.clone()));
+                context = None;
+            }
+            (Some(FnArg::Typed(PatType { ty, pat, .. })), None, None) => {
                 sender = None;
                 arg = Some((pat.clone(), ty.clone()));
+                context = None;
             }
-            (None, None) => {
+            (None, None, None) => {
                 sender = None;
                 arg = None;
+                context = None;
             }
-            (_, _) => {
+            (_, _, _) => {
                 return Err(syn::Error::new(
                     signature.span(),
-                    "Must have 2 or 3 arguments".to_string(),
+                    "Must have 2, 3, or 4 arguments".to_string(),
                 ));
             }
         }
@@ -175,7 +199,7 @@ impl Endpoint {
             .attrs
             .clone()
             .into_iter()
-            .partition(|attr| attr.path.is_ident("many"));
+            .partition(|attr| attr.path().is_ident("many"));
 
         let metadata =
             meta_attrs
@@ -194,6 +218,7 @@ impl Endpoint {
             name,
             func,
             span: signature.span(),
+            context,
             is_async,
             is_mut,
             sender,
@@ -213,6 +238,7 @@ impl Endpoint {
             is_mut,
             sender,
             arg,
+            context,
             ret_type,
             block,
             ..
@@ -246,9 +272,15 @@ impl Endpoint {
             quote! {}
         };
 
+        let context = if let Some((name, ty)) = context {
+            quote! {, #name: #ty}
+        } else {
+            quote! {}
+        };
+
         quote! {
             #(#attributes)*
-            #a fn #func(#s #sender #arg) -> #ret_type #block
+            #a fn #func(#s #sender #arg #context) -> #ret_type #block
         }
     }
 
@@ -314,28 +346,59 @@ impl Endpoint {
             quote! { let backend = self.backend.lock().unwrap(); }
         };
 
-        let call = match (self.sender.is_some(), self.arg.is_some(), self.is_async) {
-            (false, true, false) => {
+        let call = match (
+            self.sender.is_some(),
+            self.arg.is_some(),
+            self.is_async,
+            self.context.is_some(),
+        ) {
+            (false, true, false, false) => {
                 quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ) ) }
             }
-            (false, true, true) => {
+            (false, true, true, false) => {
                 quote_spanned! { span => encode( backend . #ep_ident ( decode( data )? ).await ) }
             }
-            (true, true, false) => {
+            (true, true, false, false) => {
                 quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )? ) ) }
             }
-            (true, true, true) => {
+            (true, true, true, false) => {
                 quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )? ).await ) }
             }
-            (false, false, false) => quote_spanned! { span => encode( backend . #ep_ident ( ) ) },
-            (false, false, true) => {
+            (false, false, false, false) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( ) ) }
+            }
+            (false, false, true, false) => {
                 quote_spanned! { span => encode( backend . #ep_ident ( ).await ) }
             }
-            (true, false, false) => {
+            (true, false, false, false) => {
                 quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default() ) ) }
             }
-            (true, false, true) => {
+            (true, false, true, false) => {
                 quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default() ).await ) }
+            }
+            (false, true, false, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( decode( data )?, ctx ) ) }
+            }
+            (false, true, true, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( decode( data )?, ctx ).await ) }
+            }
+            (true, true, false, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )?, ctx ) ) }
+            }
+            (true, true, true, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), decode( data )?, ctx ).await ) }
+            }
+            (false, false, false, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( ctx ) ) }
+            }
+            (false, false, true, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( ctx ).await ) }
+            }
+            (true, false, false, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), ctx ) ) }
+            }
+            (true, false, true, true) => {
+                quote_spanned! { span => encode( backend . #ep_ident ( &message.from.unwrap_or_default(), ctx ).await ) }
             }
         };
 
@@ -379,11 +442,11 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             .map_or_else(|| attr.span(), |_| tr.ident.span()),
     );
 
-    let vis = tr.vis.clone();
+    let vis = tr.vis;
     let trait_ident = if attrs.name.is_none() {
         Ident::new(&format!("{struct_name}Backend"), tr.ident.span())
     } else {
-        tr.ident.clone()
+        tr.ident
     };
 
     let attr_id = attrs.id.iter();
@@ -398,7 +461,7 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
         .items
         .iter()
         .filter_map(|item| {
-            if let TraitItem::Method(m) = item {
+            if let TraitItem::Fn(m) = item {
                 Some(Endpoint::new(m))
             } else {
                 None
@@ -455,7 +518,12 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             &self,
             message: many_protocol::RequestMessage,
         ) -> Result<many_protocol::ResponseMessage, many_error::ManyError> {
-            use many_error::ManyError;
+            use {
+                async_channel::unbounded,
+                many_error::ManyError,
+                many_protocol::context::{Context, ProofResult},
+                many_types::PROOF
+            };
             fn decode<'a, T: minicbor::Decode<'a, ()>>(data: &'a [u8]) -> Result<T, ManyError> {
                 minicbor::decode(data).map_err(|e| ManyError::deserialization_error(e.to_string()))
             }
@@ -464,17 +532,27 @@ fn many_module_impl(attr: &TokenStream, item: TokenStream) -> Result<TokenStream
             }
 
             let data = message.data.as_slice();
+            let (transmitter, receiver) = unbounded();
+            let ctx = Context::new(message.clone(), transmitter);
             let result = match message.method.as_str() {
                 #( #execute_endpoint_pat )*
 
                 _ => Err(ManyError::internal_server_error()),
             }?;
 
-            Ok( many_protocol::ResponseMessage::from_request(
-                &message,
-                &message.to,
-                Ok(result),
-            ))
+            Ok(if message.attributes.contains(&PROOF) {
+                many_protocol::ResponseMessage::from_request(
+                    &message,
+                    &message.to,
+                    Ok(result),
+                ).with_attributes(receiver.recv().await.map_err(|e| ManyError::unknown(e.to_string()))?.into_iter().collect::<Result<Vec<_>, _>>()?)
+            } else {
+                many_protocol::ResponseMessage::from_request(
+                    &message,
+                    &message.to,
+                    Ok(result),
+                )
+            })
         }
     };
 

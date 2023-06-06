@@ -16,9 +16,47 @@ pub mod identity {
     pub use many_identity::*;
 }
 pub mod ledger;
+pub mod memo;
+pub mod proof;
 
-use crate::attributes::AttributeId;
+use attributes::AttributeId;
 pub use either::Either;
+pub use memo::Memo;
+pub use proof::{ProofOperation, PROOF};
+
+pub mod legacy {
+    pub use crate::memo::DataLegacy;
+    pub use crate::memo::MemoLegacy;
+}
+
+/// A simple macro to create CBOR types. This only covers a few cases but will
+/// save a lot of boilerplate for those cases. Any use case that isn't covered
+/// by this macro should simply be implemented on its own.
+/// TODO: the next step to improve this is to have a proc_macro that reads the
+///       CDDL directly.
+#[macro_export]
+macro_rules! cbor_type_decl {
+    (
+        $(
+            $vis: vis struct $name: ident {
+                $(
+                    $($tag: ident)* $fidx: literal => $fname: ident: $ftype: ty
+                ),+ $(,)?
+            }
+        )*
+    ) => {
+        $(
+            #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+            #[cfg_attr(feature = "cucumber", derive(Default))]
+            #[cbor(map)]
+            $vis struct $name {
+                $(
+                    #[n( $fidx )] pub $fname: $ftype,
+                )+
+            }
+        )*
+    };
+}
 
 /// A deterministic (fixed point) percent value that can be multiplied with
 /// numbers and rounded down.
@@ -434,35 +472,6 @@ impl AttributeRelatedIndex {
 
     pub fn flattened(&self) -> Vec<u32> {
         [&[self.attribute], self.indices()].concat().to_vec()
-    }
-}
-
-impl const From<[u32; 1]> for AttributeRelatedIndex {
-    fn from(arr: [u32; 1]) -> Self {
-        AttributeRelatedIndex::new(arr[0])
-    }
-}
-
-impl const From<[u32; 2]> for AttributeRelatedIndex {
-    fn from(arr: [u32; 2]) -> Self {
-        AttributeRelatedIndex::new(arr[0]).with_index(arr[1])
-    }
-}
-
-impl const From<[u32; 3]> for AttributeRelatedIndex {
-    fn from(arr: [u32; 3]) -> Self {
-        AttributeRelatedIndex::new(arr[0])
-            .with_index(arr[1])
-            .with_index(arr[2])
-    }
-}
-
-impl const From<[u32; 4]> for AttributeRelatedIndex {
-    fn from(arr: [u32; 4]) -> Self {
-        AttributeRelatedIndex::new(arr[0])
-            .with_index(arr[1])
-            .with_index(arr[2])
-            .with_index(arr[3])
     }
 }
 

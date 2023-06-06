@@ -1,4 +1,4 @@
-use crate::Percent;
+use crate::{cbor::CborNull, cbor_type_decl, Either, Percent};
 use many_identity::Address;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
@@ -6,11 +6,17 @@ use num_bigint::{BigInt, BigUint};
 use num_traits::Num;
 use serde::de::Unexpected;
 use serde::Deserialize;
+use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
 
 /// A Symbol is represented by a non-anonymous identity.
 pub type Symbol = Address;
+
+/// A map of owners => tokens.
+pub type LedgerTokensAddressMap = BTreeMap<Address, TokenAmount>;
+
+pub type TokenMaybeOwner = Either<Address, CborNull>;
 
 /// Transaction fees.
 #[derive(Default, Clone, Encode, Decode)]
@@ -76,36 +82,93 @@ impl std::ops::Mul<Percent> for TokenAmount {
     }
 }
 
-macro_rules! op_impl {
-    ( $( $t: ty )* ) => {
-        $(
-            impl std::ops::Add<$t> for TokenAmount {
-                type Output = TokenAmount;
-                fn add(self, rhs: $t) -> Self::Output { Self(self.0 + Into::<BigUint>::into(rhs)) }
-            }
+impl<T: Into<BigUint>> std::ops::Add<T> for TokenAmount {
+    type Output = TokenAmount;
 
-            impl std::ops::Sub<$t> for TokenAmount {
-                type Output = TokenAmount;
-                fn sub(self, rhs: $t) -> Self::Output { Self(self.0 - Into::<BigUint>::into(rhs)) }
-            }
+    fn add(self, rhs: T) -> Self::Output {
+        Self(self.0 + rhs.into())
+    }
+}
 
-            impl std::ops::Mul<$t> for TokenAmount {
-                type Output = TokenAmount;
-                fn mul(self, rhs: $t) -> Self::Output { Self(self.0 * Into::<BigUint>::into(rhs)) }
-            }
+impl<T: Into<BigUint>> std::ops::Sub<T> for TokenAmount {
+    type Output = TokenAmount;
 
-            impl std::ops::AddAssign<$t> for TokenAmount {
-                fn add_assign(&mut self, rhs: $t) { self.0 += Into::<BigUint>::into(rhs); }
-            }
+    fn sub(self, rhs: T) -> Self::Output {
+        Self(self.0 - rhs.into())
+    }
+}
 
-            impl std::ops::SubAssign<$t> for TokenAmount {
-                fn sub_assign(&mut self, rhs: $t) { self.0 -= Into::<BigUint>::into(rhs); }
-            }
+impl<T: Into<BigUint>> std::ops::Mul<T> for TokenAmount {
+    type Output = TokenAmount;
 
-            impl std::ops::MulAssign<$t> for TokenAmount {
-                fn mul_assign(&mut self, rhs: $t) { self.0 *= Into::<BigUint>::into(rhs); }
-            }
-        )*
+    fn mul(self, rhs: T) -> Self::Output {
+        Self(self.0 * rhs.into())
+    }
+}
+
+impl AsRef<BigUint> for TokenAmount {
+    fn as_ref(&self) -> &BigUint {
+        &self.0
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::Add<T> for &TokenAmount {
+    type Output = TokenAmount;
+
+    fn add(self, rhs: T) -> Self::Output {
+        TokenAmount(&self.0 + rhs.as_ref())
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::Sub<T> for &TokenAmount {
+    type Output = TokenAmount;
+
+    fn sub(self, rhs: T) -> Self::Output {
+        TokenAmount(&self.0 - rhs.as_ref())
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::Mul<T> for &TokenAmount {
+    type Output = TokenAmount;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        TokenAmount(&self.0 * rhs.as_ref())
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::AddAssign<T> for &mut TokenAmount {
+    fn add_assign(&mut self, rhs: T) {
+        self.0 += rhs.as_ref();
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::SubAssign<T> for &mut TokenAmount {
+    fn sub_assign(&mut self, rhs: T) {
+        self.0 -= rhs.as_ref();
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::MulAssign<T> for &mut TokenAmount {
+    fn mul_assign(&mut self, rhs: T) {
+        self.0 *= rhs.as_ref();
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::AddAssign<T> for TokenAmount {
+    fn add_assign(&mut self, rhs: T) {
+        self.0 += rhs.as_ref();
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::SubAssign<T> for TokenAmount {
+    fn sub_assign(&mut self, rhs: T) {
+        self.0 -= rhs.as_ref();
+    }
+}
+
+impl<T: AsRef<BigUint>> std::ops::MulAssign<T> for TokenAmount {
+    fn mul_assign(&mut self, rhs: T) {
+        self.0 *= rhs.as_ref();
     }
 }
 
@@ -131,7 +194,6 @@ macro_rules! eq_impl {
     };
 }
 
-op_impl!(u8 u16 u32 u64 u128 TokenAmount BigUint);
 from_impl!(u8 u16 u32 u64 u128 BigUint);
 eq_impl!(u8 u16 u32 u64 u128);
 
@@ -289,6 +351,27 @@ impl<'de> Deserialize<'de> for TokenAmount {
     }
 }
 
+cbor_type_decl!(
+    pub struct TokenInfo {
+        0 => symbol: Symbol,
+        1 => summary: TokenInfoSummary,
+        2 => supply: TokenInfoSupply,
+        3 => owner: Option<Address>,
+    }
+
+    pub struct TokenInfoSummary {
+        0 => name: String,
+        1 => ticker: String,
+        2 => decimals: u64,
+    }
+
+    pub struct TokenInfoSupply {
+        0 => total: TokenAmount,
+        1 => circulating: TokenAmount,
+        2 => maximum: Option<TokenAmount>,
+    }
+);
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -323,5 +406,31 @@ mod test {
             &token,
             &[Token::String("1_208_925_819_614_629_174_706_175")],
         );
+    }
+
+    #[test]
+    fn token_amount_ref() {
+        let a = TokenAmount::from(12345u64);
+        let b = TokenAmount::from(56789u64);
+
+        assert_eq!(&a + &b, TokenAmount::from(69134u64));
+        assert_eq!(&b - &a, TokenAmount::from(44444u64));
+        assert_eq!(&a * &b, TokenAmount::from(701060205u64));
+
+        let mut c = &mut TokenAmount::zero();
+        c += &b;
+        assert_eq!(c, &b);
+        c -= &a;
+        assert_eq!(c, &TokenAmount::from(44444u64));
+        c *= &b;
+        assert_eq!(c, &TokenAmount::from(2523930316u64));
+
+        let mut d = TokenAmount::zero();
+        d += &b;
+        assert_eq!(d, b);
+        d -= &a;
+        assert_eq!(d, TokenAmount::from(44444u64));
+        d *= &b;
+        assert_eq!(d, TokenAmount::from(2523930316u64));
     }
 }

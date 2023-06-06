@@ -25,7 +25,7 @@ pub enum ResponseMessageCborKey {
 }
 
 /// A MANY message response.
-#[derive(Clone, Debug, Builder)]
+#[derive(Clone, Debug, Builder, Eq, PartialEq)]
 #[builder(setter(strip_option), default)]
 pub struct ResponseMessage {
     pub version: Option<u8>,
@@ -90,6 +90,11 @@ impl ResponseMessage {
     ) -> Result<Self, ManyError> {
         let address = verifier.verify_1(envelope)?;
 
+        // Shortcut everything if the address is illegal.
+        if address.is_illegal() {
+            return Err(ManyError::invalid_from_identity());
+        }
+
         let payload = envelope
             .payload
             .as_ref()
@@ -102,6 +107,11 @@ impl ResponseMessage {
         } else {
             Ok(message)
         }
+    }
+
+    pub fn with_attributes<T: IntoIterator<Item = Attribute>>(mut self, set: T) -> Self {
+        self.attributes.extend(set);
+        self
     }
 
     pub fn with_attribute(mut self, attr: Attribute) -> Self {
@@ -209,4 +219,52 @@ impl<'b, C> Decode<'b, C> for ResponseMessage {
             .build()
             .map_err(|_e| minicbor::decode::Error::message("could not build"))
     }
+}
+
+#[test]
+fn decode_illegal() {
+    use coset::CoseSign1Builder;
+    use many_identity::verifiers::AnonymousVerifier;
+
+    let message = ResponseMessage {
+        version: None,
+        from: Address::illegal(),
+        to: None,
+        data: Ok(Vec::new()),
+        timestamp: None,
+        id: None,
+        attributes: Default::default(),
+    };
+    let envelope = CoseSign1Builder::new()
+        .payload(message.to_bytes().unwrap())
+        .build();
+
+    assert!(ResponseMessage::decode_and_verify(&envelope, &AnonymousVerifier).is_err());
+}
+
+#[test]
+fn decode_illegal_verifier() {
+    use coset::CoseSign1Builder;
+
+    struct IllegalVerifier;
+    impl Verifier for IllegalVerifier {
+        fn verify_1(&self, _envelope: &CoseSign1) -> Result<Address, ManyError> {
+            Ok(Address::illegal())
+        }
+    }
+
+    let message = ResponseMessage {
+        version: None,
+        from: Address::illegal(),
+        to: None,
+        data: Ok(Vec::new()),
+        timestamp: None,
+        id: None,
+        attributes: Default::default(),
+    };
+    let envelope = CoseSign1Builder::new()
+        .payload(message.to_bytes().unwrap())
+        .build();
+
+    assert!(ResponseMessage::decode_and_verify(&envelope, &IllegalVerifier).is_err());
 }

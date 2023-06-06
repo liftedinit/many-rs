@@ -1,5 +1,4 @@
 #![feature(box_patterns)]
-#![feature(const_convert)]
 #![feature(const_trait_impl)]
 
 use async_trait::async_trait;
@@ -27,10 +26,10 @@ macro_rules! reexport_module {
 reexport_module!(
     base: _0_base;
     blockchain: _1_blockchain;
-    ledger: _2_ledger + _6_ledger_commands;
+    ledger: _2_ledger + _6_ledger_commands + _11_ledger_tokens + _12_ledger_mintburn;
     events: _4_events;
     data: _5_data;
-    kvstore: _3_kvstore + _7_kvstore_commands;
+    kvstore: _3_kvstore + _7_kvstore_commands + _13_kvstore_transfer;
     r#async: _8_async;
     account: _9_account;
     abci_backend: _1000_abci_backend;

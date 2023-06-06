@@ -8,6 +8,7 @@ use std::collections::BTreeSet;
 pub mod kvstore;
 pub mod ledger;
 pub mod multisig;
+pub mod tokens;
 
 pub type FeatureId = u32;
 
