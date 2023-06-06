@@ -24,6 +24,45 @@ function teardown() {
   assert_output --partial "foobar"
 }
 
+@test "$SUITE: can put 254 bytes key" {
+  local key
+  key=$(openssl rand -hex 254)
+  call_kvstore --pem=1 --port=8000 put --hex-key "$key" "foobar"
+  call_kvstore --pem=1 --port=8000 get --hex-key "$key"
+  assert_output --partial "foobar"
+}
+
+@test "$SUITE: can't put 255 bytes key" {
+  local key
+  key=$(openssl rand -hex 255)
+  call_kvstore --pem=1 --port=8000 put --hex-key "$key" "foobar"
+  call_kvstore --pem=1 --port=8000 get --hex-key "$key"
+  refute_output --partial "foobar"
+}
+
+@test "$SUITE: can put 512KiB values" {
+  dd if=/dev/urandom of=upload_test_512 bs=524288 count=1
+  cat upload_test_512 | call_kvstore --pem=1 --port=8000 put --stdin "foo"
+  call_kvstore --pem=1 --port=8000 get "foo"
+  assert_output --partial "$(cat upload_test_512)"
+}
+
+@test "$SUITE: can't put 512KiB + 1 values" {
+  dd if=/dev/urandom of=upload_test_512_1 bs=524289 count=1
+  cat upload_test_512_1 | call_kvstore --pem=1 --port=8000 put --stdin "foo"
+  call_kvstore --pem=1 --port=8000 get "foo"
+  refute_output --partial "foo"
+}
+
+@test "$SUITE: can put 254 bytes key with 512KiB values" {
+  local key
+  key=$(openssl rand -hex 254)
+  dd if=/dev/urandom of=upload_test_512 bs=524288 count=1
+  cat upload_test_512 | call_kvstore --pem=1 --port=8000 put --stdin --hex-key "$key"
+  call_kvstore --pem=1 --port=8000 get --hex-key "$key"
+  assert_output --partial "$(cat upload_test_512)"
+}
+
 @test "$SUITE: can put and query data" {
   call_kvstore --pem=1 --port=8000 put "010203" "foobar"
   call_kvstore --pem=1 --port=8000 query "010203"
@@ -97,4 +136,71 @@ function teardown() {
   call_kvstore --pem=2 --port=8000 put "112233" "bateau"
   call_kvstore --pem=1 --port=8000 get "112233"
   assert_output --partial "bateau"
+}
+
+@test "$SUITE: can list keys" {
+  call_kvstore --pem=1 --port=8000 put "112233" "foobar"
+  call_kvstore --pem=1 --port=8000 put "445566" "foobar2"
+  call_kvstore --pem=1 --port=8000 put "778899" "foobar3"
+  call_kvstore --pem=2 --port=8000 put "aabbcc" "foobar4"
+  call_kvstore --pem=2 --port=8000 put "ddeeff" "foobar5"
+  call_kvstore --pem=2 --port=8000 put "gghhii" "foobar6"
+
+  call_kvstore --pem=1 --port=8000 list
+  assert_output --partial "112233"
+  assert_output --partial "445566"
+  assert_output --partial "778899"
+  refute_output --partial "aabbcc"
+  refute_output --partial "ddeeff"
+  refute_output --partial "gghhii"
+
+  call_kvstore --pem=1 --port=8000 list --hex-key
+  assert_output --partial "313132323333"
+  assert_output --partial "343435353636"
+  assert_output --partial "373738383939"
+  refute_output --partial "616162626363"
+  refute_output --partial "646465656666"
+  refute_output --partial "676768686969"
+
+  call_kvstore --pem=2 --port=8000 list
+  assert_output --partial "aabbcc"
+  assert_output --partial "ddeeff"
+  assert_output --partial "gghhii"
+  refute_output --partial "112233"
+  refute_output --partial "445566"
+  refute_output --partial "778899"
+
+  call_kvstore --pem=2 --port=8000 list --hex-key
+  assert_output --partial "616162626363"
+  assert_output --partial "646465656666"
+  assert_output --partial "676768686969"
+  refute_output --partial "313132323333"
+  refute_output --partial "343435353636"
+  refute_output --partial "373738383939"
+}
+
+@test "$SUITE: list key ordering" {
+  call_kvstore --pem=1 --port=8000 put "112233" "foobar"
+  call_kvstore --pem=1 --port=8000 put "445566" "foobar2"
+  call_kvstore --pem=1 --port=8000 put "778899" "foobar3"
+
+  call_kvstore --pem=1 --port=8000 list --order ascending
+  assert_output "112233
+445566
+778899"
+
+  call_kvstore --pem=1 --port=8000 list --order descending
+  assert_output "778899
+445566
+112233"
+
+  call_kvstore --pem=1 --port=8000 list --hex-key --order ascending
+  assert_output "313132323333
+343435353636
+373738383939"
+
+  call_kvstore --pem=1 --port=8000 list --hex-key --order descending
+  assert_output "373738383939
+343435353636
+313132323333"
 }

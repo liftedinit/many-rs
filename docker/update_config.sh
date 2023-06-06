@@ -108,6 +108,7 @@ for node in $(seq 0 "$NB_NODES"); do
   update_toml_key "$config_toml_path" consensus timeout_commit "\"2s\""
   update_toml_key "$config_toml_path" consensus timeout_precommit "\"2s\""
   update_toml_key "$config_toml_path" p2p max_packet_msg_payload_size "1400"
+
   # update_toml_key "$config_toml_path" p2p bootstrap-peers "\"$peers\""
 done
 

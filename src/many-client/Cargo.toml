@@ -1,6 +1,6 @@
 [package]
 name = "many-client"
-version = "0.1.1" # managed by release.sh
+version = "0.1.2-rc.2" # managed by release.sh
 edition = "2021"
 description = "Client library to communicate with the MANY protocol network."
 license-file = "../../LICENSE"
@@ -9,39 +9,39 @@ repository = "https://github.com/liftedinit/many-rs.git"
 authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 
 [dependencies]
-anyhow = "1.0.44"
-async-trait = "0.1.51"
+anyhow = "1.0.71"
+async-trait = "0.1.68"
 base32 = "0.4.0"
-base64 = "0.21.0"
-coset = "0.3"
-crc-any = "2.4.0"
+base64 = "0.21.2"
+coset = "0.3.4"
+crc-any = "2.4.3"
 derive_builder = "0.12.0"
-ecdsa = "0.16.0"
-ed25519 = { version = "2.2.0", features = [ "std" ] }
+ecdsa = "0.16.7"
+ed25519 = { version = "2.2.1", features = [ "std" ] }
 ed25519-dalek = { version = "1.0.1", features = [ "std" ] }
-fixed = "1.16.0"
+fixed = "1.23.1"
 hex = "0.4.3"
-many-client-macros = { path = "../many-client-macros", version = "0.1.1" } # managed by release.sh
-many-identity = { path = "../many-identity", version = "0.1.1" } # managed by release.sh
-many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.1" } # managed by release.sh
-many-modules = { path = "../many-modules", version = "0.1.1" } # managed by release.sh
-many-protocol = { path = "../many-protocol", version = "0.1.1" } # managed by release.sh
-many-types = { path = "../many-types", version = "0.1.1" } # managed by release.sh
+many-client-macros = { path = "../many-client-macros", version = "0.1.2-rc.2" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.2-rc.2" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.2-rc.2" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.2-rc.2" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.1.2-rc.2" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.2-rc.2" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.2-rc.2" } # managed by release.sh
 minicbor = { version = "0.19.1", features = ["derive", "half", "std"] }
 num-derive = "0.3.3"
-num-traits = "0.2.14"
+num-traits = "0.2.15"
 num-bigint = "0.4.3"
-p256 = { version = "0.13.0", features = [ "pem", "ecdsa", "std" ] }
-pem = { version = "2.0.0", optional = true }
-many-server = { path = "../many-server", version = "0.1.1" } # managed by release.sh
-rand = "0.8.4"
-regex = "1.5.4"
-reqwest = { version = "0.11.5", features = ["blocking"] }
-serde = { version = "1.0.130" }
-sha3 = "0.10.6"
+p256 = { version = "0.13.2", features = [ "pem", "ecdsa", "std" ] }
+pem = { version = "2.0.1", optional = true }
+rand = "0.8.5"
+regex = "1.8.3"
+reqwest = { version = "0.11.18", features = ["blocking"] }
+serde = { version = "1.0.163" }
+sha3 = "0.10.8"
 static_assertions = "1.1.0"
-tracing = "0.1.29"
-tokio = { version = "1.24.1", features = [ "full" ] }
+tracing = "0.1.37"
+tokio = { version = "1.28.1", features = [ "full" ] }
 tiny_http = "0.12.0"
 
 [features]

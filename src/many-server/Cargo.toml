@@ -1,6 +1,6 @@
 [package]
 name = "many-server"
-version = "0.1.1" # managed by release.sh
+version = "0.1.2-rc.2" # managed by release.sh
 edition = "2021"
 description = "Types and methods to create a MANY network server and neighborhood."
 license-file = "../../LICENSE"
@@ -12,49 +12,45 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 name = "many_server"
 
 [dependencies]
-anyhow = "1.0.44"
-async-trait = "0.1.51"
-backtrace = { version = "0.3", optional = true }
+anyhow = "1.0.71"
+async-trait = "0.1.68"
+backtrace = { version = "0.3.67", optional = true }
 base32 = "0.4.0"
-base64 = "0.21.0"
-coset = "0.3"
-crc-any = "2.4.0"
+base64 = "0.21.2"
+coset = "0.3.4"
+crc-any = "2.4.3"
 derive_builder = "0.12.0"
-fixed = "1.16.0"
+fixed = "1.23.1"
 hex = "0.4.3"
-many-error = { path = "../many-error", version = "0.1.1" } # managed by release.sh
-many-identity = { path = "../many-identity", features = ["coset", "raw"], version = "0.1.1" } # managed by release.sh
-many-modules = { path = "../many-modules", version = "0.1.1" } # managed by release.sh
-many-protocol = { path = "../many-protocol", version = "0.1.1" } # managed by release.sh
-many-types = { path = "../many-types", version = "0.1.1" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.2-rc.2" } # managed by release.sh
+many-identity = { path = "../many-identity", features = ["coset", "raw"], version = "0.1.2-rc.2" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.1.2-rc.2" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.2-rc.2" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.2-rc.2" } # managed by release.sh
 minicbor = { version = "0.19.1", features = ["derive", "half", "std"] }
 num-bigint = "0.4.3"
 num-derive = "0.3.3"
-num-traits = "0.2.14"
-once_cell = "1.10"
-pem = { version = "2.0.0", optional = true }
-many-macros = { path = "../many-macros", version = "0.1.1" } # managed by release.sh
-regex = "1.5.4"
-serde = { version = "1.0.130" }
-sha3 = "0.10.6"
+num-traits = "0.2.15"
+once_cell = "1.17.1"
+pem = { version = "2.0.1", optional = true }
+many-macros = { path = "../many-macros", version = "0.1.2-rc.2" } # managed by release.sh
+regex = "1.8.3"
+serde = { version = "1.0.163" }
+sha3 = "0.10.8"
 static_assertions = "1.1.0"
-strum = "0.24.0"
-strum_macros = "0.24"
-tracing = "0.1.29"
+strum = "0.24.1"
+strum_macros = "0.24.3"
+tracing = "0.1.37"
 tiny_http = "0.12.0"
 
 [dev-dependencies]
-many-server = { path = ".", features = ["testing"], version = "0.1.1" } # managed by release.sh
-many-identity = { path = "../many-identity", features = ["coset", "raw", "testing"], version = "0.1.1" } # managed by release.sh
-many-identity-dsa = { path = "../many-identity-dsa", features = ["ed25519", "testing"], version = "0.1.1" } # managed by release.sh
-proptest = "1.0.0"
-semver = "1.0"
-smol = "1.2.5"
+many-server = { path = ".", features = ["testing"], version = "0.1.2-rc.2" } # managed by release.sh
+many-identity = { path = "../many-identity", features = ["coset", "raw", "testing"], version = "0.1.2-rc.2" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ed25519", "testing"], version = "0.1.2-rc.2" } # managed by release.sh
+proptest = "1.2.0"
+semver = "1.0.17"
+smol = "1.3.0"
 
 [features]
 default = []
-client = []
-raw = []
 testing = []
-# Whether to trace ManyError creation, which can be useful for debugging.
-trace_error_creation = ["backtrace"]

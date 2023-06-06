@@ -1,6 +1,6 @@
 [package]
 name = "many-protocol"
-version = "0.1.1" # managed by release.sh
+version = "0.1.2-rc.2" # managed by release.sh
 edition = "2021"
 description = "Types exclusively associated with the protocol."
 license-file = "../../LICENSE"
@@ -11,22 +11,22 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-many-error = { path = "../many-error", version = "0.1.1" } # managed by release.sh
-many-identity = { path = "../many-identity", version = "0.1.1" } # managed by release.sh
-many-types = { path = "../many-types", version = "0.1.1" } # managed by release.sh
-async-channel = "1.8"
-base64 = "0.21.0"
-coset = "0.3.2"
+many-error = { path = "../many-error", version = "0.1.2-rc.2" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.2-rc.2" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.2-rc.2" } # managed by release.sh
+async-channel = "1.8.0"
+base64 = "0.21.2"
+coset = "0.3.4"
 derive_builder = "0.12.0"
 hex = "0.4.3"
 minicbor = { version = "0.19.1", features = ["derive", "std"] }
 num-derive = "0.3.3"
-num-traits = "0.2.14"
+num-traits = "0.2.15"
 num-bigint = "0.4.3"
-serde = "1.0.139"
-tracing = "0.1.35"
+serde = "1.0.163"
+tracing = "0.1.37"
 url = "2.3.1"
 
 [dev-dependencies]
-once_cell = "1.13.0"
-proptest = "1.0.0"
+once_cell = "1.17.1"
+proptest = "1.2.0"

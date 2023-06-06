@@ -161,6 +161,8 @@ many_error! {
             => "Field is required but missing: '{field}'.",
     -1008: NonWebAuthnRequestDenied as non_webauthn_request_denied(endpoint)
             => "Non-WebAuthn request denied for endpoint '{endpoint}'.",
+    -1009: DuplicatedMessage as duplicated_message()
+            => "This message was already processed.",
 
     // -2000 - -2999 is for server errors.
     -2000: InternalServerError as internal_server_error()

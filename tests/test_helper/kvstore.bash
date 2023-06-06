@@ -2,10 +2,14 @@ PEM_ROOT="$(mktemp -d)"
 CONFIG_ROOT="$(mktemp -d)"
 
 function start_kvstore() {
+    local root
     local persistent
     local state
     local clean
-    persistent="$(mktemp -d)"
+    local cache_db
+    root="$(mktemp -d)"
+    persistent="$root/kvstore.db"
+    cache_db=""
     state="$GIT_ROOT/staging/kvstore_state.json5"
     clean="--clean"
 
@@ -14,6 +18,7 @@ function start_kvstore() {
             --persistent=*) persistent="${1#--persistent=}"; shift ;;
             --state=*) state="${1#--state=}"; shift ;;
             --no-clean) clean=""; shift ;;
+            --cache) cache_db="--cache-db=$root/request_cache.db"; shift ;;
             --) shift; break ;;
             *) break ;;
         esac
@@ -22,6 +27,7 @@ function start_kvstore() {
     run_in_background many-kvstore \
         -v \
         $clean \
+        $cache_db \
         --persistent "$persistent" \
         --state "$state" \
         "$@"
@@ -68,5 +74,27 @@ function check_consistency() {
         # Named parameters that can be empty need to be located after those who can't
         call_kvstore --port="$port" "$pem_arg" get "$key"
         assert_output --partial "$expected_value"
+    done
+}
+
+function check_consistency_value_from_file() {
+    local pem_arg
+    local key
+    local expected_value
+
+    while (( $# > 0 )); do
+      case "$1" in
+        --pem=*) pem_arg=${1}; shift ;;
+        --key=*) key=${1#--key=}; shift ;;
+        --file=*) expected_value=${1#--file=}; shift;;
+        --) shift; break ;;
+        *) break ;;
+      esac
+    done
+
+    for port in "$@"; do
+        # Named parameters that can be empty need to be located after those who can't
+        call_kvstore --port="$port" "$pem_arg" get "$key"
+        assert_output --partial "$(cat expected_value)"
     done
 }

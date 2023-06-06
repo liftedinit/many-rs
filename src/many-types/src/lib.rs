@@ -7,6 +7,7 @@ use minicbor::{decode, Decode, Decoder, Encode, Encoder};
 use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Bound, RangeBounds, Shl};
+use std::str::FromStr;
 
 pub mod attributes;
 pub mod blockchain;
@@ -383,6 +384,20 @@ pub enum SortOrder {
     Indeterminate = 0,
     Ascending = 1,
     Descending = 2,
+}
+
+// Implement FromStr for SortOrder
+impl FromStr for SortOrder {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "indeterminate" => Ok(Self::Indeterminate),
+            "ascending" => Ok(Self::Ascending),
+            "descending" => Ok(Self::Descending),
+            _ => Err(format!("Invalid sort order: {}", s)),
+        }
+    }
 }
 
 impl Default for SortOrder {

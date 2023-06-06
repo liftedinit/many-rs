@@ -35,13 +35,19 @@ local generate_allow_addrs_flag(allow_addrs) =
 local abci(i, user, allow_addrs, abci_migrations) = {
     image: "bazel/src/many-abci:many-abci-image",
     ports: [ (8000 + i) + ":8000" ],
-    volumes: [ "./node" + i + ":/genfiles:ro" ],
+    volumes: [
+        // TODO: have a volume specifically created for the cache db.
+        // Right now we reuse the same volume as the ledger db.
+        "./node" + i + "/persistent-ledger:/persistent",
+        "./node" + i + ":/genfiles:ro",
+    ],
     user: "" + user,
     command: [
         "--verbose", "--verbose",
         "--many", "0.0.0.0:8000",
         "--many-app", "http://ledger-" + i + ":8000",
         "--many-pem", "/genfiles/abci.pem",
+        "--cache-db", "/persistent/abci_request_cache.db",
         "--abci", "0.0.0.0:26658",
         "--tendermint", "http://tendermint-" + i + ":26657/"
     ] + load_abci_migrations(abci_migrations)

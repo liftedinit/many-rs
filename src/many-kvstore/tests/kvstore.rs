@@ -7,7 +7,7 @@ use many_kvstore::error;
 use many_modules::kvstore::{
     InfoArg, KvStoreModuleBackend, KvStoreTransferModuleBackend, TransferArgs,
 };
-use many_types::Either;
+use many_types::{Either, SortOrder};
 use minicbor::bytes::ByteVec;
 
 #[test]
@@ -195,4 +195,30 @@ fn put_put_illegal() {
     let put = setup.put(&identity(1), vec![1], vec![3], Some(Address::illegal()));
     assert!(put.is_err());
     assert_eq!(put.unwrap_err().code(), error::permission_denied().code());
+}
+
+#[test]
+fn list() {
+    let mut setup = setup();
+    let id = setup.id;
+    let keys = vec![vec![1], vec![2], vec![3], vec![4], vec![5]];
+    for k in &keys {
+        let put = setup.put(&id, k.clone(), vec![1], None);
+        assert!(put.is_ok());
+    }
+
+    let list = setup.list(&setup.id, SortOrder::Ascending).unwrap().keys;
+    assert_eq!(
+        list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
+        keys
+    );
+
+    let list = setup.list(&setup.id, SortOrder::Descending).unwrap().keys;
+    assert_eq!(
+        list.into_iter()
+            .rev()
+            .map(|e| e.into())
+            .collect::<Vec<Vec<u8>>>(),
+        keys
+    );
 }

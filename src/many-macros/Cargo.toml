@@ -1,6 +1,6 @@
 [package]
 name = "many-macros"
-version = "0.1.1" # managed by release.sh
+version = "0.1.2-rc.2" # managed by release.sh
 edition = "2021"
 description = "Procedural macros to support create MANY modules."
 license-file = "../../LICENSE"
@@ -13,9 +13,9 @@ proc-macro = true
 
 [dependencies]
 inflections = "1.1.1"
-proc-macro2 = "1.0.54"
-quote = "1.0.26"
-serde = "1.0.134"
+proc-macro2 = "1.0.56"
+quote = "1.0.28"
+serde = "1.0.163"
 serde_tokenstream = "0.2.0"
-syn = "2.0.12"
+syn = "2.0.17"
 

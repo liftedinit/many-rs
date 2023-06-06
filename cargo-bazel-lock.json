@@ -1,5 +1,5 @@
 {
-  "checksum": "4e8ee7826b7543f60f8dc8b1c13c9128a0956a45629334271e7aacae78c4bb14",
+  "checksum": "fde18af35578f3932dfdf9d8d58af001b667e38ec6804ace810a329cc292dcec",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -676,13 +676,13 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
-    "asn1 0.13.0": {
+    "asn1 0.15.2": {
       "name": "asn1",
-      "version": "0.13.0",
+      "version": "0.15.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/asn1/0.13.0/download",
-          "sha256": "2affba5e62ee09eeba078f01a00c4aed45ac4287e091298eccbb0d4802efbdc5"
+          "url": "https://crates.io/api/v1/crates/asn1/0.15.2/download",
+          "sha256": "28c19b9324de5b815b6487e0f8098312791b09de0dbf3d5c2db1fe2d95bab973"
         }
       },
       "targets": [
@@ -703,32 +703,22 @@
         ],
         "crate_features": {
           "common": [
-            "const-generics",
             "default",
             "std"
           ],
           "selects": {}
         },
-        "deps": {
-          "common": [
-            {
-              "id": "chrono 0.4.26",
-              "target": "chrono"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
+        "edition": "2021",
         "proc_macro_deps": {
           "common": [
             {
-              "id": "asn1_derive 0.13.0",
+              "id": "asn1_derive 0.15.2",
               "target": "asn1_derive"
             }
           ],
           "selects": {}
         },
-        "version": "0.13.0"
+        "version": "0.15.2"
       },
       "license": "BSD-3-Clause"
     },
@@ -911,13 +901,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "asn1_derive 0.13.0": {
+    "asn1_derive 0.15.2": {
       "name": "asn1_derive",
-      "version": "0.13.0",
+      "version": "0.15.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/asn1_derive/0.13.0/download",
-          "sha256": "bfab79c195875e5aef2bd20b4c8ed8d43ef9610bcffefbbcf66f88f555cc78af"
+          "url": "https://crates.io/api/v1/crates/asn1_derive/0.15.2/download",
+          "sha256": "a045c3ccad89f244a86bd1e6cf1a7bf645296e7692698b056399b6efd4639407"
         }
       },
       "targets": [
@@ -947,14 +937,14 @@
               "target": "quote"
             },
             {
-              "id": "syn 1.0.109",
+              "id": "syn 2.0.18",
               "target": "syn"
             }
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "0.13.0"
+        "edition": "2021",
+        "version": "0.15.2"
       },
       "license": "BSD-3-Clause"
     },
@@ -3506,16 +3496,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "ciborium 0.2.0": {
+    "ciborium 0.2.1": {
       "name": "ciborium",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "repository": {
-        "Git": {
-          "remote": "https://github.com/enarx/ciborium",
-          "commitish": {
-            "Rev": "2ca375e6b33d1ade5a5798792278b35a807b748e"
-          },
-          "strip_prefix": "ciborium"
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/ciborium/0.2.1/download",
+          "sha256": "effd91f6c78e5a4ace8a5d3c0b6bfaec9e2baaef55f3efc00e45fb2e477ee926"
         }
       },
       "targets": [
@@ -3544,11 +3531,11 @@
         "deps": {
           "common": [
             {
-              "id": "ciborium-io 0.2.0",
+              "id": "ciborium-io 0.2.1",
               "target": "ciborium_io"
             },
             {
-              "id": "ciborium-ll 0.2.0",
+              "id": "ciborium-ll 0.2.1",
               "target": "ciborium_ll"
             },
             {
@@ -3559,20 +3546,17 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.2.0"
+        "version": "0.2.1"
       },
       "license": "Apache-2.0"
     },
-    "ciborium-io 0.2.0": {
+    "ciborium-io 0.2.1": {
       "name": "ciborium-io",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "repository": {
-        "Git": {
-          "remote": "https://github.com/enarx/ciborium",
-          "commitish": {
-            "Rev": "2ca375e6b33d1ade5a5798792278b35a807b748e"
-          },
-          "strip_prefix": "ciborium-io"
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/ciborium-io/0.2.1/download",
+          "sha256": "cdf919175532b369853f5d5e20b26b43112613fd6fe7aee757e35f7a44642656"
         }
       },
       "targets": [
@@ -3599,20 +3583,17 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.2.0"
+        "version": "0.2.1"
       },
       "license": "Apache-2.0"
     },
-    "ciborium-ll 0.2.0": {
+    "ciborium-ll 0.2.1": {
       "name": "ciborium-ll",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "repository": {
-        "Git": {
-          "remote": "https://github.com/enarx/ciborium",
-          "commitish": {
-            "Rev": "2ca375e6b33d1ade5a5798792278b35a807b748e"
-          },
-          "strip_prefix": "ciborium-ll"
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/ciborium-ll/0.2.1/download",
+          "sha256": "defaa24ecc093c77630e6c15e17c51f5e187bf35ee514f4e2d67baaa96dae22b"
         }
       },
       "targets": [
@@ -3634,7 +3615,7 @@
         "deps": {
           "common": [
             {
-              "id": "ciborium-io 0.2.0",
+              "id": "ciborium-io 0.2.1",
               "target": "ciborium_io"
             },
             {
@@ -3645,7 +3626,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.2.0"
+        "version": "0.2.1"
       },
       "license": "Apache-2.0"
     },
@@ -4719,11 +4700,11 @@
         "deps": {
           "common": [
             {
-              "id": "ciborium 0.2.0",
+              "id": "ciborium 0.2.1",
               "target": "ciborium"
             },
             {
-              "id": "ciborium-io 0.2.0",
+              "id": "ciborium-io 0.2.1",
               "target": "ciborium_io"
             }
           ],
@@ -7399,6 +7380,133 @@
       },
       "license": "MIT OR Apache-2.0"
     },
+    "failure 0.1.8": {
+      "name": "failure",
+      "version": "0.1.8",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/failure/0.1.8/download",
+          "sha256": "d32e9bd16cc02eae7db7ef620b392808b89f6a5e16bb3497d159c6b92a0f4f86"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "failure",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "failure",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "backtrace",
+            "default",
+            "derive",
+            "failure_derive",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "backtrace 0.3.67",
+              "target": "backtrace"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "failure_derive 0.1.8",
+              "target": "failure_derive"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.1.8"
+      },
+      "license": "MIT OR Apache-2.0"
+    },
+    "failure_derive 0.1.8": {
+      "name": "failure_derive",
+      "version": "0.1.8",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/failure_derive/0.1.8/download",
+          "sha256": "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "failure_derive",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "failure_derive",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "failure_derive 0.1.8",
+              "target": "build_script_build"
+            },
+            {
+              "id": "proc-macro2 1.0.59",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.28",
+              "target": "quote"
+            },
+            {
+              "id": "syn 1.0.109",
+              "target": "syn"
+            },
+            {
+              "id": "synstructure 0.12.6",
+              "target": "synstructure"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "0.1.8"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "MIT OR Apache-2.0"
+    },
     "fastrand 1.9.0": {
       "name": "fastrand",
       "version": "1.9.0",
@@ -9901,9 +10009,9 @@
       },
       "license": "MIT"
     },
-    "http_proxy 0.1.1": {
+    "http_proxy 0.1.2-rc.2": {
       "name": "http_proxy",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -9934,7 +10042,7 @@
               "target": "new_mime_guess"
             },
             {
-              "id": "syslog-tracing 0.1.0",
+              "id": "syslog-tracing 0.2.0",
               "target": "syslog_tracing"
             },
             {
@@ -9957,7 +10065,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
@@ -10505,9 +10613,9 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "idstore-export 0.1.1": {
+    "idstore-export 0.1.2-rc.2": {
       "name": "idstore-export",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -10550,7 +10658,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
@@ -10735,63 +10843,6 @@
         }
       },
       "license": "Apache-2.0 OR MIT"
-    },
-    "indicatif 0.16.2": {
-      "name": "indicatif",
-      "version": "0.16.2",
-      "repository": {
-        "Http": {
-          "url": "https://crates.io/api/v1/crates/indicatif/0.16.2/download",
-          "sha256": "2d207dc617c7a380ab07ff572a6e52fa202a2a8f355860ac9c38e23f8196be1b"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "indicatif",
-            "crate_root": "src/lib.rs",
-            "srcs": [
-              "**/*.rs"
-            ]
-          }
-        }
-      ],
-      "library_target_name": "indicatif",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "default"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "console 0.15.7",
-              "target": "console"
-            },
-            {
-              "id": "lazy_static 1.4.0",
-              "target": "lazy_static"
-            },
-            {
-              "id": "number_prefix 0.4.0",
-              "target": "number_prefix"
-            },
-            {
-              "id": "regex 1.8.4",
-              "target": "regex"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "0.16.2"
-      },
-      "license": "MIT"
     },
     "indicatif 0.17.5": {
       "name": "indicatif",
@@ -11392,9 +11443,9 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
-    "kvstore 0.1.1": {
+    "kvstore 0.1.2-rc.2": {
       "name": "kvstore",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -11425,7 +11476,7 @@
               "target": "minicbor"
             },
             {
-              "id": "syslog-tracing 0.1.0",
+              "id": "syslog-tracing 0.2.0",
               "target": "syslog_tracing"
             },
             {
@@ -11444,7 +11495,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
@@ -11508,9 +11559,9 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "ledger 0.1.1": {
+    "ledger 0.1.2-rc.2": {
       "name": "ledger",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -11541,7 +11592,7 @@
               "target": "humantime"
             },
             {
-              "id": "indicatif 0.16.2",
+              "id": "indicatif 0.17.5",
               "target": "indicatif"
             },
             {
@@ -11584,13 +11635,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "ledger-db 0.1.1": {
+    "ledger-db 0.1.2-rc.2": {
       "name": "ledger-db",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -11620,7 +11671,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
@@ -12593,9 +12644,9 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "many 0.1.1": {
+    "many 0.1.2-rc.2": {
       "name": "many",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -12674,13 +12725,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-abci 0.1.1": {
+    "many-abci 0.1.2-rc.2": {
       "name": "many-abci",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -12714,7 +12765,7 @@
               "target": "base64"
             },
             {
-              "id": "ciborium 0.2.0",
+              "id": "ciborium 0.2.1",
               "target": "ciborium"
             },
             {
@@ -12746,7 +12797,7 @@
               "target": "linkme"
             },
             {
-              "id": "many-abci 0.1.1",
+              "id": "many-abci 0.1.2-rc.2",
               "target": "build_script_build"
             },
             {
@@ -12810,7 +12861,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -12828,9 +12879,9 @@
       },
       "license": null
     },
-    "many-cli-helpers 0.1.1": {
+    "many-cli-helpers 0.1.2-rc.2": {
       "name": "many-cli-helpers",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -12867,7 +12918,7 @@
               "target": "minicbor"
             },
             {
-              "id": "syslog-tracing 0.1.0",
+              "id": "syslog-tracing 0.2.0",
               "target": "syslog_tracing"
             },
             {
@@ -12882,13 +12933,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-client 0.1.1": {
+    "many-client 0.1.2-rc.2": {
       "name": "many-client",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13027,13 +13078,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-client-macros 0.1.1": {
+    "many-client-macros 0.1.2-rc.2": {
       "name": "many-client-macros",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13069,13 +13120,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-error 0.1.1": {
+    "many-error 0.1.2-rc.2": {
       "name": "many-error",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13127,13 +13178,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-identity 0.1.1": {
+    "many-identity 0.1.2-rc.2": {
       "name": "many-identity",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13221,13 +13272,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-identity-dsa 0.1.1": {
+    "many-identity-dsa 0.1.2-rc.2": {
       "name": "many-identity-dsa",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13333,13 +13384,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-identity-hsm 0.1.1": {
+    "many-identity-hsm 0.1.2-rc.2": {
       "name": "many-identity-hsm",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13360,7 +13411,7 @@
         "deps": {
           "common": [
             {
-              "id": "asn1 0.13.0",
+              "id": "asn1 0.15.2",
               "target": "asn1"
             },
             {
@@ -13395,13 +13446,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-identity-webauthn 0.1.1": {
+    "many-identity-webauthn 0.1.2-rc.2": {
       "name": "many-identity-webauthn",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13505,13 +13556,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-kvstore 0.1.1": {
+    "many-kvstore 0.1.2-rc.2": {
       "name": "many-kvstore",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13561,11 +13612,11 @@
               "target": "lazy_static"
             },
             {
-              "id": "many-kvstore 0.1.1",
+              "id": "many-kvstore 0.1.2-rc.2",
               "target": "build_script_build"
             },
             {
-              "id": "merk 2.0.0",
+              "id": "merk 2.0.0-ll",
               "target": "merk"
             },
             {
@@ -13630,7 +13681,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -13648,9 +13699,9 @@
       },
       "license": null
     },
-    "many-ledger 0.1.1": {
+    "many-ledger 0.1.2-rc.2": {
       "name": "many-ledger",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13732,7 +13783,7 @@
               "target": "linkme"
             },
             {
-              "id": "many-ledger 0.1.1",
+              "id": "many-ledger 0.1.2-rc.2",
               "target": "build_script_build"
             },
             {
@@ -13821,7 +13872,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -13839,9 +13890,9 @@
       },
       "license": null
     },
-    "many-ledger-test-macros 0.1.1": {
+    "many-ledger-test-macros 0.1.2-rc.2": {
       "name": "many-ledger-test-macros",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13873,13 +13924,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": "Apache-2.0"
     },
-    "many-ledger-test-utils 0.1.1": {
+    "many-ledger-test-utils 0.1.2-rc.2": {
       "name": "many-ledger-test-utils",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -13947,13 +13998,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": "Apache-2.0"
     },
-    "many-macros 0.1.1": {
+    "many-macros 0.1.2-rc.2": {
       "name": "many-macros",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -14001,13 +14052,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-migration 0.1.1": {
+    "many-migration 0.1.2-rc.2": {
       "name": "many-migration",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -14060,13 +14111,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-mock 0.1.1": {
+    "many-mock 0.1.2-rc.2": {
       "name": "many-mock",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -14112,7 +14163,7 @@
         "deps_dev": {
           "common": [
             {
-              "id": "ciborium 0.2.0",
+              "id": "ciborium 0.2.1",
               "target": "ciborium"
             },
             {
@@ -14144,13 +14195,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-modules 0.1.1": {
+    "many-modules 0.1.2-rc.2": {
       "name": "many-modules",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -14205,7 +14256,7 @@
               "target": "num_traits"
             },
             {
-              "id": "num_enum 0.5.11",
+              "id": "num_enum 0.6.1",
               "target": "num_enum"
             },
             {
@@ -14254,13 +14305,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-protocol 0.1.1": {
+    "many-protocol 0.1.2-rc.2": {
       "name": "many-protocol",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -14350,13 +14401,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-server 0.1.1": {
+    "many-server 0.1.2-rc.2": {
       "name": "many-server",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -14497,13 +14548,55 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
-    "many-types 0.1.1": {
+    "many-server-cache 0.1.2-rc.2": {
+      "name": "many-server-cache",
+      "version": "0.1.2-rc.2",
+      "repository": null,
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "many_server_cache",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "many_server_cache",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "coset 0.3.4",
+              "target": "coset"
+            },
+            {
+              "id": "rocksdb 0.19.0",
+              "target": "rocksdb"
+            },
+            {
+              "id": "sha2 0.10.6",
+              "target": "sha2"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.1.2-rc.2"
+      },
+      "license": null
+    },
+    "many-types 0.1.2-rc.2": {
       "name": "many-types",
-      "version": "0.1.1",
+      "version": "0.1.2-rc.2",
       "repository": null,
       "targets": [
         {
@@ -14596,7 +14689,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2-rc.2"
       },
       "license": null
     },
@@ -14819,6 +14912,104 @@
         },
         "edition": "2018",
         "version": "2.0.0"
+      },
+      "license": "MIT"
+    },
+    "merk 2.0.0-ll": {
+      "name": "merk",
+      "version": "2.0.0-ll",
+      "repository": {
+        "Git": {
+          "remote": "https://github.com/liftedinit/merk.git",
+          "commitish": {
+            "Rev": "532eb097ec50f3553c5294971c152b4e7c7d4731"
+          }
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "merk",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "merk",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "byteorder",
+            "colored",
+            "default",
+            "ed",
+            "failure",
+            "full",
+            "hex",
+            "num_cpus",
+            "rand",
+            "rocksdb",
+            "time",
+            "verify"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "byteorder 1.4.3",
+              "target": "byteorder"
+            },
+            {
+              "id": "colored 2.0.0",
+              "target": "colored"
+            },
+            {
+              "id": "ed 0.3.0",
+              "target": "ed"
+            },
+            {
+              "id": "failure 0.1.8",
+              "target": "failure"
+            },
+            {
+              "id": "hex 0.4.3",
+              "target": "hex"
+            },
+            {
+              "id": "num_cpus 1.15.0",
+              "target": "num_cpus"
+            },
+            {
+              "id": "rand 0.8.5",
+              "target": "rand"
+            },
+            {
+              "id": "rocksdb 0.19.0",
+              "target": "rocksdb"
+            },
+            {
+              "id": "sha2 0.10.6",
+              "target": "sha2"
+            },
+            {
+              "id": "thiserror 1.0.40",
+              "target": "thiserror"
+            },
+            {
+              "id": "time 0.3.21",
+              "target": "time"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "2.0.0-ll"
       },
       "license": "MIT"
     },
@@ -16077,13 +16268,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "num_enum 0.5.11": {
+    "num_enum 0.6.1": {
       "name": "num_enum",
-      "version": "0.5.11",
+      "version": "0.6.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/num_enum/0.5.11/download",
-          "sha256": "1f646caf906c20226733ed5b1374287eb97e3c2a5c227ce668c1f2ce20ae57c9"
+          "url": "https://crates.io/api/v1/crates/num_enum/0.6.1/download",
+          "sha256": "7a015b430d3c108a207fd776d2e2196aaf8b1cf8cf93253e3a097ff3085076a1"
         }
       },
       "targets": [
@@ -16109,27 +16300,27 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
+        "edition": "2021",
         "proc_macro_deps": {
           "common": [
             {
-              "id": "num_enum_derive 0.5.11",
+              "id": "num_enum_derive 0.6.1",
               "target": "num_enum_derive"
             }
           ],
           "selects": {}
         },
-        "version": "0.5.11"
+        "version": "0.6.1"
       },
       "license": "BSD-3-Clause OR MIT OR Apache-2.0"
     },
-    "num_enum_derive 0.5.11": {
+    "num_enum_derive 0.6.1": {
       "name": "num_enum_derive",
-      "version": "0.5.11",
+      "version": "0.6.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/num_enum_derive/0.5.11/download",
-          "sha256": "dcbff9bc912032c62bf65ef1d5aea88983b420f4f839db1e9b0c281a25c9c799"
+          "url": "https://crates.io/api/v1/crates/num_enum_derive/0.6.1/download",
+          "sha256": "96667db765a921f7b295ffee8b60472b686a51d4f21c2ee4ffdb94c7013b65a6"
         }
       },
       "targets": [
@@ -16170,14 +16361,14 @@
               "target": "quote"
             },
             {
-              "id": "syn 1.0.109",
+              "id": "syn 2.0.18",
               "target": "syn"
             }
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "0.5.11"
+        "edition": "2021",
+        "version": "0.6.1"
       },
       "license": "BSD-3-Clause OR MIT OR Apache-2.0"
     },
@@ -23225,13 +23416,13 @@
       },
       "license": "BlueOak-1.0.0"
     },
-    "syslog-tracing 0.1.0": {
+    "syslog-tracing 0.2.0": {
       "name": "syslog-tracing",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/syslog-tracing/0.1.0/download",
-          "sha256": "4cf9ff1f9f8e5ba220a58bbccb0375f4cabd785f96a8683b31389cefd91be747"
+          "url": "https://crates.io/api/v1/crates/syslog-tracing/0.2.0/download",
+          "sha256": "2f890b68f60eb7e87373b3b8f1f412d2a7d90460cd18294acbc0e90ba496193e"
         }
       },
       "targets": [
@@ -23267,8 +23458,8 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "0.1.0"
+        "edition": "2021",
+        "version": "0.2.0"
       },
       "license": "MIT"
     },
@@ -29117,32 +29308,33 @@
   },
   "binary_crates": [],
   "workspace_members": {
-    "http_proxy 0.1.1": "src/http_proxy",
-    "idstore-export 0.1.1": "src/idstore-export",
-    "kvstore 0.1.1": "src/kvstore",
-    "ledger 0.1.1": "src/ledger",
-    "ledger-db 0.1.1": "src/ledger-db",
-    "many 0.1.1": "src/many",
-    "many-abci 0.1.1": "src/many-abci",
-    "many-cli-helpers 0.1.1": "src/many-cli-helpers",
-    "many-client 0.1.1": "src/many-client",
-    "many-client-macros 0.1.1": "src/many-client-macros",
-    "many-error 0.1.1": "src/many-error",
-    "many-identity 0.1.1": "src/many-identity",
-    "many-identity-dsa 0.1.1": "src/many-identity-dsa",
-    "many-identity-hsm 0.1.1": "src/many-identity-hsm",
-    "many-identity-webauthn 0.1.1": "src/many-identity-webauthn",
-    "many-kvstore 0.1.1": "src/many-kvstore",
-    "many-ledger 0.1.1": "src/many-ledger",
-    "many-ledger-test-macros 0.1.1": "src/many-ledger/test-macros",
-    "many-ledger-test-utils 0.1.1": "src/many-ledger/test-utils",
-    "many-macros 0.1.1": "src/many-macros",
-    "many-migration 0.1.1": "src/many-migration",
-    "many-mock 0.1.1": "src/many-mock",
-    "many-modules 0.1.1": "src/many-modules",
-    "many-protocol 0.1.1": "src/many-protocol",
-    "many-server 0.1.1": "src/many-server",
-    "many-types 0.1.1": "src/many-types"
+    "http_proxy 0.1.2-rc.2": "src/http_proxy",
+    "idstore-export 0.1.2-rc.2": "src/idstore-export",
+    "kvstore 0.1.2-rc.2": "src/kvstore",
+    "ledger 0.1.2-rc.2": "src/ledger",
+    "ledger-db 0.1.2-rc.2": "src/ledger-db",
+    "many 0.1.2-rc.2": "src/many",
+    "many-abci 0.1.2-rc.2": "src/many-abci",
+    "many-cli-helpers 0.1.2-rc.2": "src/many-cli-helpers",
+    "many-client 0.1.2-rc.2": "src/many-client",
+    "many-client-macros 0.1.2-rc.2": "src/many-client-macros",
+    "many-error 0.1.2-rc.2": "src/many-error",
+    "many-identity 0.1.2-rc.2": "src/many-identity",
+    "many-identity-dsa 0.1.2-rc.2": "src/many-identity-dsa",
+    "many-identity-hsm 0.1.2-rc.2": "src/many-identity-hsm",
+    "many-identity-webauthn 0.1.2-rc.2": "src/many-identity-webauthn",
+    "many-kvstore 0.1.2-rc.2": "src/many-kvstore",
+    "many-ledger 0.1.2-rc.2": "src/many-ledger",
+    "many-ledger-test-macros 0.1.2-rc.2": "src/many-ledger/test-macros",
+    "many-ledger-test-utils 0.1.2-rc.2": "src/many-ledger/test-utils",
+    "many-macros 0.1.2-rc.2": "src/many-macros",
+    "many-migration 0.1.2-rc.2": "src/many-migration",
+    "many-mock 0.1.2-rc.2": "src/many-mock",
+    "many-modules 0.1.2-rc.2": "src/many-modules",
+    "many-protocol 0.1.2-rc.2": "src/many-protocol",
+    "many-server 0.1.2-rc.2": "src/many-server",
+    "many-server-cache 0.1.2-rc.2": "src/many-server-cache",
+    "many-types 0.1.2-rc.2": "src/many-types"
   },
   "conditions": {
     "aarch64-linux-android": [
