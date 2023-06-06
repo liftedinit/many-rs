@@ -726,21 +726,12 @@ dependencies = [
 
 [[package]]
 name = "clap"
-<<<<<<< HEAD
 version = "4.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "401a4694d2bf92537b6867d94de48c4842089645fdcdf6c71865b175d836e9c2"
 dependencies = [
  "clap_builder",
  "clap_derive 4.3.2",
-=======
-version = "4.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4ed2379f8603fa2b7509891660e802b88c70a79a6427a70abb5968054de2c28"
-dependencies = [
- "clap_builder",
- "clap_derive 4.3.1",
->>>>>>> main
  "once_cell",
 ]
 
@@ -773,15 +764,9 @@ dependencies = [
 
 [[package]]
 name = "clap_derive"
-<<<<<<< HEAD
 version = "4.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8cd2b2a819ad6eec39e8f1d6b53001af1e5469f8c177579cdaeb313115b825f"
-=======
-version = "4.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59e9ef9a08ee1c0e1f2e162121665ac45ac3783b0f897db7244ae75ad9a8f65b"
->>>>>>> main
 dependencies = [
  "heck 0.4.1",
  "proc-macro2",
@@ -1036,11 +1021,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "atty",
-<<<<<<< HEAD
  "clap 4.3.2",
-=======
- "clap 4.3.1",
->>>>>>> main
  "console",
  "cucumber-codegen",
  "cucumber-expressions",
@@ -2066,11 +2047,7 @@ version = "0.1.2-rc.2"
 dependencies = [
  "base64 0.21.2",
  "clap 3.2.25",
-<<<<<<< HEAD
- "merk",
-=======
  "merk 2.0.0",
->>>>>>> main
  "serde",
  "serde_derive",
  "serde_json",
@@ -2113,21 +2090,6 @@ dependencies = [
 name = "indicatif"
 version = "0.17.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-<<<<<<< HEAD
-checksum = "2d207dc617c7a380ab07ff572a6e52fa202a2a8f355860ac9c38e23f8196be1b"
-dependencies = [
- "console",
- "lazy_static",
- "number_prefix",
- "regex",
-]
-
-[[package]]
-name = "indicatif"
-version = "0.17.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-=======
->>>>>>> main
 checksum = "8ff8cc23a7393a397ed1d7f56e6365cba772aba9f9912ab968b03043c395d057"
 dependencies = [
  "console",
@@ -2249,11 +2211,7 @@ version = "0.1.2-rc.2"
 dependencies = [
  "clap 3.2.25",
  "hex",
-<<<<<<< HEAD
- "indicatif 0.17.5",
-=======
  "indicatif",
->>>>>>> main
  "log-panics",
  "many-client",
  "many-error",
@@ -2324,15 +2282,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-<<<<<<< HEAD
 version = "0.2.146"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f92be4933c13fd498862a9e02a3055f8a8d9c039ce33db97306fd5a6caa7f29b"
-=======
-version = "0.2.145"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc86cde3ff845662b8f4ef6cb50ea0e20c524eb3d29ae048287e06a1b3fa6a81"
->>>>>>> main
 
 [[package]]
 name = "libgit2-sys"
@@ -2970,8 +2922,6 @@ dependencies = [
 name = "many-server-cache"
 version = "0.1.2-rc.2"
 dependencies = [
-<<<<<<< HEAD
-=======
  "coset",
  "many-error",
  "many-protocol",
@@ -2984,7 +2934,6 @@ dependencies = [
 name = "many-types"
 version = "0.1.2-rc.2"
 dependencies = [
->>>>>>> main
  "base64 0.21.2",
  "cbor-diag",
  "coset",
