@@ -14,21 +14,21 @@ name = "many-ledger"
 doc = false
 
 [dependencies]
-async-channel = "1.8"
-async-trait = "0.1.51"
-base64 = "0.21.0"
-bip39-dict = "0.1"
-clap = { version = "3.2.23", features = ["derive"] }
-coset = "0.3"
+async-channel = "1.8.0"
+async-trait = "0.1.68"
+base64 = "0.21.2"
+bip39-dict = "0.1.1"
+clap = { version = "3.2.25", features = ["derive"] }
+coset = "0.3.4"
 const_format = "0.2.30"
-fixed = "1.11.0"
+fixed = "1.23.1"
 merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
 hex = "0.4.3"
-itertools = "0.10.3"
+itertools = "0.10.5"
 json5 = "0.4.1"
-linkme = { version = "0.3.5", features = ["used_linker"] }
+linkme = { version = "0.3.9", features = ["used_linker"] }
 num-bigint = "0.4.3"
-num-traits = "0.2.14"
+num-traits = "0.2.15"
 minicbor = { version = "0.19.1", features = ["derive", "std"] }
 many-cli-helpers = { path = "../many-cli-helpers", version = "0.1.2-rc.2" } # managed by release.sh
 many-error = { path = "../many-error", version = "0.1.2-rc.2" } # managed by release.sh
@@ -41,27 +41,27 @@ many-protocol = { path = "../many-protocol", version = "0.1.2-rc.2" } # managed 
 many-server = { path = "../many-server", version = "0.1.2-rc.2" } # managed by release.sh
 many-server-cache = { path = "../many-server-cache", version = "0.1.2-rc.2" } # managed by release.sh
 many-types = { path = "../many-types", version = "0.1.2-rc.2" } # managed by release.sh
-rand = "0.8"
-serde = "1.0.130"
-serde_json = "1.0.72"
-sha3 = "0.10.6"
-signal-hook = "0.3.13"
+rand = "0.8.5"
+serde = "1.0.163"
+serde_json = "1.0.96"
+sha3 = "0.10.8"
+signal-hook = "0.3.15"
 strum = "0.24.1"
-tokio = { version = "1.24.1", features = [ "full" ] }
-tracing = "0.1.28"
-typenum = "1.15.0"
+tokio = { version = "1.28.1", features = [ "full" ] }
+tracing = "0.1.37"
+typenum = "1.16.0"
 
 [dev-dependencies]
 cucumber = { version = "0.19.1", features = ["libtest"] }
-once_cell = "1.12"
+once_cell = "1.17.1"
 many-identity = { path = "../many-identity", features = ["default", "serde", "testing"], version = "0.1.2-rc.2" } # managed by release.sh
 many-identity-dsa = { path = "../many-identity-dsa", features = [ "ed25519", "testing" ], version = "0.1.2-rc.2" } # managed by release.sh
 many-ledger = { path = ".", features = ["balance_testing", "migration_testing", "disable_token_sender_check"]}
 many-modules = { path = "../many-modules", features = ["cucumber"], version = "0.1.2-rc.2" } # managed by release.sh
 many-types = { path = "../many-types", features = ["cucumber"], version = "0.1.2-rc.2" } # managed by release.sh
-proptest = "1"
-tempfile = "3.3.0"
-tokio = "1.13.0"
+proptest = "1.2.0"
+tempfile = "3.5.0"
+tokio = "1.28.1"
 many-ledger-test-utils = { path = "test-utils", version = "0.1.2-rc.2" } # managed by release.sh
 many-ledger-test-macros = { path = "test-macros", version = "0.1.2-rc.2" } # managed by release.sh
 
@@ -86,7 +86,7 @@ path = "tests/ledger_tokens/remove_token_ext_info.rs"
 harness = false
 
 [build-dependencies]
-vergen = { version = "8.1.0", features = ["git", "git2"] }
+vergen = { version = "8.2.1", features = ["git", "git2"] }
 
 [features]
 balance_testing=[]                  # Enable balance initialization from the CLI
