@@ -405,9 +405,9 @@ impl<'b> Decode<'b, ()> for DataValue {
     }
 }
 
-impl Into<BigInt> for DataValue {
-    fn into(self) -> BigInt {
-        match self {
+impl From<DataValue> for BigInt {
+    fn from(value: DataValue) -> Self {
+        match value {
             DataValue::Counter(v) => v.into(),
             DataValue::GaugeInt(v) => v,
         }
