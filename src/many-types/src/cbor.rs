@@ -39,22 +39,6 @@ pub enum CborAny {
     Null,
 }
 
-impl CborAny {
-    pub fn as_u64(&self) -> Option<u64> {
-        match self {
-            // Must be positive.
-            Self::Int(i) if i >= &0 => Some(*i as u64),
-            _ => None,
-        }
-    }
-    pub fn as_i64(&self) -> Option<i64> {
-        match self {
-            Self::Int(i) => Some(*i),
-            _ => None,
-        }
-    }
-}
-
 impl Debug for CborAny {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {

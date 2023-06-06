@@ -137,21 +137,6 @@ impl DataSet {
         }
     }
 
-    pub fn register_type(
-        &mut self,
-        index: DataIndex,
-        info: DataInfo,
-    ) -> Result<Arc<RwLock<DataValue>>, ManyError> {
-        if self.types.contains_key(&index) {
-            return Err(ManyError::unknown("Type already registered."));
-        }
-
-        let v = Arc::new(RwLock::new(DataValue::create(&info.r#type)));
-        self.types.insert(index, info);
-        self.values.insert(index, v.clone());
-        Ok(v)
-    }
-
     fn decode_inner(
         &mut self,
         d: &mut Decoder,
@@ -212,42 +197,8 @@ impl DataSet {
         Ok(())
     }
 
-    /// Encode a CBOR map from a selected source of indices.
-    pub fn encode_indices<W: encode::Write>(
-        &self,
-        e: &mut Encoder<W>,
-        indices: impl IntoIterator<Item = DataIndex>,
-    ) -> Result<(), encode::Error<W::Error>> {
-        let mut set: BTreeSet<DataIndex> = indices.into_iter().collect();
-        e.encode_with(self, &mut set)?;
-        Ok(())
-    }
-
     pub fn type_of(&self, index: DataIndex) -> Option<&DataType> {
         self.types.get(&index).map(|i| &i.r#type)
-    }
-
-    pub fn info(&self, index: DataIndex) -> Option<&DataInfo> {
-        self.types.get(&index)
-    }
-
-    pub fn infos(&self) -> std::collections::btree_map::Iter<'_, DataIndex, DataInfo> {
-        self.types.iter()
-    }
-
-    /// Get multiple cloned values from a list of indices. If an indices in the list isn't in the
-    /// set, it will not contain a value on the output BTreeMap.
-    /// If any lock is poisoned, this function will return the first poisoned error.
-    pub fn get_multiple(
-        &mut self,
-        indices: impl IntoIterator<Item = DataIndex>,
-    ) -> Result<BTreeMap<DataIndex, DataValue>, PoisonError<RwLockReadGuard<'_, DataValue>>> {
-        let set: BTreeSet<DataIndex> = indices.into_iter().collect();
-        self.values
-            .iter()
-            .filter(|(k, _v)| set.contains(k))
-            .map(|(k, v)| Ok((*k, v.read().map(|v| v.clone())?)))
-            .collect()
     }
 
     /// Returns a _copy_ of an internal value.
@@ -263,14 +214,6 @@ impl DataSet {
             let value = v.read()?;
             Ok(value.clone())
         })
-    }
-
-    pub fn get_mut(&mut self, index: DataIndex) -> Option<Arc<RwLock<DataValue>>> {
-        self.values.get(&index).map(Clone::clone)
-    }
-
-    pub fn delete(&mut self, index: DataIndex) {
-        self.values.remove(&index);
     }
 }
 
@@ -331,13 +274,6 @@ impl DataValue {
         }
 
         Ok(())
-    }
-
-    pub fn as_counter(&self) -> Option<u64> {
-        match self {
-            Self::Counter(v) => Some(*v),
-            _ => None,
-        }
     }
 
     pub fn as_gauge_int(&self) -> Option<&BigInt> {
