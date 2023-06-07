@@ -44,7 +44,7 @@ function teardown() {
     check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
 
     run many_message --pem=0 data.info
-    assert_output "[[]]"
+    assert_output "{0: []}"
 
     call_ledger --pem=1 --port=8000 send "$(identity 2)" 1000 MFX
     check_consistency --pem=1 --balance=999000 --id="$(identity 1)" 8000 8001 8002 8003
