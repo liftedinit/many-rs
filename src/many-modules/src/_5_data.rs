@@ -39,21 +39,21 @@ pub trait DataModuleBackend: Send {
 
 #[cfg(test)]
 mod tests {
+    use num_bigint::BigInt;
     use std::sync::{Arc, Mutex};
 
     use many_types::VecOrSingle;
-    use num_bigint::BigInt;
 
     use crate::testutils::{call_module, call_module_cbor};
 
     use super::*;
 
     fn account_total_count() -> DataIndex {
-        DataIndex::new(0).with_index(2).with_index(0)
+        accounts_count::TOTAL_COUNT_INDEX
     }
 
     fn non_zero_account_total_count() -> DataIndex {
-        DataIndex::new(0).with_index(2).with_index(1)
+        accounts_count::NON_ZERO_TOTAL_COUNT_INDEX
     }
 
     #[test]
@@ -125,8 +125,8 @@ mod tests {
 
         // Returns
         let mut returns = DataQueryReturns::new();
-        let act_value = DataValue::Counter(10);
-        let nzatc_value = DataValue::Counter(1);
+        let act_value = DataValue::GaugeInt(BigInt::from(10));
+        let nzatc_value = DataValue::GaugeInt(BigInt::from(1));
         returns.insert(account_total_count, act_value.clone());
         returns.insert(non_zero_account_total_count, nzatc_value.clone());
 
@@ -138,16 +138,22 @@ mod tests {
         )
         .unwrap();
 
-        let a: BigInt = results[&account_total_count].clone().try_into().unwrap();
-        let b = act_value.try_into().unwrap();
+        let mut ds = DataSet::default().with_known_types().unwrap();
+        ds.merge(results.clone()).unwrap();
 
-        assert_eq!(a, b);
-
-        let a: BigInt = results[&non_zero_account_total_count]
-            .clone()
-            .try_into()
-            .unwrap();
-        let b = nzatc_value.try_into().unwrap();
-        assert_eq!(a, b);
+        // Check that both the dataset and the results match their expected value.
+        assert_eq!(&ds.get_value(account_total_count).unwrap(), &act_value);
+        assert_eq!(
+            &results.get(&account_total_count).unwrap().clone(),
+            &act_value
+        );
+        assert_eq!(
+            &ds.get_value(non_zero_account_total_count).unwrap(),
+            &nzatc_value
+        );
+        assert_eq!(
+            &results.get(&non_zero_account_total_count).unwrap().clone(),
+            &nzatc_value
+        );
     }
 }

@@ -6,6 +6,7 @@ use minicbor::{Decode, Encode};
 use crate::data::{DataIndex, DataInfo};
 
 #[derive(Clone, Encode, Decode)]
+#[cbor(map)]
 pub struct DataGetInfoArgs {
     #[n(0)]
     pub indices: VecOrSingle<DataIndex>,
