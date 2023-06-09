@@ -1,6 +1,7 @@
 pub mod common;
 
 use crate::common::{setup, Setup};
+use many_error::Reason;
 use many_identity::testing::identity;
 use many_identity::Address;
 use many_kvstore::error;
@@ -9,6 +10,7 @@ use many_modules::kvstore::{
 };
 use many_types::{Either, SortOrder};
 use minicbor::bytes::ByteVec;
+use std::collections::BTreeMap;
 
 #[test]
 fn info() {
@@ -220,5 +222,42 @@ fn list() {
             .map(|e| e.into())
             .collect::<Vec<Vec<u8>>>(),
         keys
+    );
+
+    // Disable first key with bool
+    let _ = setup.disable(&id, vec![1], None, None).unwrap();
+    let query = setup.query(&id, vec![1]).unwrap();
+    assert_eq!(query.disabled, Some(Either::Left(true)));
+
+    // Verify that disabled key is not listed
+    let list = setup.list(&setup.id, SortOrder::Ascending).unwrap().keys;
+    assert_eq!(
+        list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
+        keys[1..].to_vec()
+    );
+
+    // Disable second key with reason
+    let reason = Reason::new(123, Some("Foo".to_string()), BTreeMap::new());
+    let _ = setup
+        .disable(&id, vec![2], None, Some(reason.clone()))
+        .unwrap();
+    let query = setup.query(&id, vec![2]).unwrap();
+    assert_eq!(query.disabled, Some(Either::Right(reason)));
+
+    // Verify that disabled key is not listed
+    let list = setup.list(&setup.id, SortOrder::Ascending).unwrap().keys;
+    assert_eq!(
+        list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
+        keys[2..].to_vec()
+    );
+
+    // Re-enable first key
+    let _ = setup.put(&id, vec![2], b"foo".to_vec(), None);
+
+    // Verify re-enabled key is listed
+    let list = setup.list(&setup.id, SortOrder::Ascending).unwrap().keys;
+    assert_eq!(
+        list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
+        keys[1..].to_vec()
     );
 }
