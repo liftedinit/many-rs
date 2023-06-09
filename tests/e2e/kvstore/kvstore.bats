@@ -179,6 +179,36 @@ function teardown() {
   refute_output --partial "373738383939"
 }
 
+@test "$SUITE: can't list disabled key" {
+
+  call_kvstore --pem=1 --port=8000 put "112233" "foobar"
+  call_kvstore --pem=1 --port=8000 put "445566" "foobar2"
+  call_kvstore --pem=1 --port=8000 put "778899" "foobar3"
+
+  call_kvstore --pem=1 --port=8000 list
+  assert_output --partial "112233"
+  assert_output --partial "445566"
+  assert_output --partial "778899"
+
+  call_kvstore --pem=1 --port=8000 disable "112233"
+  call_kvstore --pem=1 --port=8000 list
+  refute_output --partial "112233"
+  assert_output --partial "445566"
+  assert_output --partial "778899"
+
+  call_kvstore --pem=1 --port=8000 disable "445566" --reason "Foo"
+  call_kvstore --pem=1 --port=8000 list
+  refute_output --partial "112233"
+  refute_output --partial "445566"
+  assert_output --partial "778899"
+
+  call_kvstore --pem=1 --port=8000 put "112233" "foobar"
+  call_kvstore --pem=1 --port=8000 list
+  assert_output --partial "112233"
+  refute_output --partial "445566"
+  assert_output --partial "778899"
+}
+
 @test "$SUITE: list key ordering" {
   call_kvstore --pem=1 --port=8000 put "112233" "foobar"
   call_kvstore --pem=1 --port=8000 put "445566" "foobar2"

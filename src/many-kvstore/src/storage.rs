@@ -247,7 +247,10 @@ impl KvStoreStorage {
             let (k, v) = item.ok()?;
             let meta: KvStoreMetadata = minicbor::decode(&v).ok()?;
             if &meta.owner == owner {
-                Some(k.into_vec())
+                match meta.disabled {
+                    None | Some(Either::Left(false)) => Some(k.into_vec()),
+                    _ => None,
+                }
             } else {
                 None
             }
