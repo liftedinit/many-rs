@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2023-06-14
+
+### Bug Fixes
+
+- Don't list disabled keys ([#388](https://github.com/liftedinit/many-rs/issues/388))
+- Add kvstore.list to endpoints ([#389](https://github.com/liftedinit/many-rs/issues/389))
+
+### Features
+
+- Update maximum key/value length ([#381](https://github.com/liftedinit/many-rs/issues/381))
+- Kvstore.list ([#383](https://github.com/liftedinit/many-rs/issues/383))
+
+### Miscellaneous Tasks
+
+- Update dependencies ([#379](https://github.com/liftedinit/many-rs/issues/379))
+
 ## [0.1.2-rc.2] - 2023-06-02
 
 ### Bug Fixes
