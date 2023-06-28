@@ -1,29 +1,33 @@
-use crate::{AkashOpt, error};
 use crate::storage::ComputeStorage;
+use crate::{error, AkashOpt};
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::{
     AbciBlock, AbciCommitInfo, AbciInfo, AbciInit, BeginBlockReturn, EndpointInfo, InitChainReturn,
     ManyAbciModuleBackend,
 };
-use many_modules::compute::{CloseArgs, CloseReturns, ComputeModuleBackend, DeployArgs, DeployReturns, InfoArg, InfoReturns};
+use many_modules::compute::{
+    CloseArgs, CloseReturns, ComputeModuleBackend, DeployArgs, DeployReturns, InfoArg, InfoReturns,
+    ListArgs, ListReturns,
+};
+use many_types::compute::{
+    Bids, ComputeListFilter, ComputeStatus, DeploymentInfo, DeploymentMeta, LeaseStatus,
+    LeasesResponse, ProviderInfo, TxLog,
+};
 use many_types::Timestamp;
-use std::collections::BTreeMap;
-use std::fmt::Write;
-use std::fs::File;
-use std::io;
-use std::io::Write as _;
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, HashMap};
+use std::io::Write;
 use std::path::Path;
-use std::process::{Command, ExitCode, ExitStatus};
+use std::process::{Command, Output};
 use std::thread::sleep;
 use std::time::Duration;
-use tracing::{debug, error, info, trace};
-use many_types::compute::{ComputeStatus, Protocol, ProviderInfo};
+use tempfile::NamedTempFile;
+use tracing::{debug, info};
+
+pub mod allow_addrs;
 
 const AKASH_BIN: &str = "provider-services";
-
-const SDL_TEMPLATE: &str = r#"
-"#;
 
 // The initial state schema, loaded from JSON.
 #[derive(serde::Deserialize, Debug, Default)]
@@ -75,6 +79,462 @@ impl ComputeModuleImpl {
 
         Ok(Self { akash_opt, storage })
     }
+
+    fn execute_akash_command(&self, args: &[&str]) -> Result<Output, ManyError> {
+        Command::new(AKASH_BIN)
+            .args(args)
+            .output()
+            .map_err(|_| ManyError::unknown("Failed to execute command"))
+    }
+
+    fn generate_cert(&mut self) -> Result<(), ManyError> {
+        // Generate certificate
+        info!("Generating certificate");
+        let cert_generate_args = [
+            "tx",
+            "cert",
+            "generate",
+            "client",
+            "--chain-id",
+            self.akash_opt.akash_chain_id.as_str(),
+            "--node",
+            self.akash_opt.akash_rpc.as_str(),
+            "--from",
+            self.akash_opt.akash_wallet.as_str(),
+        ];
+        let output = self.execute_akash_command(&cert_generate_args)?;
+
+        // Certificate exists, continue with deployment
+        if !output.status.success() {
+            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+            if err != "Error: certificate error: cannot overwrite certificate\n" {
+                return Err(ManyError::unknown("Failed to generate client certificate"));
+            }
+            info!("Certificate already exists, continuing");
+        } else {
+            info!("Publishing certificate");
+            let cert_publish_args = ["tx", "cert", "publish", "client"];
+            let output = self.execute_akash_command(&cert_publish_args)?;
+
+            if !output.status.success() {
+                let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+                return Err(ManyError::unknown(format!(
+                    "Failed to publish client certificate: {}",
+                    err
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    fn create_deployment(
+        &mut self,
+        args: &DeployArgs,
+        tmpfile: &mut NamedTempFile,
+    ) -> Result<(u64, u64, u64), ManyError> {
+        let DeployArgs {
+            image,
+            port,
+            num_cpu,
+            num_memory,
+            memory_type,
+            num_storage,
+            storage_type,
+            region,
+        } = args;
+
+        let sdl = format!(
+            r#"---
+version: "2.0"
+
+services:
+  app:
+    image: {}
+    expose:
+      - port: {}
+        to:
+          - global: true
+profiles:
+  compute:
+    app:
+      resources:
+        cpu:
+          units: {}
+        memory:
+          size: {}{}
+        storage:
+          size: {}{}
+  placement:
+    region:
+      attributes:
+        host: akash
+        region: {}
+      signedBy:
+        anyOf:
+          - "akash1365yvmc4s7awdyj3n2sav7xfx76adc6dnmlx63"
+          - "akash18qa2a2ltfyvkyj0ggj3hkvuj6twzyumuaru9s4"
+      pricing:
+        app:
+          denom: uakt
+          amount: 10000
+deployment:
+  app:
+    region:
+      profile: app
+      count: 1"#,
+            image, port, num_cpu, num_memory, memory_type, num_storage, storage_type, region
+        );
+
+        write!(tmpfile, "{}", sdl).map_err(ManyError::unknown)?;
+        let tmpfile_path = tmpfile
+            .path()
+            .to_str()
+            .ok_or(ManyError::unknown("Unable to get SDL file path"))?;
+        debug!("{sdl}");
+
+        info!("Creating deployment");
+        let deploy_args = [
+            "tx",
+            "deployment",
+            "create",
+            tmpfile_path,
+            "--chain-id",
+            self.akash_opt.akash_chain_id.as_str(),
+            "--node",
+            self.akash_opt.akash_rpc.as_str(),
+            "--gas",
+            self.akash_opt.akash_gas.as_str(),
+            "--gas-prices",
+            self.akash_opt.akash_gas_price.as_str(),
+            "--gas-adjustment",
+            &format!("{}", self.akash_opt.akash_gas_adjustment),
+            "--sign-mode",
+            self.akash_opt.akash_sign_mode.as_str(),
+            "--from",
+            self.akash_opt.akash_wallet.as_str(),
+            "--yes",
+        ];
+        let output = self.execute_akash_command(&deploy_args)?;
+
+        if !output.status.success() {
+            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+            return Err(ManyError::unknown(format!(
+                "akash tx deployment create failed: {err}"
+            )));
+        }
+
+        let response: TxLog = serde_json::from_slice(&output.stdout).map_err(ManyError::unknown)?;
+
+        let mut seq_values: HashMap<String, u64> = HashMap::new();
+        let keys = vec!["dseq", "gseq", "oseq"];
+
+        for log in response.logs {
+            for event in log.events {
+                for attr in event.attributes {
+                    if keys.contains(&attr.key.as_str()) {
+                        let value = attr.value.parse().map_err(ManyError::unknown)?;
+                        seq_values.insert(attr.key, value);
+                    }
+                }
+            }
+        }
+
+        let dseq = seq_values.get("dseq").unwrap_or(&0);
+        let gseq = seq_values.get("gseq").unwrap_or(&0);
+        let oseq = seq_values.get("oseq").unwrap_or(&0);
+
+        debug!("dseq: {dseq}, gseq: {gseq}, oseq: {oseq}");
+        Ok((*dseq, *gseq, *oseq))
+    }
+
+    // TODO: Handle price range
+    fn create_bid(&mut self, dseq: u64, gseq: u64, oseq: u64) -> Result<(String, f64), ManyError> {
+        let mut my_bids = vec![];
+        let mut counter = 0;
+
+        while my_bids.is_empty() && counter < 20 {
+            info!("Waiting for bid to be created");
+            let bid_list_args = [
+                "query",
+                "market",
+                "bid",
+                "list",
+                "--chain-id",
+                self.akash_opt.akash_chain_id.as_str(),
+                "--node",
+                self.akash_opt.akash_rpc.as_str(),
+                "--owner",
+                self.akash_opt.akash_wallet.as_str(),
+                "--dseq",
+                &dseq.to_string(),
+                "--gseq",
+                &gseq.to_string(),
+                "--oseq",
+                &oseq.to_string(),
+                "--state",
+                "open",
+            ];
+            let output = self.execute_akash_command(&bid_list_args)?;
+
+            if !output.status.success() {
+                let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+                return Err(ManyError::unknown(format!(
+                    "akash query market bid list failed: {err}"
+                )));
+            }
+
+            let response: Bids =
+                serde_yaml::from_slice(&output.stdout).map_err(ManyError::unknown)?;
+            my_bids = response.bids;
+
+            sleep(Duration::from_secs(1));
+            counter += 1;
+        }
+
+        let mut cheapest_provider = "".to_string();
+        let mut cheapest_price = f64::MAX;
+
+        dbg!(&my_bids);
+
+        // Find the cheapest bid
+        for bid in my_bids {
+            if bid.bid.price.amount.partial_cmp(&cheapest_price) == Some(Ordering::Less) {
+                cheapest_price = bid.bid.price.amount;
+                cheapest_provider = bid.bid.bid_id.provider;
+            }
+        }
+
+        debug!("cheapest_provider: {cheapest_provider}");
+        debug!("cheapest_price: {cheapest_price}");
+
+        // TODO: Handle price range
+        Ok((cheapest_provider, cheapest_price))
+    }
+
+    fn create_lease(
+        &mut self,
+        dseq: u64,
+        gseq: u64,
+        oseq: u64,
+        provider: &String,
+    ) -> Result<(), ManyError> {
+        info!("Creating lease");
+        let lease_create_args = [
+            "tx",
+            "market",
+            "lease",
+            "create",
+            "--chain-id",
+            self.akash_opt.akash_chain_id.as_str(),
+            "--node",
+            self.akash_opt.akash_rpc.as_str(),
+            "--gas",
+            self.akash_opt.akash_gas.as_str(),
+            "--gas-prices",
+            self.akash_opt.akash_gas_price.as_str(),
+            "--gas-adjustment",
+            &self.akash_opt.akash_gas_adjustment.to_string(),
+            "--sign-mode",
+            self.akash_opt.akash_sign_mode.as_str(),
+            "--from",
+            self.akash_opt.akash_wallet.as_str(),
+            "--dseq",
+            &dseq.to_string(),
+            "--gseq",
+            &gseq.to_string(),
+            "--oseq",
+            &oseq.to_string(),
+            "--provider",
+            provider,
+            "--yes",
+        ];
+        let output = self.execute_akash_command(&lease_create_args)?;
+
+        if !output.status.success() {
+            // An error occurred while creating the lease, close the deployment
+            self.close_deployment(&CloseArgs { dseq })?;
+
+            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+            return Err(ManyError::unknown(format!(
+                "akash tx market lease create failed: {err}"
+            )));
+        }
+
+        Ok(())
+    }
+
+    fn check_lease_status(&mut self, dseq: u64, gseq: u64, oseq: u64) -> Result<(), ManyError> {
+        info!("Checking lease status");
+        let mut counter = 0;
+        while counter < 20 {
+            let output = Command::new(AKASH_BIN)
+                .args(["query", "market", "lease", "list"])
+                .args(["--chain-id", self.akash_opt.akash_chain_id.as_str()])
+                .args(["--node", self.akash_opt.akash_rpc.as_str()])
+                .args(["--owner", self.akash_opt.akash_wallet.as_str()])
+                .args(["--dseq", &dseq.to_string()])
+                .args(["--gseq", &gseq.to_string()])
+                .args(["--oseq", &oseq.to_string()])
+                .output()
+                .map_err(ManyError::unknown)?;
+
+            if !output.status.success() {
+                // An error occurred while creating the lease, close the deployment
+                self.close_deployment(&CloseArgs { dseq })?;
+
+                let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+                return Err(ManyError::unknown(format!(
+                    "akash query market lease list failed: {err}"
+                )));
+            }
+
+            let response: LeasesResponse =
+                serde_yaml::from_slice(&output.stdout).map_err(ManyError::unknown)?;
+            if !response.leases.is_empty() {
+                for lease in response.leases {
+                    if lease.lease.state == "active" {
+                        return Ok(());
+                    }
+                }
+                return Err(ManyError::unknown("active lease not found"));
+            }
+
+            sleep(Duration::from_secs(1));
+            counter += 1;
+        }
+
+        Err(ManyError::unknown("active lease not found"))
+    }
+
+    fn check_manifest_status(
+        &mut self,
+        dseq: u64,
+        gseq: u64,
+        oseq: u64,
+        provider: &String,
+    ) -> Result<LeaseStatus, ManyError> {
+        info!("Checking manifest status");
+        let mut counter = 0;
+        while counter < 20 {
+            let lease_list_args = [
+                "lease-status",
+                "--node",
+                self.akash_opt.akash_rpc.as_str(),
+                "--from",
+                self.akash_opt.akash_wallet.as_str(),
+                "--dseq",
+                &dseq.to_string(),
+                "--gseq",
+                &gseq.to_string(),
+                "--oseq",
+                &oseq.to_string(),
+                "--provider",
+                provider,
+            ];
+            let output = self.execute_akash_command(&lease_list_args)?;
+
+            if !output.status.success() {
+                // An error occurred while creating the lease, close the deployment
+                self.close_deployment(&CloseArgs { dseq })?;
+
+                let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+                return Err(ManyError::unknown(format!(
+                    "akash query market lease list failed: {err}"
+                )));
+            }
+
+            let response: LeaseStatus =
+                serde_yaml::from_slice(&output.stdout).map_err(ManyError::unknown)?;
+            if !response.forwarded_ports.is_empty() {
+                return Ok(response);
+            }
+
+            sleep(Duration::from_secs(1));
+            counter += 1;
+        }
+
+        Err(ManyError::unknown("active lease not found"))
+    }
+
+    fn close_deployment(&mut self, args: &CloseArgs) -> Result<(), ManyError> {
+        info!("Closing deployment");
+        let deployment_close_args = [
+            "tx",
+            "deployment",
+            "close",
+            "--chain-id",
+            self.akash_opt.akash_chain_id.as_str(),
+            "--node",
+            self.akash_opt.akash_rpc.as_str(),
+            "--gas",
+            self.akash_opt.akash_gas.as_str(),
+            "--gas-prices",
+            self.akash_opt.akash_gas_price.as_str(),
+            "--gas-adjustment",
+            &format!("{}", self.akash_opt.akash_gas_adjustment),
+            "--sign-mode",
+            self.akash_opt.akash_sign_mode.as_str(),
+            "--from",
+            self.akash_opt.akash_wallet.as_str(),
+            "--dseq",
+            &args.dseq.to_string(),
+            "--yes",
+        ];
+        let output = self.execute_akash_command(&deployment_close_args)?;
+
+        if !output.status.success() {
+            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+            return Err(ManyError::unknown(format!(
+                "akash tx deployment close failed: {err}"
+            )));
+        }
+
+        Ok(())
+    }
+
+    fn send_manifest(
+        &mut self,
+        tmpfile: &NamedTempFile,
+        dseq: u64,
+        gseq: u64,
+        oseq: u64,
+        provider: &String,
+    ) -> Result<(), ManyError> {
+        info!("Sending manifest");
+        let tmpfile_path = tmpfile
+            .path()
+            .to_str()
+            .ok_or(ManyError::unknown("Unable to get SDL file path"))?;
+
+        let send_manifest_args = [
+            "send-manifest",
+            tmpfile_path,
+            "--node",
+            self.akash_opt.akash_rpc.as_str(),
+            "--from",
+            self.akash_opt.akash_wallet.as_str(),
+            "--dseq",
+            &dseq.to_string(),
+            "--gseq",
+            &gseq.to_string(),
+            "--oseq",
+            &oseq.to_string(),
+            "--provider",
+            provider,
+        ];
+        let output = self.execute_akash_command(&send_manifest_args)?;
+
+        if !output.status.success() {
+            // An error occurred while creating the lease, close the deployment
+            self.close_deployment(&CloseArgs { dseq })?;
+
+            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+            return Err(ManyError::unknown(format!(
+                "akash send-manifest failed: {err}"
+            )));
+        }
+        Ok(())
+    }
 }
 
 // This module is always supported, but will only be added when created using an ABCI
@@ -86,6 +546,8 @@ impl ManyAbciModuleBackend for ComputeModuleImpl {
             endpoints: BTreeMap::from([
                 ("compute.info".to_string(), EndpointInfo { is_command: false }),
                 ("compute.deploy".to_string(), EndpointInfo { is_command: true }),
+                ("compute.close".to_string(), EndpointInfo { is_command: true }),
+                ("compute.list".to_string(), EndpointInfo { is_command: false }),
                 //
                 // Events
                 ("events.info".to_string(), EndpointInfo { is_command: false }),
@@ -149,312 +611,84 @@ impl ComputeModuleBackend for ComputeModuleImpl {
         Ok(InfoReturns { hash: hash.into() })
     }
 
-    fn deploy(&self, _sender: &Address, args: DeployArgs) -> Result<DeployReturns, ManyError> {
+    fn deploy(&mut self, sender: &Address, args: DeployArgs) -> Result<DeployReturns, ManyError> {
         // At this point, the sender should already be validated by the WhitelistValidator
+        let mut tmpfile = tempfile::Builder::new()
+            .prefix("akash-sdl")
+            .suffix(".yml")
+            .tempfile()
+            .map_err(ManyError::unknown)?;
 
-        let DeployArgs {
-            image,
+        self.generate_cert()?;
+        let (dseq, gseq, oseq) = self.create_deployment(&args, &mut tmpfile)?;
+        let (provider, price) = self.create_bid(dseq, gseq, oseq)?;
+
+        let DeployArgs { image, port, .. } = args;
+
+        self.create_lease(dseq, gseq, oseq, &provider)?;
+        self.check_lease_status(dseq, gseq, oseq)?;
+        self.send_manifest(&tmpfile, dseq, gseq, oseq, &provider)?;
+        let lease_status = self.check_manifest_status(dseq, gseq, oseq, &provider)?;
+
+        let app = lease_status
+            .forwarded_ports
+            .get("app")
+            .ok_or(ManyError::unknown("unable to get app"))?;
+        let forwarded_port_status = app
+            .first()
+            .ok_or(ManyError::unknown("unable to get app entry"))?;
+
+        let host = forwarded_port_status.host.clone();
+        let external_port = forwarded_port_status.external_port;
+        let protocol = forwarded_port_status.proto;
+        let provider_info = ProviderInfo {
+            host,
             port,
-            num_cpu,
-            num_memory,
-            memory_type,
-            num_storage,
-            storage_type,
-            region,
-        } = args;
+            external_port,
+            protocol,
+        };
 
-        // Generate certificate
-        let output = Command::new(AKASH_BIN)
-            .args(["tx", "cert", "generate", "client"])
-            .args(["--chain-id", self.akash_opt.akash_chain_id.as_str()])
-            .args(["--node", self.akash_opt.akash_rpc.as_str()])
-            .args(["--from", self.akash_opt.akash_wallet.as_str()])
-            .output()
-            .map_err(ManyError::unknown)?;
-
-        // Certificate exists, continue with deployment
-        if !output.status.success() {
-            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
-            if err != "Error: certificate error: cannot overwrite certificate\n" {
-                return Err(ManyError::unknown("akash tx cert generate client failed"));
-            }
-            error!("{err}");
-        } else {
-            // We don't already have a certificate - publish new akash certificate
-            let output = Command::new(AKASH_BIN)
-                .args(["tx", "cert", "publish", "client"])
-                .args(["--chain-id", self.akash_opt.akash_chain_id.as_str()])
-                .args(["--node", self.akash_opt.akash_rpc.as_str()])
-                .args(["--from", self.akash_opt.akash_wallet.as_str()])
-                .output()
-                .map_err(ManyError::unknown)?;
-
-            if !output.status.success() {
-                let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
-                error!("{err}");
-                return Err(ManyError::unknown("akash tx cert publish client failed"));
-            }
-        }
-
-        // Creating deployment SDL
-        let sdl = format!(
-r#"---
-version: "2.0"
-
-services:
-  app:
-    image: {}
-    expose:
-      - port: {}
-        to:
-          - global: true
-profiles:
-  compute:
-    app:
-      resources:
-        cpu:
-          units: {}
-        memory:
-          size: {}{}
-        storage:
-          size: {}{}
-  placement:
-    region:
-      attributes:
-        host: akash
-        region: {}
-      signedBy:
-        anyOf:
-          - "akash1365yvmc4s7awdyj3n2sav7xfx76adc6dnmlx63"
-          - "akash18qa2a2ltfyvkyj0ggj3hkvuj6twzyumuaru9s4"
-      pricing:
-        app:
-          denom: uakt
-          amount: 10000
-deployment:
-  app:
-    region:
-      profile: app
-      count: 1"#,
-        image, port, num_cpu, num_memory, memory_type, num_storage, storage_type, region);
-
-        // let mut tmpfile = tempfile::NamedTempFile::new().map_err(ManyError::unknown)?;
-        let mut tmpfile = File::create("/tmp/akash-sdl.yml").map_err(ManyError::unknown)?;
-        // let mut tmpfile = tempfile::Builder::new()
-        //     .prefix("akash-sdl")
-        //     .suffix(".yml")
-        //     .tempfile()
-        //     .map_err(ManyError::unknown)?;
-        write!(tmpfile, "{}", sdl).map_err(ManyError::unknown)?;
-        // trace!("tmpfile path: {:?}", tmpfile.path());
-        debug!("{sdl}");
-
-        // Creating deployment
-        let output = Command::new(AKASH_BIN)
-            .args(["tx", "deployment", "create", "/tmp/akash-sdl.yml"]) // Safe to unwrap
-            .args(["--chain-id", self.akash_opt.akash_chain_id.as_str()])
-            .args(["--node", self.akash_opt.akash_rpc.as_str()])
-            .args(["--gas", self.akash_opt.akash_gas.as_str()])
-            .args(["--gas-prices", self.akash_opt.akash_gas_price.as_str()])
-            .args(["--gas-adjustment", &format!("{}", self.akash_opt.akash_gas_adjustment)])
-            .args(["--sign-mode", self.akash_opt.akash_sign_mode.as_str()])
-            .args(["--from", self.akash_opt.akash_wallet.as_str()])
-            .args(["--yes"])
-            .output()
-            .map_err(ManyError::unknown)?;
-
-        if !output.status.success() {
-            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
-            error!("{err}");
-            return Err(ManyError::unknown("akash tx deployment create failed"));
-        }
-
-        // TODO: Deserialize to proper structs
-        let response = serde_json::from_slice::<serde_json::Value>(&output.stdout)
-            .map_err(ManyError::unknown)?;
-
-        let attributes = &response["logs"][0]["events"][0]["attributes"];
-        if !attributes.is_array() {
-            return Err(ManyError::unknown("akash tx deployment create failed. attributes is not an array."));
-        }
-
-        let mut dseq = "";
-        let mut gseq = "";
-        let mut oseq = "";
-
-        // Safe because we checked above
-        for attr in attributes.as_array().unwrap() {
-            if dseq == "" && attr["key"] == "dseq" {
-                dseq = attr["value"].as_str().ok_or(ManyError::unknown("unable to parse dseq."))?;
-            }
-            if gseq == "" && attr["key"] == "gseq" {
-                gseq = attr["value"].as_str().ok_or(ManyError::unknown("unable to parse gseq."))?;
-            }
-            if oseq == "" && attr["key"] == "oseq" {
-                oseq = attr["value"].as_str().ok_or(ManyError::unknown("unable to parse oseq."))?;
-            }
-        }
-
-        debug!("dseq: {dseq}");
-        debug!("gseq: {gseq}");
-        debug!("oseq: {oseq}");
-
-        let mut my_bids = vec![];
-        let mut counter = 0;
-
-        while my_bids.is_empty() && counter < 10 {
-            // View the provider bids
-            let output = Command::new(AKASH_BIN)
-                .args(["query", "market", "bid", "list"])
-                .args(["--chain-id", self.akash_opt.akash_chain_id.as_str()])
-                .args(["--node", self.akash_opt.akash_rpc.as_str()])
-                .args(["--owner", self.akash_opt.akash_wallet.as_str()])
-                .args(["--dseq", dseq])
-                .args(["--gseq", gseq])
-                .args(["--oseq", oseq])
-                .args(["--state", "open"])
-                .output()
-                .map_err(ManyError::unknown)?;
-
-            if !output.status.success() {
-                let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
-                error!("{err}");
-                return Err(ManyError::unknown("akash query market bid list failed"));
-            }
-
-            // TODO: Deserialize to proper structs
-            let response = serde_yaml::from_slice::<serde_yaml::Value>(&output.stdout)
-                .map_err(ManyError::unknown)?;
-
-            let bids = &response["bids"];
-            if !bids.is_sequence() {
-                return Err(ManyError::unknown("akash query market bid list failed. bids is not an array."));
-            }
-
-            my_bids = bids.as_sequence().unwrap().to_vec();
-
-            sleep(Duration::from_secs(1));
-            counter += 1;
-        }
-
-
-        let mut cheapest_provider = "".to_string();
-        let mut cheapest_price = f64::MAX;
-
-        // Find the cheapest bid
-        for bid in my_bids {
-            let price = bid["bid"]["price"]["amount"].as_str().ok_or(ManyError::unknown("unable to parse price."))?;
-            let price = price.parse::<f64>().map_err(ManyError::unknown)?;
-            if price < cheapest_price {
-                cheapest_price = price;
-                cheapest_provider = bid["bid"]["bid_id"]["provider"].as_str().ok_or(ManyError::unknown("unable to parse provider."))?.to_string();
-            }
-        }
-
-        debug!("cheapest_provider: {cheapest_provider}");
-        debug!("cheapest_price: {cheapest_price}");
-
-        // TODO: Handle price range
-
-        // Create a lease using the cheapest bid
-        let output = Command::new(AKASH_BIN)
-            .args(["tx", "market", "lease", "create"])
-            .args(["--chain-id", self.akash_opt.akash_chain_id.as_str()])
-            .args(["--node", self.akash_opt.akash_rpc.as_str()])
-            .args(["--gas", self.akash_opt.akash_gas.as_str()])
-            .args(["--gas-prices", self.akash_opt.akash_gas_price.as_str()])
-            .args(["--gas-adjustment", &format!("{}", self.akash_opt.akash_gas_adjustment)])
-            .args(["--sign-mode", self.akash_opt.akash_sign_mode.as_str()])
-            .args(["--from", self.akash_opt.akash_wallet.as_str()])
-            .args(["--dseq", dseq])
-            .args(["--gseq", gseq])
-            .args(["--oseq", oseq])
-            .args(["--provider", &cheapest_provider])
-            .args(["--yes"])
-            .output()
-            .map_err(ManyError::unknown)?;
-
-        // TODO: Handle bids timeout
-
-        if !output.status.success() {
-            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
-            error!("{err}");
-            return Err(ManyError::unknown("akash tx market lease create failed"));
-        }
-
-        // Query lease list
-        // let output = Command::new(AKASH_BIN)
-        //     .args(["query", "market", "lease", "list"])
-        //     .args(["--chain-id", self.akash_opt.akash_chain_id.as_str()])
-        //     .args(["--node", self.akash_opt.akash_rpc.as_str()])
-        //     .args(["--owner", self.akash_opt.akash_wallet.as_str()])
-        //     .args(["--dseq", dseq])
-        //     .args(["--gseq", gseq])
-        //     .args(["--oseq", oseq])
-        //     .output()
-        //     .map_err(ManyError::unknown)?;
-
-        // FIXME: This is a hack to wait for the lease to be created
-        sleep(Duration::from_secs(2));
-
-        // Send the manifest
-        let output = Command::new(AKASH_BIN)
-            .args(["send-manifest", "/tmp/akash-sdl.yml"])
-            .args(["--node", self.akash_opt.akash_rpc.as_str()])
-            .args(["--from", self.akash_opt.akash_wallet.as_str()])
-            .args(["--dseq", dseq])
-            .args(["--gseq", gseq])
-            .args(["--oseq", oseq])
-            .args(["--provider", &cheapest_provider])
-            .output()
-            .map_err(ManyError::unknown)?;
-
-        if !output.status.success() {
-            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
-            error!("{err}");
-            return Err(ManyError::unknown("akash send-manifest failed"));
-        }
-
-        // FIXME: This is a hack to wait for the lease to be created
-        sleep(Duration::from_secs(2));
-
-        // Get lease status
-        let output = Command::new(AKASH_BIN)
-            .args(["lease-status"])
-            .args(["--node", self.akash_opt.akash_rpc.as_str()])
-            .args(["--dseq", dseq])
-            .args(["--gseq", gseq])
-            .args(["--oseq", oseq])
-            .args(["--provider", &cheapest_provider])
-            .args(["--from", self.akash_opt.akash_wallet.as_str()])
-            .output()
-            .map_err(ManyError::unknown)?;
-
-        if !output.status.success() {
-            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
-            error!("{err}");
-            return Err(ManyError::unknown("akash lease-status failed"));
-        }
-
-        // TODO: Deserialize to proper structs
-        io::stdout().write_all(&output.stdout).unwrap();
+        let meta = DeploymentMeta {
+            status: ComputeStatus::Deployed,
+            dseq,
+            meta: Some(DeploymentInfo {
+                provider,
+                provider_info,
+                price,
+            }),
+            image,
+        };
 
         // Write info to compute storage
+        self.storage.add_deployment(sender, &meta)?;
 
-        // TODO: Return relevant info...
-        Ok(DeployReturns {
-            status: ComputeStatus::Running,
-            provider_info: ProviderInfo {
-                host: "".to_string(),
-                port,
-                external_port: 0,
-                protocol: Protocol::TCP,
-            },
-            dseq: dseq.parse().map_err(ManyError::unknown)?, // TODO
-        })
+        Ok(DeployReturns(meta))
     }
 
-    fn close(&self, sender: &Address, args: CloseArgs) -> Result<CloseReturns, ManyError> {
-        todo!()
+    fn close(&mut self, sender: &Address, args: CloseArgs) -> Result<CloseReturns, ManyError> {
+        if !self.storage.has(sender, args.dseq)? {
+            return Err(ManyError::unknown(format!(
+                "deployment {} not found for {}",
+                args.dseq, sender
+            )));
+        }
+
+        self.close_deployment(&args)?;
+        self.storage.remove_deployment(sender, args.dseq)?;
+
+        Ok(CloseReturns {})
+    }
+
+    fn list(&self, _sender: &Address, args: ListArgs) -> Result<ListReturns, ManyError> {
+        let deployments = self.storage.list_deployment(args.order, args.owner)?;
+        Ok(ListReturns {
+            deployments: match args.filter {
+                Some(ComputeListFilter::Status(filter)) => deployments
+                    .into_iter()
+                    .filter(|meta| meta.status == filter)
+                    .collect(),
+                Some(ComputeListFilter::All) | None => deployments,
+            },
+        })
     }
 }

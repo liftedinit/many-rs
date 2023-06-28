@@ -1,11 +1,15 @@
 use crate::error;
+use crate::storage::iterator::ComputeIterator;
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::AbciCommitInfo;
 use many_modules::events::EventId;
-use many_types::Timestamp;
+use many_types::compute::{ComputeStatus, DeploymentMeta};
+use many_types::{SortOrder, Timestamp};
 use merk::{BatchEntry, Op};
 use std::path::Path;
+
+pub mod iterator;
 
 pub struct ComputeStorage {
     persistent_store: merk::Merk,
@@ -18,7 +22,9 @@ pub struct ComputeStorage {
     latest_event_id: EventId,
     current_time: Option<Timestamp>,
     current_hash: Option<Vec<u8>>,
+    #[allow(dead_code)]
     next_subresource: u32,
+    #[allow(dead_code)]
     root_identity: Address,
 }
 
@@ -32,26 +38,6 @@ impl ComputeStorage {
     #[inline]
     pub fn set_time(&mut self, time: Timestamp) {
         self.current_time = Some(time);
-    }
-    #[inline]
-    pub fn now(&self) -> Timestamp {
-        self.current_time.unwrap_or_else(Timestamp::now)
-    }
-
-    pub fn new_subresource_id(&mut self) -> Result<(Address, Vec<u8>), ManyError> {
-        let current_id = self.next_subresource;
-        self.next_subresource += 1;
-        let key = b"/config/subresource_id".to_vec();
-        self.persistent_store
-            .apply(&[(
-                key.clone(),
-                Op::Put(self.next_subresource.to_be_bytes().to_vec()),
-            )])
-            .map_err(error::storage_apply_failed)?;
-
-        self.root_identity
-            .with_subresource_id(current_id)
-            .map(|address| (address, key))
     }
 
     pub fn load<P: AsRef<Path>>(persistent_path: P, blockchain: bool) -> Result<Self, String> {
@@ -100,9 +86,8 @@ impl ComputeStorage {
     ) -> Result<Self, String> {
         let mut persistent_store = merk::Merk::open(persistent_path).map_err(|e| e.to_string())?;
 
-        let mut batch: Vec<BatchEntry> = Vec::new();
-
-        batch.push((b"/config/identity".to_vec(), Op::Put(identity.to_vec())));
+        let batch: Vec<BatchEntry> =
+            vec![(b"/config/identity".to_vec(), Op::Put(identity.to_vec()))];
 
         persistent_store
             .apply(batch.as_slice())
@@ -177,5 +162,75 @@ impl ComputeStorage {
         self.current_hash
             .as_ref()
             .map_or_else(|| self.persistent_store.root_hash().to_vec(), |x| x.clone())
+    }
+
+    pub fn add_deployment(
+        &mut self,
+        sender: &Address,
+        meta: &DeploymentMeta,
+    ) -> Result<(), ManyError> {
+        let dseq = meta.dseq;
+        self.persistent_store
+            .apply(&[(
+                format!("/deploy/{sender}/{dseq}").into_bytes(),
+                Op::Put(minicbor::to_vec(meta).map_err(ManyError::serialization_error)?),
+            )])
+            .map_err(error::storage_apply_failed)?;
+
+        if !self.blockchain {
+            self.persistent_store.commit(&[]).unwrap();
+        }
+
+        Ok(())
+    }
+
+    pub fn has(&self, owner: &Address, dseq: u64) -> Result<bool, ManyError> {
+        Ok(self
+            .persistent_store
+            .get(format!("/deploy/{owner}/{dseq}").as_bytes())
+            .map_err(error::storage_get_failed)?
+            .is_some())
+    }
+
+    pub fn remove_deployment(&mut self, sender: &Address, dseq: u64) -> Result<(), ManyError> {
+        let mut meta: DeploymentMeta = minicbor::decode(
+            &self
+                .persistent_store
+                .get(format!("/deploy/{sender}/{dseq}").as_bytes())
+                .map_err(error::storage_get_failed)?
+                .ok_or(ManyError::unknown("Option is null"))?,
+        )
+        .map_err(ManyError::deserialization_error)?; // TODO: better error
+
+        meta.status = ComputeStatus::Closed;
+        meta.meta = None;
+
+        self.persistent_store
+            .apply(&[(
+                format!("/deploy/{sender}/{dseq}").into_bytes(),
+                Op::Put(minicbor::to_vec(meta).map_err(ManyError::serialization_error)?),
+            )])
+            .map_err(error::storage_apply_failed)?;
+
+        if !self.blockchain {
+            self.persistent_store.commit(&[]).unwrap();
+        }
+
+        Ok(())
+    }
+
+    pub fn list_deployment(
+        &self,
+        order: Option<SortOrder>,
+        owner: Option<Address>,
+    ) -> Result<Vec<DeploymentMeta>, ManyError> {
+        ComputeIterator::all_dseq(&self.persistent_store, order, owner)
+            .map(|item| {
+                let (_, v) = item.map_err(error::storage_get_failed)?;
+                let meta: DeploymentMeta =
+                    minicbor::decode(&v).map_err(ManyError::deserialization_error)?;
+                Ok(meta)
+            })
+            .collect::<Result<Vec<_>, _>>()
     }
 }

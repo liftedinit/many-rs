@@ -1,25 +1,22 @@
+use crate::allow_addrs::AllowAddrsModule;
 use clap::Parser;
 use many_identity::verifiers::AnonymousVerifier;
 use many_identity::Address;
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
-use many_modules::{abci_backend, compute, events};
+use many_modules::compute;
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
-use many_server_cache::{RequestCacheValidator, RocksDbCacheBackend};
 use std::collections::BTreeSet;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info};
-use many_protocol::ManyUrl;
 
 mod error;
 mod module;
 mod storage;
-mod validator;
 
 use module::*;
-use validator::*;
 
 #[derive(Debug, Parser)]
 struct Opts {
@@ -35,8 +32,8 @@ struct Opts {
     addr: SocketAddr,
 
     /// Uses an ABCI application module.
-    #[clap(long)]
-    abci: bool,
+    // #[clap(long)]
+    // abci: bool,
 
     /// Path of a state file (that will be used for the initial setup).
     #[clap(long)]
@@ -57,21 +54,14 @@ struct Opts {
     #[clap(long)]
     allow_addrs: Option<PathBuf>,
 
-    /// Database path to the request cache to validate duplicate messages.
-    /// If unspecified, the server will not verify transactions for duplicate
-    /// messages.
-    #[clap(long)]
-    cache_db: Option<PathBuf>,
-
-    #[clap(long)]
-    whitelist: Option<PathBuf>,
-
     #[clap(flatten)]
     akash_opt: AkashOpt,
 }
 
 #[derive(Debug, Parser)]
 pub struct AkashOpt {
+    akash_wallet: String,
+
     #[clap(long, default_value = "akashnet-2")]
     akash_chain_id: String,
 
@@ -92,9 +82,6 @@ pub struct AkashOpt {
 
     #[clap(long, default_value = "amino-json")]
     akash_sign_mode: String,
-
-    #[clap(long, default_value = "")]
-    akash_wallet: String,
 }
 
 fn main() {
@@ -102,16 +89,17 @@ fn main() {
         common_flags,
         pem,
         addr,
-        abci,
         mut state,
         persistent,
         clean,
         allow_addrs,
-        cache_db,
-        whitelist,
         akash_opt,
+        ..
     } = Opts::parse();
 
+    // This binary is NOT meant to be run behind ABCI.
+    // Integrating with our chain will require IBC support.
+    let abci = false;
 
     common_flags.init_logging().unwrap();
 
@@ -166,32 +154,16 @@ fn main() {
 
     {
         let mut s = many.lock().unwrap();
-        s.add_module(compute::ComputeModule::new(module.clone()));
-        // let kvstore_command_module = kvstore::KvStoreCommandsModule::new(module.clone());
-        // if let Some(path) = allow_addrs {
-        //     let allow_addrs: BTreeSet<Address> =
-        //         json5::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
-        //     s.add_module(allow_addrs::AllowAddrsModule {
-        //         inner: kvstore_command_module,
-        //         allow_addrs,
-        //     });
-        // } else {
-        //     s.add_module(kvstore_command_module);
-        // }
-        // s.add_module(kvstore::KvStoreTransferModule::new(module.clone()));
-        // s.add_module(events::EventsModule::new(module.clone()));
-
-        if abci {
-            s.set_timeout(u64::MAX);
-            s.add_module(abci_backend::AbciModule::new(module));
-        }
-
-        if let Some(p) = cache_db {
-            s.add_validator(RequestCacheValidator::new(RocksDbCacheBackend::new(p)));
-        }
-
-        if let Some(p) = whitelist {
-            s.add_validator(WhitelistValidator::new(p));
+        let compute_module = compute::ComputeModule::new(module);
+        if let Some(path) = allow_addrs {
+            let allow_addrs: BTreeSet<Address> =
+                json5::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+            s.add_module(AllowAddrsModule {
+                inner: compute_module,
+                allow_addrs,
+            });
+        } else {
+            s.add_module(compute_module);
         }
     }
     let mut many_server = HttpServer::new(many);

@@ -1,7 +1,7 @@
-use many_types::compute::{ByteUnits, ComputeStatus, ProviderInfo, Region};
+use many_types::compute::{ByteUnits, DeploymentMeta, Region};
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Decode, Encode)]
+#[derive(Clone, Debug, Decode, Encode)]
 #[cbor(map)]
 pub struct DeployArgs {
     #[n(0)]
@@ -9,7 +9,7 @@ pub struct DeployArgs {
     #[n(1)]
     pub port: u16,
     #[n(2)]
-    pub num_cpu: f64,
+    pub num_cpu: u64, // TODO: f64
     #[n(3)]
     pub num_memory: u64,
     #[n(4)]
@@ -23,12 +23,5 @@ pub struct DeployArgs {
 }
 
 #[derive(Clone, Decode, Encode)]
-#[cbor(map)]
-pub struct DeployReturns {
-    #[n(0)]
-    pub status: ComputeStatus,
-    #[n(1)]
-    pub provider_info: ProviderInfo,
-    #[n(2)]
-    pub dseq: u64,
-}
+#[cbor(transparent)]
+pub struct DeployReturns(#[n(0)] pub DeploymentMeta);

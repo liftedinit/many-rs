@@ -2556,6 +2556,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "many-compute"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "clap 3.2.25",
+ "coset",
+ "hex",
+ "json5",
+ "many-cli-helpers",
+ "many-error",
+ "many-identity",
+ "many-identity-dsa",
+ "many-modules",
+ "many-protocol",
+ "many-server",
+ "many-server-cache",
+ "many-types",
+ "merk 2.0.0-ll (git+https://github.com/liftedinit/merk.git?rev=532eb097ec50f3553c5294971c152b4e7c7d4731#532eb097ec50f3553c5294971c152b4e7c7d4731)",
+ "minicbor",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "signal-hook",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "vergen",
+]
+
+[[package]]
 name = "many-error"
 version = "0.1.3"
 dependencies = [
@@ -2686,7 +2716,7 @@ dependencies = [
  "serde",
  "sha3",
  "signal-hook",
- "strum",
+ "strum 0.24.1",
  "tempfile",
  "tokio",
  "tracing",
@@ -2735,7 +2765,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "signal-hook",
- "strum",
+ "strum 0.24.1",
  "tempfile",
  "tokio",
  "tracing",
@@ -2797,7 +2827,7 @@ dependencies = [
  "minicbor",
  "serde",
  "serde_json",
- "strum",
+ "strum 0.24.1",
  "tracing",
 ]
 
@@ -2850,8 +2880,8 @@ dependencies = [
  "once_cell",
  "proptest",
  "smol",
- "strum",
- "strum_macros",
+ "strum 0.24.1",
+ "strum_macros 0.24.3",
 ]
 
 [[package]]
@@ -2912,8 +2942,8 @@ dependencies = [
  "sha3",
  "smol",
  "static_assertions",
- "strum",
- "strum_macros",
+ "strum 0.24.1",
+ "strum_macros 0.24.3",
  "tiny_http",
  "tracing",
 ]
@@ -2950,6 +2980,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_test",
+ "strum 0.25.0",
 ]
 
 [[package]]
@@ -4270,6 +4301,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_yaml"
+version = "0.9.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9d684e3ec7de3bf5466b32bd75303ac16f0736426e5a4e0d6e489559ce1249c"
+dependencies = [
+ "indexmap",
+ "itoa",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
+]
+
+[[package]]
 name = "sha1"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4457,7 +4501,16 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.24.3",
+]
+
+[[package]]
+name = "strum"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "290d54ea6f91c969195bdbcd7442c8c2a2ba87da8bf60a7ee86a235d4bc1e125"
+dependencies = [
+ "strum_macros 0.25.0",
 ]
 
 [[package]]
@@ -4471,6 +4524,19 @@ dependencies = [
  "quote",
  "rustversion",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe9f3bd7d2e45dcc5e265fbb88d6513e4747d8ef9444cf01a533119bce28a157"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn 2.0.18",
 ]
 
 [[package]]
@@ -5076,6 +5142,12 @@ name = "unicode-xid"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
+
+[[package]]
+name = "unsafe-libyaml"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1865806a559042e51ab5414598446a5871b561d21b6764f2eabb0dd481d880a6"
 
 [[package]]
 name = "untrusted"

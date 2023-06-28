@@ -1,4 +1,5 @@
 use crate::EmptyReturn;
+use minicbor::{Decode, Encode};
 
 pub type CloseReturns = EmptyReturn;
 
