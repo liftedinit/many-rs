@@ -22,7 +22,6 @@ use std::path::Path;
 use std::process::{Command, Output};
 use std::thread::sleep;
 use std::time::Duration;
-use tempfile::NamedTempFile;
 use tracing::{debug, info};
 
 pub mod allow_addrs;
@@ -148,8 +147,7 @@ impl ComputeModuleImpl {
     fn create_deployment(
         &mut self,
         args: &DeployArgs,
-        tmpfile: &mut NamedTempFile,
-    ) -> Result<(u64, u64, u64), ManyError> {
+    ) -> Result<(u64, u64, u64, String), ManyError> {
         let DeployArgs {
             image,
             port,
@@ -203,12 +201,18 @@ deployment:
             image, port, num_cpu, num_memory, memory_type, num_storage, storage_type, region
         );
 
+        debug!("{sdl}");
+
+        let mut tmpfile = tempfile::Builder::new()
+            .prefix("akash-sdl")
+            .suffix(".yml")
+            .tempfile()
+            .map_err(ManyError::unknown)?;
         write!(tmpfile, "{}", sdl).map_err(ManyError::unknown)?;
         let tmpfile_path = tmpfile
             .path()
             .to_str()
             .ok_or(ManyError::unknown("Unable to get SDL file path"))?;
-        debug!("{sdl}");
 
         info!("Creating deployment");
         let deploy_args = [
@@ -264,7 +268,7 @@ deployment:
         let oseq = seq_values.get("oseq").unwrap_or(&0);
 
         debug!("dseq: {dseq}, gseq: {gseq}, oseq: {oseq}");
-        Ok((*dseq, *gseq, *oseq))
+        Ok((*dseq, *gseq, *oseq, sdl))
     }
 
     // TODO: Handle price range
@@ -535,13 +539,19 @@ deployment:
 
     fn send_manifest(
         &mut self,
-        tmpfile: &NamedTempFile,
         dseq: u64,
         gseq: u64,
         oseq: u64,
         provider: &String,
+        sdl: &String,
     ) -> Result<(), ManyError> {
         info!("Sending manifest");
+        let mut tmpfile = tempfile::Builder::new()
+            .prefix("akash-sdl")
+            .suffix(".yml")
+            .tempfile()
+            .map_err(ManyError::unknown)?;
+        write!(tmpfile, "{}", sdl).map_err(ManyError::unknown)?;
         let tmpfile_path = tmpfile
             .path()
             .to_str()
@@ -686,21 +696,15 @@ impl ComputeModuleBackend for ComputeModuleImpl {
 
     fn deploy(&mut self, sender: &Address, args: DeployArgs) -> Result<DeployReturns, ManyError> {
         // At this point, the sender should already be validated by the WhitelistValidator
-        let mut tmpfile = tempfile::Builder::new()
-            .prefix("akash-sdl")
-            .suffix(".yml")
-            .tempfile()
-            .map_err(ManyError::unknown)?;
-
         self.generate_cert()?;
-        let (dseq, gseq, oseq) = self.create_deployment(&args, &mut tmpfile)?;
+        let (dseq, gseq, oseq, sdl) = self.create_deployment(&args)?;
         let (provider, price) = self.create_bid(dseq, gseq, oseq)?;
 
         let DeployArgs { image, port, .. } = args;
 
         self.create_lease(dseq, gseq, oseq, &provider)?;
         self.check_lease_status(dseq, gseq, oseq)?;
-        self.send_manifest(&tmpfile, dseq, gseq, oseq, &provider)?;
+        self.send_manifest(dseq, gseq, oseq, &provider, &sdl)?;
         let lease_status = self.check_manifest_status(dseq, gseq, oseq, &provider)?;
 
         let uris = lease_status
