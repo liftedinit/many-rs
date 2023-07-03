@@ -12,11 +12,12 @@ use many_modules::compute::{
 };
 use many_types::compute::{
     Bids, ComputeListFilter, ComputeStatus, DeploymentInfo, DeploymentMeta, LeaseStatus,
-    LeasesResponse, ProviderInfo, TxLog,
+    LeasesResponse, ProviderInfo, ServiceProtocol, ServiceStatus, TxLog,
 };
 use many_types::Timestamp;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
+use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -28,6 +29,7 @@ use tracing::{debug, info};
 pub mod allow_addrs;
 
 const AKASH_BIN: &str = "provider-services";
+const DEPLOYMENT_TIMEOUT: u16 = 60 * 2; // 2 minutes
 
 // The initial state schema, loaded from JSON.
 #[derive(serde::Deserialize, Debug, Default)]
@@ -252,7 +254,7 @@ deployment:
         let mut my_bids = vec![];
         let mut counter = 0;
 
-        while my_bids.is_empty() && counter < 20 {
+        while my_bids.is_empty() && counter < DEPLOYMENT_TIMEOUT {
             info!("Waiting for bid to be created");
             let bid_list_args = [
                 "query",
@@ -366,7 +368,7 @@ deployment:
     fn check_lease_status(&mut self, dseq: u64, gseq: u64, oseq: u64) -> Result<(), ManyError> {
         info!("Checking lease status");
         let mut counter = 0;
-        while counter < 20 {
+        while counter < DEPLOYMENT_TIMEOUT {
             let output = Command::new(AKASH_BIN)
                 .args(["query", "market", "lease", "list"])
                 .args(["--chain-id", self.akash_opt.akash_chain_id.as_str()])
@@ -396,6 +398,9 @@ deployment:
                         return Ok(());
                     }
                 }
+
+                // An error occurred while creating the lease, close the deployment
+                self.close_deployment(&CloseArgs { dseq })?;
                 return Err(ManyError::unknown("active lease not found"));
             }
 
@@ -403,6 +408,8 @@ deployment:
             counter += 1;
         }
 
+        // An error occurred while creating the lease, close the deployment
+        self.close_deployment(&CloseArgs { dseq })?;
         Err(ManyError::unknown("active lease not found"))
     }
 
@@ -415,7 +422,7 @@ deployment:
     ) -> Result<LeaseStatus, ManyError> {
         info!("Checking manifest status");
         let mut counter = 0;
-        while counter < 20 {
+        while counter < DEPLOYMENT_TIMEOUT {
             let lease_list_args = [
                 "lease-status",
                 "--node",
@@ -443,9 +450,16 @@ deployment:
                 )));
             }
 
+            io::stdout().write_all(&output.stdout).unwrap();
+
             let response: LeaseStatus =
                 serde_yaml::from_slice(&output.stdout).map_err(ManyError::unknown)?;
-            if !response.forwarded_ports.is_empty() {
+            if response
+                .services
+                .get("app")
+                .and_then(|service_status| service_status.as_ref())
+                .map_or(false, |box ServiceStatus { available, .. }| *available > 0)
+            {
                 return Ok(response);
             }
 
@@ -453,6 +467,8 @@ deployment:
             counter += 1;
         }
 
+        // An error occurred while creating the lease, close the deployment
+        self.close_deployment(&CloseArgs { dseq })?;
         Err(ManyError::unknown("active lease not found"))
     }
 
@@ -534,6 +550,35 @@ deployment:
             )));
         }
         Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn create_deployment_meta(
+        &self,
+        host: Option<String>,
+        port: u16,
+        external_port: u16,
+        protocol: ServiceProtocol,
+        dseq: u64,
+        provider: String,
+        price: f64,
+        image: String,
+    ) -> DeploymentMeta {
+        DeploymentMeta {
+            status: ComputeStatus::Deployed,
+            dseq,
+            meta: Some(DeploymentInfo {
+                provider,
+                provider_info: ProviderInfo {
+                    host,
+                    port,
+                    external_port,
+                    protocol,
+                },
+                price,
+            }),
+            image,
+        }
     }
 }
 
@@ -630,33 +675,44 @@ impl ComputeModuleBackend for ComputeModuleImpl {
         self.send_manifest(&tmpfile, dseq, gseq, oseq, &provider)?;
         let lease_status = self.check_manifest_status(dseq, gseq, oseq, &provider)?;
 
-        let app = lease_status
-            .forwarded_ports
+        let uris = lease_status
+            .services
             .get("app")
-            .ok_or(ManyError::unknown("unable to get app"))?;
-        let forwarded_port_status = app
-            .first()
-            .ok_or(ManyError::unknown("unable to get app entry"))?;
+            .and_then(|service_status| service_status.as_ref())
+            .and_then(|boxed_status| boxed_status.uris.as_deref());
 
-        let host = forwarded_port_status.host.clone();
-        let external_port = forwarded_port_status.external_port;
-        let protocol = forwarded_port_status.proto;
-        let provider_info = ProviderInfo {
-            host,
-            port,
-            external_port,
-            protocol,
-        };
+        let forwarded_ports = lease_status.forwarded_ports.get("app");
 
-        let meta = DeploymentMeta {
-            status: ComputeStatus::Deployed,
-            dseq,
-            meta: Some(DeploymentInfo {
+        let meta = match (
+            uris.and_then(|u| u.get(0)),
+            forwarded_ports.and_then(|fp| fp.get(0)),
+        ) {
+            (Some(uri), _) => self.create_deployment_meta(
+                Some(uri.clone()),
+                port,
+                port,
+                ServiceProtocol::TCP,
+                dseq,
                 provider,
-                provider_info,
                 price,
-            }),
-            image,
+                image,
+            ),
+            (_, Some(forwarded_port)) => self.create_deployment_meta(
+                forwarded_port.host.clone(),
+                port,
+                forwarded_port.external_port,
+                forwarded_port.proto,
+                dseq,
+                provider,
+                price,
+                image,
+            ),
+            _ => {
+                return Err(ManyError::unknown(format!(
+                    "No URIs or forwarded ports found for deployment {}",
+                    dseq
+                )))
+            }
         };
 
         // Write info to compute storage

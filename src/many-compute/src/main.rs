@@ -1,3 +1,5 @@
+#![feature(box_patterns)]
+
 use crate::allow_addrs::AllowAddrsModule;
 use clap::Parser;
 use many_identity::verifiers::AnonymousVerifier;
