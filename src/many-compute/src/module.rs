@@ -17,7 +17,6 @@ use many_types::compute::{
 use many_types::Timestamp;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
-use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -374,10 +373,11 @@ deployment:
         let output = self.execute_akash_command(&lease_create_args)?;
 
         if !output.status.success() {
+            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+
             // An error occurred while creating the lease, close the deployment
             self.close_deployment(&CloseArgs { dseq })?;
 
-            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
             return Err(ManyError::unknown(format!(
                 "akash tx market lease create failed: {err}"
             )));
@@ -402,10 +402,11 @@ deployment:
                 .map_err(ManyError::unknown)?;
 
             if !output.status.success() {
+                let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+
                 // An error occurred while creating the lease, close the deployment
                 self.close_deployment(&CloseArgs { dseq })?;
 
-                let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
                 return Err(ManyError::unknown(format!(
                     "akash query market lease list failed: {err}"
                 )));
@@ -464,16 +465,15 @@ deployment:
             let output = self.execute_akash_command(&lease_list_args)?;
 
             if !output.status.success() {
+                let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+
                 // An error occurred while creating the lease, close the deployment
                 self.close_deployment(&CloseArgs { dseq })?;
 
-                let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
                 return Err(ManyError::unknown(format!(
                     "akash query market lease list failed: {err}"
                 )));
             }
-
-            io::stdout().write_all(&output.stdout).unwrap();
 
             let response: LeaseStatus =
                 serde_yaml::from_slice(&output.stdout).map_err(ManyError::unknown)?;
@@ -568,10 +568,11 @@ deployment:
         let output = self.execute_akash_command(&send_manifest_args)?;
 
         if !output.status.success() {
+            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
+
             // An error occurred while creating the lease, close the deployment
             self.close_deployment(&CloseArgs { dseq })?;
 
-            let err = std::str::from_utf8(&output.stderr).map_err(ManyError::unknown)?;
             return Err(ManyError::unknown(format!(
                 "akash send-manifest failed: {err}"
             )));
