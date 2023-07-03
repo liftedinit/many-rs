@@ -103,6 +103,9 @@ impl ComputeModuleImpl {
             self.akash_opt.akash_rpc.as_str(),
             "--from",
             self.akash_opt.akash_wallet.as_str(),
+            "--keyring-backend",
+            self.akash_opt.akash_keyring_backend.as_str(),
+            "--yes",
         ];
         let output = self.execute_akash_command(&cert_generate_args)?;
 
@@ -115,7 +118,21 @@ impl ComputeModuleImpl {
             info!("Certificate already exists, continuing");
         } else {
             info!("Publishing certificate");
-            let cert_publish_args = ["tx", "cert", "publish", "client"];
+            let cert_publish_args = [
+                "tx",
+                "cert",
+                "publish",
+                "client",
+                "--chain-id",
+                self.akash_opt.akash_chain_id.as_str(),
+                "--node",
+                self.akash_opt.akash_rpc.as_str(),
+                "--from",
+                self.akash_opt.akash_wallet.as_str(),
+                "--keyring-backend",
+                self.akash_opt.akash_keyring_backend.as_str(),
+                "--yes",
+            ];
             let output = self.execute_akash_command(&cert_publish_args)?;
 
             if !output.status.success() {
@@ -214,6 +231,8 @@ deployment:
             self.akash_opt.akash_sign_mode.as_str(),
             "--from",
             self.akash_opt.akash_wallet.as_str(),
+            "--keyring-backend",
+            self.akash_opt.akash_keyring_backend.as_str(),
             "--yes",
         ];
         let output = self.execute_akash_command(&deploy_args)?;
@@ -267,6 +286,8 @@ deployment:
                 self.akash_opt.akash_rpc.as_str(),
                 "--owner",
                 self.akash_opt.akash_wallet.as_str(),
+                "--keyring-backend",
+                self.akash_opt.akash_keyring_backend.as_str(),
                 "--dseq",
                 &dseq.to_string(),
                 "--gseq",
@@ -338,6 +359,8 @@ deployment:
             &self.akash_opt.akash_gas_adjustment.to_string(),
             "--sign-mode",
             self.akash_opt.akash_sign_mode.as_str(),
+            "--keyring-backend",
+            self.akash_opt.akash_keyring_backend.as_str(),
             "--from",
             self.akash_opt.akash_wallet.as_str(),
             "--dseq",
@@ -437,6 +460,8 @@ deployment:
                 &oseq.to_string(),
                 "--provider",
                 provider,
+                "--keyring-backend",
+                self.akash_opt.akash_keyring_backend.as_str(),
             ];
             let output = self.execute_akash_command(&lease_list_args)?;
 
@@ -494,6 +519,8 @@ deployment:
             self.akash_opt.akash_wallet.as_str(),
             "--dseq",
             &args.dseq.to_string(),
+            "--keyring-backend",
+            self.akash_opt.akash_keyring_backend.as_str(),
             "--yes",
         ];
         let output = self.execute_akash_command(&deployment_close_args)?;
@@ -537,6 +564,8 @@ deployment:
             &oseq.to_string(),
             "--provider",
             provider,
+            "--keyring-backend",
+            self.akash_opt.akash_keyring_backend.as_str(),
         ];
         let output = self.execute_akash_command(&send_manifest_args)?;
 

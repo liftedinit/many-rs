@@ -92,6 +92,9 @@ pub struct AkashOpt {
 
     #[clap(long, default_value = "amino-json")]
     akash_sign_mode: String,
+
+    #[clap(long, default_value = "os")]
+    akash_keyring_backend: String,
 }
 
 fn main() {
