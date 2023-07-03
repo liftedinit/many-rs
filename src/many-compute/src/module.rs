@@ -286,8 +286,6 @@ deployment:
                 self.akash_opt.akash_rpc.as_str(),
                 "--owner",
                 self.akash_opt.akash_wallet.as_str(),
-                "--keyring-backend",
-                self.akash_opt.akash_keyring_backend.as_str(),
                 "--dseq",
                 &dseq.to_string(),
                 "--gseq",
