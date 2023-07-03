@@ -15,6 +15,7 @@ many-cli-helpers = { path = "../many-cli-helpers", version = "0.1.3" } # managed
 many-error = { path = "../many-error", version = "0.1.3" } # managed by release.sh
 many-identity = { path = "../many-identity", features = ["default", "serde"], version = "0.1.3" } # managed by release.sh
 many-identity-dsa = { path = "../many-identity-dsa", features = ["ed25519", "ecdsa"], version = "0.1.3" } # managed by release.sh
+many-identity-webauthn = { path = "../many-identity-webauthn", version = "0.1.3" } # managed by release.sh
 many-modules = { path = "../many-modules", version = "0.1.3" } # managed by release.sh
 many-protocol = { path = "../many-protocol", version = "0.1.3" } # managed by release.sh
 many-server = { path = "../many-server", version = "0.1.3" } # managed by release.sh

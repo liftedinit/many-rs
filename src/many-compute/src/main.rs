@@ -5,7 +5,9 @@ use clap::Parser;
 use many_identity::verifiers::AnonymousVerifier;
 use many_identity::Address;
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
+use many_identity_webauthn::WebAuthnVerifier;
 use many_modules::compute;
+use many_protocol::ManyUrl;
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
 use std::collections::BTreeSet;
@@ -49,6 +51,12 @@ struct Opts {
     /// If this is not specified the initial state will not be used.
     #[clap(long, short)]
     clean: bool,
+
+    /// Application absolute URLs allowed to communicate with this server. Any
+    /// application will be able to communicate with this server if left empty.
+    /// Multiple occurences of this argument can be given.
+    #[clap(long)]
+    allow_origin: Option<Vec<ManyUrl>>,
 
     /// Path to a JSON file containing an array of MANY addresses
     /// Only addresses from this array will be able to execute commands, e.g., send, put, ...
@@ -94,6 +102,7 @@ fn main() {
         mut state,
         persistent,
         clean,
+        allow_origin,
         allow_addrs,
         akash_opt,
         ..
@@ -150,7 +159,11 @@ fn main() {
     let many = ManyServer::simple(
         "many-compute",
         key,
-        (AnonymousVerifier, CoseKeyVerifier),
+        (
+            AnonymousVerifier,
+            CoseKeyVerifier,
+            WebAuthnVerifier::new(allow_origin),
+        ),
         Some(env!("CARGO_PKG_VERSION").to_string()),
     );
 

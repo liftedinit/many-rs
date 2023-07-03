@@ -32,6 +32,7 @@ rust_binary(
         "//src/many-error",
         "//src/many-identity",
         "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
         "//src/many-modules",
         "//src/many-protocol",
         "//src/many-server",
