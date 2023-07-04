@@ -56,7 +56,7 @@ cucumber = { version = "0.19.1", features = ["libtest"] }
 once_cell = "1.17.1"
 many-identity = { path = "../many-identity", features = ["default", "serde", "testing"], version = "0.1.3" } # managed by release.sh
 many-identity-dsa = { path = "../many-identity-dsa", features = [ "ed25519", "testing" ], version = "0.1.3" } # managed by release.sh
-many-ledger = { path = ".", features = ["balance_testing", "migration_testing", "disable_token_sender_check"]}
+many-ledger = { path = ".", features = ["balance_testing", "migration_testing"] }
 many-modules = { path = "../many-modules", features = ["cucumber"], version = "0.1.3" } # managed by release.sh
 many-types = { path = "../many-types", features = ["cucumber"], version = "0.1.3" } # managed by release.sh
 proptest = "1.2.0"
@@ -92,4 +92,3 @@ vergen = { version = "8.2.1", features = ["git", "git2"] }
 balance_testing=[]                  # Enable balance initialization from the CLI
 migration_testing=[]                # Enable Dummy migration
 webauthn_testing=[]                 # Disable WebAuthn token validation from the CLI
-disable_token_sender_check=[]       # Disable token endpoint sender validation

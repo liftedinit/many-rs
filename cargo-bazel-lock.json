@@ -1,5 +1,5 @@
 {
-  "checksum": "1502f25d103c86b104c37c3e757bd672c50ef13e4b5375f61ff7cc7166c13073",
+  "checksum": "537b9e8e8799bd5ac8abc72aab8db6be5c535689a88ca71e5142dee7720b0265",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -13708,7 +13708,6 @@
         "crate_features": {
           "common": [
             "balance_testing",
-            "disable_token_sender_check",
             "migration_testing"
           ],
           "selects": {}

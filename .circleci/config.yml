@@ -320,7 +320,7 @@ jobs:
             
             bazel test << parameters.bazel_linkopt >> --test_output=errors \
               --config=remote-cache \
-              --config=bats-resiliency-ledger ${D[@]}
+              --config=all-features ${D[@]}
       - run:
           name: collect test reports
           when: always
@@ -358,7 +358,7 @@ jobs:
           name: running single tests
           # This command MUST BE ON A SINGLE LINE. Bazel for some reason does not support multiline
           # commands.
-          command: bazel test << parameters.bazel_linkopt >> --test_output=errors --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
+          command: bazel test << parameters.bazel_linkopt >> --test_output=errors --config=remote-cache --config=all-features //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
 
   # Push a tag to GitHub
   tag:
@@ -467,12 +467,6 @@ commands:
             bazel test << parameters.bazel_linkopt >> --test_output=errors \
               --config=all-features \
               --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
-            
-            # --disable_token_sender_check needs to be disabled for the token sender check test
-            bazel test << parameters.bazel_linkopt >> --test_output=errors \
-              --balance_testing \
-              --migration_testing \
-              --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-token-sender-check
 
 parameters:
   run_resiliency:
