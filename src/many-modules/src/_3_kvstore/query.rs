@@ -19,4 +19,7 @@ pub struct QueryReturns {
 
     #[n(1)]
     pub disabled: Option<Either<bool, Reason<u64>>>,
+
+    #[n(2)]
+    pub previous_owner: Option<Address>,
 }

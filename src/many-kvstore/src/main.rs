@@ -3,6 +3,7 @@ use clap::Parser;
 use many_identity::verifiers::AnonymousVerifier;
 use many_identity::Address;
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
+use many_identity_webauthn::WebAuthnVerifier;
 use many_modules::account::features::Feature;
 use many_modules::{abci_backend, account, events, kvstore};
 use many_server::transport::http::HttpServer;
@@ -13,6 +14,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info};
+use many_protocol::ManyUrl;
 
 mod error;
 mod module;
@@ -56,6 +58,12 @@ struct Opts {
     #[clap(long)]
     allow_addrs: Option<PathBuf>,
 
+    /// Application absolute URLs allowed to communicate with this server. Any
+    /// application will be able to communicate with this server if left empty.
+    /// Multiple occurences of this argument can be given.
+    #[clap(long)]
+    allow_origin: Option<Vec<ManyUrl>>,
+
     /// Database path to the request cache to validate duplicate messages.
     /// If unspecified, the server will not verify transactions for duplicate
     /// messages.
@@ -73,6 +81,7 @@ fn main() {
         persistent,
         clean,
         allow_addrs,
+        allow_origin,
         cache_db,
     } = Opts::parse();
 
@@ -122,7 +131,9 @@ fn main() {
     let many = ManyServer::simple(
         "many-kvstore",
         key,
-        (AnonymousVerifier, CoseKeyVerifier),
+        (AnonymousVerifier, CoseKeyVerifier,
+         WebAuthnVerifier::new(allow_origin),
+        ),
         Some(env!("CARGO_PKG_VERSION").to_string()),
     );
 

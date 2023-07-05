@@ -1,6 +1,9 @@
+use minicbor::{decode, encode};
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
+use crate::_3_kvstore::list::ListArgs;
+use crate::kvstore::list::ListReturns;
 
 #[cfg(test)]
 use mockall::{automock, predicate::*};
@@ -9,8 +12,6 @@ pub mod get;
 pub mod info;
 pub mod list;
 pub mod query;
-use crate::_3_kvstore::list::ListArgs;
-use crate::kvstore::list::ListReturns;
 pub use get::*;
 pub use info::*;
 pub use query::*;
@@ -22,6 +23,75 @@ pub trait KvStoreModuleBackend: Send {
     fn get(&self, sender: &Address, args: GetArgs) -> Result<GetReturns, ManyError>;
     fn query(&self, sender: &Address, args: QueryArgs) -> Result<QueryReturns, ManyError>;
     fn list(&self, sender: &Address, args: ListArgs) -> Result<ListReturns, ManyError>;
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum KeyFilterType {
+    Owner(Address),
+    PreviousOwner(Address),
+    Disabled(bool),
+}
+
+impl std::str::FromStr for KeyFilterType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.splitn(2, ':');
+        let tag = parts.next().ok_or_else(|| "missing tag".to_string())?;
+        let value = parts.next().ok_or_else(|| "missing value".to_string())?;
+
+        match tag {
+            "owner" => {
+                let address = value.parse().map_err(|e| format!("invalid address: {}", e))?;
+                Ok(KeyFilterType::Owner(address))
+            }
+            _ => Err(format!("unknown tag: {}", tag)),
+        }
+    }
+}
+
+impl<C> minicbor::Encode<C> for KeyFilterType {
+    fn encode<W: encode::Write>(
+        &self,
+        e: &mut minicbor::Encoder<W>,
+        _: &mut C
+    ) -> Result<(), minicbor::encode::Error<W::Error>> {
+        match self {
+            KeyFilterType::Owner(address) => {
+                e.array(2)?.u32(0)?.encode(address).map(|_| ())
+            }
+            KeyFilterType::PreviousOwner(address) => {
+                e.array(2)?.u32(1)?.encode(address).map(|_| ())
+            }
+            KeyFilterType::Disabled(disabled) => {
+                e.array(2)?.u32(2)?.bool(*disabled).map(|_| ())
+            }
+        }
+    }
+}
+
+impl<'b, C> minicbor::Decode<'b, C> for KeyFilterType {
+    fn decode(d: &mut minicbor::Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
+        if d.array()? != Some(2) {
+            return Err(decode::Error::message("array of length 2 expected"));
+        }
+
+        match d.u32()? {
+            0 => {
+                let address = d.decode()?;
+                Ok(KeyFilterType::Owner(address))
+            }
+            1 => {
+                let address = d.decode()?;
+                Ok(KeyFilterType::PreviousOwner(address))
+            }
+            2 => {
+                let disabled = d.decode()?;
+                Ok(KeyFilterType::Disabled(disabled))
+            }
+            _ => Err(decode::Error::message("unexpected tag")),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -86,6 +156,7 @@ mod tests {
                 Ok(QueryReturns {
                     owner: identity(666),
                     disabled: None,
+                    previous_owner: None
                 })
             });
         let module = super::KvStoreModule::new(Arc::new(Mutex::new(mock)));

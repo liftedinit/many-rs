@@ -2674,6 +2674,7 @@ dependencies = [
  "many-error",
  "many-identity",
  "many-identity-dsa",
+ "many-identity-webauthn",
  "many-modules",
  "many-protocol",
  "many-server",

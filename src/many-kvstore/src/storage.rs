@@ -23,6 +23,7 @@ pub mod iterator;
 use crate::error;
 use crate::storage::iterator::KvStoreIterator;
 use event::EventId;
+use many_modules::kvstore::KeyFilterType;
 
 const KVSTORE_ROOT: &[u8] = b"s";
 const KVSTORE_ACL_ROOT: &[u8] = b"a";
@@ -54,6 +55,22 @@ pub struct KvStoreStorage {
 impl std::fmt::Debug for KvStoreStorage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("KvStoreStorage").finish()
+    }
+}
+
+fn filter_key(filter: &KeyFilterType, _key: &[u8], meta: &KvStoreMetadata) -> bool {
+    match filter {
+        KeyFilterType::Owner(address) => {
+            &meta.owner == address
+        }
+        KeyFilterType::PreviousOwner(address) => {
+            &meta.previous_owner == address
+        }
+        KeyFilterType::Disabled(disabled) => if *disabled {
+            matches!(meta.disabled, Some(Either::Left(true)) | Some(Either::Right(_)))
+        } else {
+            matches!(meta.disabled, None | Some(Either::Left(false)))
+        },
     }
 }
 
@@ -240,20 +257,22 @@ impl KvStoreStorage {
 
     pub fn list<'a>(
         &'a self,
-        owner: &'a Address,
         order: SortOrder,
+        filter: Option<Vec<KeyFilterType>>
     ) -> impl Iterator<Item = Vec<u8>> + 'a {
         KvStoreIterator::all_keys(&self.persistent_store, order).filter_map(move |item| {
             let (k, v) = item.ok()?;
-            let meta: KvStoreMetadata = minicbor::decode(&v).ok()?;
-            if &meta.owner == owner {
-                match meta.disabled {
-                    None | Some(Either::Left(false)) => Some(k.into_vec()),
-                    _ => None,
+            if let Some(filters) = &filter {
+                if !filters.is_empty() {
+                    let meta: KvStoreMetadata = minicbor::decode(&v).ok()?;
+                    if filters.iter().all(|f| filter_key(f, &k, &meta)) {
+                        return Some(k.into_vec());
+                    } else {
+                        return None;
+                    }
                 }
-            } else {
-                None
             }
+            Some(k.into_vec())
         })
     }
 
