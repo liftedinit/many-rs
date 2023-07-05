@@ -1,4 +1,5 @@
 use crate::error;
+use crate::migration::token_create::TOKEN_CREATE_MIGRATION;
 use crate::migration::tokens::TOKEN_MIGRATION;
 use crate::module::LedgerModuleImpl;
 use crate::storage::account::verify_acl;
@@ -28,19 +29,19 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
         sender: &Address,
         args: TokenCreateArgs,
     ) -> Result<TokenCreateReturns, ManyError> {
-        #[cfg(not(feature = "disable_token_sender_check"))]
-        use crate::storage::{ledger_tokens::TOKEN_IDENTITY_ROOT, IDENTITY_ROOT};
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.create"));
         }
 
-        #[cfg(not(feature = "disable_token_sender_check"))]
-        crate::storage::ledger_tokens::verify_tokens_sender(
-            sender,
-            self.storage
-                .get_identity(TOKEN_IDENTITY_ROOT)
-                .or_else(|_| self.storage.get_identity(IDENTITY_ROOT))?,
-        )?;
+        if !self.storage.migrations().is_active(&TOKEN_CREATE_MIGRATION) {
+            use crate::storage::{ledger_tokens::TOKEN_IDENTITY_ROOT, IDENTITY_ROOT};
+            crate::storage::ledger_tokens::verify_tokens_sender(
+                sender,
+                self.storage
+                    .get_identity(TOKEN_IDENTITY_ROOT)
+                    .or_else(|_| self.storage.get_identity(IDENTITY_ROOT))?,
+            )?;
+        }
 
         if let Some(Either::Left(addr)) = &args.owner {
             verify_acl(

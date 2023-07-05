@@ -5,11 +5,8 @@ build --@rules_rust//rust/toolchain/channel=nightly
 build --flag_alias=balance_testing=//src/many-ledger:balance_testing
 build --flag_alias=migration_testing=//src/many-ledger:migration_testing
 build --flag_alias=webauthn_testing=//src/many-ledger:webauthn_testing
-build --flag_alias=disable_token_sender_check=//src/many-ledger:disable_token_sender_check
 
-build:all-features --balance_testing --migration_testing --webauthn_testing --disable_token_sender_check
-
-test:bats-resiliency-ledger --balance_testing --migration_testing
+build:all-features --balance_testing --migration_testing --webauthn_testing
 
 # Enable rustfmt for all targets in the workspace
 build:rustfmt --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect

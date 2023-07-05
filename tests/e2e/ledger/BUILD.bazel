@@ -9,40 +9,22 @@ bats_test_suite(
     name = "bats-e2e-ledger",
     srcs = glob(
         include = ["*.bats"],
-        exclude = ["token_migration_sender_verification.bats"],
     ),
+    bats_args = [
+        "--formatter",
+        "tap",
+        "--report-formatter",
+        "junit",
+        "--output",
+        ".",
+    ],
     tags = [
         "exclusive",
-        "manual",
     ],
     uses_bats_assert = True,
-    bats_args = ["--formatter", "tap", "--report-formatter", "junit", "--output", "."],
     deps = [
         ":webauthn-state",
         "//src/idstore-export",
-        "//src/ledger",
-        "//src/many",
-        "//src/many-ledger",
-        "//staging:ledger-migrations",
-        "//staging:ledger-staging",
-        "//tests:bats-helpers",
-    ],
-)
-
-# TODO: Toggle this test based on the presence of the --disable_token_sender_check flag
-# Can't run with --disable_token_sender_check
-bats_test(
-    name = "bats-e2e-ledger-token-sender-check",
-    srcs = [
-        "token_migration_sender_verification.bats",
-    ],
-    tags = [
-        "exclusive",
-        "manual",
-    ],
-    uses_bats_assert = True,
-    bats_args = ["--formatter", "tap", "--report-formatter", "junit", "--output", "."],
-    deps = [
         "//src/ledger",
         "//src/many",
         "//src/many-ledger",

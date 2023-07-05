@@ -47,6 +47,9 @@ jobs:
             equal: [ "linux2204", << parameters.os >> ]
           steps:
             - run:
+                name: install cbor-diag
+                command: cargo install --force cbor-diag-cli
+            - run:
                 name: rustfmt, clippy, build and tests and doc tests (linux)
                 command: |
                   bazel test --jobs=8 \
@@ -63,6 +66,10 @@ jobs:
           condition:
             equal: [ "macos", << parameters.os >> ]
           steps:
+            - rust/install
+            - run:
+                name: install cbor-diag
+                command: cargo install --force cbor-diag-cli
             - run:
                 name: tests and doc tests (macos)
                 # Exclude HSM tests as we are not configured in MacOS for them.
@@ -72,50 +79,16 @@ jobs:
                     --config=remote-cache \
                     --config=all-features \
                     -- //... -//src/many-identity-hsm:many-identity-hsm-test
-
-  # Run e2e bats tests using the binaries build from the previous step.
-  bats:
-    parameters:
-      os:
-        type: string
-      bazel_linkopt:
-        type: string
-        default: *bazel_linux_linkopt
-    executor: << parameters.os >>
-    steps:
-      - checkout
-      - when:
-          condition:
-            equal: [ "macos", << parameters.os >> ]
-          steps:
-            - rust/install
-      - run:
-          name: install cbor-diag
-          command: cargo install --force cbor-diag-cli
-      - when:
-          condition:
-            equal: [ "macos", << parameters.os >> ]
-          steps:
-            - run_bats_e2e_tests:
-                os: << parameters.os >>
-                bazel_linkopt: ""
-      - when:
-          condition:
-            not:
-              equal: [ "macos", << parameters.os >> ]
-          steps:
-            - run_bats_e2e_tests:
-                os: << parameters.os >>
       - run:
           name: collect test reports
           when: always
           command: |
-              # Collect all test reports
-              # NOTE: The combinaison of `xargs` and `sh -c` is insecure.
-              #       The risks are acceptable on CI.
-              mkdir -p bats-reports
-              bazel cquery 'kind(.bats, "//tests/e2e/kvstore:*" + "//tests/e2e/ledger:*")' --output=files | \
-                xargs -I {} sh -c 'cp {}.runfiles/__main__/report.xml ./bats-reports/$(basename {})_report.xml'
+            # Collect all test reports
+            # NOTE: The combinaison of `xargs` and `sh -c` is insecure.
+            #       The risks are acceptable on CI.
+            mkdir -p bats-reports
+            bazel cquery 'kind(.bats, "//tests/e2e/kvstore:*" + "//tests/e2e/ledger:*")' --output=files | \
+              xargs -I {} sh -c 'cp {}.runfiles/__main__/report.xml ./bats-reports/$(basename {})_report.xml'
       - store_test_results:
           path: bats-reports
 
@@ -142,7 +115,7 @@ jobs:
               --test_env=SOFTHSM2_CONF \
               --combined_report=lcov \
               << parameters.bazel_linkopt >> \
-              -- //...
+              -- //... -//tests/e2e/ledger:bats-e2e-ledger -//tests/e2e/kvstore:bats-e2e-kvstore
       - codecov/upload:
           file: bazel-out/_coverage/_coverage_report.dat
 
@@ -320,7 +293,7 @@ jobs:
             
             bazel test << parameters.bazel_linkopt >> --test_output=errors \
               --config=remote-cache \
-              --config=bats-resiliency-ledger ${D[@]}
+              --config=all-features ${D[@]}
       - run:
           name: collect test reports
           when: always
@@ -358,7 +331,7 @@ jobs:
           name: running single tests
           # This command MUST BE ON A SINGLE LINE. Bazel for some reason does not support multiline
           # commands.
-          command: bazel test << parameters.bazel_linkopt >> --test_output=errors --config=remote-cache --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
+          command: bazel test << parameters.bazel_linkopt >> --test_output=errors --config=remote-cache --config=all-features //tests/resiliency/ledger:bats-resiliency-ledger_<< parameters.test_name >>
 
   # Push a tag to GitHub
   tag:
@@ -449,31 +422,6 @@ commands:
           name: creating release shasum
           command: shasum artifacts/many-rs_<< parameters.release_id >>_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.tar.gz > artifacts/shasum_<< parameters.release_id >>_${CIRCLE_SHA1}_${OSD_ID}_${OSD_VERSION}.txt
 
-  run_bats_e2e_tests:
-    description: run bats e2e tests
-    parameters:
-      os:
-        type: string
-      bazel_linkopt:
-        type: string
-        default: *bazel_linux_linkopt
-    steps:
-      - run:
-          name: running bats e2e tests
-          command: |
-            bazel test << parameters.bazel_linkopt >> --test_output=errors \
-              --config=all-features \
-              --config=remote-cache //tests/e2e/kvstore:bats-e2e-kvstore
-            bazel test << parameters.bazel_linkopt >> --test_output=errors \
-              --config=all-features \
-              --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger
-            
-            # --disable_token_sender_check needs to be disabled for the token sender check test
-            bazel test << parameters.bazel_linkopt >> --test_output=errors \
-              --balance_testing \
-              --migration_testing \
-              --config=remote-cache //tests/e2e/ledger:bats-e2e-ledger-token-sender-check
-
 parameters:
   run_resiliency:
     type: boolean
@@ -520,16 +468,6 @@ workflows:
           matrix:
             parameters:
               os: [linux2204]
-      - bats:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: bats-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [linux2204]
-          requires:
-            - lint-test-build-v<< matrix.os >>
       - coverage:
           pre-steps:
             - install-deps:
@@ -722,16 +660,6 @@ workflows:
           matrix:
             parameters:
               os: [macos]
-      - bats:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: bats-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [macos]
-          requires:
-            - lint-test-build-v<< matrix.os >>
       - tag:
           name: macos nightly tag
           tag: macos-green
