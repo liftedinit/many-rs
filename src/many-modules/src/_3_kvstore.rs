@@ -54,9 +54,7 @@ impl std::str::FromStr for KeyFilterType {
                 Ok(KeyFilterType::PreviousOwner(address))
             }
             "disabled" => {
-                let disabled = value
-                    .parse()
-                    .map_err(|e| format!("invalid bool: {}", e))?;
+                let disabled = value.parse().map_err(|e| format!("invalid bool: {}", e))?;
                 Ok(KeyFilterType::Disabled(disabled))
             }
             _ => Err(format!("unknown tag: {}", tag)),
