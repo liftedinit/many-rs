@@ -8,7 +8,10 @@ use many_modules::account;
 use many_modules::account::features::FeatureInfo;
 use many_modules::account::{AccountModuleBackend, Role};
 use many_modules::kvstore::list::{ListArgs, ListReturns};
-use many_modules::kvstore::{DisableArgs, DisableReturn, GetArgs, GetReturns, KeyFilterType, KvStoreCommandsModuleBackend, KvStoreModuleBackend, PutArgs, QueryArgs, QueryReturns};
+use many_modules::kvstore::{
+    DisableArgs, DisableReturn, GetArgs, GetReturns, KeyFilterType, KvStoreCommandsModuleBackend,
+    KvStoreModuleBackend, PutArgs, QueryArgs, QueryReturns,
+};
 use many_types::SortOrder;
 use once_cell::sync::Lazy;
 use std::cell::{Ref, RefCell, RefMut};
@@ -95,9 +98,20 @@ impl Setup {
         self.module_impl.get(sender, GetArgs { key: key.into() })
     }
 
-    pub fn list(&self, sender: &Address, order: SortOrder, filter: Option<Vec<KeyFilterType>>) -> Result<ListReturns, ManyError> {
-        self.module_impl
-            .list(sender, ListArgs { count: None, order: Some(order), filter })
+    pub fn list(
+        &self,
+        sender: &Address,
+        order: SortOrder,
+        filter: Option<Vec<KeyFilterType>>,
+    ) -> Result<ListReturns, ManyError> {
+        self.module_impl.list(
+            sender,
+            ListArgs {
+                count: None,
+                order: Some(order),
+                filter,
+            },
+        )
     }
 
     pub fn disable(

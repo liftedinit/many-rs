@@ -6,6 +6,7 @@ use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
 use many_identity_webauthn::WebAuthnVerifier;
 use many_modules::account::features::Feature;
 use many_modules::{abci_backend, account, events, kvstore};
+use many_protocol::ManyUrl;
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
 use many_server_cache::{RequestCacheValidator, RocksDbCacheBackend};
@@ -14,7 +15,6 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info};
-use many_protocol::ManyUrl;
 
 mod error;
 mod module;
@@ -131,8 +131,10 @@ fn main() {
     let many = ManyServer::simple(
         "many-kvstore",
         key,
-        (AnonymousVerifier, CoseKeyVerifier,
-         WebAuthnVerifier::new(allow_origin),
+        (
+            AnonymousVerifier,
+            CoseKeyVerifier,
+            WebAuthnVerifier::new(allow_origin),
         ),
         Some(env!("CARGO_PKG_VERSION").to_string()),
     );

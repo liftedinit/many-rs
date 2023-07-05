@@ -273,7 +273,11 @@ fn list(
     filter: Option<Vec<KeyFilterType>>,
     hex_key: bool,
 ) -> Result<(), ManyError> {
-    let args = ListArgs { count: None, order, filter };
+    let args = ListArgs {
+        count: None,
+        order,
+        filter,
+    };
     let response = client.call("kvstore.list", args)?;
     let payload = wait_response(client, response)?;
     if payload.is_empty() {
@@ -472,7 +476,11 @@ fn main() {
             };
             transfer(client, alt_owner, key, new_owner)
         }
-        SubCommand::List(ListOpt { order, filter, hex_key }) => list(client, order, filter, hex_key),
+        SubCommand::List(ListOpt {
+            order,
+            filter,
+            hex_key,
+        }) => list(client, order, filter, hex_key),
     };
 
     if let Err(err) = result {

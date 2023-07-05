@@ -1,7 +1,7 @@
+use crate::kvstore::KeyFilterType;
 use many_types::SortOrder;
 use minicbor::bytes::ByteVec;
 use minicbor::{Decode, Encode};
-use crate::kvstore::{KeyFilterType};
 
 #[derive(Clone, Decode, Encode)]
 #[cbor(map)]

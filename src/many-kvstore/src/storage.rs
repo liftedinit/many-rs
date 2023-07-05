@@ -60,17 +60,18 @@ impl std::fmt::Debug for KvStoreStorage {
 
 fn filter_key(filter: &KeyFilterType, _key: &[u8], meta: &KvStoreMetadata) -> bool {
     match filter {
-        KeyFilterType::Owner(address) => {
-            &meta.owner == address
+        KeyFilterType::Owner(address) => &meta.owner == address,
+        KeyFilterType::PreviousOwner(address) => &meta.previous_owner == address,
+        KeyFilterType::Disabled(disabled) => {
+            if *disabled {
+                matches!(
+                    meta.disabled,
+                    Some(Either::Left(true)) | Some(Either::Right(_))
+                )
+            } else {
+                matches!(meta.disabled, None | Some(Either::Left(false)))
+            }
         }
-        KeyFilterType::PreviousOwner(address) => {
-            &meta.previous_owner == address
-        }
-        KeyFilterType::Disabled(disabled) => if *disabled {
-            matches!(meta.disabled, Some(Either::Left(true)) | Some(Either::Right(_)))
-        } else {
-            matches!(meta.disabled, None | Some(Either::Left(false)))
-        },
     }
 }
 
@@ -255,11 +256,11 @@ impl KvStoreStorage {
         self._get(key, KVSTORE_ROOT)
     }
 
-    pub fn list<'a>(
-        &'a self,
+    pub fn list(
+        &self,
         order: SortOrder,
-        filter: Option<Vec<KeyFilterType>>
-    ) -> impl Iterator<Item = Vec<u8>> + 'a {
+        filter: Option<Vec<KeyFilterType>>,
+    ) -> impl Iterator<Item = Vec<u8>> + '_ {
         KvStoreIterator::all_keys(&self.persistent_store, order).filter_map(move |item| {
             let (k, v) = item.ok()?;
             if let Some(filters) = &filter {

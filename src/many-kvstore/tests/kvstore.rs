@@ -1,14 +1,16 @@
 pub mod common;
 
-use std::collections::BTreeMap;
 use crate::common::{setup, Setup};
+use many_error::Reason;
 use many_identity::testing::identity;
 use many_identity::Address;
 use many_kvstore::error;
-use many_modules::kvstore::{InfoArg, KeyFilterType, KvStoreModuleBackend, KvStoreTransferModuleBackend, TransferArgs};
+use many_modules::kvstore::{
+    InfoArg, KeyFilterType, KvStoreModuleBackend, KvStoreTransferModuleBackend, TransferArgs,
+};
 use many_types::{Either, SortOrder};
 use minicbor::bytes::ByteVec;
-use many_error::Reason;
+use std::collections::BTreeMap;
 
 #[test]
 fn info() {
@@ -208,14 +210,20 @@ fn list_order() {
     }
 
     // List all keys, ascending order
-    let list = setup.list(&setup.id, SortOrder::Ascending, None).unwrap().keys;
+    let list = setup
+        .list(&setup.id, SortOrder::Ascending, None)
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         keys
     );
 
     // List all keys, descending order
-    let list = setup.list(&setup.id, SortOrder::Descending, None).unwrap().keys;
+    let list = setup
+        .list(&setup.id, SortOrder::Descending, None)
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter()
             .rev()
@@ -239,14 +247,28 @@ fn list_filter_with_owner() {
     }
 
     // List only keys belonging to id
-    let list = setup.list(&setup.id, SortOrder::Ascending, Some(vec![KeyFilterType::Owner(id)])).unwrap().keys;
+    let list = setup
+        .list(
+            &setup.id,
+            SortOrder::Ascending,
+            Some(vec![KeyFilterType::Owner(id)]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         keys
     );
 
     // List only keys belonging to identity(666)
-    let list = setup.list(&identity(666), SortOrder::Ascending, Some(vec![KeyFilterType::Owner(identity(666))])).unwrap().keys;
+    let list = setup
+        .list(
+            &identity(666),
+            SortOrder::Ascending,
+            Some(vec![KeyFilterType::Owner(identity(666))]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         keys2
@@ -272,34 +294,76 @@ fn list_filter_with_owner_and_disabled() {
     assert_eq!(query.disabled, Some(Either::Left(true)));
 
     // List keys belonging to id that are disabled
-    let list = setup.list(&setup.id, SortOrder::Ascending, Some(vec![KeyFilterType::Owner(id), KeyFilterType::Disabled(true)])).unwrap().keys;
+    let list = setup
+        .list(
+            &setup.id,
+            SortOrder::Ascending,
+            Some(vec![
+                KeyFilterType::Owner(id),
+                KeyFilterType::Disabled(true),
+            ]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         vec![keys[0].clone()]
     );
 
     // List keys belonging to id that are not disabled
-    let list = setup.list(&setup.id, SortOrder::Ascending, Some(vec![KeyFilterType::Owner(id), KeyFilterType::Disabled(false)])).unwrap().keys;
+    let list = setup
+        .list(
+            &setup.id,
+            SortOrder::Ascending,
+            Some(vec![
+                KeyFilterType::Owner(id),
+                KeyFilterType::Disabled(false),
+            ]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         keys[1..].to_vec()
     );
 
     // Disable first key belonging to identity(666)
-    let reason =Reason::new(123, Some("foo".to_string()), BTreeMap::new());
-    let _ = setup.disable(&identity(666), vec![11], None, Some(reason.clone())).unwrap();
+    let reason = Reason::new(123, Some("foo".to_string()), BTreeMap::new());
+    let _ = setup
+        .disable(&identity(666), vec![11], None, Some(reason.clone()))
+        .unwrap();
     let query = setup.query(&identity(666), vec![11]).unwrap();
     assert_eq!(query.disabled, Some(Either::Right(reason)));
 
     // List keys belonging to identity(666) that are disabled
-    let list = setup.list(&identity(666), SortOrder::Ascending, Some(vec![KeyFilterType::Owner(identity(666)), KeyFilterType::Disabled(true)])).unwrap().keys;
+    let list = setup
+        .list(
+            &identity(666),
+            SortOrder::Ascending,
+            Some(vec![
+                KeyFilterType::Owner(identity(666)),
+                KeyFilterType::Disabled(true),
+            ]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         vec![keys2[0].clone()]
     );
 
     // List keys belonging to identity(666) that are not disabled
-    let list = setup.list(&identity(666), SortOrder::Ascending, Some(vec![KeyFilterType::Owner(identity(666)), KeyFilterType::Disabled(false)])).unwrap().keys;
+    let list = setup
+        .list(
+            &identity(666),
+            SortOrder::Ascending,
+            Some(vec![
+                KeyFilterType::Owner(identity(666)),
+                KeyFilterType::Disabled(false),
+            ]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         keys2[1..].to_vec()
@@ -309,7 +373,17 @@ fn list_filter_with_owner_and_disabled() {
     let _ = setup.put(&id, vec![1], b"foo".to_vec(), None);
 
     // Verify re-enabled key is listed when querying for keys owned by id and that are not disabled
-    let list = setup.list(&setup.id, SortOrder::Ascending,Some(vec![KeyFilterType::Owner(id), KeyFilterType::Disabled(false)]) ).unwrap().keys;
+    let list = setup
+        .list(
+            &setup.id,
+            SortOrder::Ascending,
+            Some(vec![
+                KeyFilterType::Owner(id),
+                KeyFilterType::Disabled(false),
+            ]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         keys
@@ -343,14 +417,28 @@ fn list_filter_previous_owner() {
         .unwrap();
 
     // List keys belonging to id
-    let list = setup.list(&setup.id, SortOrder::Ascending, Some(vec![KeyFilterType::Owner(id)])).unwrap().keys;
+    let list = setup
+        .list(
+            &setup.id,
+            SortOrder::Ascending,
+            Some(vec![KeyFilterType::Owner(id)]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         keys[1..].to_vec()
     );
 
     // List keys belonging to illegal address
-    let list = setup.list(&setup.id, SortOrder::Ascending, Some(vec![KeyFilterType::Owner(Address::illegal())])).unwrap().keys;
+    let list = setup
+        .list(
+            &setup.id,
+            SortOrder::Ascending,
+            Some(vec![KeyFilterType::Owner(Address::illegal())]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         vec![keys[0].clone()]
@@ -370,14 +458,31 @@ fn list_filter_previous_owner() {
         .unwrap();
 
     // List all immutable keys
-    let list = setup.list(&setup.id, SortOrder::Ascending, Some(vec![KeyFilterType::Owner(Address::illegal())])).unwrap().keys;
+    let list = setup
+        .list(
+            &setup.id,
+            SortOrder::Ascending,
+            Some(vec![KeyFilterType::Owner(Address::illegal())]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         vec![keys[0].clone(), keys2[0].clone()]
     );
 
     // List immutable keys where id is the previous owner
-    let list = setup.list(&setup.id, SortOrder::Ascending, Some(vec![KeyFilterType::Owner(Address::illegal()), KeyFilterType::PreviousOwner(id)])).unwrap().keys;
+    let list = setup
+        .list(
+            &setup.id,
+            SortOrder::Ascending,
+            Some(vec![
+                KeyFilterType::Owner(Address::illegal()),
+                KeyFilterType::PreviousOwner(id),
+            ]),
+        )
+        .unwrap()
+        .keys;
     assert_eq!(
         list.into_iter().map(|e| e.into()).collect::<Vec<Vec<u8>>>(),
         vec![keys[0].clone()]

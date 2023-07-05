@@ -1,9 +1,9 @@
-use minicbor::{decode, encode};
+use crate::_3_kvstore::list::ListArgs;
+use crate::kvstore::list::ListReturns;
 use many_error::ManyError;
 use many_identity::Address;
 use many_macros::many_module;
-use crate::_3_kvstore::list::ListArgs;
-use crate::kvstore::list::ListReturns;
+use minicbor::{decode, encode};
 
 #[cfg(test)]
 use mockall::{automock, predicate::*};
@@ -42,7 +42,9 @@ impl std::str::FromStr for KeyFilterType {
 
         match tag {
             "owner" => {
-                let address = value.parse().map_err(|e| format!("invalid address: {}", e))?;
+                let address = value
+                    .parse()
+                    .map_err(|e| format!("invalid address: {}", e))?;
                 Ok(KeyFilterType::Owner(address))
             }
             _ => Err(format!("unknown tag: {}", tag)),
@@ -54,18 +56,14 @@ impl<C> minicbor::Encode<C> for KeyFilterType {
     fn encode<W: encode::Write>(
         &self,
         e: &mut minicbor::Encoder<W>,
-        _: &mut C
+        _: &mut C,
     ) -> Result<(), minicbor::encode::Error<W::Error>> {
         match self {
-            KeyFilterType::Owner(address) => {
-                e.array(2)?.u32(0)?.encode(address).map(|_| ())
-            }
+            KeyFilterType::Owner(address) => e.array(2)?.u32(0)?.encode(address).map(|_| ()),
             KeyFilterType::PreviousOwner(address) => {
                 e.array(2)?.u32(1)?.encode(address).map(|_| ())
             }
-            KeyFilterType::Disabled(disabled) => {
-                e.array(2)?.u32(2)?.bool(*disabled).map(|_| ())
-            }
+            KeyFilterType::Disabled(disabled) => e.array(2)?.u32(2)?.bool(*disabled).map(|_| ()),
         }
     }
 }
@@ -156,7 +154,7 @@ mod tests {
                 Ok(QueryReturns {
                     owner: identity(666),
                     disabled: None,
-                    previous_owner: None
+                    previous_owner: None,
                 })
             });
         let module = super::KvStoreModule::new(Arc::new(Mutex::new(mock)));
