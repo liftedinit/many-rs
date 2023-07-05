@@ -47,6 +47,18 @@ impl std::str::FromStr for KeyFilterType {
                     .map_err(|e| format!("invalid address: {}", e))?;
                 Ok(KeyFilterType::Owner(address))
             }
+            "previous_owner" => {
+                let address = value
+                    .parse()
+                    .map_err(|e| format!("invalid address: {}", e))?;
+                Ok(KeyFilterType::PreviousOwner(address))
+            }
+            "disabled" => {
+                let disabled = value
+                    .parse()
+                    .map_err(|e| format!("invalid bool: {}", e))?;
+                Ok(KeyFilterType::Disabled(disabled))
+            }
             _ => Err(format!("unknown tag: {}", tag)),
         }
     }
