@@ -16,7 +16,9 @@ function setup() {
     skip_if_missing_background_utilities
 
     jq '(.migrations[] | select(.name == "Token Migration")).block_height |= 0 |
-        (.migrations[] | select(.name == "Token Migration")).disabled |= empty' \
+        (.migrations[] | select(.name == "Token Migration")).disabled |= empty |
+        (.migrations[] | select(.name == "Token Create Migration")).block_height |= 0 |
+        (.migrations[] | select(.name == "Token Create Migration")).disabled |= empty' \
         "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
     # Dummy image

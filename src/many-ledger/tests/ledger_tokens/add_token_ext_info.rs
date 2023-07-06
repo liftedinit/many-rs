@@ -9,6 +9,7 @@ use std::path::Path;
 use cucumber::{given, then, when, World};
 use many_error::ManyError;
 use many_identity::Address;
+use many_ledger::migration::token_create::TOKEN_CREATE_MIGRATION;
 use many_ledger::migration::tokens::TOKEN_MIGRATION;
 use many_ledger::module::LedgerModuleImpl;
 use many_modules::events::{EventFilter, EventKind, EventsModuleBackend, ListArgs};
@@ -32,7 +33,11 @@ struct AddExtInfoWorld {
 impl AddExtInfoWorld {
     fn new() -> Self {
         Self {
-            setup: Setup::new_with_migrations(false, [(0, &TOKEN_MIGRATION)], true),
+            setup: Setup::new_with_migrations(
+                false,
+                [(0, &TOKEN_MIGRATION), (0, &TOKEN_CREATE_MIGRATION)],
+                true,
+            ),
             ..Default::default()
         }
     }

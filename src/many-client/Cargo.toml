@@ -1,6 +1,6 @@
 [package]
 name = "many-client"
-version = "0.1.3" # managed by release.sh
+version = "0.1.4" # managed by release.sh
 edition = "2021"
 description = "Client library to communicate with the MANY protocol network."
 license-file = "../../LICENSE"
@@ -21,13 +21,13 @@ ed25519 = { version = "2.2.1", features = [ "std" ] }
 ed25519-dalek = { version = "1.0.1", features = [ "std" ] }
 fixed = "1.23.1"
 hex = "0.4.3"
-many-client-macros = { path = "../many-client-macros", version = "0.1.3" } # managed by release.sh
-many-error = { path = "../many-error", version = "0.1.3" } # managed by release.sh
-many-identity = { path = "../many-identity", version = "0.1.3" } # managed by release.sh
-many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.3" } # managed by release.sh
-many-modules = { path = "../many-modules", version = "0.1.3" } # managed by release.sh
-many-protocol = { path = "../many-protocol", version = "0.1.3" } # managed by release.sh
-many-types = { path = "../many-types", version = "0.1.3" } # managed by release.sh
+many-client-macros = { path = "../many-client-macros", version = "0.1.4" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.4" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.4" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", version = "0.1.4" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.1.4" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.4" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.4" } # managed by release.sh
 minicbor = { version = "0.19.1", features = ["derive", "half", "std"] }
 num-derive = "0.3.3"
 num-traits = "0.2.15"
