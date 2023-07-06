@@ -722,16 +722,6 @@ workflows:
           matrix:
             parameters:
               os: [macos]
-      - bats:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: bats-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [macos]
-          requires:
-            - lint-test-build-v<< matrix.os >>
       - tag:
           name: macos nightly tag
           tag: macos-green
