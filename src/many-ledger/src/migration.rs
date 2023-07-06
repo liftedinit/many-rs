@@ -7,6 +7,7 @@ pub mod block_9400;
 pub mod data;
 pub mod legacy_remove_roles;
 pub mod memo;
+pub mod token_create;
 pub mod tokens;
 
 #[cfg(feature = "migration_testing")]

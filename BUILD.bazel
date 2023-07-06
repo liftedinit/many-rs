@@ -59,6 +59,7 @@ download_pkgs(
     name = "ubuntu_download",
     image_tar = "@ubuntu_base//image",
     packages = [
+        "libc++1",
         "libssl3",
         "libudev1",
         "libusb-1.0-0",

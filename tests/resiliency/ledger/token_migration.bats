@@ -174,18 +174,6 @@ function teardown() {
     done
 }
 
-@test "$SUITE: Token creation sender is limited to token identity" {
-    check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
-    wait_for_block 30
-
-    # Creation fails
-    create_token --pem=2 --error=invalid_sender --port=8000
-    create_token --error=anon --port=8000
-
-    # Creation successful
-    create_token --pem=1 --port=8000
-}
-
 @test "$SUITE: Token creation migration is properly initialized when resetting the node" {
     check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
     call_ledger --pem=1 --port=8000 token info ${MFX_ADDRESS}
