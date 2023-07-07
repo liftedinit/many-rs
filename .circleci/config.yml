@@ -667,4 +667,3 @@ workflows:
             - GITHUB_CREDS
           requires:
             - lint-test-build-vmacos
-            - bats-vmacos
