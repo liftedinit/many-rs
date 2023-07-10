@@ -1,5 +1,5 @@
 {
-  "checksum": "4e7ab0e0294ba0446296754e77c99544efde297d2ee6f49b4e1de6e7a2a25ab2",
+  "checksum": "ecb2cc583ffaf3ac1bf994d450f5013a87e1226e46420e7208ce006da62bd8b2",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -12636,10 +12636,6 @@
             {
               "id": "anyhow 1.0.71",
               "target": "anyhow"
-            },
-            {
-              "id": "atty 0.2.14",
-              "target": "atty"
             },
             {
               "id": "base64 0.21.2",
