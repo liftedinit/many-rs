@@ -21,7 +21,7 @@ use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
 use many_types::{attributes::Attribute, Timestamp};
 use std::convert::TryFrom;
-use std::io::{IsTerminal, stderr};
+use std::io::{stderr, IsTerminal};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
