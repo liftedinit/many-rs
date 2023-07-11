@@ -1,6 +1,6 @@
 [package]
 name = "many-identity-webauthn"
-version = "0.1.3" # managed by release.sh
+version = "0.1.4" # managed by release.sh
 edition = "2021"
 description = "Verifiers for WebAuthn signed envelopes."
 license-file = "../../LICENSE"
@@ -15,12 +15,12 @@ authenticator-ctap2-2021 = { version = "0.3.2-dev.1", optional = true, default-f
 base64 = "0.21.2"
 base64urlsafedata = { version = "0.1.3", optional = true }
 coset = "0.3.4"
-many-error = { path = "../many-error", version = "0.1.3" } # managed by release.sh
-many-identity = { path = "../many-identity", version = "0.1.3" } # managed by release.sh
-many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa"], version = "0.1.3" } # managed by release.sh
-many-modules = { path = "../many-modules", optional = true, version = "0.1.3" } # managed by release.sh
-many-protocol = { path = "../many-protocol", version = "0.1.3" } # managed by release.sh
-many-types = { path = "../many-types", version = "0.1.3" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.4" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.4" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa"], version = "0.1.4" } # managed by release.sh
+many-modules = { path = "../many-modules", optional = true, version = "0.1.4" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.4" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.4" } # managed by release.sh
 minicbor = "0.19.1"
 once_cell = "1.17.1"
 rand = { version = "0.8.5", optional = true }

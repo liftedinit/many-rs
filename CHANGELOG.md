@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2023-07-06
+
+### Bug Fixes
+
+- Rustsec-2023-0044 ([#390](https://github.com/liftedinit/many-rs/issues/390))
+
+### CI
+
+- Fix macos nightly ([#394](https://github.com/liftedinit/many-rs/issues/394))
+
+### Features
+
+- Token creation for all ([#392](https://github.com/liftedinit/many-rs/issues/392))
+
 ## [0.1.3] - 2023-06-14
 
 ### Bug Fixes

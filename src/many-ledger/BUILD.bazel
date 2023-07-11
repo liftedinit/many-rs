@@ -28,18 +28,12 @@ bool_flag(
     build_setting_default = False,
 )
 
-bool_flag(
-    name = "disable_token_sender_check",
-    build_setting_default = False,
-)
-
 rustc_flags_file(
     name = "flags_file",
     flags = [
         ":balance_testing",
         ":migration_testing",
         ":webauthn_testing",
-        ":disable_token_sender_check",
     ],
 )
 
@@ -89,7 +83,6 @@ rust_library(
     crate_features = [
         "balance_testing",
         "migration_testing",
-        "disable_token_sender_check",
     ],
     crate_name = "many_ledger",
     proc_macro_deps = all_crate_deps(
