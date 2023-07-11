@@ -8,6 +8,7 @@ package(default_visibility = [
     "//src/many:__pkg__",
     "//src/many-abci:__pkg__",
     "//src/many-client:__pkg__",
+    "//src/many-compute:__pkg__",
     "//src/many-identity-dsa:__pkg__",
     "//src/many-identity-hsm:__pkg__",
     "//src/many-identity-webauthn:__pkg__",

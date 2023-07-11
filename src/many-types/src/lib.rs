@@ -12,6 +12,7 @@ use std::str::FromStr;
 pub mod attributes;
 pub mod blockchain;
 pub mod cbor;
+pub mod compute;
 pub mod either;
 pub mod identity {
     pub use many_identity::*;

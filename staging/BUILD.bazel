@@ -13,6 +13,11 @@ filegroup(
 )
 
 filegroup(
+    name = "compute-staging",
+    srcs = [":compute_state.json5"],
+)
+
+filegroup(
     name = "ledger-migrations",
     srcs = ["ledger_migrations.json"],
 )
