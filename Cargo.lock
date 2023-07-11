@@ -2446,7 +2446,6 @@ version = "0.1.4"
 dependencies = [
  "anyhow",
  "async-recursion",
- "atty",
  "base64 0.21.2",
  "cbor-diag",
  "clap 3.2.25",
