@@ -1,7 +1,15 @@
 load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(default_visibility = ["//:__pkg__"])
+
+cargo_build_script(
+    name = "build_script",
+    srcs = ["build.rs"],
+    data = ["//:.git"],
+    deps = all_crate_deps(build = True),
+)
 
 rust_binary(
     name = "http-proxy",
@@ -13,6 +21,8 @@ rust_binary(
     deps = all_crate_deps(
         normal = True,
     ) + [
+        ":build_script",
+        "//src/many-cli-helpers",
         "//src/many-client",
         "//src/many-identity",
         "//src/many-identity-dsa",

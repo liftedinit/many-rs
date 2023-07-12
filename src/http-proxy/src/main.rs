@@ -1,13 +1,17 @@
 use clap::Parser;
+use base64::{engine::general_purpose, Engine as _};
 use many_client::client::blocking::ManyClient;
 use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::CoseKeyIdentity;
 use many_modules::kvstore::{GetArgs, GetReturns};
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use tiny_http::{Header, Method, Response, StatusCode};
-use tracing::warn;
-use tracing_subscriber::filter::LevelFilter;
+use std::sync::Arc;
+use std::thread;
+use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
+use tracing::{debug, info, warn};
+
+type Client = Arc<ManyClient<Box<dyn Identity>>>;
 
 #[derive(clap::ArgEnum, Clone)]
 enum LogStrategy {
@@ -15,8 +19,11 @@ enum LogStrategy {
     Syslog,
 }
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 struct Opts {
+    #[clap(flatten)]
+    common_flags: many_cli_helpers::CommonCliFlags,
+
     /// Many server URL to connect to. It must implement a KV-Store attribute.
     #[clap(default_value = "http://localhost:8000")]
     server: String,
@@ -32,58 +39,108 @@ struct Opts {
     #[clap(long)]
     pem: Option<PathBuf>,
 
-    /// Increase output logging verbosity to DEBUG level.
-    #[clap(short, long, parse(from_occurrences))]
-    verbose: i8,
+    /// Number of threads to use for request processing. Defaults to 1.
+    #[clap(long)]
+    #[clap(value_parser = clap::value_parser!(u8).range(1..))]
+    num_threads: Option<u8>,
+}
 
-    /// Suppress all output logging. Can be used multiple times to suppress more.
-    #[clap(short, long, parse(from_occurrences))]
-    quiet: i8,
+fn process_request(http: Arc<Server>, client: Client) -> impl Fn() {
+    move || {
+        for request in http.incoming_requests() {
+            match request.method() {
+                Method::Get => handle_get_request(&client, request),
+                x => {
+                    warn!("Received unknown method: {}", x);
+                    let _ = request.respond(Response::empty(StatusCode::from(405)));
+                }
+            }
+        }
+    }
+}
 
-    /// Use given logging strategy
-    #[clap(long, arg_enum, default_value_t = LogStrategy::Terminal)]
-    logmode: LogStrategy,
+fn handle_get_request(client: &Client, request: Request) {
+    let path = request.url();
+    let result = client.call_(
+        "kvstore.get",
+        GetArgs {
+            key: format!("http{path}").into_bytes().into(),
+        },
+    );
+    match result {
+        Ok(result) => process_result(result, request),
+        Err(_) => {
+            let _ = request.respond(Response::empty(500));
+        }
+    }
+}
+
+fn process_result(result: Vec<u8>, request: Request) {
+   match minicbor::decode::<GetReturns>(&result) {
+        Ok(GetReturns { value }) => {
+            match value {
+                None => {
+                    if let Err(e) = request.respond(Response::empty(404)) {
+                        warn!("Failed to send response: {}", e);
+                    }
+                }
+                Some(value) => respond_with_value(value.into(), request),
+            }
+        }
+        Err(e) => {
+            warn!("Failed to decode result: {}", e);
+            if let Err(e) = request.respond(Response::empty(500)) {
+                warn!("Failed to send response: {}", e);
+            }
+        }
+    }
+}
+
+fn respond_with_value(value: Vec<u8>, request: Request) {
+        match general_purpose::STANDARD.decode(value) {
+        Ok(value) => {
+            let mimetype = new_mime_guess::from_path(request.url()).first_raw();
+            let mut response = Response::empty(200)
+                .with_data(value.as_slice(), Some(value.len()));
+
+            if let Some(mimetype) = mimetype {
+                if let Ok(header) = Header::from_bytes("Content-Type", mimetype) {
+                    response = response.with_header(header);
+                } else {
+                    warn!("Failed to create header for mimetype: {}", mimetype);
+                }
+            }
+
+            if let Err(e) = request.respond(response) {
+                warn!("Failed to send response: {}", e);
+            }
+        }
+        Err(e) => {
+            warn!("Failed to decode value: {}", e);
+            if let Err(e) = request.respond(Response::empty(500)) {
+                warn!("Failed to send response: {}", e);
+            }
+        }
+    }
 }
 
 fn main() {
     let Opts {
+        common_flags,
         addr,
         pem,
         server,
         server_id,
-        verbose,
-        quiet,
-        logmode,
+        num_threads,
     } = Opts::parse();
 
-    let verbose_level = 2 + verbose - quiet;
-    let log_level = match verbose_level {
-        x if x > 3 => LevelFilter::TRACE,
-        3 => LevelFilter::DEBUG,
-        2 => LevelFilter::INFO,
-        1 => LevelFilter::WARN,
-        0 => LevelFilter::ERROR,
-        x if x < 0 => LevelFilter::OFF,
-        _ => unreachable!(),
-    };
+    common_flags.init_logging().unwrap();
 
-    let subscriber = tracing_subscriber::fmt::Subscriber::builder().with_max_level(log_level);
-
-    match logmode {
-        LogStrategy::Terminal => {
-            let subscriber = subscriber.with_writer(std::io::stderr);
-            subscriber.init();
-        }
-        LogStrategy::Syslog => {
-            let identity = std::ffi::CStr::from_bytes_with_nul(b"http-proxy\0").unwrap();
-            let (options, facility) = Default::default();
-            let syslog = syslog_tracing::Syslog::new(identity, options, facility).unwrap();
-
-            let subscriber = subscriber.with_writer(syslog);
-            subscriber.init();
-            log_panics::init();
-        }
-    };
+    debug!("{:?}", Opts::parse());
+    info!(
+        version = env!("CARGO_PKG_VERSION"),
+        git_sha = env!("VERGEN_GIT_SHA")
+    );
 
     let server_id = server_id.unwrap_or_default();
     let key: Box<dyn Identity> = pem.map_or_else(
@@ -91,52 +148,18 @@ fn main() {
         |p| Box::new(CoseKeyIdentity::from_pem(std::fs::read_to_string(p).unwrap()).unwrap()),
     );
 
-    let client = ManyClient::new(server, server_id, key).unwrap();
-    let http = tiny_http::Server::http(addr).unwrap();
+    let client = Client::new(ManyClient::new(server, server_id, key).unwrap());
+    let http = Arc::new(tiny_http::Server::http(addr).unwrap());
 
-    // TODO: parallelize this.
-    for request in http.incoming_requests() {
-        let path = request.url();
-        match request.method() {
-            Method::Get => {
-                let result = client.call_(
-                    "kvstore.get",
-                    GetArgs {
-                        key: format!("http/{path}").into_bytes().into(),
-                    },
-                );
-                match result {
-                    Ok(result) => {
-                        let GetReturns { value } = minicbor::decode(&result).unwrap();
-                        match value {
-                            None => request.respond(Response::empty(404)).unwrap(),
-                            Some(value) => {
-                                let mimetype = new_mime_guess::from_path(path).first();
-                                let response = Response::empty(200)
-                                    .with_data(value.as_slice(), Some(value.len()));
-                                let response = if let Some(mimetype) = mimetype {
-                                    response.with_header(
-                                        Header::from_bytes("Content-Type", mimetype.essence_str())
-                                            .unwrap(),
-                                    )
-                                } else {
-                                    response
-                                };
+    let mut handles = Vec::new();
 
-                                // Ignore errors on return.
-                                let _ = request.respond(response);
-                            }
-                        }
-                    }
-                    Err(_) => request.respond(Response::empty(500)).unwrap(),
-                }
-            }
-            // Method::Head => {}
-            // Method::Options => {}
-            x => {
-                warn!("Received unknown method: {}", x);
-                let _ = request.respond(Response::empty(StatusCode::from(405)));
-            }
-        }
+    for _ in 0..num_threads.unwrap_or(1) {
+        let http = http.clone();
+        let client = client.clone();
+        handles.push(thread::spawn(process_request(http, client)));
+    }
+
+    for h in handles {
+        h.join().unwrap();
     }
 }

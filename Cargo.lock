@@ -1929,9 +1929,11 @@ dependencies = [
 name = "http-proxy"
 version = "0.1.4"
 dependencies = [
+ "base64 0.21.2",
  "clap 3.2.25",
  "hex",
  "log-panics",
+ "many-cli-helpers",
  "many-client",
  "many-identity",
  "many-identity-dsa",
@@ -1943,6 +1945,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "vergen",
 ]
 
 [[package]]
