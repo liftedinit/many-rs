@@ -75,7 +75,7 @@ fn main() {
             subscriber.init();
         }
         LogStrategy::Syslog => {
-            let identity = std::ffi::CStr::from_bytes_with_nul(b"http_proxy\0").unwrap();
+            let identity = std::ffi::CStr::from_bytes_with_nul(b"http-proxy\0").unwrap();
             let (options, facility) = Default::default();
             let syslog = syslog_tracing::Syslog::new(identity, options, facility).unwrap();
 

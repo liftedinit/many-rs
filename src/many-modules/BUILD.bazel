@@ -2,7 +2,7 @@ load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = [
-    "//src/http_proxy:__pkg__",
+    "//src/http-proxy:__pkg__",
     "//src/kvstore:__pkg__",
     "//src/ledger:__pkg__",
     "//src/ledger-db:__pkg__",

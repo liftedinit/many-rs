@@ -49,7 +49,7 @@ crates_repository(
     lockfile = "//:cargo-bazel-lock.json",
     manifests = [
         "//:Cargo.toml",
-        "//src/http_proxy:Cargo.toml",
+        "//src/http-proxy:Cargo.toml",
         "//src/idstore-export:Cargo.toml",
         "//src/kvstore:Cargo.toml",
         "//src/ledger-db:Cargo.toml",

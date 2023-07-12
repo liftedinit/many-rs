@@ -1,5 +1,5 @@
 {
-  "checksum": "33665373d301bd1225d280b4a3f2fe545319e30bc9164d6ecca06907505db0d0",
+  "checksum": "a65d6703089aed2582cb75e164f5c2f68809e04df43c2bf58760d3785d6f182a",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -10009,8 +10009,8 @@
       },
       "license": "MIT"
     },
-    "http_proxy 0.1.4": {
-      "name": "http_proxy",
+    "http-proxy 0.1.4": {
+      "name": "http-proxy",
       "version": "0.1.4",
       "repository": null,
       "targets": [],
@@ -29628,7 +29628,7 @@
   },
   "binary_crates": [],
   "workspace_members": {
-    "http_proxy 0.1.4": "src/http_proxy",
+    "http-proxy 0.1.4": "src/http-proxy",
     "idstore-export 0.1.4": "src/idstore-export",
     "kvstore 0.1.4": "src/kvstore",
     "ledger 0.1.4": "src/ledger",

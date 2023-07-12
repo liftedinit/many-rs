@@ -25,7 +25,7 @@ basic_naming(
 pkg_tar(
     name = "many-rs-tar",
     srcs = [
-        "//src/http_proxy",
+        "//src/http-proxy",
         "//src/idstore-export",
         "//src/kvstore",
         "//src/ledger",
