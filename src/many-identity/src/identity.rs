@@ -4,7 +4,7 @@ use coset::{CoseKey, CoseSign1};
 use many_error::ManyError;
 
 /// An Identity is anything that is a unique address and can sign messages.
-pub trait Identity: Send {
+pub trait Identity: Send + Sync {
     /// The address of the identity.
     fn address(&self) -> Address;
 
