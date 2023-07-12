@@ -21,6 +21,7 @@ use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
 use many_types::{attributes::Attribute, Timestamp};
 use std::convert::TryFrom;
+use std::io::{stderr, IsTerminal};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process;
@@ -252,7 +253,7 @@ async fn show_response<'a>(
         // Allow eprint/ln for showing the progress bar, when we're interactive.
         #[allow(clippy::print_stderr)]
         fn progress(str: &str, done: bool) {
-            if atty::is(atty::Stream::Stderr) {
+            if stderr().is_terminal() {
                 if done {
                     eprintln!("{str}");
                 } else {
