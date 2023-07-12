@@ -2,7 +2,10 @@ load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 
-package(default_visibility = ["//:__pkg__"])
+package(default_visibility = [
+    "//:__pkg__",
+    "//tests/e2e:__subpackages__",
+])
 
 cargo_build_script(
     name = "build_script",
