@@ -1,5 +1,5 @@
-use clap::Parser;
 use base64::{engine::general_purpose, Engine as _};
+use clap::Parser;
 use many_client::client::blocking::ManyClient;
 use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::CoseKeyIdentity;
@@ -76,17 +76,15 @@ fn handle_get_request(client: &Client, request: Request) {
 }
 
 fn process_result(result: Vec<u8>, request: Request) {
-   match minicbor::decode::<GetReturns>(&result) {
-        Ok(GetReturns { value }) => {
-            match value {
-                None => {
-                    if let Err(e) = request.respond(Response::empty(404)) {
-                        warn!("Failed to send response: {}", e);
-                    }
+    match minicbor::decode::<GetReturns>(&result) {
+        Ok(GetReturns { value }) => match value {
+            None => {
+                if let Err(e) = request.respond(Response::empty(404)) {
+                    warn!("Failed to send response: {}", e);
                 }
-                Some(value) => respond_with_value(value.into(), request),
             }
-        }
+            Some(value) => respond_with_value(value.into(), request),
+        },
         Err(e) => {
             warn!("Failed to decode result: {}", e);
             if let Err(e) = request.respond(Response::empty(500)) {
@@ -97,11 +95,10 @@ fn process_result(result: Vec<u8>, request: Request) {
 }
 
 fn respond_with_value(value: Vec<u8>, request: Request) {
-        match general_purpose::STANDARD.decode(value) {
+    match general_purpose::STANDARD.decode(value) {
         Ok(value) => {
             let mimetype = new_mime_guess::from_path(request.url()).first_raw();
-            let mut response = Response::empty(200)
-                .with_data(value.as_slice(), Some(value.len()));
+            let mut response = Response::empty(200).with_data(value.as_slice(), Some(value.len()));
 
             if let Some(mimetype) = mimetype {
                 if let Ok(header) = Header::from_bytes("Content-Type", mimetype) {
