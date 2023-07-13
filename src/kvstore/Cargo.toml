@@ -1,6 +1,6 @@
 [package]
 name = "kvstore"
-version = "0.1.4" # managed by release.sh
+version = "0.1.5" # managed by release.sh
 edition = "2021"
 description = "MANY kvstore CLI client."
 license-file = "../../LICENSE"
@@ -18,13 +18,13 @@ hex = "0.4.3"
 indicatif = "0.17.3"
 log-panics = { version = "2.1.0", features = ["with-backtrace"]}
 minicbor = { version = "0.19.1", features = ["derive", "std"] }
-many-client = { path = "../many-client", version = "0.1.4" } # managed by release.sh
-many-error = { path = "../many-error", version = "0.1.4" } # managed by release.sh
-many-identity = { path = "../many-identity", version = "0.1.4" } # managed by release.sh
-many-identity-dsa = { path = "../many-identity-dsa", features = ["ed25519", "ecdsa"], version = "0.1.4" } # managed by release.sh
-many-modules = { path = "../many-modules", version = "0.1.4" } # managed by release.sh
-many-protocol = { path = "../many-protocol", version = "0.1.4" } # managed by release.sh
-many-types = { path = "../many-types", version = "0.1.4" } # managed by release.sh
+many-client = { path = "../many-client", version = "0.1.5" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.5" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.5" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ed25519", "ecdsa"], version = "0.1.5" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.1.5" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.5" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.5" } # managed by release.sh
 syslog-tracing = "0.2.0"
 tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
