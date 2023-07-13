@@ -6,7 +6,6 @@ use minicbor::{Decode, Encode};
 use crate::data::{DataIndex, DataValue};
 
 #[derive(Clone, Encode, Decode)]
-#[cbor(map)]
 pub struct DataQueryArgs {
     #[n(0)]
     pub indices: VecOrSingle<DataIndex>,

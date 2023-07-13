@@ -1,5 +1,3 @@
-#![feature(const_trait_impl)]
-
 use many_error::ManyError;
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
@@ -475,7 +473,6 @@ impl AttributeRelatedIndex {
         }
     }
 
-    #[inline]
     pub const fn indices(&self) -> &[u32] {
         match &self.indices {
             AttributeRelatedIndexInner::None => &[],

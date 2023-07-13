@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5] - 2023-07-13
+
+### Bug Fixes
+
+- Revert data module serialization ([#216](https://github.com/liftedinit/many-rs/issues/216)) ([#399](https://github.com/liftedinit/many-rs/issues/399))
+- Compute crate version ([#400](https://github.com/liftedinit/many-rs/issues/400))
+
+### CI
+
+- Fix macos nightly, again ([#395](https://github.com/liftedinit/many-rs/issues/395))
+
+### Features
+
+- Many compute ([#391](https://github.com/liftedinit/many-rs/issues/391))
+
+### Miscellaneous Tasks
+
+- Crate cleanup ([#396](https://github.com/liftedinit/many-rs/issues/396))
+
 ## [0.1.4] - 2023-07-06
 
 ### Bug Fixes
