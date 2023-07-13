@@ -2578,7 +2578,7 @@ dependencies = [
 
 [[package]]
 name = "many-compute"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "async-trait",
  "clap 3.2.25",
