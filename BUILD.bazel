@@ -35,6 +35,7 @@ pkg_tar(
         "//src/many-compute",
         "//src/many-kvstore",
         "//src/many-ledger",
+        "//src/many-web",
         "//staging:abci-ledger-migrations",
         "//staging:compute-staging",
         "//staging:kvstore-staging",

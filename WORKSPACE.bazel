@@ -76,6 +76,7 @@ crates_repository(
         "//src/many-server:Cargo.toml",
         "//src/many-server-cache:Cargo.toml",
         "//src/many-types:Cargo.toml",
+        "//src/many-web:Cargo.toml",
         "//src/many:Cargo.toml",
     ],
     rust_version = RUST_VERSION,

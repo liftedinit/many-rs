@@ -1,5 +1,5 @@
 {
-  "checksum": "332dbeba9264a0d4f24dae7505b1e96230d2db32822b0da87eb5c162e92c5fb6",
+  "checksum": "309ebc9ebdaec9b50dd0bba0fdc6703bb8af1cc3187ba39bccc705afc66fa443",
   "crates": {
     "addr2line 0.19.0": {
       "name": "addr2line",
@@ -13097,9 +13097,9 @@
       },
       "license": null
     },
-    "many-compute 0.1.0": {
+    "many-compute 0.1.4": {
       "name": "many-compute",
-      "version": "0.1.0",
+      "version": "0.1.4",
       "repository": null,
       "targets": [
         {
@@ -13145,7 +13145,7 @@
               "target": "json5"
             },
             {
-              "id": "many-compute 0.1.0",
+              "id": "many-compute 0.1.4",
               "target": "build_script_build"
             },
             {
@@ -13197,7 +13197,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.0"
+        "version": "0.1.4"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -14784,6 +14784,115 @@
           "selects": {}
         },
         "version": "0.1.4"
+      },
+      "license": null
+    },
+    "many-web 0.1.4": {
+      "name": "many-web",
+      "version": "0.1.4",
+      "repository": null,
+      "targets": [
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": null,
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "clap 3.2.25",
+              "target": "clap"
+            },
+            {
+              "id": "coset 0.3.4",
+              "target": "coset"
+            },
+            {
+              "id": "hex 0.4.3",
+              "target": "hex"
+            },
+            {
+              "id": "json5 0.4.1",
+              "target": "json5"
+            },
+            {
+              "id": "many-web 0.1.4",
+              "target": "build_script_build"
+            },
+            {
+              "id": "merk 2.0.0-ll",
+              "target": "merk"
+            },
+            {
+              "id": "minicbor 0.19.1",
+              "target": "minicbor"
+            },
+            {
+              "id": "serde 1.0.164",
+              "target": "serde"
+            },
+            {
+              "id": "serde_json 1.0.97",
+              "target": "serde_json"
+            },
+            {
+              "id": "serde_yaml 0.9.21",
+              "target": "serde_yaml"
+            },
+            {
+              "id": "signal-hook 0.3.15",
+              "target": "signal_hook"
+            },
+            {
+              "id": "tempfile 3.6.0",
+              "target": "tempfile"
+            },
+            {
+              "id": "tokio 1.28.2",
+              "target": "tokio"
+            },
+            {
+              "id": "tracing 0.1.37",
+              "target": "tracing"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "async-trait 0.1.68",
+              "target": "async_trait"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.1.4"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "vergen 8.2.1",
+              "target": "vergen"
+            }
+          ],
+          "selects": {}
+        }
       },
       "license": null
     },
@@ -29634,7 +29743,7 @@
     "many-cli-helpers 0.1.4": "src/many-cli-helpers",
     "many-client 0.1.4": "src/many-client",
     "many-client-macros 0.1.4": "src/many-client-macros",
-    "many-compute 0.1.0": "src/many-compute",
+    "many-compute 0.1.4": "src/many-compute",
     "many-error 0.1.4": "src/many-error",
     "many-identity 0.1.4": "src/many-identity",
     "many-identity-dsa 0.1.4": "src/many-identity-dsa",
@@ -29651,7 +29760,8 @@
     "many-protocol 0.1.4": "src/many-protocol",
     "many-server 0.1.4": "src/many-server",
     "many-server-cache 0.1.4": "src/many-server-cache",
-    "many-types 0.1.4": "src/many-types"
+    "many-types 0.1.4": "src/many-types",
+    "many-web 0.1.4": "src/many-web"
   },
   "conditions": {
     "aarch64-linux-android": [

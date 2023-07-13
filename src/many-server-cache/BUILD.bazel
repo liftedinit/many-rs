@@ -6,6 +6,7 @@ package(default_visibility = [
     "//src/many-compute:__pkg__",
     "//src/many-kvstore:__pkg__",
     "//src/many-ledger:__subpackages__",
+    "//src/many-web:__pkg__",
 ])
 
 rust_library(

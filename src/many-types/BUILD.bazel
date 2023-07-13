@@ -15,6 +15,7 @@ package(default_visibility = [
     "//src/many-modules:__pkg__",
     "//src/many-protocol:__pkg__",
     "//src/many-server:__pkg__",
+    "//src/many-web:__pkg__",
 ])
 
 rust_library(

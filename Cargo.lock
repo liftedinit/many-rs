@@ -2578,7 +2578,7 @@ dependencies = [
 
 [[package]]
 name = "many-compute"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "async-trait",
  "clap 3.2.25",
@@ -3003,6 +3003,37 @@ dependencies = [
  "serde",
  "serde_test",
  "strum 0.25.0",
+]
+
+[[package]]
+name = "many-web"
+version = "0.1.4"
+dependencies = [
+ "async-trait",
+ "clap 3.2.25",
+ "coset",
+ "hex",
+ "json5",
+ "many-cli-helpers",
+ "many-error",
+ "many-identity",
+ "many-identity-dsa",
+ "many-identity-webauthn",
+ "many-modules",
+ "many-protocol",
+ "many-server",
+ "many-server-cache",
+ "many-types",
+ "merk 2.0.0-ll",
+ "minicbor",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "signal-hook",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "vergen",
 ]
 
 [[package]]
