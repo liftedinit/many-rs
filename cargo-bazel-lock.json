@@ -1,5 +1,5 @@
 {
-  "checksum": "508dd01984c9c5d81b8ec000b2108cd00bc2a2fab1b4faeb3c2ca0073347d49e",
+  "checksum": "bcd4565e80439e5c7ec7c3b7379ab9115ee8e9531460f3e3ecfe5075325ae40f",
   "crates": {
     "addr2line 0.20.0": {
       "name": "addr2line",
@@ -13158,9 +13158,9 @@
       },
       "license": null
     },
-    "many-compute 0.1.0": {
+    "many-compute 0.1.4": {
       "name": "many-compute",
-      "version": "0.1.0",
+      "version": "0.1.4",
       "repository": null,
       "targets": [
         {
@@ -13206,7 +13206,7 @@
               "target": "json5"
             },
             {
-              "id": "many-compute 0.1.0",
+              "id": "many-compute 0.1.4",
               "target": "build_script_build"
             },
             {
@@ -13258,7 +13258,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.0"
+        "version": "0.1.4"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -29801,7 +29801,7 @@
     "many-cli-helpers 0.1.4": "src/many-cli-helpers",
     "many-client 0.1.4": "src/many-client",
     "many-client-macros 0.1.4": "src/many-client-macros",
-    "many-compute 0.1.0": "src/many-compute",
+    "many-compute 0.1.4": "src/many-compute",
     "many-error 0.1.4": "src/many-error",
     "many-identity 0.1.4": "src/many-identity",
     "many-identity-dsa 0.1.4": "src/many-identity-dsa",
