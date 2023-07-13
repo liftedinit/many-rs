@@ -30,6 +30,7 @@ reexport_module!(
     r#async: _8_async;
     account: _9_account;
     compute: _15_compute;
+    web: _16_web;
     abci_backend: _1000_abci_backend;
     abci_frontend: _1001_abci_frontend;
     idstore: _1002_idstore;
