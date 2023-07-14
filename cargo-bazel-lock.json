@@ -1,5 +1,5 @@
 {
-  "checksum": "988e130ed594b887840993b89de4e291deb394dcda2dde469448c203326043fb",
+  "checksum": "d0ec5be2698d95c3353d26a2b1d6e1546afd5b8f74674a61742ce179b8ebac48",
   "crates": {
     "addr2line 0.20.0": {
       "name": "addr2line",
@@ -3801,13 +3801,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "clap 4.3.11": {
+    "clap 4.3.12": {
       "name": "clap",
-      "version": "4.3.11",
+      "version": "4.3.12",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap/4.3.11/download",
-          "sha256": "1640e5cc7fb47dbb8338fd471b105e7ed6c3cb2aeb00c2e067127ffd3764a05d"
+          "url": "https://crates.io/api/v1/crates/clap/4.3.12/download",
+          "sha256": "3eab9e8ceb9afdade1ab3f0fd8dbce5b1b2f468ad653baf10e771781b2b67b73"
         }
       },
       "targets": [
@@ -3843,7 +3843,7 @@
         "deps": {
           "common": [
             {
-              "id": "clap_builder 4.3.11",
+              "id": "clap_builder 4.3.12",
               "target": "clap_builder"
             },
             {
@@ -3857,23 +3857,23 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "clap_derive 4.3.2",
+              "id": "clap_derive 4.3.12",
               "target": "clap_derive"
             }
           ],
           "selects": {}
         },
-        "version": "4.3.11"
+        "version": "4.3.12"
       },
       "license": "MIT OR Apache-2.0"
     },
-    "clap_builder 4.3.11": {
+    "clap_builder 4.3.12": {
       "name": "clap_builder",
-      "version": "4.3.11",
+      "version": "4.3.12",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap_builder/4.3.11/download",
-          "sha256": "98c59138d527eeaf9b53f35a77fcc1fad9d883116070c63d5de1c7dc7b00c72b"
+          "url": "https://crates.io/api/v1/crates/clap_builder/4.3.12/download",
+          "sha256": "9f2763db829349bf00cfc06251268865ed4363b93a943174f638daf3ecdba2cd"
         }
       },
       "targets": [
@@ -3930,7 +3930,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "4.3.11"
+        "version": "4.3.12"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -3995,13 +3995,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "clap_derive 4.3.2": {
+    "clap_derive 4.3.12": {
       "name": "clap_derive",
-      "version": "4.3.2",
+      "version": "4.3.12",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap_derive/4.3.2/download",
-          "sha256": "b8cd2b2a819ad6eec39e8f1d6b53001af1e5469f8c177579cdaeb313115b825f"
+          "url": "https://crates.io/api/v1/crates/clap_derive/4.3.12/download",
+          "sha256": "54a9bb5758fc5dfe728d1019941681eccaf0cf8a4189b692a0ee2f2ecf90a050"
         }
       },
       "targets": [
@@ -4048,7 +4048,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "4.3.2"
+        "version": "4.3.12"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -5339,7 +5339,7 @@
               "target": "atty"
             },
             {
-              "id": "clap 4.3.11",
+              "id": "clap 4.3.12",
               "target": "clap"
             },
             {
@@ -18719,7 +18719,7 @@
               "target": "once_cell"
             },
             {
-              "id": "toml_edit 0.19.12",
+              "id": "toml_edit 0.19.13",
               "target": "toml_edit"
             }
           ],
@@ -25802,7 +25802,7 @@
               "target": "toml_datetime"
             },
             {
-              "id": "toml_edit 0.19.12",
+              "id": "toml_edit 0.19.13",
               "target": "toml_edit"
             }
           ],
@@ -25858,13 +25858,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "toml_edit 0.19.12": {
+    "toml_edit 0.19.13": {
       "name": "toml_edit",
-      "version": "0.19.12",
+      "version": "0.19.13",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/toml_edit/0.19.12/download",
-          "sha256": "c500344a19072298cd05a7224b3c0c629348b78692bf48466c5238656e315a78"
+          "url": "https://crates.io/api/v1/crates/toml_edit/0.19.13/download",
+          "sha256": "5f8751d9c1b03c6500c387e96f81f815a4f8e72d142d2d4a9ffa6fedd51ddee7"
         }
       },
       "targets": [
@@ -25909,14 +25909,14 @@
               "target": "toml_datetime"
             },
             {
-              "id": "winnow 0.4.9",
+              "id": "winnow 0.5.0",
               "target": "winnow"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.19.12"
+        "version": "0.19.13"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -29628,13 +29628,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "winnow 0.4.9": {
+    "winnow 0.5.0": {
       "name": "winnow",
-      "version": "0.4.9",
+      "version": "0.5.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/winnow/0.4.9/download",
-          "sha256": "81a2094c43cc94775293eaa0e499fbc30048a6d824ac82c0351a8c0bf9112529"
+          "url": "https://crates.io/api/v1/crates/winnow/0.5.0/download",
+          "sha256": "81fac9742fd1ad1bd9643b991319f72dd031016d44b77039a26977eb667141e7"
         }
       },
       "targets": [
@@ -29662,7 +29662,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.4.9"
+        "version": "0.5.0"
       },
       "license": "MIT"
     },
