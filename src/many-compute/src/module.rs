@@ -1,5 +1,5 @@
 use crate::storage::ComputeStorage;
-use crate::{error, AkashOpt};
+use crate::{error};
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::{
@@ -23,6 +23,7 @@ use std::process::{Command, Output};
 use std::thread::sleep;
 use std::time::Duration;
 use tracing::{debug, info};
+use crate::opt::AkashOpt;
 
 pub mod allow_addrs;
 
