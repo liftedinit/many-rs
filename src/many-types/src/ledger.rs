@@ -3,9 +3,9 @@ use many_identity::Address;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::{BigInt, BigUint};
-use num_traits::Num;
+use num_traits::{Num, ToPrimitive};
 use serde::de::Unexpected;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
@@ -103,6 +103,15 @@ impl<T: Into<BigUint>> std::ops::Mul<T> for TokenAmount {
 
     fn mul(self, rhs: T) -> Self::Output {
         Self(self.0 * rhs.into())
+    }
+}
+
+// Implement Div for TokenAmount
+impl<T: Into<BigUint>> std::ops::Div<T> for TokenAmount {
+    type Output = TokenAmount;
+
+    fn div(self, rhs: T) -> Self::Output {
+        Self(self.0 / rhs.into())
     }
 }
 
@@ -348,6 +357,21 @@ impl<'de> Deserialize<'de> for TokenAmount {
         }
 
         deserializer.deserialize_any(Visitor)
+    }
+}
+
+// Write Serializer for TokenAmount
+impl Serialize for TokenAmount {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        // Serialize efficiently.
+        if let Some(amount) = self.0.to_u64() {
+            serializer.serialize_u64(amount)
+        } else {
+            serializer.serialize_str(&self.0.to_str_radix(10))
+        }
     }
 }
 

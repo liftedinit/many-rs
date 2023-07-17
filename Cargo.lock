@@ -1649,6 +1649,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "genesis-from-db"
+version = "0.1.5"
+dependencies = [
+ "base64 0.21.2",
+ "clap 3.2.25",
+ "const_format",
+ "hex",
+ "many-error",
+ "many-modules",
+ "many-types",
+ "merk 2.0.0",
+ "minicbor",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
