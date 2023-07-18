@@ -1,3 +1,4 @@
+// use git2::Repository;
 use std::collections::BTreeMap;
 use std::path::Path;
 use tracing::info;
@@ -6,6 +7,7 @@ use many_identity::Address;
 use many_modules::abci_backend::{AbciBlock, AbciCommitInfo, AbciInfo, AbciInit, BeginBlockReturn, EndpointInfo, InitChainReturn, ManyAbciModuleBackend};
 use many_modules::web::{DeployArgs, DeployReturns, InfoArg, InfoReturns, ListArgs, ListReturns, RemoveArgs, RemoveReturns, WebModuleBackend};
 use many_types::Timestamp;
+use many_types::web::WebDeploymentSource;
 use crate::error;
 use crate::storage::WebStorage;
 
@@ -28,11 +30,10 @@ impl WebModuleImpl {
         persistent_store_path: P,
         blockchain: bool,
     ) -> Result<Self, ManyError> {
-        // let storage =
-        //     WebStorage::load(persistent_store_path, blockchain).map_err(ManyError::unknown)?;
-        //
-        // Ok(Self { storage })
-        todo!()
+        let storage =
+            WebStorage::load(persistent_store_path, blockchain).map_err(ManyError::unknown)?;
+
+        Ok(Self { storage })
     }
 
     pub fn new<P: AsRef<Path>>(
@@ -40,25 +41,24 @@ impl WebModuleImpl {
         persistence_store_path: P,
         blockchain: bool,
     ) -> Result<Self, ManyError> {
-        // let storage =
-        //     Webtorage::new(initial_state.identity, persistence_store_path, blockchain)
-        //         .map_err(ManyError::unknown)?;
-        //
-        // if let Some(h) = initial_state.hash {
-        //     // Verify the hash.
-        //     let actual = hex::encode(storage.hash());
-        //     if actual != h {
-        //         return Err(error::invalid_initial_hash(h, actual));
-        //     }
-        // }
-        //
-        // info!(
-        //     height = storage.get_height(),
-        //     hash = hex::encode(storage.hash()).as_str()
-        // );
-        //
-        // Ok(Self { storage })
-        todo!()
+        let storage =
+            WebStorage::new(initial_state.identity, persistence_store_path, blockchain)
+                .map_err(ManyError::unknown)?;
+
+        if let Some(h) = initial_state.hash {
+            // Verify the hash.
+            let actual = hex::encode(storage.hash());
+            if actual != h {
+                return Err(error::invalid_initial_hash(h, actual));
+            }
+        }
+
+        info!(
+            height = storage.get_height(),
+            hash = hex::encode(storage.hash()).as_str()
+        );
+
+        Ok(Self { storage })
     }
 }
 
@@ -131,10 +131,19 @@ impl ManyAbciModuleBackend for WebModuleImpl {
 
 impl WebModuleBackend for WebModuleImpl {
     fn info(&self, sender: &Address, args: InfoArg) -> Result<InfoReturns, ManyError> {
-        todo!()
+        Ok(InfoReturns { hash: self.storage.hash().into() })
     }
 
     fn deploy(&mut self, sender: &Address, args: DeployArgs) -> Result<DeployReturns, ManyError> {
+        let DeployArgs { site_name, site_description, source } = args;
+        match source {
+            WebDeploymentSource::GitHub(url) => {
+                // match Repository::clone(url, "") {
+                //     Ok(repo) => {},
+                //     Err(e) => return ManyError::unknown(e), // TODO
+                // }
+            }
+        }
         todo!()
     }
 

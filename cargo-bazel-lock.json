@@ -1,5 +1,5 @@
 {
-  "checksum": "d0ec5be2698d95c3353d26a2b1d6e1546afd5b8f74674a61742ce179b8ebac48",
+  "checksum": "a5f4e1c8f102847a18340ca434e6f5ab4dd65d0e9e53f8bb9aef54007258dfcd",
   "crates": {
     "addr2line 0.20.0": {
       "name": "addr2line",
@@ -14844,9 +14844,9 @@
       },
       "license": null
     },
-    "many-web 0.1.4": {
+    "many-web 0.1.5": {
       "name": "many-web",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "repository": null,
       "targets": [
         {
@@ -14883,7 +14883,7 @@
               "target": "json5"
             },
             {
-              "id": "many-web 0.1.4",
+              "id": "many-web 0.1.5",
               "target": "build_script_build"
             },
             {
@@ -14935,7 +14935,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.4"
+        "version": "0.1.5"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -29928,7 +29928,7 @@
     "many-server 0.1.5": "src/many-server",
     "many-server-cache 0.1.5": "src/many-server-cache",
     "many-types 0.1.5": "src/many-types",
-    "many-web 0.1.4": "src/many-web"
+    "many-web 0.1.5": "src/many-web"
   },
   "conditions": {
     "aarch64-linux-android": [

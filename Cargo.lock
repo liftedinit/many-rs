@@ -2985,7 +2985,7 @@ dependencies = [
 
 [[package]]
 name = "many-web"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "async-trait",
  "clap 3.2.25",
