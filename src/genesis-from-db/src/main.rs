@@ -40,7 +40,7 @@ use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::str::FromStr;
-use tracing::{error, Level};
+use tracing::{Level, trace};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser)]
@@ -135,7 +135,7 @@ struct CombinedJson {
 
 fn main() {
     let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
+        .with_max_level(Level::INFO)
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
@@ -361,7 +361,7 @@ fn extract_accounts(merk: &merk::Merk) -> AccountJsonRoot {
                 Err(e) => {
                     // This is not a multisig account feature
                     if e.code() != ManyErrorCode::AttributeNotFound {
-                        error!("Error while reading multisig account: {}", e);
+                        trace!("Error while reading multisig account: {}", e);
                     }
 
                     // At this point we know that this is not a multisig account feature but some other feature with no arguments
