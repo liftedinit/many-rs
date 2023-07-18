@@ -250,8 +250,6 @@ impl<C> Encode<C> for TokenAmount {
         e: &mut Encoder<W>,
         _: &mut C,
     ) -> Result<(), encode::Error<W::Error>> {
-        use num_traits::cast::ToPrimitive;
-
         // Encode efficiently.
         if let Some(amount) = self.0.to_u64() {
             e.u64(amount)?;

@@ -1,4 +1,27 @@
 #![feature(string_remove_matches)]
+/// This is a tool to extract the genesis data from a RocksDB store.
+/// This tool will extract
+/// - The IDStore seed
+/// - The IDStore keys
+/// - The symbols
+/// - The token identity
+/// - The account identity
+/// - The balances
+/// - The accounts
+/// and create a genesis file, i.e., `ledger_state.json`.
+///
+/// This tool will NOT extract
+/// - The data attributes (recalculated at block 1)
+/// - The data info (recalculated at block 1)
+/// - The events (not used in the genesis)
+/// - The multisig (not used in the genesis)
+/// - The token extended info (not used in the genesis)
+/// - The next subresource id (recalculated)
+///
+/// In our context, we will need to activate the following migrations from block 1
+/// - Data migration
+/// - Memo migration
+/// - Token migration
 extern crate core;
 
 use base64::{engine::general_purpose, Engine as _};
@@ -7,49 +30,18 @@ use many_error::ManyErrorCode;
 use many_modules::account::features::multisig::MultisigAccountFeature;
 use many_modules::account::features::TryCreateFeature;
 use many_modules::account::Account;
+use many_modules::events::EventLog;
 use many_types::identity::Address;
-use many_types::ledger::{Symbol, TokenAmount, TokenInfo};
+use many_types::ledger::{TokenAmount, TokenInfo};
 use merk::rocksdb;
 use merk::rocksdb::{IteratorMode, ReadOptions};
 use merk::tree::Tree;
 use serde_json::json;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::{error, Level};
 use tracing_subscriber::FmtSubscriber;
-
-const IDSTORE_ROOT: &[u8] = b"/idstore/";
-const IDSTORE_SEED_ROOT: &[u8] = b"/config/idstore_seed";
-const SYMBOLS_ROOT: &str = "/config/symbols";
-const IDENTITY_ROOT: &str = "/config/identity";
-const SYMBOLS_ROOT_DASH: &str = const_format::concatcp!(SYMBOLS_ROOT, "/");
-const TOKEN_IDENTITY_ROOT: &str = "/config/token_identity";
-const NEXT_SUBRESOURCE_ID_ROOT: &str = "/config/subresource_counter/";
-const BALANCE_ROOT: &str = "/balances/";
-const ACCOUNT_ROOT: &str = "/accounts/";
-const ACCOUNT_IDENTITY_ROOT: &str = "/config/account_identity";
-
-// The DATA attribute will be computed at the first block
-// pub const DATA_ATTRIBUTES_KEY: &[u8] = b"/data/attributes";
-// pub const DATA_INFO_KEY: &[u8] = b"/data/info";
-
-// Do not export EVENTS and MULTISIG, as they are not used in the genesis.
-// Token Extended Info won't be imported, as it is not used in the genesis.
-
-// We will activate all migrations from block 0
-
-pub fn key_for_symbol(symbol: &Symbol) -> String {
-    format!("/config/symbols/{symbol}")
-}
-
-pub fn key_for_account_balance(id: &Address, symbol: &Symbol) -> Vec<u8> {
-    format!("/balances/{id}/{symbol}").into_bytes()
-}
-
-pub fn key_for_subresource_counter(id: &Address) -> Vec<u8> {
-    format!("/config/subresource_counter/{id}").into_bytes()
-}
 
 #[derive(Parser)]
 struct Opts {
@@ -142,12 +134,8 @@ struct CombinedJson {
 }
 
 fn main() {
-    // a builder for `FmtSubscriber`.
     let subscriber = FmtSubscriber::builder()
-        // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
-        // will be written to stdout.
         .with_max_level(Level::TRACE)
-        // completes the builder.
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
@@ -178,9 +166,14 @@ fn main() {
         "{}",
         serde_json::to_string_pretty(&mega).expect("Could not serialize"),
     );
+
+    // extract_events(&merk);
 }
 
 fn extract_idstore(merk: &merk::Merk) -> IdStoreJsonRoot {
+    const IDSTORE_ROOT: &[u8] = b"/idstore/";
+    const IDSTORE_SEED_ROOT: &[u8] = b"/config/idstore_seed";
+
     let mut opts = ReadOptions::default();
     opts.set_iterate_range(rocksdb::PrefixRange(IDSTORE_ROOT));
     let it = merk.iter_opt(IteratorMode::Start, opts);
@@ -211,6 +204,9 @@ fn extract_idstore(merk: &merk::Merk) -> IdStoreJsonRoot {
 }
 
 fn extract_symbols(merk: &merk::Merk) -> SymbolsJsonRoot {
+    const SYMBOLS_ROOT: &str = "/config/symbols";
+    const SYMBOLS_ROOT_DASH: &str = const_format::concatcp!(SYMBOLS_ROOT, "/");
+
     let mut opts = ReadOptions::default();
     opts.set_iterate_range(rocksdb::PrefixRange(SYMBOLS_ROOT_DASH));
     let it = merk.iter_opt(IteratorMode::Start, opts);
@@ -248,6 +244,8 @@ fn extract_symbols(merk: &merk::Merk) -> SymbolsJsonRoot {
 }
 
 fn extract_balances(merk: &merk::Merk) -> BalancesJsonRoot {
+    const BALANCE_ROOT: &str = "/balances/";
+
     let mut opts = ReadOptions::default();
     opts.set_iterate_range(rocksdb::PrefixRange(BALANCE_ROOT));
     let it = merk.iter_opt(IteratorMode::Start, opts);
@@ -273,6 +271,8 @@ fn extract_balances(merk: &merk::Merk) -> BalancesJsonRoot {
 }
 
 fn extract_identity(merk: &merk::Merk) -> IdentityJsonRoot {
+    const IDENTITY_ROOT: &str = "/config/identity";
+
     IdentityJsonRoot {
         identity: Address::from_bytes(
             &merk
@@ -285,6 +285,8 @@ fn extract_identity(merk: &merk::Merk) -> IdentityJsonRoot {
 }
 
 fn extract_token_identity(merk: &merk::Merk) -> TokenIdentityJsonRoot {
+    const TOKEN_IDENTITY_ROOT: &str = "/config/token_identity";
+
     TokenIdentityJsonRoot {
         token_identity: Address::from_bytes(
             &merk
@@ -297,6 +299,8 @@ fn extract_token_identity(merk: &merk::Merk) -> TokenIdentityJsonRoot {
 }
 
 fn extract_account_identity(merk: &merk::Merk) -> AccountIdentityJsonRoot {
+    const ACCOUNT_IDENTITY_ROOT: &str = "/config/account_identity";
+
     AccountIdentityJsonRoot {
         account_identity: Address::from_bytes(
             &merk
@@ -308,27 +312,9 @@ fn extract_account_identity(merk: &merk::Merk) -> AccountIdentityJsonRoot {
     }
 }
 
-// fn extract_subresources(merk: &merk::Merk, token_identity: &Address) {
-//     let mut opts = ReadOptions::default();
-//     opts.set_iterate_range(rocksdb::PrefixRange(NEXT_SUBRESOURCE_ID_ROOT));
-//     let it = merk.iter_opt(IteratorMode::Start, opts);
-//
-//     // let mut balances = BTreeMap::new();
-//     for item in it {
-//         let (key, value) = item.expect("Error while reading the DB");
-//         let new_v = Tree::decode(key.to_vec(), value.as_ref());
-//         let value = new_v.value().to_vec();
-//
-//         let mut key_string = String::from_utf8(key.to_vec()).expect("Could not decode symbol key");
-//         key_string.remove_matches(NEXT_SUBRESOURCE_ID_ROOT);
-//         let mut new_data = [0u8; 4];
-//         new_data.copy_from_slice(&value);
-//         let a = u32::from_be_bytes(new_data);
-//         // info!("Subresource: {}", a);
-//     }
-// }
-
 fn extract_accounts(merk: &merk::Merk) -> AccountJsonRoot {
+    const ACCOUNT_ROOT: &str = "/accounts/";
+
     let mut opts = ReadOptions::default();
     opts.set_iterate_range(rocksdb::PrefixRange(ACCOUNT_ROOT));
     let it = merk.iter_opt(IteratorMode::Start, opts);
@@ -396,4 +382,24 @@ fn extract_accounts(merk: &merk::Merk) -> AccountJsonRoot {
         });
     }
     AccountJsonRoot { accounts }
+}
+
+// This is for testing purpose only
+#[allow(dead_code)]
+fn extract_events(merk: &merk::Merk) {
+    const EVENTS_ROOT: &str = "/events/";
+
+    let mut opts = ReadOptions::default();
+    opts.set_iterate_range(rocksdb::PrefixRange(EVENTS_ROOT));
+    let it = merk.iter_opt(IteratorMode::Start, opts);
+
+    for item in it {
+        let (key, value) = item.expect("Error while reading the DB");
+        let new_v = Tree::decode(key.to_vec(), value.as_ref());
+        let value = new_v.value().to_vec();
+
+        let event_log: EventLog = minicbor::decode(&value).expect("Could not decode event log");
+
+        println!("{:?}", event_log);
+    }
 }
