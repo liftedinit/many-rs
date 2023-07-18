@@ -52,7 +52,7 @@ tracing = "0.1.37"
 typenum = "1.16.0"
 
 [dev-dependencies]
-cucumber = { version = "0.19.1", features = ["libtest"] }
+cucumber = { version = "0.20.0", features = ["libtest"] }
 once_cell = "1.17.1"
 many-identity = { path = "../many-identity", features = ["default", "serde", "testing"], version = "0.1.5" } # managed by release.sh
 many-identity-dsa = { path = "../many-identity-dsa", features = [ "ed25519", "testing" ], version = "0.1.5" } # managed by release.sh

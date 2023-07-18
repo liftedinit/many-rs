@@ -12,7 +12,7 @@ publish = false
 [dependencies]
 async-channel = "1.8.0"
 coset = "0.3.4"
-cucumber = { version = "0.19.1", features = ["libtest"] }
+cucumber = { version = "0.20.0", features = ["libtest"] }
 itertools = "0.10.5"
 many-error = { path = "../../many-error", version = "0.1.5" } # managed by release.sh
 many-identity = { path = "../../many-identity", features = ["default", "serde", "testing"], version = "0.1.5" } # managed by release.sh

@@ -128,6 +128,10 @@ impl ManyAbciModuleBackend for WebModuleImpl {
     }
 }
 
+fn all_alphanumeric_or_symbols(input: &str) -> bool {
+    input.chars().all(|c| c.is_alphanumeric() || c.is_ascii_punctuation() || c.is_ascii_whitespace())
+}
+
 
 impl WebModuleBackend for WebModuleImpl {
     fn info(&self, sender: &Address, args: InfoArg) -> Result<InfoReturns, ManyError> {
@@ -136,14 +140,22 @@ impl WebModuleBackend for WebModuleImpl {
 
     fn deploy(&mut self, sender: &Address, args: DeployArgs) -> Result<DeployReturns, ManyError> {
         let DeployArgs { site_name, site_description, source } = args;
-        match source {
-            WebDeploymentSource::GitHub(url) => {
-                // match Repository::clone(url, "") {
-                //     Ok(repo) => {},
-                //     Err(e) => return ManyError::unknown(e), // TODO
-                // }
+
+        if !all_alphanumeric_or_symbols(&site_name) {
+            return Err(error::invalid_site_name(site_name));
+        }
+
+        if let Some(site_description) = site_description {
+            if !all_alphanumeric_or_symbols(&site_description) {
+                return Err(error::invalid_site_description(site_description));
             }
         }
+
+        match source {
+            WebDeploymentSource::GitHub(source) => {
+            }
+        }
+
         todo!()
     }
 

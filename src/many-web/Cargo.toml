@@ -12,6 +12,7 @@ doc = false
 async-trait = "0.1.68"
 clap = { version = "3.2.25", features = ["derive"] }
 coset = "0.3.4"
+git2 = "0.17.2"
 hex = { version = "0.4.3", features = ["serde"] }
 json5 = "0.4.1"
 many-cli-helpers = { path = "../many-cli-helpers", version = "0.1.5" } # managed by release.sh
