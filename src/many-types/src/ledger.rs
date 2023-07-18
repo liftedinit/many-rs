@@ -106,15 +106,6 @@ impl<T: Into<BigUint>> std::ops::Mul<T> for TokenAmount {
     }
 }
 
-// Implement Div for TokenAmount
-impl<T: Into<BigUint>> std::ops::Div<T> for TokenAmount {
-    type Output = TokenAmount;
-
-    fn div(self, rhs: T) -> Self::Output {
-        Self(self.0 / rhs.into())
-    }
-}
-
 impl AsRef<BigUint> for TokenAmount {
     fn as_ref(&self) -> &BigUint {
         &self.0
@@ -397,7 +388,7 @@ cbor_type_decl!(
 #[cfg(test)]
 mod test {
     use super::*;
-    use serde_test::{assert_de_tokens, Token};
+    use serde_test::{assert_de_tokens, assert_ser_tokens, Token};
 
     #[test]
     fn serde_token_amount() {
@@ -411,12 +402,14 @@ mod test {
         assert_de_tokens(&token, &[Token::I32(123)]);
         assert_de_tokens(&token, &[Token::I64(123)]);
         assert_de_tokens(&token, &[Token::String("123")]);
+        assert_ser_tokens(&token, &[Token::U64(123)]);
     }
 
     #[test]
     fn serde_token_amount_extra() {
         let token = TokenAmount::from(123456789000u64);
         assert_de_tokens(&token, &[Token::String("123_456_789__000")]);
+        assert_ser_tokens(&token, &[Token::U64(123456789000)]);
     }
 
     #[test]
@@ -428,6 +421,7 @@ mod test {
             &token,
             &[Token::String("1_208_925_819_614_629_174_706_175")],
         );
+        assert_ser_tokens(&token, &[Token::String("1208925819614629174706175")]);
     }
 
     #[test]
