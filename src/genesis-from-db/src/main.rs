@@ -1,5 +1,10 @@
 #![feature(string_remove_matches)]
 /// This is a tool to extract the genesis data from a RocksDB store.
+/// This tool requires the persistent storage to have the following migrations activated:
+/// - Data
+/// - Memo
+/// - Token
+///
 /// This tool will extract
 /// - The IDStore seed
 /// - The IDStore keys
@@ -18,7 +23,7 @@
 /// - The token extended info (not used in the genesis)
 /// - The next subresource id (recalculated)
 ///
-/// In our context, we will need to activate the following migrations from block 1
+/// In our context, we will need to activate the following migrations from block 0
 /// - Data migration
 /// - Memo migration
 /// - Token migration
@@ -40,7 +45,7 @@ use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::str::FromStr;
-use tracing::{Level, trace};
+use tracing::{trace, Level};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser)]
