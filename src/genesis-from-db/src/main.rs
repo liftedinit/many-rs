@@ -32,6 +32,7 @@ extern crate core;
 use base64::{engine::general_purpose, Engine as _};
 use clap::Parser;
 use many_error::{ManyError, ManyErrorCode};
+use many_ledger::storage::multisig::MultisigTransactionStorage;
 use many_modules::account::features::multisig::MultisigAccountFeature;
 use many_modules::account::features::TryCreateFeature;
 use many_modules::account::Account;
@@ -47,7 +48,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::{trace, Level};
 use tracing_subscriber::FmtSubscriber;
-use many_ledger::storage::multisig::MultisigTransactionStorage;
 
 enum Extract {
     Genesis,
@@ -181,13 +181,13 @@ fn main() {
 }
 
 fn extract_genesis(merk: &merk::Merk) {
-    let idstore_root = extract_idstore(&merk);
-    let symbols_root = extract_symbols(&merk);
-    let balances_root = extract_balances(&merk);
-    let identity_root = extract_identity(&merk);
-    let token_identity_root = extract_token_identity(&merk);
-    let account_identity_root = extract_account_identity(&merk);
-    let accounts_root = extract_accounts(&merk);
+    let idstore_root = extract_idstore(merk);
+    let symbols_root = extract_symbols(merk);
+    let balances_root = extract_balances(merk);
+    let identity_root = extract_identity(merk);
+    let token_identity_root = extract_token_identity(merk);
+    let account_identity_root = extract_account_identity(merk);
+    let accounts_root = extract_accounts(merk);
 
     let mega = CombinedJson {
         id_store: idstore_root,
@@ -449,7 +449,8 @@ fn extract_multisig(merk: &merk::Merk) {
         let new_v = Tree::decode(key.to_vec(), value.as_ref());
         let value = new_v.value().to_vec();
 
-        let event_log: MultisigTransactionStorage = minicbor::decode(&value).expect("Could not decode multisig log");
+        let event_log: MultisigTransactionStorage =
+            minicbor::decode(&value).expect("Could not decode multisig log");
 
         println!("{:?}", event_log);
     }
