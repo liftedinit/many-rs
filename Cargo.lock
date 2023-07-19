@@ -2921,6 +2921,7 @@ dependencies = [
  "num_enum",
  "once_cell",
  "proptest",
+ "serde",
  "smol",
  "strum 0.24.1",
  "strum_macros 0.24.3",

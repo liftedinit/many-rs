@@ -1,5 +1,5 @@
 {
-  "checksum": "9951f3b995a43cf7e6d038b9497d5efd4643b5945d2c33c644c16463a0178849",
+  "checksum": "90fbab968764a415de797809313d63d802eba90fb9e3392cb27204bafaa50bd0",
   "crates": {
     "addr2line 0.20.0": {
       "name": "addr2line",
@@ -8725,6 +8725,10 @@
               "target": "serde_json"
             },
             {
+              "id": "strum 0.24.1",
+              "target": "strum"
+            },
+            {
               "id": "tracing 0.1.37",
               "target": "tracing"
             },
@@ -8741,6 +8745,10 @@
             {
               "id": "serde_derive 1.0.171",
               "target": "serde_derive"
+            },
+            {
+              "id": "strum_macros 0.24.3",
+              "target": "strum_macros"
             }
           ],
           "selects": {}
