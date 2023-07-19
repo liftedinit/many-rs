@@ -17,6 +17,7 @@ rust_binary(
         normal = True,
     ) + [
         "//src/many-error",
+        "//src/many-ledger:many-ledger-lib",
         "//src/many-modules",
         "//src/many-types",
     ],

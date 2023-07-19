@@ -1657,6 +1657,7 @@ dependencies = [
  "const_format",
  "hex",
  "many-error",
+ "many-ledger",
  "many-modules",
  "many-types",
  "merk 2.0.0",

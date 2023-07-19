@@ -31,7 +31,7 @@ extern crate core;
 
 use base64::{engine::general_purpose, Engine as _};
 use clap::Parser;
-use many_error::ManyErrorCode;
+use many_error::{ManyError, ManyErrorCode};
 use many_modules::account::features::multisig::MultisigAccountFeature;
 use many_modules::account::features::TryCreateFeature;
 use many_modules::account::Account;
@@ -47,11 +47,35 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::{trace, Level};
 use tracing_subscriber::FmtSubscriber;
+use many_ledger::storage::multisig::MultisigTransactionStorage;
+
+enum Extract {
+    Genesis,
+    Events,
+    Multisig,
+}
+
+// Implement the `FromStr` trait for `Extract`.
+impl FromStr for Extract {
+    type Err = ManyError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "genesis" => Ok(Extract::Genesis),
+            "events" => Ok(Extract::Events),
+            "multisig" => Ok(Extract::Multisig),
+            _ => Err(ManyError::unknown("Invalid extract type")),
+        }
+    }
+}
 
 #[derive(Parser)]
 struct Opts {
     /// The RocksDB store to load.
     store: PathBuf,
+
+    /// What to extract from the persistent storage.
+    extract: Extract,
 }
 
 #[derive(serde_derive::Serialize)]
@@ -145,10 +169,18 @@ fn main() {
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
-    let Opts { store } = Opts::parse();
+    let Opts { store, extract } = Opts::parse();
 
     let merk = merk::Merk::open(store).expect("Could not open the store.");
 
+    match extract {
+        Extract::Genesis => extract_genesis(&merk),
+        Extract::Events => extract_events(&merk),
+        Extract::Multisig => extract_multisig(&merk),
+    };
+}
+
+fn extract_genesis(merk: &merk::Merk) {
     let idstore_root = extract_idstore(&merk);
     let symbols_root = extract_symbols(&merk);
     let balances_root = extract_balances(&merk);
@@ -171,8 +203,6 @@ fn main() {
         "{}",
         serde_json::to_string_pretty(&mega).expect("Could not serialize"),
     );
-
-    // extract_events(&merk);
 }
 
 fn extract_idstore(merk: &merk::Merk) -> IdStoreJsonRoot {
@@ -389,8 +419,6 @@ fn extract_accounts(merk: &merk::Merk) -> AccountJsonRoot {
     AccountJsonRoot { accounts }
 }
 
-// This is for testing purpose only
-#[allow(dead_code)]
 fn extract_events(merk: &merk::Merk) {
     const EVENTS_ROOT: &str = "/events/";
 
@@ -404,6 +432,24 @@ fn extract_events(merk: &merk::Merk) {
         let value = new_v.value().to_vec();
 
         let event_log: EventLog = minicbor::decode(&value).expect("Could not decode event log");
+
+        println!("{:?}", event_log);
+    }
+}
+
+fn extract_multisig(merk: &merk::Merk) {
+    const MULTISIG_ROOT: &str = "/multisig/";
+
+    let mut opts = ReadOptions::default();
+    opts.set_iterate_range(rocksdb::PrefixRange(MULTISIG_ROOT));
+    let it = merk.iter_opt(IteratorMode::Start, opts);
+
+    for item in it {
+        let (key, value) = item.expect("Error while reading the DB");
+        let new_v = Tree::decode(key.to_vec(), value.as_ref());
+        let value = new_v.value().to_vec();
+
+        let event_log: MultisigTransactionStorage = minicbor::decode(&value).expect("Could not decode multisig log");
 
         println!("{:?}", event_log);
     }

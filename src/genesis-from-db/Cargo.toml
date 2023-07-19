@@ -18,6 +18,7 @@ clap = { version = "3.2.25", features = ["derive"] }
 const_format = "0.2.31"
 hex = "0.4.3"
 many-error = { path = "../many-error", version = "0.1.5" } # managed by release.sh
+many-ledger = { path = "../many-ledger", version = "0.1.5" } # managed by release.sh
 many-modules = { path = "../many-modules", version = "0.1.5" } # managed by release.sh
 many-types = { path = "../many-types", version = "0.1.5" } # managed by release.sh
 merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
