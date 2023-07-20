@@ -1,33 +1,5 @@
 #![feature(string_remove_matches)]
 #![feature(box_into_inner)]
-/// This is a tool to extract the genesis data from a RocksDB store.
-/// This tool requires the persistent storage to have the following migrations activated:
-/// - Data
-/// - Memo
-/// - Token
-///
-/// This tool will extract
-/// - The IDStore seed
-/// - The IDStore keys
-/// - The symbols
-/// - The token identity
-/// - The account identity
-/// - The balances
-/// - The accounts
-/// and create a genesis file, i.e., `ledger_state.json`.
-///
-/// This tool will NOT extract
-/// - The data attributes (recalculated at block 1)
-/// - The data info (recalculated at block 1)
-/// - The events (not used in the genesis)
-/// - The multisig (not used in the genesis)
-/// - The token extended info (not used in the genesis)
-/// - The next subresource id (recalculated)
-///
-/// In our context, we will need to activate the following migrations from block 0
-/// - Data migration
-/// - Memo migration
-/// - Token migration
 extern crate core;
 
 use base64::{engine::general_purpose, Engine as _};
@@ -35,14 +7,15 @@ use clap::Parser;
 use many_error::{ManyError, ManyErrorCode};
 use many_ledger::storage::multisig::MultisigTransactionStorage;
 use many_modules::account::features::multisig::{MultisigAccountFeature, MultisigTransactionState};
-use many_modules::account::features::TryCreateFeature;
-use many_modules::account::{Account, Role};
+use many_modules::account::features::{FeatureSet, TryCreateFeature};
+use many_modules::account::{Account, AddressRoleMap, Role};
 use many_modules::events::{AccountMultisigTransaction, EventInfo, EventLog};
 use many_modules::ledger::extended_info::TokenExtendedInfo;
 use many_types::identity::Address;
 use many_types::ledger::{
     LedgerTokensAddressMap, TokenAmount, TokenInfo, TokenInfoSummary, TokenMaybeOwner,
 };
+use many_types::Memo;
 use merk::rocksdb;
 use merk::rocksdb::{IteratorMode, ReadOptions};
 use merk::tree::Tree;
@@ -84,13 +57,13 @@ struct Opts {
     extract: Extract,
 }
 
-#[derive(serde_derive::Serialize)]
+#[derive(Serialize)]
 struct IdStoreJsonRoot {
     id_store_seed: u64,
     id_store_keys: BTreeMap<String, String>,
 }
 
-#[derive(serde_derive::Serialize)]
+#[derive(Serialize)]
 pub struct SymbolMeta {
     pub name: String,
     pub decimals: u64,
@@ -98,44 +71,44 @@ pub struct SymbolMeta {
     pub maximum: Option<TokenAmount>,
 }
 
-#[derive(serde_derive::Serialize)]
+#[derive(Serialize)]
 struct SymbolsJsonRoot {
     symbols: BTreeMap<Address, String>,
     symbols_meta: BTreeMap<String, SymbolMeta>,
 }
 
-#[derive(serde_derive::Serialize)]
+#[derive(Serialize)]
 struct BalancesJsonRoot {
     initial: BTreeMap<String, BTreeMap<String, TokenAmount>>,
 }
 
-#[derive(serde_derive::Serialize)]
+#[derive(Serialize)]
 struct IdentityJsonRoot {
     identity: Address,
 }
 
-#[derive(serde_derive::Serialize)]
+#[derive(Serialize)]
 struct TokenIdentityJsonRoot {
     token_identity: Address,
 }
 
-#[derive(serde_derive::Serialize)]
+#[derive(Serialize)]
 struct AccountIdentityJsonRoot {
     account_identity: Address,
 }
 
-#[derive(Debug, serde_derive::Serialize)]
+#[derive(Debug, Serialize)]
 struct FeatureJson {
     id: u32,
     arg: Option<serde_json::value::Value>,
 }
 
-#[derive(serde_derive::Serialize)]
+#[derive(Serialize)]
 struct AccountJsonRoot {
     accounts: Vec<AccountJsonParamRoot>,
 }
 
-#[derive(serde_derive::Serialize)]
+#[derive(Serialize)]
 struct AccountJsonParamRoot {
     subresource_id: u32,
     id: Address,
@@ -144,7 +117,7 @@ struct AccountJsonParamRoot {
     features: Vec<FeatureJson>,
 }
 
-#[derive(serde_derive::Serialize)]
+#[derive(Serialize)]
 struct CombinedJson {
     #[serde(flatten)]
     id_store: IdStoreJsonRoot,
@@ -383,42 +356,12 @@ fn extract_accounts(merk: &merk::Merk) -> AccountJsonRoot {
             );
         }
 
-        let mut acc_features = vec![];
-        for feature in acc.features.iter() {
-            let feature_id = feature.id();
-
-            // The only feature currently supporting arguments if the multisig account feature
-            let arg = MultisigAccountFeature::try_create(feature);
-            match arg {
-                Ok(arg) => acc_features.push(FeatureJson {
-                    id: feature_id,
-                    arg: Some(json!({
-                        "threshold": arg.arg.threshold,
-                        "timeout_in_secs": arg.arg.timeout_in_secs,
-                        "execute_automatically": arg.arg.execute_automatically,
-                    })),
-                }),
-                Err(e) => {
-                    // This is not a multisig account feature
-                    if e.code() != ManyErrorCode::AttributeNotFound {
-                        trace!("Error while reading multisig account: {}", e);
-                    }
-
-                    // At this point we know that this is not a multisig account feature but some other feature with no arguments
-                    acc_features.push(FeatureJson {
-                        id: feature_id,
-                        arg: None,
-                    })
-                }
-            }
-        }
-
         accounts.push(AccountJsonParamRoot {
             subresource_id: subresource_id.unwrap(),
             id,
             description,
             roles,
-            features: acc_features,
+            features: get_features(&acc.features),
         });
     }
     AccountJsonRoot { accounts }
@@ -457,8 +400,8 @@ enum MultisigTransactionJson {
     AccountMultisigSetDefaults(AccountMultisigSetDefaultsTransactionJson),
     TokenCreate(TokenCreateTransactionJson),
     TokenUpdate(TokenUpdateTransactionJson),
-    // TokenAddExtendedInfo(TokenAddExtendedInfoTransactionJson),
-    // TokenRemoveExtendedInfo(TokenRemoveExtendedInfoTransactionJson),
+    TokenAddExtendedInfo(TokenAddExtendedInfoTransactionJson),
+    TokenRemoveExtendedInfo(TokenRemoveExtendedInfoTransactionJson),
     TokenMint(TokenMintTransactionJson),
     TokenBurn(TokenBurnTransactionJson),
 }
@@ -584,16 +527,7 @@ impl From<AccountMultisigTransaction> for MultisigTransactionJson {
     fn from(tx: AccountMultisigTransaction) -> Self {
         match tx {
             AccountMultisigTransaction::Send(args) => {
-                let memo = if let Some(memo) = args.memo {
-                    if memo.len() == 1 {
-                        memo.iter_str().next().map(String::from)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
-
+                let memo = get_str_memo(&args.memo);
                 MultisigTransactionJson::Send(SendTransactionJson {
                     from: args.from,
                     to: args.to,
@@ -603,44 +537,10 @@ impl From<AccountMultisigTransaction> for MultisigTransactionJson {
                 })
             }
             AccountMultisigTransaction::AccountCreate(args) => {
-                let mut acc_features = vec![];
-                for feature in args.features.iter() {
-                    let feature_id = feature.id();
-
-                    // The only feature currently supporting arguments if the multisig account feature
-                    let arg = MultisigAccountFeature::try_create(feature);
-                    match arg {
-                        Ok(arg) => acc_features.push(FeatureJson {
-                            id: feature_id,
-                            arg: Some(json!({
-                                "threshold": arg.arg.threshold,
-                                "timeout_in_secs": arg.arg.timeout_in_secs,
-                                "execute_automatically": arg.arg.execute_automatically,
-                            })),
-                        }),
-                        Err(e) => {
-                            // This is not a multisig account feature
-                            if e.code() != ManyErrorCode::AttributeNotFound {
-                                trace!("Error while reading multisig account: {}", e);
-                            }
-
-                            // At this point we know that this is not a multisig account feature but some other feature with no arguments
-                            acc_features.push(FeatureJson {
-                                id: feature_id,
-                                arg: None,
-                            })
-                        }
-                    }
-                }
-
                 MultisigTransactionJson::AccountCreate(AccountCreateTransactionJson {
                     description: args.description,
-                    roles: args.roles.map(|k| {
-                        k.into_iter()
-                            .map(|(k, v)| (k, v.into_iter().map(|v| v.into()).collect()))
-                            .collect()
-                    }),
-                    features: acc_features,
+                    roles: args.roles.map(get_roles),
+                    features: get_features(&args.features),
                 })
             }
             AccountMultisigTransaction::AccountSetDescription(args) => {
@@ -654,21 +554,13 @@ impl From<AccountMultisigTransaction> for MultisigTransactionJson {
             AccountMultisigTransaction::AccountAddRoles(args) => {
                 MultisigTransactionJson::AccountAddRoles(AccountAddRolesTransactionJson {
                     account: args.account,
-                    roles: args
-                        .roles
-                        .into_iter()
-                        .map(|(k, v)| (k, v.into_iter().map(|v| v.into()).collect()))
-                        .collect(),
+                    roles: get_roles(args.roles),
                 })
             }
             AccountMultisigTransaction::AccountRemoveRoles(args) => {
                 MultisigTransactionJson::AccountRemoveRoles(AccountRemoveRolesTransactionJson {
                     account: args.account,
-                    roles: args
-                        .roles
-                        .into_iter()
-                        .map(|(k, v)| (k, v.into_iter().map(|v| v.into()).collect()))
-                        .collect(),
+                    roles: get_roles(args.roles),
                 })
             }
             AccountMultisigTransaction::AccountDisable(args) => {
@@ -677,44 +569,10 @@ impl From<AccountMultisigTransaction> for MultisigTransactionJson {
                 })
             }
             AccountMultisigTransaction::AccountAddFeatures(args) => {
-                let mut features = vec![];
-                for feature in args.features.iter() {
-                    let feature_id = feature.id();
-
-                    // The only feature currently supporting arguments if the multisig account feature
-                    let arg = MultisigAccountFeature::try_create(feature);
-                    match arg {
-                        Ok(arg) => features.push(FeatureJson {
-                            id: feature_id,
-                            arg: Some(json!({
-                                "threshold": arg.arg.threshold,
-                                "timeout_in_secs": arg.arg.timeout_in_secs,
-                                "execute_automatically": arg.arg.execute_automatically,
-                            })),
-                        }),
-                        Err(e) => {
-                            // This is not a multisig account feature
-                            if e.code() != ManyErrorCode::AttributeNotFound {
-                                trace!("Error while reading multisig account: {}", e);
-                            }
-
-                            // At this point we know that this is not a multisig account feature but some other feature with no arguments
-                            features.push(FeatureJson {
-                                id: feature_id,
-                                arg: None,
-                            })
-                        }
-                    }
-                }
-
                 MultisigTransactionJson::AccountAddFeatures(AccountAddFeaturesTransactionJson {
                     account: args.account,
-                    roles: args.roles.map(|k| {
-                        k.into_iter()
-                            .map(|(k, v)| (k, v.into_iter().map(|v| v.into()).collect()))
-                            .collect()
-                    }),
-                    features,
+                    roles: args.roles.map(get_roles),
+                    features: get_features(&args.features),
                 })
             }
             AccountMultisigTransaction::AccountMultisigSubmit(args) => {
@@ -723,15 +581,7 @@ impl From<AccountMultisigTransaction> for MultisigTransactionJson {
                 let transaction = Box::new(
                     Box::<AccountMultisigTransaction>::into_inner(args.transaction).into(),
                 );
-                let memo = if let Some(memo) = args.memo {
-                    if memo.len() == 1 {
-                        memo.iter_str().next().map(String::from)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
+                let memo = get_str_memo(&args.memo);
                 MultisigTransactionJson::AccountMultisigSubmit(
                     AccountMultisigSubmitTransactionJson {
                         account: args.account,
@@ -784,15 +634,7 @@ impl From<AccountMultisigTransaction> for MultisigTransactionJson {
                 )
             }
             AccountMultisigTransaction::TokenCreate(args) => {
-                let memo = if let Some(memo) = args.memo {
-                    if memo.len() == 1 {
-                        memo.iter_str().next().map(String::from)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
+                let memo = get_str_memo(&args.memo);
                 MultisigTransactionJson::TokenCreate(TokenCreateTransactionJson {
                     summary: args.summary.into(),
                     owner: args.owner.map(|owner| owner.into()),
@@ -803,15 +645,7 @@ impl From<AccountMultisigTransaction> for MultisigTransactionJson {
                 })
             }
             AccountMultisigTransaction::TokenUpdate(args) => {
-                let memo = if let Some(memo) = args.memo {
-                    if memo.len() == 1 {
-                        memo.iter_str().next().map(String::from)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
+                let memo = get_str_memo(&args.memo);
                 MultisigTransactionJson::TokenUpdate(TokenUpdateTransactionJson {
                     symbol: args.symbol,
                     name: args.name,
@@ -821,22 +655,17 @@ impl From<AccountMultisigTransaction> for MultisigTransactionJson {
                     memo,
                 })
             }
-            // AccountMultisigTransaction::TokenAddExtendedInfo(args) => {
-            //     MultisigTransactionJson::TokenAddExtendedInfo(TokenAddExtendedInfoTransactionJson()) // FIXME: We don't care about ExtInfo
-            // }
-            // AccountMultisigTransaction::TokenRemoveExtendedInfo(args) => {
-            //     MultisigTransactionJson::TokenRemoveExtendedInfo(TokenRemoveExtendedInfoTransactionJson()) // FIXME: We don't care about ExtInfo
-            // }
+            AccountMultisigTransaction::TokenAddExtendedInfo(_args) => {
+                MultisigTransactionJson::TokenAddExtendedInfo(TokenAddExtendedInfoTransactionJson())
+                // FIXME: We don't care about ExtInfo
+            }
+            AccountMultisigTransaction::TokenRemoveExtendedInfo(_args) => {
+                MultisigTransactionJson::TokenRemoveExtendedInfo(
+                    TokenRemoveExtendedInfoTransactionJson(),
+                ) // FIXME: We don't care about ExtInfo
+            }
             AccountMultisigTransaction::TokenMint(args) => {
-                let memo = if let Some(memo) = args.memo {
-                    if memo.len() == 1 {
-                        memo.iter_str().next().map(String::from)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
+                let memo = get_str_memo(&args.memo);
                 MultisigTransactionJson::TokenMint(TokenMintTransactionJson {
                     symbol: args.symbol,
                     distribution: args.distribution,
@@ -844,15 +673,7 @@ impl From<AccountMultisigTransaction> for MultisigTransactionJson {
                 })
             }
             AccountMultisigTransaction::TokenBurn(args) => {
-                let memo = if let Some(memo) = args.memo {
-                    if memo.len() == 1 {
-                        memo.iter_str().next().map(String::from)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
+                let memo = get_str_memo(&args.memo);
                 MultisigTransactionJson::TokenBurn(TokenBurnTransactionJson {
                     symbol: args.symbol,
                     distribution: args.distribution,
@@ -863,6 +684,59 @@ impl From<AccountMultisigTransaction> for MultisigTransactionJson {
             _ => todo!(),
         }
     }
+}
+
+fn get_roles(roles: AddressRoleMap) -> AddressRoleMapJson {
+    roles
+        .into_iter()
+        .map(|(k, v)| (k, v.into_iter().map(|v| v.into()).collect()))
+        .collect()
+}
+
+fn get_features(args: &FeatureSet) -> Vec<FeatureJson> {
+    let mut acc_features = vec![];
+    for feature in args.iter() {
+        let feature_id = feature.id();
+
+        // The only feature currently supporting arguments if the multisig account feature
+        let arg = MultisigAccountFeature::try_create(feature);
+        match arg {
+            Ok(arg) => acc_features.push(FeatureJson {
+                id: feature_id,
+                arg: Some(json!({
+                    "threshold": arg.arg.threshold,
+                    "timeout_in_secs": arg.arg.timeout_in_secs,
+                    "execute_automatically": arg.arg.execute_automatically,
+                })),
+            }),
+            Err(e) => {
+                // This is not a multisig account feature
+                if e.code() != ManyErrorCode::AttributeNotFound {
+                    trace!("Error while reading multisig account: {}", e);
+                }
+
+                // At this point we know that this is not a multisig account feature but some other feature with no arguments
+                acc_features.push(FeatureJson {
+                    id: feature_id,
+                    arg: None,
+                })
+            }
+        }
+    }
+    acc_features
+}
+
+fn get_str_memo(memo: &Option<Memo>) -> Option<String> {
+    let memo = if let Some(memo) = memo {
+        if memo.len() == 1 {
+            memo.iter_str().next().map(String::from)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    memo
 }
 
 #[derive(Debug, Serialize)]
@@ -1070,58 +944,19 @@ impl From<EventInfo> for EventInfoJson {
                 to,
                 symbol,
                 amount,
-                memo: memo.map(|m| {
-                    m.iter_str()
-                        .next()
-                        .map(String::from)
-                        .expect("Only string memo are supported...")
-                }),
+                memo: get_str_memo(&memo),
             }),
             EventInfo::AccountCreate {
                 account,
                 description,
                 roles,
                 features,
-            } => {
-                let mut acc_features = vec![];
-                for feature in features.iter() {
-                    let feature_id = feature.id();
-
-                    // The only feature currently supporting arguments if the multisig account feature
-                    let arg = MultisigAccountFeature::try_create(feature);
-                    match arg {
-                        Ok(arg) => acc_features.push(FeatureJson {
-                            id: feature_id,
-                            arg: Some(json!({
-                                "threshold": arg.arg.threshold,
-                                "timeout_in_secs": arg.arg.timeout_in_secs,
-                                "execute_automatically": arg.arg.execute_automatically,
-                            })),
-                        }),
-                        Err(e) => {
-                            // This is not a multisig account feature
-                            if e.code() != ManyErrorCode::AttributeNotFound {
-                                trace!("Error while reading multisig account: {}", e);
-                            }
-
-                            // At this point we know that this is not a multisig account feature but some other feature with no arguments
-                            acc_features.push(FeatureJson {
-                                id: feature_id,
-                                arg: None,
-                            })
-                        }
-                    }
-                }
-                Self::AccountCreate(AccountCreateEventJson {
-                    account,
-                    description,
-                    roles: roles
-                        .into_iter()
-                        .map(|(k, v)| (k, v.into_iter().map(|v| v.into()).collect()))
-                        .collect(),
-                    features: acc_features,
-                })
-            }
+            } => Self::AccountCreate(AccountCreateEventJson {
+                account,
+                description,
+                roles: get_roles(roles),
+                features: get_features(&features),
+            }),
             EventInfo::AccountSetDescription {
                 account,
                 description,
@@ -1132,19 +967,13 @@ impl From<EventInfo> for EventInfoJson {
             EventInfo::AccountAddRoles { account, roles } => {
                 Self::AccountAddRoles(AccountAddRolesEventJson {
                     account,
-                    roles: roles
-                        .into_iter()
-                        .map(|(k, v)| (k, v.into_iter().map(|v| v.into()).collect()))
-                        .collect(),
+                    roles: get_roles(roles),
                 })
             }
             EventInfo::AccountRemoveRoles { account, roles } => {
                 Self::AccountRemoveRoles(AccountRemoveRolesEventJson {
                     account,
-                    roles: roles
-                        .into_iter()
-                        .map(|(k, v)| (k, v.into_iter().map(|v| v.into()).collect()))
-                        .collect(),
+                    roles: get_roles(roles),
                 })
             }
             EventInfo::AccountDisable { account } => {
@@ -1154,45 +983,11 @@ impl From<EventInfo> for EventInfoJson {
                 account,
                 roles,
                 features,
-            } => {
-                let mut acc_features = vec![];
-                for feature in features.iter() {
-                    let feature_id = feature.id();
-
-                    // The only feature currently supporting arguments if the multisig account feature
-                    let arg = MultisigAccountFeature::try_create(feature);
-                    match arg {
-                        Ok(arg) => acc_features.push(FeatureJson {
-                            id: feature_id,
-                            arg: Some(json!({
-                                "threshold": arg.arg.threshold,
-                                "timeout_in_secs": arg.arg.timeout_in_secs,
-                                "execute_automatically": arg.arg.execute_automatically,
-                            })),
-                        }),
-                        Err(e) => {
-                            // This is not a multisig account feature
-                            if e.code() != ManyErrorCode::AttributeNotFound {
-                                trace!("Error while reading multisig account: {}", e);
-                            }
-
-                            // At this point we know that this is not a multisig account feature but some other feature with no arguments
-                            acc_features.push(FeatureJson {
-                                id: feature_id,
-                                arg: None,
-                            })
-                        }
-                    }
-                }
-                Self::AccountAddFeatures(AccountAddFeaturesEventJson {
-                    account,
-                    roles: roles
-                        .into_iter()
-                        .map(|(k, v)| (k, v.into_iter().map(|v| v.into()).collect()))
-                        .collect(),
-                    features: acc_features,
-                })
-            }
+            } => Self::AccountAddFeatures(AccountAddFeaturesEventJson {
+                account,
+                roles: get_roles(roles),
+                features: get_features(&features),
+            }),
             EventInfo::AccountMultisigSubmit {
                 submitter,
                 account,
@@ -1216,12 +1011,7 @@ impl From<EventInfo> for EventInfoJson {
                 timeout: timeout.secs(),
                 execute_automatically,
                 data: data_.map(|d| hex::encode(d.as_bytes())),
-                memo: memo.map(|m| {
-                    m.iter_str()
-                        .next()
-                        .map(String::from)
-                        .expect("Only string memo are supported...")
-                }),
+                memo: get_str_memo(&memo),
             }),
             EventInfo::AccountMultisigApprove {
                 account,
@@ -1293,22 +1083,15 @@ impl From<EventInfo> for EventInfoJson {
                 maximum_supply,
                 extended_info,
                 memo,
-            } => {
-                Self::TokenCreate(TokenCreateEventJson {
-                    summary: summary.into(),
-                    symbol,
-                    owner: owner.map(|owner| owner.into()),
-                    initial_distribution,
-                    maximum_supply,
-                    extended_info: extended_info.map(|extended_info| extended_info.into()), // FIXME: We don't care about ExtInfo
-                    memo: memo.map(|m| {
-                        m.iter_str()
-                            .next()
-                            .map(String::from)
-                            .expect("Only string memo are supported...")
-                    }),
-                })
-            }
+            } => Self::TokenCreate(TokenCreateEventJson {
+                summary: summary.into(),
+                symbol,
+                owner: owner.map(|owner| owner.into()),
+                initial_distribution,
+                maximum_supply,
+                extended_info: extended_info.map(|extended_info| extended_info.into()), // FIXME: We don't care about ExtInfo
+                memo: get_str_memo(&memo),
+            }),
             EventInfo::TokenUpdate {
                 symbol,
                 name,
@@ -1322,12 +1105,7 @@ impl From<EventInfo> for EventInfoJson {
                 ticker,
                 decimals,
                 owner: owner.map(|owner| owner.into()),
-                memo: memo.map(|m| {
-                    m.iter_str()
-                        .next()
-                        .map(String::from)
-                        .expect("Only string memo are supported...")
-                }),
+                memo: get_str_memo(&memo),
             }),
             EventInfo::TokenMint {
                 symbol,
@@ -1336,12 +1114,7 @@ impl From<EventInfo> for EventInfoJson {
             } => Self::TokenMint(TokenMintEventJson {
                 symbol,
                 distribution,
-                memo: memo.map(|m| {
-                    m.iter_str()
-                        .next()
-                        .map(String::from)
-                        .expect("Only string memo are supported...")
-                }),
+                memo: get_str_memo(&memo),
             }),
             EventInfo::TokenBurn {
                 symbol,
@@ -1350,12 +1123,7 @@ impl From<EventInfo> for EventInfoJson {
             } => Self::TokenBurn(TokenBurnEventJson {
                 symbol,
                 distribution,
-                memo: memo.map(|m| {
-                    m.iter_str()
-                        .next()
-                        .map(String::from)
-                        .expect("Only string memo are supported...")
-                }),
+                memo: get_str_memo(&memo),
             }),
             _ => todo!(),
         }
@@ -1500,15 +1268,7 @@ impl From<MultisigTransactionStorage> for MultisigTransactionStorageJson {
         };
 
         let memo_ = info.memo_.map(|memo| memo.to_string());
-        let memo = if let Some(memo) = info.memo {
-            if memo.len() == 1 {
-                memo.iter_str().next().map(String::from)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        let memo = get_str_memo(&info.memo);
         let data_ = info.data_.map(|data| hex::encode(data.as_bytes()));
 
         let transaction = info.transaction.into();
