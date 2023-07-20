@@ -1,6 +1,6 @@
 [package]
 name = "many-protocol"
-version = "0.1.5" # managed by release.sh
+version = "0.1.6" # managed by release.sh
 edition = "2021"
 description = "Types exclusively associated with the protocol."
 license-file = "../../LICENSE"
@@ -11,9 +11,9 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-many-error = { path = "../many-error", version = "0.1.5" } # managed by release.sh
-many-identity = { path = "../many-identity", version = "0.1.5" } # managed by release.sh
-many-types = { path = "../many-types", version = "0.1.5" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.6" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.6" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.1.6" } # managed by release.sh
 async-channel = "1.8.0"
 base64 = "0.21.2"
 coset = "0.3.4"

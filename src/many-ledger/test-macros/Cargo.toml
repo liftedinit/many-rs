@@ -1,6 +1,6 @@
 [package]
 name = "many-ledger-test-macros"
-version = "0.1.5" # managed by release.sh
+version = "0.1.6" # managed by release.sh
 edition = "2021"
 authors = ["The Lifted Initiative"]
 license = "Apache-2.0"
