@@ -1,5 +1,5 @@
 {
-  "checksum": "331bb6c08edb42c3d240303fd4b1e238c2564c848db236962c1bf75fbb48bf0d",
+  "checksum": "169e0c6d44395781b16594372cfddae5cd6a6cdf0d1a1b76040c6930631e07e7",
   "crates": {
     "addr2line 0.20.0": {
       "name": "addr2line",
@@ -8679,6 +8679,83 @@
         }
       },
       "license": "MIT"
+    },
+    "genesis-from-db 0.1.5": {
+      "name": "genesis-from-db",
+      "version": "0.1.5",
+      "repository": null,
+      "targets": [],
+      "library_target_name": null,
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "base64 0.21.2",
+              "target": "base64"
+            },
+            {
+              "id": "clap 3.2.25",
+              "target": "clap"
+            },
+            {
+              "id": "const_format 0.2.31",
+              "target": "const_format"
+            },
+            {
+              "id": "hex 0.4.3",
+              "target": "hex"
+            },
+            {
+              "id": "merk 2.0.0",
+              "target": "merk"
+            },
+            {
+              "id": "minicbor 0.19.1",
+              "target": "minicbor"
+            },
+            {
+              "id": "serde 1.0.171",
+              "target": "serde"
+            },
+            {
+              "id": "serde_json 1.0.102",
+              "target": "serde_json"
+            },
+            {
+              "id": "strum 0.24.1",
+              "target": "strum"
+            },
+            {
+              "id": "tracing 0.1.37",
+              "target": "tracing"
+            },
+            {
+              "id": "tracing-subscriber 0.3.17",
+              "target": "tracing_subscriber"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "serde_derive 1.0.171",
+              "target": "serde_derive"
+            },
+            {
+              "id": "strum_macros 0.24.3",
+              "target": "strum_macros"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.1.5"
+      },
+      "license": null
     },
     "getrandom 0.1.16": {
       "name": "getrandom",
@@ -29791,6 +29868,7 @@
   },
   "binary_crates": [],
   "workspace_members": {
+    "genesis-from-db 0.1.5": "src/genesis-from-db",
     "http_proxy 0.1.5": "src/http_proxy",
     "idstore-export 0.1.5": "src/idstore-export",
     "kvstore 0.1.5": "src/kvstore",

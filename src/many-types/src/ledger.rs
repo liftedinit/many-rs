@@ -3,9 +3,9 @@ use many_identity::Address;
 use minicbor::data::{Tag, Type};
 use minicbor::{encode, Decode, Decoder, Encode, Encoder};
 use num_bigint::{BigInt, BigUint};
-use num_traits::Num;
+use num_traits::{Num, ToPrimitive};
 use serde::de::Unexpected;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Shr;
@@ -241,8 +241,6 @@ impl<C> Encode<C> for TokenAmount {
         e: &mut Encoder<W>,
         _: &mut C,
     ) -> Result<(), encode::Error<W::Error>> {
-        use num_traits::cast::ToPrimitive;
-
         // Encode efficiently.
         if let Some(amount) = self.0.to_u64() {
             e.u64(amount)?;
@@ -351,6 +349,21 @@ impl<'de> Deserialize<'de> for TokenAmount {
     }
 }
 
+// Write Serializer for TokenAmount
+impl Serialize for TokenAmount {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        // Serialize efficiently.
+        if let Some(amount) = self.0.to_u64() {
+            serializer.serialize_u64(amount)
+        } else {
+            serializer.serialize_str(&self.0.to_str_radix(10))
+        }
+    }
+}
+
 cbor_type_decl!(
     pub struct TokenInfo {
         0 => symbol: Symbol,
@@ -375,7 +388,7 @@ cbor_type_decl!(
 #[cfg(test)]
 mod test {
     use super::*;
-    use serde_test::{assert_de_tokens, Token};
+    use serde_test::{assert_de_tokens, assert_ser_tokens, Token};
 
     #[test]
     fn serde_token_amount() {
@@ -389,12 +402,14 @@ mod test {
         assert_de_tokens(&token, &[Token::I32(123)]);
         assert_de_tokens(&token, &[Token::I64(123)]);
         assert_de_tokens(&token, &[Token::String("123")]);
+        assert_ser_tokens(&token, &[Token::U64(123)]);
     }
 
     #[test]
     fn serde_token_amount_extra() {
         let token = TokenAmount::from(123456789000u64);
         assert_de_tokens(&token, &[Token::String("123_456_789__000")]);
+        assert_ser_tokens(&token, &[Token::U64(123456789000)]);
     }
 
     #[test]
@@ -406,6 +421,7 @@ mod test {
             &token,
             &[Token::String("1_208_925_819_614_629_174_706_175")],
         );
+        assert_ser_tokens(&token, &[Token::String("1208925819614629174706175")]);
     }
 
     #[test]
