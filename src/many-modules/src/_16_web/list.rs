@@ -1,6 +1,6 @@
-use minicbor::{Decode, Encode};
-use many_types::SortOrder;
 use many_types::web::{WebDeploymentFilter, WebDeploymentInfo};
+use many_types::SortOrder;
+use minicbor::{Decode, Encode};
 
 #[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]

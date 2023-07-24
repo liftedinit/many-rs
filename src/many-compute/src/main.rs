@@ -21,8 +21,8 @@ mod module;
 mod opt;
 mod storage;
 
-use module::*;
 use crate::opt::AkashOpt;
+use module::*;
 
 #[derive(Debug, Parser)]
 struct Opts {

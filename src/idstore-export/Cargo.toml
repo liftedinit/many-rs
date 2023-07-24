@@ -16,6 +16,6 @@ doc = false
 base64 = "0.21.2"
 clap = { version = "3.2.25", features = ["derive"] }
 merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
-serde = "1.0.163"
+serde = "=1.0.163"
 serde_derive = "1.0.163"
 serde_json = "1.0.96"

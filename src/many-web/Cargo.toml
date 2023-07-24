@@ -10,6 +10,7 @@ doc = false
 
 [dependencies]
 async-trait = "0.1.68"
+base64 = "0.21.2"
 clap = { version = "3.2.25", features = ["derive"] }
 coset = "0.3.4"
 git2 = "0.17.2"
@@ -27,13 +28,14 @@ many-server-cache = { path = "../many-server-cache", version = "0.1.5" } # manag
 many-types = { path = "../many-types", version = "0.1.5" } # managed by release.sh
 merk = { git = "https://github.com/liftedinit/merk.git", rev = "532eb097ec50f3553c5294971c152b4e7c7d4731" }
 minicbor = { version = "0.19.1", features = ["derive", "std"] }
-serde = "1.0"
+serde = "=1.0.163"
 serde_json = "1.0"
 serde_yaml = "0.9"
 signal-hook = "0.3.15"
 tempfile = "3"
 tokio = { version = "1.28.1", features = [ "full" ] }
 tracing = "0.1.37"
+walkdir = "2.3.3"
 
 [build-dependencies]
 vergen = { version = "8.2.1", features = ["git", "git2"] }

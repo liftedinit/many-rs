@@ -1,9 +1,31 @@
-use std::path::Path;
-use merk::{BatchEntry, Op};
+use crate::error;
+use base64::{engine::general_purpose, Engine as _};
+use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::AbciCommitInfo;
 use many_modules::events::EventId;
 use many_types::Timestamp;
+use merk::{BatchEntry, Op};
+use std::fs;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use walkdir::{DirEntry, WalkDir};
+
+pub const HTTP_ROOT: &str = "/http";
+const META_ROOT: &str = "/meta";
+
+// TODO: Refactor
+fn key_for_website(owner: &Address, site_name: &str) -> Vec<u8> {
+    format!("{HTTP_ROOT}/{owner}/{site_name}/").into_bytes()
+}
+
+fn key_for_website_file(owner: &Address, site_name: &str, file_name: &str) -> Vec<u8> {
+    format!("{HTTP_ROOT}/{owner}/{site_name}/{file_name}").into_bytes()
+}
+
+fn key_for_website_description(owner: &Address, site_name: &String) -> Vec<u8> {
+    format!("{META_ROOT}/{owner}/{site_name}").into_bytes()
+}
 
 pub struct WebStorage {
     persistent_store: merk::Merk,
@@ -52,7 +74,7 @@ impl WebStorage {
                 .expect("Could not open storage.")
                 .expect("Could not find key '/config/identity' in storage."),
         )
-            .map_err(|e| e.to_string())?;
+        .map_err(|e| e.to_string())?;
 
         let latest_event_id = minicbor::decode(
             &persistent_store
@@ -60,7 +82,7 @@ impl WebStorage {
                 .expect("Could not open storage.")
                 .expect("Could not find key '/latest_event_id'"),
         )
-            .map_err(|e| e.to_string())?;
+        .map_err(|e| e.to_string())?;
 
         Ok(Self {
             persistent_store,
@@ -156,5 +178,95 @@ impl WebStorage {
         self.current_hash
             .as_ref()
             .map_or_else(|| self.persistent_store.root_hash().to_vec(), |x| x.clone())
+    }
+
+    // Returns if a directory entry is hidden or not.
+    fn is_hidden(entry: &DirEntry) -> bool {
+        entry
+            .file_name()
+            .to_str()
+            .map(|s| s.starts_with("."))
+            .unwrap_or(false)
+    }
+
+    pub fn store_website(
+        &mut self,
+        owner: &Address,
+        site_name: &String,
+        site_description: &Option<String>,
+        path: impl AsRef<Path>,
+    ) -> Result<(), ManyError> {
+        let mut batch: Vec<BatchEntry> = Vec::new();
+
+        // Walk the directory tree, ignoring hidden files and directories.
+        // Add each file content to the batch as base64
+        for entry in WalkDir::new(path)
+            .into_iter()
+            .filter_entry(|e| !Self::is_hidden(e))
+        {
+            let entry = entry.map_err(error::unable_to_read_entry)?;
+            let entry_path = entry.path();
+
+            let mut enc = base64::write::EncoderWriter::new(Vec::new(), &general_purpose::STANDARD);
+            enc.write_all(&fs::read(entry_path).map_err(ManyError::unknown)?)
+                .map_err(ManyError::unknown)?; //TODO
+
+            batch.push(
+                (
+                    key_for_website_file(
+                        owner,
+                        site_name,
+                        entry_path.to_str().ok_or_else(|| {
+                            ManyError::unknown("Path contains non UTF-8 characters")
+                        })?,
+                    ), // TODO
+                    Op::Put(enc.finish().map_err(ManyError::unknown)?),
+                ), // TODO
+            );
+        }
+
+        // Add the website description to the batch
+        if let Some(description) = &site_description {
+            batch.push((
+                key_for_website_description(owner, site_name),
+                Op::Put(description.as_bytes().to_vec()),
+            ));
+        }
+
+        batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
+
+        self.persistent_store
+            .apply(batch.as_slice())
+            .map_err(error::storage_apply_failed)?;
+
+        // TODO: Refactor
+        if !self.blockchain {
+            self.persistent_store
+                .commit(&[])
+                .map_err(error::storage_commit_failed)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn remove_website(&mut self, owner: &Address, site_name: &String) -> Result<(), ManyError> {
+        self.persistent_store
+            .apply(&[(key_for_website(owner, site_name), Op::Delete)])
+            .map_err(error::storage_apply_failed)?;
+
+        // TODO: Refactor
+        if !self.blockchain {
+            self.persistent_store
+                .commit(&[])
+                .map_err(error::storage_commit_failed)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, ManyError> {
+        self.persistent_store
+            .get(key)
+            .map_err(error::storage_get_failed)
     }
 }

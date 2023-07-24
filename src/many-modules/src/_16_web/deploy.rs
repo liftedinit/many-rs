@@ -1,5 +1,5 @@
-use minicbor::{Decode, Encode};
 use many_types::web::WebDeploymentSource;
+use minicbor::{Decode, Encode};
 
 #[derive(Clone, Decode, Encode)]
 #[cbor(map)]

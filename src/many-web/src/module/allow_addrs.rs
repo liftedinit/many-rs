@@ -1,7 +1,7 @@
 use coset::CoseSign1;
 use many_error::ManyError;
 use many_identity::Address;
-use many_modules::{ManyModule, ManyModuleInfo, web};
+use many_modules::{web, ManyModule, ManyModuleInfo};
 use many_protocol::{RequestMessage, ResponseMessage};
 use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};

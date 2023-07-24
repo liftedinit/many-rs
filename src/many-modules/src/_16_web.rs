@@ -3,14 +3,14 @@ use many_identity::Address;
 use many_macros::many_module;
 
 pub mod deploy;
-pub mod remove;
 pub mod info;
 pub mod list;
+pub mod remove;
 
-pub use remove::*;
 pub use deploy::*;
 pub use info::*;
 pub use list::*;
+pub use remove::*;
 
 #[cfg(test)]
 use mockall::{automock, predicate::*};

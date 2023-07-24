@@ -1,5 +1,5 @@
-use minicbor::{Decode, Encode};
 use crate::EmptyReturn;
+use minicbor::{Decode, Encode};
 
 #[derive(Clone, Debug, Encode, Decode)]
 #[cbor(map)]

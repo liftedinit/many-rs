@@ -44,4 +44,4 @@ incremental = false
 
 [patch.crates-io]
 # Workaround for https://github.com/bazelbuild/rules_rust/issues/1966
-gherkin = { git = "https://github.com/fmorency/gherkin.git", commit = "b378f966281a79b501d59a1bfc2dd7519ad2ac98" }
+gherkin = { git = "https://github.com/fmorency/gherkin.git", rev = "b378f966281a79b501d59a1bfc2dd7519ad2ac98" }

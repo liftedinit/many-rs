@@ -1,7 +1,7 @@
+use many_identity::Address;
 use minicbor::encode::{Error, Write};
 use minicbor::{Decode, Encode, Encoder};
 use strum::Display;
-use many_identity::Address;
 
 #[derive(Clone, Debug, Display, Eq, PartialEq)]
 pub enum WebDeploymentFilter {
@@ -38,9 +38,12 @@ impl<'d, C> minicbor::Decode<'d, C> for WebDeploymentFilter {
         }?;
         let result = match key {
             0 => Ok(WebDeploymentFilter::All),
-            1 => Ok(WebDeploymentFilter::Owner(d.str()?.to_string().parse().map_err(|_| {
-                    minicbor::decode::Error::message("invalid address".to_string())
-                })?)),
+            1 => Ok(WebDeploymentFilter::Owner(
+                d.str()?
+                    .to_string()
+                    .parse()
+                    .map_err(|_| minicbor::decode::Error::message("invalid address".to_string()))?,
+            )),
             x => Err(minicbor::decode::Error::unknown_variant(u32::from(x))),
         };
 
@@ -70,7 +73,7 @@ pub struct WebDeploymentInfo {
 
 #[derive(Clone, Debug, Display, Eq, PartialEq)]
 pub enum WebDeploymentSource {
-    GitHub(String)
+    GitHub(String),
 }
 
 impl<C> minicbor::Encode<C> for WebDeploymentSource {

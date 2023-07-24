@@ -1,26 +1,26 @@
-use std::collections::BTreeSet;
-use std::net::SocketAddr;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 use clap::Parser;
-use tracing::{debug, info};
 use many_cli_helpers::CommonCliFlags;
-use many_identity::{Address, Identity};
 use many_identity::verifiers::AnonymousVerifier;
+use many_identity::{Address, Identity};
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
 use many_identity_webauthn::WebAuthnVerifier;
 use many_modules::{abci_backend, events, kvstore, web};
 use many_protocol::ManyUrl;
-use many_server::ManyServer;
 use many_server::transport::http::HttpServer;
+use many_server::ManyServer;
 use many_server_cache::{RequestCacheValidator, RocksDbCacheBackend};
+use std::collections::BTreeSet;
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use tracing::{debug, info};
 
 mod error;
 mod module;
 mod storage;
 
-use module::*;
 use crate::module::allow_addrs::AllowAddrsModule;
+use module::*;
 
 #[derive(Parser, Debug)]
 #[clap(args_override_self(true))]
@@ -166,7 +166,11 @@ fn main() {
     let many = ManyServer::simple(
         "many-web",
         key,
-        (AnonymousVerifier, CoseKeyVerifier, WebAuthnVerifier::new(allow_origin)),
+        (
+            AnonymousVerifier,
+            CoseKeyVerifier,
+            WebAuthnVerifier::new(allow_origin),
+        ),
         Some(env!("CARGO_PKG_VERSION").to_string()),
     );
 
@@ -185,7 +189,7 @@ fn main() {
             s.add_module(web_module);
         }
         // FIXME: Activate and impl those
-        // s.add_module(kvstore::KvStoreModule::new(module.clone()));
+        s.add_module(kvstore::KvStoreModule::new(module.clone()));
         // s.add_module(events::EventsModule::new(module.clone()));
 
         if abci {

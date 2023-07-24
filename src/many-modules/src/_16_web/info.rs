@@ -1,6 +1,6 @@
-use minicbor::{Decode, Encode};
-use minicbor::bytes::ByteVec;
 use crate::EmptyArg;
+use minicbor::bytes::ByteVec;
+use minicbor::{Decode, Encode};
 
 pub type InfoArg = EmptyArg;
 
