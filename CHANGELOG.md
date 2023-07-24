@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.6] - 2023-07-20
+
+### Features
+
+- Genesis from DB ([#401](https://github.com/liftedinit/many-rs/issues/401))
+
+### Miscellaneous Tasks
+
+- Add genesis-from-db to pkg ([#402](https://github.com/liftedinit/many-rs/issues/402))
+
 ## [0.1.5] - 2023-07-13
 
 ### Bug Fixes
