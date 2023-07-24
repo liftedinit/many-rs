@@ -1,5 +1,5 @@
-MIGRATIONS ?=
-ABCI_MIGRATIONS ?=
+MIGRATIONS ?= "../staging/ledger_migrations.json"
+ABCI_MIGRATIONS ?= "../staging/abci_migrations.json"
 ALLOW_ADDRS ?= false
 STATE ?= "../staging/ledger_state.json5"
 

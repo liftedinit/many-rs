@@ -48,6 +48,8 @@ impl LedgerStorage {
             Op::Put(minicbor::to_vec(symbols).map_err(ManyError::serialization_error)?),
         ));
 
+        batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
+
         self.persistent_store
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;

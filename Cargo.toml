@@ -2,6 +2,7 @@
 resolver = "2"
 
 members = [
+    "src/genesis-from-db",
     "src/http-proxy",
     "src/idstore-export",
     "src/kvstore",
