@@ -26,7 +26,7 @@ pkg_tar(
     name = "many-rs-tar",
     srcs = [
         "//src/genesis-from-db",
-        "//src/http_proxy",
+        "//src/http-proxy",
         "//src/idstore-export",
         "//src/kvstore",
         "//src/ledger",

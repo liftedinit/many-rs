@@ -173,7 +173,7 @@ main() {
     tmux new-window -t "$tmux_name" -n kvstore "./target/debug/many-kvstore -v -v --abci --addr 127.0.0.1:8010 --pem \"$pem_root/id3.pem\" --state ./staging/kvstore_state.json5 2>&1 --persistent \"$root_dir/kvstore.db\" | tee \"$root_dir/many-kvstore.log\""
     tmux new-window -t "$tmux_name" -n kvstore-abci "./target/debug/many-abci -v -v --many 127.0.0.1:8011 --many-app http://127.0.0.1:8010 --many-pem \"$pem_root/id4.pem\" --abci 127.0.0.1:16658 --tendermint http://127.0.0.1:16657/ --cache-db \"$root_dir/kvstore_cache.db\" 2>&1 | tee \"$root_dir/many-abci-kvstore.log\""
 
-    tmux new-window -t "$tmux_name" -n http "./target/debug/http_proxy -v http://localhost:8011 --pem \"$pem_root/id5.pem\" --addr 0.0.0.0:8888 2>&1 | tee \"$root_dir/http.log\""
+    tmux new-window -t "$tmux_name" -n http "./target/debug/http-proxy -v http://localhost:8011 --pem \"$pem_root/id5.pem\" --addr 0.0.0.0:8888 2>&1 | tee \"$root_dir/http.log\""
 
     tmux new-window -t "$tmux_name"
 
