@@ -17,7 +17,8 @@ use many_types::web::WebDeploymentSource;
 use many_types::Timestamp;
 use std::collections::BTreeMap;
 use std::path::Path;
-use tracing::info;
+use tracing::{info, trace};
+use tempfile::Builder;
 
 pub mod allow_addrs;
 
@@ -155,23 +156,30 @@ impl WebModuleBackend for WebModuleImpl {
             source,
         } = args;
 
+        trace!("Checking site name is alphanumeric or symbols");
         if !all_alphanumeric_or_symbols(&site_name) {
             return Err(error::invalid_site_name(site_name));
         }
 
+        trace!("Checking site description is alphanumeric or symbols");
         if let Some(site_description) = &site_description {
             if !all_alphanumeric_or_symbols(&site_description) {
                 return Err(error::invalid_site_description(site_description));
             }
         }
 
+        trace!("Checking site source");
         match source {
             WebDeploymentSource::GitHub(source) => {
-                let tmpdir = tempfile::tempdir().map_err(error::unable_to_create_tempdir)?;
+                trace!("Source is GitHub, cloning {source}");
+                let tmpdir = Builder::new().prefix("dweb-").tempdir().map_err(error::unable_to_create_tempdir)?;
+                trace!("Crated temporary directory {path}", path = tmpdir.path().display());
                 let repo = Repository::clone(&source, tmpdir.path())
                     .map_err(error::unable_to_clone_repository)?;
+                trace!("Cloned repository to {path}", path = repo.path().display());
+                trace!("Storing website");
                 self.storage
-                    .store_website(sender, &site_name, &site_description, repo.path())?;
+                    .store_website(sender, &site_name, &site_description, tmpdir.path())?;
             }
         }
 

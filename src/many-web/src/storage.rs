@@ -19,8 +19,8 @@ fn key_for_website(owner: &Address, site_name: &str) -> Vec<u8> {
     format!("{HTTP_ROOT}/{owner}/{site_name}/").into_bytes()
 }
 
-fn key_for_website_file(owner: &Address, site_name: &str, file_name: &str) -> Vec<u8> {
-    format!("{HTTP_ROOT}/{owner}/{site_name}/{file_name}").into_bytes()
+fn key_for_website_file(owner: &Address, site_name: &str, file_name: &str) -> String {
+    format!("{HTTP_ROOT}/{owner}/{site_name}/{file_name}")
 }
 
 fn key_for_website_description(owner: &Address, site_name: &String) -> Vec<u8> {
@@ -200,31 +200,53 @@ impl WebStorage {
 
         // Walk the directory tree, ignoring hidden files and directories.
         // Add each file content to the batch as base64
+        tracing::trace!("Walking directory tree");
         for entry in WalkDir::new(path)
             .into_iter()
             .filter_entry(|e| !Self::is_hidden(e))
         {
             let entry = entry.map_err(error::unable_to_read_entry)?;
             let entry_path = entry.path();
+            if entry_path.is_dir() {
+                tracing::trace!("Skipping directory");
+                continue;
+            }
 
+            let file_name = entry_path
+                .file_name()
+                .ok_or_else(|| ManyError::unknown("Path has no file name"))? // TODO
+                .to_str()
+                .ok_or_else(|| ManyError::unknown("Unable to convert file name to UTF-8"))?; // TODO
+            tracing::trace!("Found file {}", file_name);
+
+            tracing::trace!("Encoding file");
             let mut enc = base64::write::EncoderWriter::new(Vec::new(), &general_purpose::STANDARD);
             enc.write_all(&fs::read(entry_path).map_err(ManyError::unknown)?)
                 .map_err(ManyError::unknown)?; //TODO
 
+            let entry_path_str = entry_path.to_str().ok_or_else(|| {
+                ManyError::unknown("Path contains non UTF-8 characters")
+            })?;
+
+            tracing::trace!("Finished encoding file");
+            let data = enc.finish().map_err(ManyError::unknown)?;
+            tracing::trace!("Encoded data is {}", hex::encode(&data));
+
+            tracing::info!("Storing file to {}", key_for_website_file(owner, site_name, file_name));
             batch.push(
                 (
                     key_for_website_file(
                         owner,
                         site_name,
-                        entry_path.to_str().ok_or_else(|| {
-                            ManyError::unknown("Path contains non UTF-8 characters")
-                        })?,
-                    ), // TODO
-                    Op::Put(enc.finish().map_err(ManyError::unknown)?),
+                       file_name
+                        ,
+                    ).into_bytes(), // TODO
+                    Op::Put(data),
                 ), // TODO
             );
         }
 
+        tracing::trace!("Adding website description to batch");
         // Add the website description to the batch
         if let Some(description) = &site_description {
             batch.push((
@@ -233,14 +255,17 @@ impl WebStorage {
             ));
         }
 
+        tracing::trace!("Sorting batch");
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
+        tracing::trace!("Applying batch");
         self.persistent_store
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;
 
         // TODO: Refactor
         if !self.blockchain {
+            tracing::trace!("Committing batch");
             self.persistent_store
                 .commit(&[])
                 .map_err(error::storage_commit_failed)?;
