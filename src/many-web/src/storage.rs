@@ -1,5 +1,5 @@
 use crate::error;
-use base64::{engine::general_purpose, Engine as _};
+use base64::engine::general_purpose;
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::AbciCommitInfo;
@@ -8,7 +8,7 @@ use many_types::Timestamp;
 use merk::{BatchEntry, Op};
 use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use walkdir::{DirEntry, WalkDir};
 
 pub const HTTP_ROOT: &str = "/http";
@@ -185,7 +185,7 @@ impl WebStorage {
         entry
             .file_name()
             .to_str()
-            .map(|s| s.starts_with("."))
+            .map(|s| s.starts_with('.'))
             .unwrap_or(false)
     }
 
@@ -224,23 +224,17 @@ impl WebStorage {
             enc.write_all(&fs::read(entry_path).map_err(ManyError::unknown)?)
                 .map_err(ManyError::unknown)?; //TODO
 
-            let entry_path_str = entry_path.to_str().ok_or_else(|| {
-                ManyError::unknown("Path contains non UTF-8 characters")
-            })?;
-
             tracing::trace!("Finished encoding file");
             let data = enc.finish().map_err(ManyError::unknown)?;
             tracing::trace!("Encoded data is {}", hex::encode(&data));
 
-            tracing::info!("Storing file to {}", key_for_website_file(owner, site_name, file_name));
+            tracing::info!(
+                "Storing file to {}",
+                key_for_website_file(owner, site_name, file_name)
+            );
             batch.push(
                 (
-                    key_for_website_file(
-                        owner,
-                        site_name,
-                       file_name
-                        ,
-                    ).into_bytes(), // TODO
+                    key_for_website_file(owner, site_name, file_name).into_bytes(), // TODO
                     Op::Put(data),
                 ), // TODO
             );
@@ -274,9 +268,13 @@ impl WebStorage {
         Ok(())
     }
 
-    pub fn remove_website(&mut self, owner: &Address, site_name: &String) -> Result<(), ManyError> {
+    pub fn remove_website<S: AsRef<str>>(
+        &mut self,
+        owner: &Address,
+        site_name: S,
+    ) -> Result<(), ManyError> {
         self.persistent_store
-            .apply(&[(key_for_website(owner, site_name), Op::Delete)])
+            .apply(&[(key_for_website(owner, site_name.as_ref()), Op::Delete)])
             .map_err(error::storage_apply_failed)?;
 
         // TODO: Refactor

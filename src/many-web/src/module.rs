@@ -17,8 +17,8 @@ use many_types::web::WebDeploymentSource;
 use many_types::Timestamp;
 use std::collections::BTreeMap;
 use std::path::Path;
-use tracing::{info, trace};
 use tempfile::Builder;
+use tracing::{info, trace};
 
 pub mod allow_addrs;
 
@@ -143,7 +143,7 @@ fn all_alphanumeric_or_symbols(input: &str) -> bool {
 }
 
 impl WebModuleBackend for WebModuleImpl {
-    fn info(&self, sender: &Address, args: InfoArg) -> Result<InfoReturns, ManyError> {
+    fn info(&self, _sender: &Address, _args: InfoArg) -> Result<InfoReturns, ManyError> {
         Ok(InfoReturns {
             hash: self.storage.hash().into(),
         })
@@ -163,7 +163,7 @@ impl WebModuleBackend for WebModuleImpl {
 
         trace!("Checking site description is alphanumeric or symbols");
         if let Some(site_description) = &site_description {
-            if !all_alphanumeric_or_symbols(&site_description) {
+            if !all_alphanumeric_or_symbols(site_description) {
                 return Err(error::invalid_site_description(site_description));
             }
         }
@@ -172,8 +172,14 @@ impl WebModuleBackend for WebModuleImpl {
         match source {
             WebDeploymentSource::GitHub(source) => {
                 trace!("Source is GitHub, cloning {source}");
-                let tmpdir = Builder::new().prefix("dweb-").tempdir().map_err(error::unable_to_create_tempdir)?;
-                trace!("Crated temporary directory {path}", path = tmpdir.path().display());
+                let tmpdir = Builder::new()
+                    .prefix("dweb-")
+                    .tempdir()
+                    .map_err(error::unable_to_create_tempdir)?;
+                trace!(
+                    "Crated temporary directory {path}",
+                    path = tmpdir.path().display()
+                );
                 let repo = Repository::clone(&source, tmpdir.path())
                     .map_err(error::unable_to_clone_repository)?;
                 trace!("Cloned repository to {path}", path = repo.path().display());
@@ -194,7 +200,7 @@ impl WebModuleBackend for WebModuleImpl {
         Ok(RemoveReturns {})
     }
 
-    fn list(&self, sender: &Address, args: ListArgs) -> Result<ListReturns, ManyError> {
+    fn list(&self, _sender: &Address, _args: ListArgs) -> Result<ListReturns, ManyError> {
         todo!()
     }
 }
@@ -202,15 +208,15 @@ impl WebModuleBackend for WebModuleImpl {
 impl KvStoreModuleBackend for WebModuleImpl {
     fn info(
         &self,
-        sender: &Address,
-        args: many_modules::kvstore::InfoArg,
+        _sender: &Address,
+        _args: many_modules::kvstore::InfoArg,
     ) -> Result<many_modules::kvstore::InfoReturns, ManyError> {
         Ok(many_modules::kvstore::InfoReturns {
             hash: self.storage.hash().into(),
         })
     }
 
-    fn get(&self, sender: &Address, args: GetArgs) -> Result<GetReturns, ManyError> {
+    fn get(&self, _sender: &Address, args: GetArgs) -> Result<GetReturns, ManyError> {
         let GetArgs { key } = args;
 
         if !key.starts_with(HTTP_ROOT.as_ref()) {
@@ -222,14 +228,14 @@ impl KvStoreModuleBackend for WebModuleImpl {
         })
     }
 
-    fn query(&self, sender: &Address, args: QueryArgs) -> Result<QueryReturns, ManyError> {
+    fn query(&self, _sender: &Address, _args: QueryArgs) -> Result<QueryReturns, ManyError> {
         Err(ManyError::unknown("Unimplemented")) // TODO
     }
 
     fn list(
         &self,
-        sender: &Address,
-        args: many_modules::kvstore::list::ListArgs,
+        _sender: &Address,
+        _args: many_modules::kvstore::list::ListArgs,
     ) -> Result<many_modules::kvstore::list::ListReturns, ManyError> {
         Err(ManyError::unknown("Unimplemented")) // TODO
     }
