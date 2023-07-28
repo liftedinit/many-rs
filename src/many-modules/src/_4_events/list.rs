@@ -15,7 +15,7 @@ pub struct ListArgs {
     pub filter: Option<events::EventFilter>,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Debug, Encode, Decode)]
 #[cbor(map)]
 pub struct ListReturns {
     #[n(0)]

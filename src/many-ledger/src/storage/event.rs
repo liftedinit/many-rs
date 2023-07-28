@@ -38,6 +38,17 @@ impl LedgerStorage {
         self.latest_tid.clone()
     }
 
+    pub(crate) fn check_event_id(&self, id: &events::EventId) -> Result<(), ManyError> {
+        match self
+            .persistent_store
+            .get(&key_for_event(id.clone()))
+            .map_err(|e| error::storage_get_failed(e))?
+        {
+            None => Err(error::event_not_found(hex::encode(id.as_ref()))),
+            Some(_) => Ok(()),
+        }
+    }
+
     pub fn nb_events(&self) -> Result<u64, ManyError> {
         self.persistent_store
             .get(EVENT_COUNT_ROOT)

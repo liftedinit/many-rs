@@ -6,7 +6,8 @@ use many_modules::account::features::multisig::{
     self, AccountMultisigModuleBackend, MultisigTransactionState,
 };
 use many_modules::events::{
-    self, EventFilterAttributeSpecific, EventFilterAttributeSpecificIndex, EventsModuleBackend,
+    self, EventFilterAttributeSpecific, EventFilterAttributeSpecificIndex, EventId,
+    EventsModuleBackend,
 };
 use many_modules::ledger;
 use many_modules::ledger::LedgerCommandsModuleBackend;
@@ -228,6 +229,197 @@ fn list_filter_kind() {
     assert!(list_return.events[0].is_about(id));
 }
 
+#[test]
+fn list_filter_id() {
+    let Setup {
+        mut module_impl,
+        id,
+        ..
+    } = setup();
+
+    // Create 5 events
+    for i in 0..5 {
+        send(&mut module_impl, id, identity(i));
+    }
+
+    // Collect all events ids
+    let events_ids = get_all_events_ids(&mut module_impl);
+
+    let tests = vec![
+        // Unbounded bounds
+        (Bound::Unbounded, Bound::Unbounded, 5, 0..5),
+        // Included bounds
+        (
+            Bound::Unbounded,
+            Bound::Included(events_ids[3].clone()),
+            4,
+            0..4,
+        ),
+        (
+            Bound::Included(events_ids[1].clone()),
+            Bound::Unbounded,
+            4,
+            1..5,
+        ),
+        (
+            Bound::Included(events_ids[1].clone()),
+            Bound::Included(events_ids[3].clone()),
+            3,
+            1..4,
+        ),
+        // Excluded bounds
+        (
+            Bound::Unbounded,
+            Bound::Excluded(events_ids[4].clone()),
+            4,
+            0..4,
+        ),
+        (
+            Bound::Excluded(events_ids[0].clone()),
+            Bound::Unbounded,
+            4,
+            1..5,
+        ),
+        (
+            Bound::Excluded(events_ids[0].clone()),
+            Bound::Excluded(events_ids[4].clone()),
+            3,
+            1..4,
+        ),
+        // Mixed Included/Excluded bounds
+        (
+            Bound::Included(events_ids[1].clone()),
+            Bound::Excluded(events_ids[4].clone()),
+            3,
+            1..4,
+        ),
+        (
+            Bound::Excluded(events_ids[0].clone()),
+            Bound::Included(events_ids[3].clone()),
+            3,
+            1..4,
+        ),
+    ];
+
+    for (start_bound, end_bound, expected_len, id_range) in tests {
+        let list_return = filter_events(&mut module_impl, start_bound, end_bound);
+        assert_eq!(list_return.nb_events, 5);
+        assert_eq!(list_return.events.len(), expected_len);
+
+        list_return
+            .events
+            .into_iter()
+            .zip(events_ids[id_range].iter())
+            .for_each(|(event, id)| {
+                assert_eq!(event.id, *id);
+            });
+    }
+}
+
+fn get_all_events_ids(module_impl: &mut LedgerModuleImpl) -> Vec<EventId> {
+    let result = module_impl
+        .list(events::ListArgs {
+            count: None,
+            order: None,
+            filter: None,
+        })
+        .unwrap();
+
+    assert_eq!(result.nb_events, 5);
+    assert_eq!(result.events.len(), 5);
+
+    result.events.iter().map(|e| e.id.clone()).collect()
+}
+
+fn filter_events(
+    module_impl: &mut LedgerModuleImpl,
+    start_bound: Bound<EventId>,
+    end_bound: Bound<EventId>,
+) -> events::ListReturns {
+    let result = module_impl.list(events::ListArgs {
+        count: None,
+        order: None,
+        filter: Some(events::EventFilter {
+            id_range: Some(CborRange {
+                start: start_bound,
+                end: end_bound,
+            }),
+            ..events::EventFilter::default()
+        }),
+    });
+
+    assert!(result.is_ok());
+
+    result.unwrap()
+}
+
+#[test]
+fn list_invalid_filter_id() {
+    let Setup {
+        mut module_impl,
+        id,
+        ..
+    } = setup();
+
+    // Create 5 events
+    for i in 0..5 {
+        send(&mut module_impl, id, identity(i));
+    }
+    let invalid_tests = vec![
+        // Hypothetical error case - included range out of bounds
+        (
+            Bound::Included(vec![6, 7, 8].into()),
+            Bound::Included(vec![9, 10, 11].into()),
+        ),
+        // Hypothetical error case - excluded range out of bounds
+        (
+            Bound::Excluded(vec![6, 7, 8].into()),
+            Bound::Excluded(vec![9, 10, 11].into()),
+        ),
+        // Hypothetical error case - start included and end excluded, but range is out of bounds
+        (
+            Bound::Included(vec![0].into()),
+            Bound::Excluded(vec![10].into()),
+        ),
+        // Hypothetical error case - start excluded and end included, but range is out of bounds
+        (
+            Bound::Excluded(vec![0].into()),
+            Bound::Included(vec![10].into()),
+        ),
+        // Hypothetical error case - start unbounded and end included, but range is out of bounds
+        (Bound::Unbounded, Bound::Included(vec![6].into())),
+        // Hypothetical error case - start included and end unbounded, but range is out of bounds
+        (Bound::Included(vec![0].into()), Bound::Unbounded),
+        // Hypothetical error case - start unbounded and end excluded, but range is out of bounds
+        (Bound::Unbounded, Bound::Excluded(vec![6].into())),
+        // Hypothetical error case - start excluded and end unbounded, but range is out of bounds
+        (Bound::Excluded(vec![0].into()), Bound::Unbounded),
+    ];
+
+    for (start_bound, end_bound) in invalid_tests {
+        assert_invalid_filter(&mut module_impl, start_bound, end_bound);
+    }
+}
+
+fn assert_invalid_filter(
+    module_impl: &mut LedgerModuleImpl,
+    start_bound: Bound<EventId>,
+    end_bound: Bound<EventId>,
+) {
+    let result = module_impl.list(events::ListArgs {
+        count: None,
+        order: None,
+        filter: Some(events::EventFilter {
+            id_range: Some(CborRange {
+                start: start_bound,
+                end: end_bound,
+            }),
+            ..events::EventFilter::default()
+        }),
+    });
+
+    assert!(result.is_err());
+}
 #[test]
 fn list_filter_date() {
     let Setup {
