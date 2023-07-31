@@ -373,7 +373,7 @@ commands:
                 name: installing << parameters.os >> dependencies
                 command: |
                   sudo DEBIAN_FRONTEND=noninteractive apt -y update
-                  sudo DEBIAN_FRONTEND=noninteractive apt -y install clang lld libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev bsdextrautils xmlstarlet
+                  sudo DEBIAN_FRONTEND=noninteractive apt -y install clang lld libssl-dev libsofthsm2 libudev-dev libusb-1.0-0-dev bsdextrautils xmlstarlet libssh2-1-dev
                   mkdir /tmp/tokens
                   echo "directories.tokendir = /tmp/tokens" > /tmp/softhsm2.conf
             - run:
