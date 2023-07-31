@@ -13,7 +13,7 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 [dependencies]
 async-trait = "0.1.68"
 coset = "0.3.4"
-serde = { version = "1.0.163", features = ["derive"] }
+serde = { version = "=1.0.163", features = ["derive"] }
 toml = "0.7.4"
 regex = "1.8.3"
 many-error = { path = "../many-error", version = "0.1.6" } # managed by release.sh

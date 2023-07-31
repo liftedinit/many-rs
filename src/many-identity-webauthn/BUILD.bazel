@@ -5,6 +5,7 @@ package(default_visibility = [
     "//src/many:__pkg__",
     "//src/many-abci:__pkg__",
     "//src/many-compute:__pkg__",
+    "//src/many-kvstore:__pkg__",
     "//src/many-ledger:__pkg__",
     "//src/many-mock:__pkg__",
 ])
