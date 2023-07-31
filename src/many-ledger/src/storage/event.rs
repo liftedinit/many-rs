@@ -42,7 +42,7 @@ impl LedgerStorage {
         match self
             .persistent_store
             .get(&key_for_event(id.clone()))
-            .map_err(|e| error::storage_get_failed(e))?
+            .map_err(error::storage_get_failed)?
         {
             None => Err(error::event_not_found(hex::encode(id.as_ref()))),
             Some(_) => Ok(()),
