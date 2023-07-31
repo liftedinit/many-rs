@@ -146,7 +146,7 @@ function teardown() {
   call_kvstore --pem=2 --port=8000 put "ddeeff" "foobar5"
   call_kvstore --pem=2 --port=8000 put "gghhii" "foobar6"
 
-  call_kvstore --pem=1 --port=8000 list
+  call_kvstore --pem=1 --port=8000 list --filter owner:$(identity 1)
   assert_output --partial "112233"
   assert_output --partial "445566"
   assert_output --partial "778899"
@@ -154,7 +154,7 @@ function teardown() {
   refute_output --partial "ddeeff"
   refute_output --partial "gghhii"
 
-  call_kvstore --pem=1 --port=8000 list --hex-key
+  call_kvstore --pem=1 --port=8000 list --hex-key --filter owner:$(identity 1)
   assert_output --partial "313132323333"
   assert_output --partial "343435353636"
   assert_output --partial "373738383939"
@@ -162,7 +162,7 @@ function teardown() {
   refute_output --partial "646465656666"
   refute_output --partial "676768686969"
 
-  call_kvstore --pem=2 --port=8000 list
+  call_kvstore --pem=2 --port=8000 list --filter owner:$(identity 2)
   assert_output --partial "aabbcc"
   assert_output --partial "ddeeff"
   assert_output --partial "gghhii"
@@ -170,7 +170,7 @@ function teardown() {
   refute_output --partial "445566"
   refute_output --partial "778899"
 
-  call_kvstore --pem=2 --port=8000 list --hex-key
+  call_kvstore --pem=2 --port=8000 list --hex-key --filter owner:$(identity 2)
   assert_output --partial "616162626363"
   assert_output --partial "646465656666"
   assert_output --partial "676768686969"
@@ -180,7 +180,6 @@ function teardown() {
 }
 
 @test "$SUITE: can't list disabled key" {
-
   call_kvstore --pem=1 --port=8000 put "112233" "foobar"
   call_kvstore --pem=1 --port=8000 put "445566" "foobar2"
   call_kvstore --pem=1 --port=8000 put "778899" "foobar3"
@@ -191,22 +190,101 @@ function teardown() {
   assert_output --partial "778899"
 
   call_kvstore --pem=1 --port=8000 disable "112233"
-  call_kvstore --pem=1 --port=8000 list
+  call_kvstore --pem=1 --port=8000 list --filter disabled:false
   refute_output --partial "112233"
   assert_output --partial "445566"
   assert_output --partial "778899"
 
   call_kvstore --pem=1 --port=8000 disable "445566" --reason "Foo"
-  call_kvstore --pem=1 --port=8000 list
+  call_kvstore --pem=1 --port=8000 list --filter disabled:false
   refute_output --partial "112233"
   refute_output --partial "445566"
   assert_output --partial "778899"
 
   call_kvstore --pem=1 --port=8000 put "112233" "foobar"
-  call_kvstore --pem=1 --port=8000 list
+  call_kvstore --pem=1 --port=8000 list --filter disabled:false
   assert_output --partial "112233"
   refute_output --partial "445566"
   assert_output --partial "778899"
+}
+
+@test "$SUITE: can list disabled key" {
+  call_kvstore --pem=1 --port=8000 put "112233" "foobar"
+  call_kvstore --pem=1 --port=8000 put "445566" "foobar2"
+  call_kvstore --pem=1 --port=8000 put "778899" "foobar3"
+
+  call_kvstore --pem=1 --port=8000 disable "112233"
+  call_kvstore --pem=1 --port=8000 disable "445566" --reason "Foo"
+  call_kvstore --pem=1 --port=8000 list --filter disabled:true
+  assert_output --partial "112233"
+  assert_output --partial "445566"
+  refute_output --partial "778899"
+}
+
+@test "$SUITE: can list disabled key of a given user" {
+  call_kvstore --pem=1 --port=8000 put "112233" "foobar"
+  call_kvstore --pem=1 --port=8000 put "445566" "foobar2"
+  call_kvstore --pem=1 --port=8000 put "778899" "foobar3"
+  call_kvstore --pem=2 --port=8000 put "aabbcc" "foobar4"
+  call_kvstore --pem=2 --port=8000 put "ddeeff" "foobar5"
+  call_kvstore --pem=2 --port=8000 put "gghhii" "foobar6"
+
+  call_kvstore --pem=1 --port=8000 disable "112233"
+  call_kvstore --pem=1 --port=8000 disable "445566" --reason "Foo"
+  call_kvstore --pem=2 --port=8000 disable "aabbcc"
+  call_kvstore --pem=1 --port=8000 list --filter disabled:true --filter owner:$(identity 1)
+  assert_output --partial "112233"
+  assert_output --partial "445566"
+  refute_output --partial "778899"
+  refute_output --partial "aabbcc"
+
+  call_kvstore --pem=1 --port=8000 list --filter disabled:true --filter owner:$(identity 2)
+  refute_output --partial "112233"
+  refute_output --partial "445566"
+  refute_output --partial "778899"
+  assert_output --partial "aabbcc"
+
+  call_kvstore --pem=1 --port=8000 list --filter disabled:true
+  assert_output --partial "112233"
+  assert_output --partial "445566"
+  refute_output --partial "778899"
+  assert_output --partial "aabbcc"
+}
+
+@test "$SUITE: list immutable keys from given user" {
+  call_kvstore --pem=1 --port=8000 put "112233" "foobar"
+  call_kvstore --pem=1 --port=8000 put "445566" "foobar2"
+  call_kvstore --pem=1 --port=8000 put "778899" "foobar3"
+  call_kvstore --pem=2 --port=8000 put "aabbcc" "foobar4"
+  call_kvstore --pem=2 --port=8000 put "ddeeff" "foobar5"
+  call_kvstore --pem=2 --port=8000 put "gghhii" "foobar6"
+
+  call_kvstore --pem=1 --port=8000 transfer "112233" maiyg
+  call_kvstore --pem=2 --port=8000 transfer "aabbcc" maiyg
+
+  call_kvstore --pem=1 --port=8000 list --filter previous_owner:$(identity 1) --filter owner:maiyg
+  assert_output --partial "112233"
+  refute_output --partial "445566"
+  refute_output --partial "778899"
+  refute_output --partial "aabbcc"
+  refute_output --partial "ddeeff"
+  refute_output --partial "gghhii"
+
+  call_kvstore --pem=1 --port=8000 list --filter previous_owner:$(identity 2) --filter owner:maiyg
+  refute_output --partial "112233"
+  refute_output --partial "445566"
+  refute_output --partial "778899"
+  assert_output --partial "aabbcc"
+  refute_output --partial "ddeeff"
+  refute_output --partial "gghhii"
+
+  call_kvstore --pem=1 --port=8000 list --filter owner:maiyg
+  assert_output --partial "112233"
+  refute_output --partial "445566"
+  refute_output --partial "778899"
+  assert_output --partial "aabbcc"
+  refute_output --partial "ddeeff"
+  refute_output --partial "gghhii"
 }
 
 @test "$SUITE: list key ordering" {

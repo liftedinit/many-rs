@@ -50,6 +50,9 @@ pub struct KvStoreMetadata {
     #[n(1)]
     #[serde(skip_deserializing)]
     pub disabled: Option<Either<bool, Reason<u64>>>,
+
+    #[n(2)]
+    pub previous_owner: Option<Address>,
 }
 
 #[derive(Debug, serde::Deserialize, minicbor::Encode, minicbor::Decode)]
@@ -207,11 +210,11 @@ impl KvStoreModuleBackend for KvStoreModuleImpl {
         .map_err(|e| ManyError::deserialization_error(e.to_string()))
     }
 
-    fn list(&self, sender: &Address, args: ListArgs) -> Result<ListReturns, ManyError> {
+    fn list(&self, _sender: &Address, args: ListArgs) -> Result<ListReturns, ManyError> {
         Ok(ListReturns {
             keys: self
                 .storage
-                .list(sender, args.order.unwrap_or_default())
+                .list(args.order.unwrap_or_default(), args.filter)
                 .map(|item| item.into_iter().skip(1).collect::<Vec<_>>().into()) // Skip the delimiter
                 .collect(),
         })
@@ -241,6 +244,7 @@ impl KvStoreCommandsModuleBackend for KvStoreModuleImpl {
         let meta = KvStoreMetadata {
             owner,
             disabled: Some(Either::Left(false)),
+            previous_owner: None,
         };
         self.storage.put(&meta, &key, value.into())?;
         Ok(PutReturn {})
@@ -277,6 +281,7 @@ impl KvStoreCommandsModuleBackend for KvStoreModuleImpl {
         let meta = KvStoreMetadata {
             owner: *owner,
             disabled: Some(maybe_reason),
+            previous_owner: None,
         };
 
         self.storage.disable(&meta, &key)?;
@@ -323,6 +328,7 @@ impl KvStoreTransferModuleBackend for KvStoreModuleImpl {
         let meta = KvStoreMetadata {
             owner: args.new_owner,
             disabled: metadata.disabled,
+            previous_owner: Some(metadata.owner),
         };
         self.storage.transfer(&key, *owner, meta)?;
 

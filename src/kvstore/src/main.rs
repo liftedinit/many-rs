@@ -4,7 +4,7 @@ use many_error::{ManyError, Reason};
 use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::CoseKeyIdentity;
 use many_modules::kvstore::list::{ListArgs, ListReturns};
-use many_modules::kvstore::TransferArgs;
+use many_modules::kvstore::{KeyFilterType, TransferArgs};
 use many_modules::r#async::{StatusArgs, StatusReturn};
 use many_modules::{kvstore, r#async};
 use many_protocol::ResponseMessage;
@@ -153,6 +153,10 @@ struct ListOpt {
     #[clap(long)]
     order: Option<SortOrder>,
 
+    /// The filters to apply to the keys
+    #[clap(long)]
+    filter: Option<Vec<KeyFilterType>>,
+
     /// Use this flag if the keys are hexadecimal
     #[clap(long)]
     hex_key: bool,
@@ -266,9 +270,14 @@ fn transfer(
 fn list(
     client: ManyClient<impl Identity>,
     order: Option<SortOrder>,
+    filter: Option<Vec<KeyFilterType>>,
     hex_key: bool,
 ) -> Result<(), ManyError> {
-    let args = ListArgs { order };
+    let args = ListArgs {
+        count: None,
+        order,
+        filter,
+    };
     let response = client.call("kvstore.list", args)?;
     let payload = wait_response(client, response)?;
     if payload.is_empty() {
@@ -467,7 +476,11 @@ fn main() {
             };
             transfer(client, alt_owner, key, new_owner)
         }
-        SubCommand::List(ListOpt { order, hex_key }) => list(client, order, hex_key),
+        SubCommand::List(ListOpt {
+            order,
+            filter,
+            hex_key,
+        }) => list(client, order, filter, hex_key),
     };
 
     if let Err(err) = result {
