@@ -1,0 +1,26 @@
+load("@bazel_bats//:rules.bzl", "bats_test_suite")
+
+bats_test_suite(
+    name = "bats-e2e-http-proxy",
+    srcs = glob(include = ["*.bats"]),
+    bats_args = [
+        "--formatter",
+        "tap",
+        "--report-formatter",
+        "junit",
+        "--output",
+        ".",
+    ],
+    tags = [
+        "exclusive",
+    ],
+    uses_bats_assert = True,
+    deps = [
+        "//src/http-proxy",
+        "//src/kvstore",
+        "//src/many",
+        "//src/many-kvstore",
+        "//staging:kvstore-staging",
+        "//tests:bats-helpers",
+    ],
+)

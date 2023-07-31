@@ -23,7 +23,7 @@ many-server-cache = { path = "../many-server-cache", version = "0.1.6" } # manag
 many-types = { path = "../many-types", version = "0.1.6" } # managed by release.sh
 merk = { git = "https://github.com/liftedinit/merk.git", rev = "532eb097ec50f3553c5294971c152b4e7c7d4731" }
 minicbor = { version = "0.19.1", features = ["derive", "std"] }
-serde = "1.0"
+serde = "=1.0.163"
 serde_json = "1.0"
 serde_yaml = "0.9"
 signal-hook = "0.3.15"
