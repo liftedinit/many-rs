@@ -12,7 +12,7 @@ package(default_visibility = [
 exports_files([".git"])
 
 ## PACKAGE CONFIGURATION ##
-VERSION = "0.1.4"  # managed by release.sh
+VERSION = "0.1.6"  # managed by release.sh
 
 # Exposes the value of the compilation mode to the package naming.
 # Used below for the `package_file_name` in the `pkg_tar` rule.
@@ -25,6 +25,7 @@ basic_naming(
 pkg_tar(
     name = "many-rs-tar",
     srcs = [
+        "//src/genesis-from-db",
         "//src/http_proxy",
         "//src/idstore-export",
         "//src/kvstore",
@@ -32,9 +33,11 @@ pkg_tar(
         "//src/ledger-db",
         "//src/many",
         "//src/many-abci",
+        "//src/many-compute",
         "//src/many-kvstore",
         "//src/many-ledger",
         "//staging:abci-ledger-migrations",
+        "//staging:compute-staging",
         "//staging:kvstore-staging",
         "//staging:ledger-migrations",
         "//staging:ledger-staging",

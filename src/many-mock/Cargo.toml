@@ -1,6 +1,6 @@
 [package]
 name = "many-mock"
-version = "0.1.4" # managed by release.sh
+version = "0.1.6" # managed by release.sh
 edition = "2021"
 description = "Utility types for creating mocked MANY servers."
 license-file = "../../LICENSE"
@@ -13,22 +13,22 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 [dependencies]
 async-trait = "0.1.68"
 coset = "0.3.4"
-serde = { version = "1.0.163", features = ["derive"] }
+serde = { version = "=1.0.163", features = ["derive"] }
 toml = "0.7.4"
 regex = "1.8.3"
-many-error = { path = "../many-error", version = "0.1.4" } # managed by release.sh
-many-identity = { path = "../many-identity", version = "0.1.4" } # managed by release.sh
-many-identity-dsa = { path = "../many-identity-dsa", features = ["ed25519"], version = "0.1.4" } # managed by release.sh
-many-identity-webauthn = { path = "../many-identity-webauthn", version = "0.1.4" } # managed by release.sh
-many-modules = { path = "../many-modules", version = "0.1.4" } # managed by release.sh
-many-protocol = { path = "../many-protocol", version = "0.1.4" } # managed by release.sh
-many-server = { path = "../many-server", version = "0.1.4" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.6" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.6" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ed25519"], version = "0.1.6" } # managed by release.sh
+many-identity-webauthn = { path = "../many-identity-webauthn", version = "0.1.6" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.1.6" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.1.6" } # managed by release.sh
+many-server = { path = "../many-server", version = "0.1.6" } # managed by release.sh
 cbor-diag = "0.1.12"
 
 [dev-dependencies]
 cucumber = { version = "0.19.1", features = ["libtest"] }
 futures = "0.3.28"
-many-client = { path = "../many-client", version = "0.1.4" } # managed by release.sh
+many-client = { path = "../many-client", version = "0.1.6" } # managed by release.sh
 serde_json = "1.0.96"
 ciborium = "0.2.1"
 tokio = "1.28.1"

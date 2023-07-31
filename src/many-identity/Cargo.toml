@@ -1,6 +1,6 @@
 [package]
 name = "many-identity"
-version = "0.1.4" # managed by release.sh
+version = "0.1.6" # managed by release.sh
 edition = "2021"
 description = "Types for managing an identity, its address and traits related to signing/verification of messages."
 license-file = "../../LICENSE"
@@ -11,20 +11,20 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-many-error = { path = "../many-error", version = "0.1.4" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.6" } # managed by release.sh
 base32 = "0.4.0"
 crc-any = "2.4.3"
 coset = { version = "0.3.4", optional = true }
 hex = "0.4.3"
 minicbor = { version = "0.19.1", optional = true }
 once_cell = "1.17.1"
-serde = "1.0.163"
+serde = "=1.0.163"
 sha3 = "0.10.8"
 static_assertions = "1.1.0"
 tracing = "0.1.37"
 
 [dev-dependencies]
-many-identity = { path = ".", features = [ "serde", "testing" ], version = "0.1.4" } # managed by release.sh
+many-identity = { path = ".", features = [ "serde", "testing" ], version = "0.1.6" } # managed by release.sh
 proptest = "1.2.0"
 serde_test = "1.0.163"
 

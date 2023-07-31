@@ -2,6 +2,7 @@ load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = [
+    "//src/genesis-from-db:__pkg__",
     "//src/http_proxy:__pkg__",
     "//src/kvstore:__pkg__",
     "//src/ledger:__pkg__",
@@ -9,6 +10,7 @@ package(default_visibility = [
     "//src/many:__pkg__",
     "//src/many-abci:__pkg__",
     "//src/many-client:__pkg__",
+    "//src/many-compute:__pkg__",
     "//src/many-identity-webauthn:__pkg__",
     "//src/many-kvstore:__pkg__",
     "//src/many-ledger:__subpackages__",

@@ -2,6 +2,7 @@
 resolver = "2"
 
 members = [
+    "src/genesis-from-db",
     "src/http_proxy",
     "src/idstore-export",
     "src/kvstore",
@@ -12,6 +13,7 @@ members = [
     "src/many-cli-helpers",
     "src/many-client",
     "src/many-client-macros",
+    "src/many-compute",
     "src/many-error",
     "src/many-identity",
     "src/many-identity-dsa",

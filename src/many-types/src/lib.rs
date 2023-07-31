@@ -1,5 +1,3 @@
-#![feature(const_trait_impl)]
-
 use many_error::ManyError;
 use minicbor::data::{Tag, Type};
 use minicbor::encode::{Error, Write};
@@ -12,6 +10,7 @@ use std::str::FromStr;
 pub mod attributes;
 pub mod blockchain;
 pub mod cbor;
+pub mod compute;
 pub mod either;
 pub mod identity {
     pub use many_identity::*;
@@ -474,7 +473,6 @@ impl AttributeRelatedIndex {
         }
     }
 
-    #[inline]
     pub const fn indices(&self) -> &[u32] {
         match &self.indices {
             AttributeRelatedIndexInner::None => &[],

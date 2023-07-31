@@ -28,7 +28,6 @@ impl<'b, C> Decode<'b, C> for CborNull {
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum CborAny {
-    Undefined(),
     Bool(bool),
     Int(i64),
     String(String),
@@ -42,14 +41,13 @@ pub enum CborAny {
 impl Debug for CborAny {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CborAny::Undefined() => write!(f, "undefined"),
             CborAny::Bool(b) => write!(f, "{b}"),
             CborAny::Int(i) => write!(f, "{i}"),
             CborAny::String(s) => f.write_str(s),
             CborAny::Bytes(b) => write!(f, r#"b"{}""#, hex::encode(b)),
             CborAny::Array(a) => write!(f, "{a:?}"),
             CborAny::Map(m) => write!(f, "{m:?}"),
-            CborAny::Tagged(t, v) => write!(f, "tagged({t:?}, {v:?})"),
+            CborAny::Tagged(t, v) => write!(f, "{t:?}({v:?})"),
             CborAny::Null => write!(f, "Null"),
         }
     }
@@ -58,9 +56,6 @@ impl Debug for CborAny {
 impl<C> Encode<C> for CborAny {
     fn encode<W: Write>(&self, e: &mut Encoder<W>, _: &mut C) -> Result<(), Error<W::Error>> {
         match self {
-            CborAny::Undefined() => {
-                e.undefined()?;
-            }
             CborAny::Bool(b) => {
                 e.bool(*b)?;
             }

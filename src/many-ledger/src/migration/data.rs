@@ -45,14 +45,14 @@ fn data_info() -> BTreeMap<DataIndex, DataInfo> {
             ACCOUNT_TOTAL_COUNT_INDEX,
             DataInfo {
                 r#type: many_modules::data::DataType::Counter,
-                shortname: "accountTotalCount".to_string().into(),
+                shortname: "accountTotalCount".to_string(),
             },
         ),
         (
             NON_ZERO_ACCOUNT_TOTAL_COUNT_INDEX,
             DataInfo {
                 r#type: many_modules::data::DataType::Counter,
-                shortname: "nonZeroAccountTotalCount".to_string().into(),
+                shortname: "nonZeroAccountTotalCount".to_string(),
             },
         ),
     ])
