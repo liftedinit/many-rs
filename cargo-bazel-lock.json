@@ -1,5 +1,5 @@
 {
-  "checksum": "c321642ddd623f51677f0f72eb8c5fdccf3d71c36050a8c0f3aba1d74a614ec0",
+  "checksum": "7f606e53abe05cd48f77555b19cb7d8f658a81c963b09fce004fa7b71d707e12",
   "crates": {
     "addr2line 0.20.0": {
       "name": "addr2line",
@@ -10045,11 +10045,21 @@
       },
       "license": "MIT"
     },
-    "http_proxy 0.1.6": {
-      "name": "http_proxy",
+    "http-proxy 0.1.6": {
+      "name": "http-proxy",
       "version": "0.1.6",
       "repository": null,
-      "targets": [],
+      "targets": [
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
       "library_target_name": null,
       "common_attrs": {
         "compile_data_glob": [
@@ -10058,12 +10068,20 @@
         "deps": {
           "common": [
             {
+              "id": "base64 0.21.2",
+              "target": "base64"
+            },
+            {
               "id": "clap 3.2.25",
               "target": "clap"
             },
             {
               "id": "hex 0.4.3",
               "target": "hex"
+            },
+            {
+              "id": "http-proxy 0.1.6",
+              "target": "build_script_build"
             },
             {
               "id": "log-panics 2.1.0",
@@ -10102,6 +10120,20 @@
         },
         "edition": "2021",
         "version": "0.1.6"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "vergen 8.2.4",
+              "target": "vergen"
+            }
+          ],
+          "selects": {}
+        }
       },
       "license": null
     },
@@ -29826,7 +29858,7 @@
   "binary_crates": [],
   "workspace_members": {
     "genesis-from-db 0.1.6": "src/genesis-from-db",
-    "http_proxy 0.1.6": "src/http_proxy",
+    "http-proxy 0.1.6": "src/http-proxy",
     "idstore-export 0.1.6": "src/idstore-export",
     "kvstore 0.1.6": "src/kvstore",
     "ledger 0.1.6": "src/ledger",

@@ -50,7 +50,7 @@ crates_repository(
     manifests = [
         "//:Cargo.toml",
         "//src/genesis-from-db:Cargo.toml",
-        "//src/http_proxy:Cargo.toml",
+        "//src/http-proxy:Cargo.toml",
         "//src/idstore-export:Cargo.toml",
         "//src/kvstore:Cargo.toml",
         "//src/ledger-db:Cargo.toml",

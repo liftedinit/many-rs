@@ -8,6 +8,7 @@ sh_library(
     srcs = [
         "test_helper/account.bash",
         "test_helper/bats-utils",
+        "test_helper/http-proxy.bash",
         "test_helper/kvstore.bash",
         "test_helper/ledger.bash",
         "test_helper/load.bash",
