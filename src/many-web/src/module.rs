@@ -1,4 +1,3 @@
-// use git2::Repository;
 use crate::error;
 use crate::storage::{WebStorage, HTTP_ROOT};
 use git2::Repository;
