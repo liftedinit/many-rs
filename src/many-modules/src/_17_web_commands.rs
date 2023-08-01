@@ -24,11 +24,13 @@ pub trait WebCommandsModuleBackend: Send {
 #[cfg(test)]
 mod tests {
     use crate::testutils::call_module_cbor;
-    use std::sync::{Arc, Mutex};
-    use mockall::predicate;
+    use crate::web::{
+        DeployArgs, DeployReturns, MockWebCommandsModuleBackend, RemoveArgs, RemoveReturns,
+    };
     use many_identity::testing::identity;
     use many_types::web::WebDeploymentSource;
-    use crate::web::{DeployArgs, DeployReturns, MockWebCommandsModuleBackend, RemoveArgs, RemoveReturns};
+    use mockall::predicate;
+    use std::sync::{Arc, Mutex};
 
     #[test]
     fn deploy() {
@@ -40,21 +42,18 @@ mod tests {
         };
         mock.expect_deploy()
             .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
-            .times(1).returning(|_sender, _args| {
-            Ok(DeployReturns { url: "foobar".to_string() })
-        });
+            .times(1)
+            .returning(|_sender, _args| {
+                Ok(DeployReturns {
+                    url: "foobar".to_string(),
+                })
+            });
         let module = super::WebCommandsModule::new(Arc::new(Mutex::new(mock)));
 
         let deploy: DeployReturns = minicbor::decode(
-            &call_module_cbor(
-                1,
-                &module,
-                "web.deploy",
-                minicbor::to_vec(data).unwrap(),
-            )
-                .unwrap(),
+            &call_module_cbor(1, &module, "web.deploy", minicbor::to_vec(data).unwrap()).unwrap(),
         )
-            .unwrap();
+        .unwrap();
         assert_eq!(deploy.url, "foobar".to_string());
     }
 
@@ -66,21 +65,13 @@ mod tests {
         };
         mock.expect_remove()
             .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
-            .times(1).returning(|_sender, _args| {
-            Ok(RemoveReturns {})
-        });
+            .times(1)
+            .returning(|_sender, _args| Ok(RemoveReturns {}));
         let module = super::WebCommandsModule::new(Arc::new(Mutex::new(mock)));
 
         let _: RemoveReturns = minicbor::decode(
-            &call_module_cbor(
-                1,
-                &module,
-                "web.remove",
-                minicbor::to_vec(data)
-                    .unwrap(),
-            )
-                .unwrap(),
+            &call_module_cbor(1, &module, "web.remove", minicbor::to_vec(data).unwrap()).unwrap(),
         )
-            .unwrap();
+        .unwrap();
     }
 }
