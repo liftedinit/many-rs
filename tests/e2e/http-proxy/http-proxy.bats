@@ -21,7 +21,7 @@ function teardown() {
 }
 
 @test "$SUITE: http-proxy works" {
-    call_kvstore --pem=1 --port=8000 put http/foo $(echo '<h1>Hello world</h1>' | base64 -w 0)
+    call_kvstore --pem=1 --port=8000 put /http/foo $(echo '<h1>Hello world</h1>' | base64 -w 0)
     run curl http://localhost:8880/foo
     assert_output --partial '<h1>Hello world</h1>'
 }
