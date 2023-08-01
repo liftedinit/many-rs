@@ -1,7 +1,7 @@
 use many_types::web::WebDeploymentSource;
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Decode, Encode)]
+#[derive(Clone, Debug, Decode, Encode, PartialEq, Eq)]
 #[cbor(map)]
 pub struct DeployArgs {
     #[n(0)]
@@ -14,7 +14,7 @@ pub struct DeployArgs {
     pub source: WebDeploymentSource,
 }
 
-#[derive(Clone, Decode, Encode)]
+#[derive(Clone, Debug, Decode, Encode, PartialEq, Eq)]
 #[cbor(map)]
 pub struct DeployReturns {
     #[n(0)]

@@ -1,7 +1,7 @@
 use crate::EmptyReturn;
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq, Eq)]
 #[cbor(map)]
 pub struct RemoveArgs {
     #[n(0)]

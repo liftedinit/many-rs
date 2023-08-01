@@ -4,7 +4,7 @@ use minicbor::{Decode, Encode};
 
 pub type InfoArg = EmptyArg;
 
-#[derive(Clone, Decode, Encode)]
+#[derive(Clone, Debug, Decode, Encode, PartialEq, Eq)]
 #[cbor(map)]
 pub struct InfoReturns {
     #[n(0)]

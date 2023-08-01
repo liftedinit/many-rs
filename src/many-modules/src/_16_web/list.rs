@@ -2,7 +2,7 @@ use many_types::web::{WebDeploymentFilter, WebDeploymentInfo};
 use many_types::SortOrder;
 use minicbor::{Decode, Encode};
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq, Eq)]
 #[cbor(map)]
 pub struct ListArgs {
     #[n(0)]
@@ -12,7 +12,7 @@ pub struct ListArgs {
     pub filter: Option<Vec<WebDeploymentFilter>>,
 }
 
-#[derive(Clone, Debug, Encode, Decode)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq, Eq)]
 #[cbor(map)]
 pub struct ListReturns {
     #[n(0)]
