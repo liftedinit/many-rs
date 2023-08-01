@@ -60,11 +60,21 @@ fn process_request(http: Arc<Server>, client: Client) -> impl Fn() {
 }
 
 fn handle_get_request(client: &Client, request: Request) {
-    let path = request.url();
+    let mut path = "/http".to_string();
+    let url = request.url();
+    let maybe_host = request.headers().iter().find(|h| h.field.equiv("host"));
+    if let Some(host) = maybe_host {
+        // TODO: Add checks
+        let parts: Vec<_> = host.value.as_str().splitn(3, '.').collect();
+        if let [site_name, addr, _] = parts.as_slice() {
+            path = format!("{path}/{addr}/{site_name}")
+        }
+    }
+    debug!("Received request for path: {path}{url}");
     let result = client.call_(
         "kvstore.get",
         GetArgs {
-            key: format!("/http{path}").into_bytes().into(),
+            key: format!("{path}{url}").into_bytes().into(),
         },
     );
     match result {

@@ -10,6 +10,9 @@ define_attribute_many_error!(
         5: pub fn unable_to_clone_repository(source) => "Unable to clone repository: {source}.",
         6: pub fn unable_to_read_entry(entry) => "Unable to read entry: {entry}.",
         7: pub fn key_should_start_with_http() => "Key should start with '/http/'.",
+        8: pub fn unable_to_strip_prefix(prefix) => "Unable to strip prefix: {prefix}.",
+        9: pub fn unable_to_convert_to_str() => "Unable to convert to str.",
+        10: pub fn io_error(err) => "I/O error: {err}.",
     }
 );
 

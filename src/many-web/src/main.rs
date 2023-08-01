@@ -61,23 +61,6 @@ struct Opts {
     #[clap(long)]
     allow_origin: Option<Vec<ManyUrl>>,
 
-    /// A list of initial balances. This will be in addition to the genesis
-    /// state file in --state and should only be used for testing.
-    /// Each transaction MUST be of the format:
-    ///     --balance-only-for-testing=<account_address>:<balance>:<symbol_address>
-    /// The hashing of the state will not include these.
-    /// This requires the feature "balance_testing" to be enabled.
-    #[cfg(feature = "balance_testing")]
-    #[clap(long)]
-    balance_only_for_testing: Option<Vec<String>>,
-
-    /// If set, this flag will disable any validation for webauthn tokens
-    /// to access the id store. WebAuthn signatures are still validated.
-    /// This requires the feature "webauthn_testing" to be enabled.
-    #[cfg(feature = "webauthn_testing")]
-    #[clap(long)]
-    disable_webauthn_only_for_testing: bool,
-
     /// Path to a JSON file containing an array of MANY addresses
     /// Only addresses from this array will be able to execute commands, e.g., send, put, ...
     /// Any addresses will be able to execute queries, e.g., balance, get, ...
@@ -176,19 +159,19 @@ fn main() {
 
     {
         let mut s = many.lock().unwrap();
-        let web_module = web::WebModule::new(module.clone());
+        let web_commands_module = web::WebCommandsModule::new(module.clone());
         if let Some(path) = allow_addrs {
-            // FIXME: Filter both queries and commands for now
             let allow_addrs: BTreeSet<Address> =
                 json5::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
             s.add_module(AllowAddrsModule {
-                inner: web_module,
+                inner: web_commands_module,
                 allow_addrs,
             });
         } else {
-            s.add_module(web_module);
+            s.add_module(web_commands_module);
         }
-        // FIXME: Activate and impl those
+        s.add_module(web::WebModule::new(module.clone()));
+        // Impl only get and info
         s.add_module(kvstore::KvStoreModule::new(module.clone()));
         // s.add_module(events::EventsModule::new(module.clone()));
 

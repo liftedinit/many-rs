@@ -1,6 +1,6 @@
 use crate::error;
-use crate::storage::{WebStorage, HTTP_ROOT};
-use git2::Repository;
+use crate::storage::{url_for_website, WebStorage, HTTP_ROOT};
+use git2::build::RepoBuilder;
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::{
@@ -10,9 +10,9 @@ use many_modules::abci_backend::{
 use many_modules::kvstore::{GetArgs, GetReturns, KvStoreModuleBackend, QueryArgs, QueryReturns};
 use many_modules::web::{
     DeployArgs, DeployReturns, InfoArg, InfoReturns, ListArgs, ListReturns, RemoveArgs,
-    RemoveReturns, WebModuleBackend,
+    RemoveReturns, WebCommandsModuleBackend, WebModuleBackend,
 };
-use many_types::web::WebDeploymentSource;
+use many_types::web::{WebDeploymentInfo, WebDeploymentSource};
 use many_types::Timestamp;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -80,10 +80,12 @@ impl ManyAbciModuleBackend for WebModuleImpl {
                 ("web.deploy".to_string(), EndpointInfo { is_command: true }),
                 ("web.remove".to_string(), EndpointInfo { is_command: true }),
                 ("web.list".to_string(), EndpointInfo { is_command: false }),
-                //
+                // KvStore
+                ("kvstore.get".to_string(), EndpointInfo { is_command: false }),
+                ("kvstore.info".to_string(), EndpointInfo { is_command: false }),
                 // Events
-                ("events.info".to_string(), EndpointInfo { is_command: false }),
-                ("events.list".to_string(), EndpointInfo { is_command: false }),
+                // ("events.info".to_string(), EndpointInfo { is_command: false }),
+                // ("events.list".to_string(), EndpointInfo { is_command: false }),
             ]),
         })
     }
@@ -148,6 +150,23 @@ impl WebModuleBackend for WebModuleImpl {
         })
     }
 
+    fn list(&self, _sender: &Address, args: ListArgs) -> Result<ListReturns, ManyError> {
+        Ok(ListReturns {
+            deployments: self
+                .storage
+                .list(args.order.unwrap_or_default(), args.filter)
+                .map(|(_, meta)| WebDeploymentInfo {
+                    site_name: meta.site_name,
+                    site_description: meta.description,
+                    source: meta.source,
+                    url: meta.url,
+                })
+                .collect(),
+        })
+    }
+}
+
+impl WebCommandsModuleBackend for WebModuleImpl {
     fn deploy(&mut self, sender: &Address, args: DeployArgs) -> Result<DeployReturns, ManyError> {
         let DeployArgs {
             site_name,
@@ -166,41 +185,50 @@ impl WebModuleBackend for WebModuleImpl {
                 return Err(error::invalid_site_description(site_description));
             }
         }
+        let tmpdir = Builder::new()
+            .prefix("dweb-")
+            .tempdir()
+            .map_err(error::unable_to_create_tempdir)?;
+        trace!(
+            "Created temporary directory {path}",
+            path = tmpdir.path().display()
+        );
+
+        let mut serve_path = tmpdir.path().to_path_buf();
 
         trace!("Checking site source");
-        match source {
-            WebDeploymentSource::GitHub(source) => {
+        match &source {
+            WebDeploymentSource::GitHub(source, artifacts_path) => {
                 trace!("Source is GitHub, cloning {source}");
-                let tmpdir = Builder::new()
-                    .prefix("dweb-")
-                    .tempdir()
-                    .map_err(error::unable_to_create_tempdir)?;
-                trace!(
-                    "Crated temporary directory {path}",
-                    path = tmpdir.path().display()
-                );
-                let repo = Repository::clone(&source, tmpdir.path())
+                let repo = RepoBuilder::new()
+                    .clone(source, tmpdir.path())
                     .map_err(error::unable_to_clone_repository)?;
                 trace!("Cloned repository to {path}", path = repo.path().display());
-                trace!("Storing website");
-                self.storage
-                    .store_website(sender, &site_name, &site_description, tmpdir.path())?;
-            }
-        }
 
-        Ok(DeployReturns {
-            url: "FIXME".to_string(),
-        })
+                if let Some(artifacts_path) = artifacts_path {
+                    trace!(
+                        "Adding artifacts path {artifacts_path} to {}",
+                        serve_path.display()
+                    );
+                    serve_path = serve_path.join(artifacts_path);
+                }
+            }
+        };
+
+        // TODO: Get real URL for website
+        let url = url_for_website(sender, &site_name);
+
+        trace!("Storing website");
+        self.storage
+            .store_website(sender, site_name, site_description, source, serve_path)?;
+
+        Ok(DeployReturns { url })
     }
 
     fn remove(&mut self, sender: &Address, args: RemoveArgs) -> Result<RemoveReturns, ManyError> {
         let RemoveArgs { site_name } = args;
         self.storage.remove_website(sender, &site_name)?;
         Ok(RemoveReturns {})
-    }
-
-    fn list(&self, _sender: &Address, _args: ListArgs) -> Result<ListReturns, ManyError> {
-        todo!()
     }
 }
 
@@ -227,15 +255,17 @@ impl KvStoreModuleBackend for WebModuleImpl {
         })
     }
 
+    // We do not expose this endpoint
     fn query(&self, _sender: &Address, _args: QueryArgs) -> Result<QueryReturns, ManyError> {
-        Err(ManyError::unknown("Unimplemented")) // TODO
+        Err(ManyError::unknown("Unimplemented"))
     }
 
+    // We do not expose this endpoint
     fn list(
         &self,
         _sender: &Address,
         _args: many_modules::kvstore::list::ListArgs,
     ) -> Result<many_modules::kvstore::list::ListReturns, ManyError> {
-        Err(ManyError::unknown("Unimplemented")) // TODO
+        Err(ManyError::unknown("Unimplemented"))
     }
 }

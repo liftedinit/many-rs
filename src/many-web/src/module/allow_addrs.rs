@@ -6,19 +6,19 @@ use many_protocol::{RequestMessage, ResponseMessage};
 use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};
 
-pub struct AllowAddrsModule<T: web::WebModuleBackend> {
-    pub inner: web::WebModule<T>,
+pub struct AllowAddrsModule<T: web::WebCommandsModuleBackend> {
+    pub inner: web::WebCommandsModule<T>,
     pub allow_addrs: BTreeSet<Address>,
 }
 
-impl<T: web::WebModuleBackend> Debug for AllowAddrsModule<T> {
+impl<T: web::WebCommandsModuleBackend> Debug for AllowAddrsModule<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("AllowAddrsModule")
     }
 }
 
 #[async_trait::async_trait]
-impl<T: web::WebModuleBackend> ManyModule for AllowAddrsModule<T> {
+impl<T: web::WebCommandsModuleBackend> ManyModule for AllowAddrsModule<T> {
     fn info(&self) -> &ManyModuleInfo {
         self.inner.info()
     }

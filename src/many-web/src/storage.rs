@@ -1,20 +1,25 @@
 use crate::error;
+use crate::storage::iterator::WebIterator;
 use base64::engine::general_purpose;
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::AbciCommitInfo;
 use many_modules::events::EventId;
-use many_types::Timestamp;
+use many_types::web::{WebDeploymentFilter, WebDeploymentSource};
+use many_types::{SortOrder, Timestamp};
 use merk::{BatchEntry, Op};
+use minicbor::{Decode, Encode};
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use tracing::trace;
 use walkdir::{DirEntry, WalkDir};
 
-pub const HTTP_ROOT: &str = "/http";
-const META_ROOT: &str = "/meta";
+pub mod iterator;
 
-// TODO: Refactor
+pub const HTTP_ROOT: &str = "/http"; // Where website files are stored.
+const META_ROOT: &str = "/meta"; // Where website metadata are stored.
+
 fn key_for_website(owner: &Address, site_name: &str) -> Vec<u8> {
     format!("{HTTP_ROOT}/{owner}/{site_name}/").into_bytes()
 }
@@ -23,8 +28,31 @@ fn key_for_website_file(owner: &Address, site_name: &str, file_name: &str) -> St
     format!("{HTTP_ROOT}/{owner}/{site_name}/{file_name}")
 }
 
-fn key_for_website_description(owner: &Address, site_name: &String) -> Vec<u8> {
+fn key_for_website_meta(owner: &Address, site_name: &str) -> Vec<u8> {
     format!("{META_ROOT}/{owner}/{site_name}").into_bytes()
+}
+
+pub fn url_for_website(owner: &Address, site_name: &str) -> String {
+    format!("https://{}.{}.web.liftedinit.tech", site_name, owner)
+}
+
+#[derive(Debug, Encode, Decode)]
+#[cbor(map)]
+pub struct WebMeta {
+    #[n(0)]
+    pub owner: Address,
+
+    #[n(1)]
+    pub site_name: String,
+
+    #[n(2)]
+    pub description: Option<String>,
+
+    #[n(3)]
+    pub source: WebDeploymentSource,
+
+    #[n(4)]
+    pub url: Option<String>, // TODO: Url type
 }
 
 pub struct WebStorage {
@@ -192,74 +220,80 @@ impl WebStorage {
     pub fn store_website(
         &mut self,
         owner: &Address,
-        site_name: &String,
-        site_description: &Option<String>,
+        site_name: String,
+        site_description: Option<String>,
+        source: WebDeploymentSource,
         path: impl AsRef<Path>,
     ) -> Result<(), ManyError> {
         let mut batch: Vec<BatchEntry> = Vec::new();
 
         // Walk the directory tree, ignoring hidden files and directories.
         // Add each file content to the batch as base64
-        tracing::trace!("Walking directory tree");
-        for entry in WalkDir::new(path)
+        trace!("Walking directory tree");
+        for entry in WalkDir::new(&path)
             .into_iter()
             .filter_entry(|e| !Self::is_hidden(e))
         {
             let entry = entry.map_err(error::unable_to_read_entry)?;
             let entry_path = entry.path();
             if entry_path.is_dir() {
-                tracing::trace!("Skipping directory");
+                trace!("Skipping directory");
                 continue;
             }
 
-            let file_name = entry_path
-                .file_name()
-                .ok_or_else(|| ManyError::unknown("Path has no file name"))? // TODO
+            let file_path = entry_path
+                .strip_prefix(&path)
+                .map_err(error::unable_to_strip_prefix)?
                 .to_str()
-                .ok_or_else(|| ManyError::unknown("Unable to convert file name to UTF-8"))?; // TODO
-            tracing::trace!("Found file {}", file_name);
+                .ok_or_else(error::unable_to_convert_to_str)?;
+            trace!("Found file {}", file_path);
 
-            tracing::trace!("Encoding file");
+            trace!("Encoding file");
             let mut enc = base64::write::EncoderWriter::new(Vec::new(), &general_purpose::STANDARD);
-            enc.write_all(&fs::read(entry_path).map_err(ManyError::unknown)?)
-                .map_err(ManyError::unknown)?; //TODO
+            enc.write_all(&fs::read(entry_path).map_err(error::io_error)?)
+                .map_err(error::io_error)?;
 
-            tracing::trace!("Finished encoding file");
+            trace!("Finished encoding file");
             let data = enc.finish().map_err(ManyError::unknown)?;
-            tracing::trace!("Encoded data is {}", hex::encode(&data));
 
-            tracing::info!(
+            trace!(
                 "Storing file to {}",
-                key_for_website_file(owner, site_name, file_name)
+                key_for_website_file(owner, &site_name, file_path)
             );
-            batch.push(
-                (
-                    key_for_website_file(owner, site_name, file_name).into_bytes(), // TODO
-                    Op::Put(data),
-                ), // TODO
-            );
-        }
-
-        tracing::trace!("Adding website description to batch");
-        // Add the website description to the batch
-        if let Some(description) = &site_description {
             batch.push((
-                key_for_website_description(owner, site_name),
-                Op::Put(description.as_bytes().to_vec()),
+                key_for_website_file(owner, &site_name, file_path).into_bytes(),
+                Op::Put(data),
             ));
         }
 
-        tracing::trace!("Sorting batch");
+        let url = url_for_website(owner, &site_name);
+
+        trace!("Adding website meta to batch");
+        batch.push((
+            key_for_website_meta(owner, &site_name),
+            Op::Put(
+                minicbor::to_vec(WebMeta {
+                    owner: *owner,
+                    site_name,
+                    description: site_description,
+                    source,
+                    url: Some(url),
+                })
+                .map_err(ManyError::serialization_error)?,
+            ),
+        ));
+
+        trace!("Sorting batch");
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
-        tracing::trace!("Applying batch");
+        trace!("Applying batch");
         self.persistent_store
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;
 
         // TODO: Refactor
         if !self.blockchain {
-            tracing::trace!("Committing batch");
+            trace!("Committing batch");
             self.persistent_store
                 .commit(&[])
                 .map_err(error::storage_commit_failed)?;
@@ -273,8 +307,21 @@ impl WebStorage {
         owner: &Address,
         site_name: S,
     ) -> Result<(), ManyError> {
+        trace!("Removing website {}", site_name.as_ref());
+        let it = WebIterator::website_files(&self.persistent_store, owner, &site_name);
+        let mut batch: Vec<BatchEntry> = Vec::new();
+
+        // Remove each file of the website
+        for item in it {
+            let (key, _) = item.map_err(error::storage_get_failed)?;
+            batch.push((key.to_vec(), Op::Delete));
+        }
+
+        trace!("Removing website meta");
+        batch.push((key_for_website_meta(owner, site_name.as_ref()), Op::Delete));
+
         self.persistent_store
-            .apply(&[(key_for_website(owner, site_name.as_ref()), Op::Delete)])
+            .apply(&batch)
             .map_err(error::storage_apply_failed)?;
 
         // TODO: Refactor
@@ -291,5 +338,33 @@ impl WebStorage {
         self.persistent_store
             .get(key)
             .map_err(error::storage_get_failed)
+    }
+
+    pub fn list(
+        &self,
+        order: SortOrder,
+        filter: Option<Vec<WebDeploymentFilter>>,
+    ) -> impl Iterator<Item = (Vec<u8>, WebMeta)> + '_ {
+        WebIterator::meta(&self.persistent_store, order).filter_map(move |item| {
+            let (k, v) = item.ok()?; // Note: Errors are silently ignored
+            let meta: WebMeta = minicbor::decode(&v).ok()?; // Note: Errors are silently ignored
+            if let Some(filters) = &filter {
+                if !filters.is_empty() {
+                    return if filters.iter().all(|f| filter_item(f, &k, &meta)) {
+                        Some((k.into_vec(), meta))
+                    } else {
+                        None
+                    };
+                }
+            }
+            Some((k.into_vec(), meta))
+        })
+    }
+}
+
+fn filter_item(filter: &WebDeploymentFilter, _key: &[u8], meta: &WebMeta) -> bool {
+    match filter {
+        WebDeploymentFilter::All => true,
+        WebDeploymentFilter::Owner(owner) => meta.owner == *owner,
     }
 }

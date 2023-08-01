@@ -9,7 +9,7 @@ pub struct ListArgs {
     pub order: Option<SortOrder>,
 
     #[n(1)]
-    pub filter: Option<WebDeploymentFilter>,
+    pub filter: Option<Vec<WebDeploymentFilter>>,
 }
 
 #[derive(Clone, Debug, Encode, Decode)]
