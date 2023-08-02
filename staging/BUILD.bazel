@@ -18,6 +18,11 @@ filegroup(
 )
 
 filegroup(
+    name = "web-staging",
+    srcs = [":web_state.json5"],
+)
+
+filegroup(
     name = "ledger-migrations",
     srcs = ["ledger_migrations.json"],
 )

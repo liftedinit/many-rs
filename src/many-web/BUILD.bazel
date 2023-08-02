@@ -1,6 +1,7 @@
 load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test_suite")
 load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
+load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
 
 package(default_visibility = [
     "//:__pkg__",
@@ -23,6 +24,32 @@ rust_binary(
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
     ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":build_script",
+        "//src/many-cli-helpers",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-server-cache",
+        "//src/many-types",
+    ],
+)
+
+rust_image(
+    name = "many-web-image",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    base = "//:ubuntu_image",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    tags = ["manual"],
     deps = all_crate_deps(
         normal = True,
     ) + [
