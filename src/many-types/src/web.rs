@@ -1,9 +1,9 @@
-use std::str::FromStr;
-use many_identity::Address;
-use minicbor::{Decode, Encode};
-use minicbor::bytes::ByteVec;
-use strum::Display;
 use many_error::ManyError;
+use many_identity::Address;
+use minicbor::bytes::ByteVec;
+use minicbor::{Decode, Encode};
+use std::str::FromStr;
+use strum::Display;
 
 #[derive(Clone, Debug, Decode, Display, Encode, Eq, PartialEq)]
 #[cbor(map)]
@@ -31,7 +31,6 @@ impl FromStr for WebDeploymentFilter {
     }
 }
 
-
 #[derive(Clone, Debug, Eq, PartialEq, Encode, Decode)]
 #[cbor(map)]
 pub struct WebDeploymentInfo {
@@ -42,9 +41,6 @@ pub struct WebDeploymentInfo {
     pub site_description: Option<String>,
 
     #[n(2)]
-    pub source: WebDeploymentSource,
-
-    #[n(3)]
     pub url: Option<String>,
 }
 
@@ -52,5 +48,5 @@ pub struct WebDeploymentInfo {
 #[cbor(map)]
 pub enum WebDeploymentSource {
     #[n(0)]
-    Zip(#[n(0)] ByteVec)
+    Zip(#[n(0)] ByteVec),
 }

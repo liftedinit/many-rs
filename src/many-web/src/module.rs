@@ -158,7 +158,6 @@ impl WebModuleBackend for WebModuleImpl {
                 .map(|(_, meta)| WebDeploymentInfo {
                     site_name: meta.site_name,
                     site_description: meta.description,
-                    source: meta.source,
                     url: meta.url,
                 })
                 .collect(),
@@ -211,7 +210,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
 
         trace!("Storing website");
         self.storage
-            .store_website(sender, site_name, site_description, source, serve_path)?;
+            .store_website(sender, site_name, site_description, serve_path)?;
 
         Ok(DeployReturns { url })
     }

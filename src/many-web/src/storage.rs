@@ -49,9 +49,6 @@ pub struct WebMeta {
     pub description: Option<String>,
 
     #[n(3)]
-    pub source: WebDeploymentSource,
-
-    #[n(4)]
     pub url: Option<String>, // TODO: Url type
 }
 
@@ -222,7 +219,6 @@ impl WebStorage {
         owner: &Address,
         site_name: String,
         site_description: Option<String>,
-        source: WebDeploymentSource,
         path: impl AsRef<Path>,
     ) -> Result<(), ManyError> {
         let mut batch: Vec<BatchEntry> = Vec::new();
@@ -276,7 +272,6 @@ impl WebStorage {
                     owner: *owner,
                     site_name,
                     description: site_description,
-                    source,
                     url: Some(url),
                 })
                 .map_err(ManyError::serialization_error)?,
