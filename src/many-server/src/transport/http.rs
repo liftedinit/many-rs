@@ -10,8 +10,8 @@ use std::time::Duration;
 use tiny_http::{Request, Response};
 use tracing::info;
 
-/// Maximum of 2MB per HTTP request.
-const READ_BUFFER_LEN: usize = 1024 * 1024 * 2;
+/// Maximum of 5MB per HTTP request.
+const READ_BUFFER_LEN: usize = 1024 * 1024 * 5;
 
 #[derive(Debug)]
 pub struct HttpServer<E: LowLevelManyRequestHandler> {
