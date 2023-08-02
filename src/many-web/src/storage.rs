@@ -5,7 +5,7 @@ use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::AbciCommitInfo;
 use many_modules::events::EventId;
-use many_types::web::{WebDeploymentFilter, WebDeploymentSource};
+use many_types::web::WebDeploymentFilter;
 use many_types::{SortOrder, Timestamp};
 use merk::{BatchEntry, Op};
 use minicbor::{Decode, Encode};
