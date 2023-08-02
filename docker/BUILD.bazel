@@ -13,6 +13,7 @@ filegroup(
         "//src/many-kvstore:many-kvstore-image",
         "//src/many-ledger:many-ledger-image",
         "//src/many-web:many-web-image",
+        "//src/http-proxy:http-proxy-image",
     ],
     tags = ["manual"],
 )
@@ -35,7 +36,7 @@ filegroup(
     srcs = [
         "Makefile",
         "Makefile.common",
-        "Makefile.web",
+        "Makefile.dweb",
         "docker-compose-web.jsonnet",
         "generate-allow-addrs.sh",
         "update_config.sh",
@@ -112,6 +113,16 @@ container_push(
     image = "//src/many-web:many-web-image",
     registry = "index.docker.io",
     repository = "lifted/many-web",
+    tag = "nightly",
+    tags = ["manual"],
+)
+
+container_push(
+    name = "http-proxy-push-docker",
+    format = "Docker",
+    image = "//src/http-proxy:http-proxy-image",
+    registry = "index.docker.io",
+    repository = "lifted/http-proxy",
     tag = "nightly",
     tags = ["manual"],
 )

@@ -17,7 +17,7 @@ local abci(i, user, allow_addrs) = {
     ],
     user: "" + user,
     command: [
-        "--verbose", "--verbose",
+        "--verbose",
         "--many", "0.0.0.0:8000",
         "--many-app", "http://web-" + i + ":8000",
         "--many-pem", "/genfiles/abci.pem",
@@ -25,6 +25,17 @@ local abci(i, user, allow_addrs) = {
         "--abci", "0.0.0.0:26658",
         "--tendermint", "http://tendermint-" + i + ":26657/"
     ] + generate_allow_addrs_flag(allow_addrs),
+    depends_on: [ "web-" + i ],
+};
+
+local proxy(i, user) = {
+    image: "bazel/src/http-proxy:http-proxy-image",
+    ports: [ (8880 + i) + ":8880" ],
+    user: "" + user,
+    command: [
+        "--addr", "0.0.0.0:8880",
+        "http://web-" + i + ":8000",
+    ],
     depends_on: [ "web-" + i ],
 };
 
@@ -36,7 +47,7 @@ local web(i, user) = {
         "./node" + i + ":/genfiles:ro",
     ],
     command: [
-        "--verbose", "--verbose",
+        "--verbose",
         "--abci",
         "--state=/genfiles/web_state.json5",
         "--pem=/genfiles/web.pem",
@@ -67,5 +78,7 @@ function(nb_nodes=4, user=1000, allow_addrs=false) {
         ["web-" + i]: web(i, user) for i in std.range(0, nb_nodes - 1)
     } + {
         ["tendermint-" + i]: tendermint(i, user) for i in std.range(0, nb_nodes - 1)
+    } + {
+        ["proxy-" + i]: proxy(i, user) for i in std.range(0, nb_nodes - 1)
     },
 }

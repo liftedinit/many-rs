@@ -19,7 +19,7 @@ genfiles-web/many-web-docker:
 genfiles-web/generate-allow-addrs-config:
 	I=0; while [[ $$I -lt ${NB_NODES} ]]; do \
 		echo $$I genfiles-web/node$$I; \
-		make -f Makefile.web genfiles-web/node$$I; \
+		make -f Makefile.dweb genfiles-web/node$$I; \
 		bash generate-allow-addrs.sh genfiles-web/node$$I $(PEM_ROOT); \
 		(( I = I + 1 )); \
 	done
@@ -40,10 +40,10 @@ genfiles-web/docker-compose.json: genfiles-common/jsonnet-docker docker-compose-
 genfiles-web/generate-tendermint-e2e-config:
 	I=0; while [[ $$I -lt ${NB_NODES} ]]; do \
 		echo $$I genfiles-web/node$$I; \
-		make -f Makefile.web genfiles-web/node$$I; \
+		make -f Makefile.dweb genfiles-web/node$$I; \
 		(( I = I + 1 )); \
 	done
-	bash update_config.sh -c "genfiles-web/node%/tendermint/config" -r "$$PWD/genfiles-web/node%/tendermint" -i tendermint-% $(NB_NODES)
+	bash update_config.sh -c "genfiles-web/node%/tendermint/config" -r "$$PWD/genfiles-web/node%/tendermint" -d 1 -i tendermint-% $(NB_NODES)
 	mkdir -p $(dir $@) && touch $@
 
 genfiles-web/node%: genfiles-common/tendermint-docker genfiles-common/openssl-docker
@@ -55,7 +55,7 @@ genfiles-web/node%: genfiles-common/tendermint-docker genfiles-common/openssl-do
 	cp "$(STATE)" $@/web_state.json5
 
 .PHONY: start-nodes
-start-nodes: genfiles-web/generate-tendermint-e2e-config genfiles-web/docker-compose.json genfiles-web/many-web-docker genfiles-common/many-abci-docker
+start-nodes: genfiles-web/generate-tendermint-e2e-config genfiles-web/docker-compose.json genfiles-web/many-web-docker genfiles-common/many-abci-docker genfiles-common/http-proxy-docker
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up
 
 .PHONY: start-abci-%
@@ -69,6 +69,10 @@ start-web-%: genfiles-web/docker-compose.json genfiles-web/generate-tendermint-e
 .PHONY: start-tendermint-%
 start-tendermint-%: genfiles-web/docker-compose.json genfiles-web/generate-tendermint-e2e-config genfiles-common/tendermint-docker
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up tendermint-$*
+
+.PHONY: start-proxy-%
+start-proxy-%: genfiles-web/docker-compose.json
+	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up proxy-$*
 
 .PHONY: down-nodes
 down-nodes: genfiles-web/docker-compose.json
@@ -86,6 +90,10 @@ down-web-%: genfiles-web/docker-compose.json
 down-tendermint--%: genfiles-web/docker-compose.json
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web down tendermint-$*
 
+.PHONY: down-proxy-%
+down-proxy--%: genfiles-web/docker-compose.json
+	docker-compose -f genfiles-web/docker-compose.json -p e2e-web down proxy-$*
+
 .PHONY: stop-nodes
 stop-nodes: genfiles-web/docker-compose.json
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web stop
@@ -99,6 +107,7 @@ stop-single-node-%: genfiles-web/docker-compose.json
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web stop abci-$*
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web stop web-$*
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web stop tendermint-$*
+	docker-compose -f genfiles-web/docker-compose.json -p e2e-web stop proxy-$*
 
 .PHONY: stop-abci-%
 stop-abci-%: genfiles-web/docker-compose.json
@@ -112,6 +121,10 @@ start-web-%: genfiles-web/docker-compose.json
 stop-tendermint-%: genfiles-web/docker-compose.json
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web stop tendermint-$*
 
+.PHONY: stop-proxy-%
+stop-proxy-%: genfiles-web/docker-compose.json
+	docker-compose -f genfiles-web/docker-compose.json -p e2e-web stop proxy-$*
+
 .PHONY: start-nodes-detached
 start-nodes-detached: genfiles-web/generate-tendermint-e2e-config genfiles-web/docker-compose.json genfiles-common/tendermint-docker genfiles-web/many-web-docker genfiles-common/many-abci-docker
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up --detach
@@ -121,3 +134,5 @@ start-single-node-detached-%: genfiles-web/generate-tendermint-e2e-config genfil
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up abci-$* --detach
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up web-$* --detach
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up tendermint-$* --detach
+	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up proxy-$* --detach
+

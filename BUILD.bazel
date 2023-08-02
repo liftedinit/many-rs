@@ -3,6 +3,7 @@ load(":rules.bzl", "basic_naming")
 
 # Visibility for Docker image
 package(default_visibility = [
+    "//src/http-proxy:__pkg__",
     "//src/many-abci:__pkg__",
     "//src/many-kvstore:__pkg__",
     "//src/many-ledger:__pkg__",
@@ -38,9 +39,11 @@ pkg_tar(
         "//src/many-kvstore",
         "//src/many-ledger",
         "//src/many-web",
+        "//src/web",
         "//staging:abci-ledger-migrations",
         "//staging:compute-staging",
         "//staging:kvstore-staging",
+        "//staging:web-staging",
         "//staging:ledger-migrations",
         "//staging:ledger-staging",
     ],
@@ -181,6 +184,7 @@ run_make(
         "//docker:tendermint_image.tar",
         "//src/many-abci:many-abci-image.tar",
         "//src/many-web:many-web-image.tar",
+        "//src/http-proxy:http-proxy-image.tar",
     ],
     tags = ["manual"],
 )
@@ -196,6 +200,7 @@ run_make(
         "//docker:tendermint_image.tar",
         "//src/many-abci:many-abci-image.tar",
         "//src/many-web:many-web-image.tar",
+        "//src/http-proxy:http-proxy-image.tar",
     ],
     tags = ["manual"],
 )
@@ -220,6 +225,7 @@ run_make(
     data = [
         "//docker:docker-kvstore-deps",
         "//docker:docker-ledger-deps",
+        "//docker:docker-web-deps",
         "//docker:jsonnet_image.tar",
         "//docker:openssl_image.tar",
         "//docker:tendermint_image.tar",
