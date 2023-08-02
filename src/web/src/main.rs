@@ -1,17 +1,17 @@
 use clap::Parser;
 use many_client::client::blocking::ManyClient;
-use many_error::{ManyError};
+use many_error::ManyError;
 use many_identity::{Address, AnonymousIdentity, Identity};
 use many_identity_dsa::CoseKeyIdentity;
 use many_modules::r#async::{StatusArgs, StatusReturn};
-use many_modules::{web, r#async};
+use many_modules::web::ListArgs;
+use many_modules::{r#async, web};
 use many_protocol::ResponseMessage;
-use many_types::{SortOrder};
+use many_types::web::{WebDeploymentFilter, WebDeploymentSource};
+use many_types::SortOrder;
 use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{debug, error, info};
-use many_modules::web::{ListArgs, ListReturns};
-use many_types::web::{WebDeploymentFilter, WebDeploymentSource};
 
 #[derive(Debug, Parser)]
 struct Opts {
@@ -66,13 +66,8 @@ struct RemoveOpt {
     site_name: String,
 }
 
-
 #[derive(Debug, Parser)]
 struct ListOpt {
-    /// Owner
-    #[clap(long)]
-    owner: Option<Address>,
-
     /// Order
     #[clap(long)]
     order: Option<SortOrder>,
@@ -82,43 +77,31 @@ struct ListOpt {
     filter: Option<Vec<WebDeploymentFilter>>,
 }
 
-fn deploy(client: ManyClient<impl Identity>, site_name: String, site_description: Option<String>, source: PathBuf) -> Result<(), ManyError> {
+fn deploy(
+    client: ManyClient<impl Identity>,
+    site_name: String,
+    site_description: Option<String>,
+    source: PathBuf,
+) -> Result<(), ManyError> {
     // Read the source file
     let source = std::fs::read(source).map_err(ManyError::unknown)?;
-
     let arguments = web::DeployArgs {
         site_name,
         site_description,
         source: WebDeploymentSource::Zip(source.into()),
     };
-    let payload = client.call_("web.deploy", arguments)?;
-    if payload.is_empty() {
-        Err(ManyError::unexpected_empty_response())
-    } else {
-        let result: web::DeployReturns =
-            minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
-        let url = result.url;
-
-        println!("{url}");
-
-        Ok(())
-    }
+    let response = client.call("web.deploy", arguments)?;
+    let payload = wait_response(client, response)?;
+    println!("{}", minicbor::display(&payload));
+    Ok(())
 }
 
 fn remove(client: ManyClient<impl Identity>, site_name: String) -> Result<(), ManyError> {
-    let arguments = web::RemoveArgs {
-        site_name,
-    };
-
-    let payload = client.call_("web.remove", arguments)?;
-    if payload.is_empty() {
-        Err(ManyError::unexpected_empty_response())
-    } else {
-        let result: web::RemoveReturns =
-            minicbor::decode(&payload).map_err(ManyError::deserialization_error)?;
-
-        Ok(())
-    }
+    let arguments = web::RemoveArgs { site_name };
+    let response = client.call("web.remove", arguments)?;
+    let payload = wait_response(client, response)?;
+    println!("{}", minicbor::display(&payload));
+    Ok(())
 }
 
 fn list(
@@ -126,18 +109,11 @@ fn list(
     order: Option<SortOrder>,
     filter: Option<Vec<WebDeploymentFilter>>,
 ) -> Result<(), ManyError> {
-    let args = ListArgs {
-        order,
-        filter,
-    };
+    let args = ListArgs { order, filter };
     let response = client.call("web.list", args)?;
     let payload = wait_response(client, response)?;
-    if payload.is_empty() {
-        Err(ManyError::unexpected_empty_response())
-    } else {
-        minicbor::display(payload.as_slice());
-        Ok(())
-    }
+    println!("{}", minicbor::display(&payload));
+    Ok(())
 }
 
 pub(crate) fn wait_response(
@@ -184,7 +160,7 @@ pub(crate) fn wait_response(
                                 "Empty payload. Expected ResponseMessage.",
                             )
                         })?)
-                            .map_err(ManyError::deserialization_error)?;
+                        .map_err(ManyError::deserialization_error)?;
                     return wait_response(client, response);
                 }
                 StatusReturn::Expired => {
@@ -223,17 +199,13 @@ fn main() {
 
     let client = ManyClient::new(server, server_id, key).unwrap();
     let result = match subcommand {
-        SubCommand::Deploy(DeployOpt { site_name, site_description, source }) => {
-            deploy(client, site_name, site_description, source)
-        }
-        SubCommand::Remove(RemoveOpt { site_name }) => {
-            Ok(())
-            // remove(client, )
-        }
-        SubCommand::List(ListOpt {
-                             owner, order, filter
-                         }) => { Err(ManyError::unknown(""))//list(client, )
-        }
+        SubCommand::Deploy(DeployOpt {
+            site_name,
+            site_description,
+            source,
+        }) => deploy(client, site_name, site_description, source),
+        SubCommand::Remove(RemoveOpt { site_name }) => remove(client, site_name),
+        SubCommand::List(ListOpt { order, filter }) => list(client, order, filter),
     };
 
     if let Err(err) = result {
