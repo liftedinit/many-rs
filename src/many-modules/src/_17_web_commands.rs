@@ -38,7 +38,7 @@ mod tests {
         let data = DeployArgs {
             site_name: "".to_string(),
             site_description: None,
-            source: WebDeploymentSource::GitHub("".to_string(), None),
+            source: WebDeploymentSource::Zip(vec![].into()),
         };
         mock.expect_deploy()
             .with(predicate::eq(identity(1)), predicate::eq(data.clone()))

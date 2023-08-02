@@ -13,6 +13,8 @@ define_attribute_many_error!(
         8: pub fn unable_to_strip_prefix(prefix) => "Unable to strip prefix: {prefix}.",
         9: pub fn unable_to_convert_to_str() => "Unable to convert to str.",
         10: pub fn io_error(err) => "I/O error: {err}.",
+        11: pub fn invalid_zip_file(err) => "Invalid zip file: {err}.",
+        12: pub fn unable_to_extract_zip_file(err) => "Unable to extract zip file: {err}.",
     }
 );
 

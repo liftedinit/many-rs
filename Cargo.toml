@@ -32,6 +32,7 @@ members = [
     "src/many-server-cache",
     "src/many-types",
     "src/many-web",
+    "src/web",
 ]
 
 [profile.release]

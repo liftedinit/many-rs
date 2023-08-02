@@ -1,6 +1,5 @@
 use crate::error;
 use crate::storage::{url_for_website, WebStorage, HTTP_ROOT};
-use git2::build::RepoBuilder;
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::{
@@ -15,6 +14,7 @@ use many_modules::web::{
 use many_types::web::{WebDeploymentInfo, WebDeploymentSource};
 use many_types::Timestamp;
 use std::collections::BTreeMap;
+use std::io::Cursor;
 use std::path::Path;
 use tempfile::Builder;
 use tracing::{info, trace};
@@ -198,20 +198,11 @@ impl WebCommandsModuleBackend for WebModuleImpl {
 
         trace!("Checking site source");
         match &source {
-            WebDeploymentSource::GitHub(source, artifacts_path) => {
-                trace!("Source is GitHub, cloning {source}");
-                let repo = RepoBuilder::new()
-                    .clone(source, tmpdir.path())
-                    .map_err(error::unable_to_clone_repository)?;
-                trace!("Cloned repository to {path}", path = repo.path().display());
-
-                if let Some(artifacts_path) = artifacts_path {
-                    trace!(
-                        "Adding artifacts path {artifacts_path} to {}",
-                        serve_path.display()
-                    );
-                    serve_path = serve_path.join(artifacts_path);
-                }
+            WebDeploymentSource::Zip(bytes) => {
+                zip::ZipArchive::new(Cursor::new(bytes.as_slice()))
+                    .map_err(error::invalid_zip_file)?
+                    .extract(&mut serve_path)
+                    .map_err(error::unable_to_extract_zip_file)?;
             }
         };
 

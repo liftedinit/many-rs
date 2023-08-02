@@ -81,6 +81,7 @@ crates_repository(
         "//src/many-types:Cargo.toml",
         "//src/many-web:Cargo.toml",
         "//src/many:Cargo.toml",
+        "//src/web:Cargo.toml",
     ],
     rust_version = RUST_VERSION,
 )
