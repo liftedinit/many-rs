@@ -1,10 +1,10 @@
-use std::path::Path;
-use cucumber::{given, then, when, World as _};
-use tempfile::Builder;
+use cucumber::{given, then, World as _};
 use many_identity::testing::identity;
 use many_modules::web::{DeployArgs, WebCommandsModuleBackend};
 use many_types::web::WebDeploymentSource;
 use many_web::module::{InitialStateJson, WebModuleImpl};
+use std::path::Path;
+use tempfile::Builder;
 
 #[derive(cucumber::World, Debug)]
 #[world(init = Self::new)]
@@ -23,9 +23,13 @@ impl World {
             source: WebDeploymentSource::Zip(vec![].into()),
             module: WebModuleImpl::new(
                 InitialStateJson::default(),
-                Builder::new().prefix("many-web").tempdir().expect("Unable to create temporary directory"),
+                Builder::new()
+                    .prefix("many-web")
+                    .tempdir()
+                    .expect("Unable to create temporary directory"),
                 false,
-            ).expect("Unable to create web module"),
+            )
+            .expect("Unable to create web module"),
         }
     }
 }
@@ -44,16 +48,21 @@ fn given_site_name(w: &mut World, name: String) {
 
 #[given(expr = "a website description {string}")]
 fn given_site_description(w: &mut World, description: String) {
-        w.site_description = Some(description);
+    w.site_description = Some(description);
 }
 
 #[then(expr = "the website is deployed as identity {int}")]
 fn then_deploy(w: &mut World, seed: u32) {
-    w.module.deploy(&identity(seed), DeployArgs {
-        site_name: w.site_name.clone(),
-        site_description: w.site_description.clone(),
-        source: w.source.clone(),
-    }).expect("Website deployment failed");
+    w.module
+        .deploy(
+            &identity(seed),
+            DeployArgs {
+                site_name: w.site_name.clone(),
+                site_description: w.site_description.clone(),
+                source: w.source.clone(),
+            },
+        )
+        .expect("Website deployment failed");
 }
 
 #[tokio::main]
@@ -66,4 +75,3 @@ async fn main() {
 
     World::run(Path::new(features).join("web.feature")).await;
 }
-
