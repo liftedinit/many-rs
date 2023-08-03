@@ -1,5 +1,5 @@
 {
-  "checksum": "fb3383c021d638a4a94b2364463f566db05d4891747b59f519ba126f17a10a09",
+  "checksum": "77649974f27902b9cbe2b42dc797f7de1acd269be5a91260bbf38d770e6b8785",
   "crates": {
     "addr2line 0.20.0": {
       "name": "addr2line",
@@ -5793,6 +5793,69 @@
       },
       "license": "BSD-3-Clause"
     },
+    "curve25519-dalek-ng 4.1.1": {
+      "name": "curve25519-dalek-ng",
+      "version": "4.1.1",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/curve25519-dalek-ng/4.1.1/download",
+          "sha256": "1c359b7249347e46fb28804470d071c921156ad62b3eef5d34e2ba867533dec8"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "curve25519_dalek_ng",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "curve25519_dalek_ng",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc",
+            "u64_backend"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "byteorder 1.4.3",
+              "target": "byteorder"
+            },
+            {
+              "id": "digest 0.9.0",
+              "target": "digest"
+            },
+            {
+              "id": "rand_core 0.6.4",
+              "target": "rand_core"
+            },
+            {
+              "id": "subtle-ng 2.5.0",
+              "target": "subtle_ng",
+              "alias": "subtle"
+            },
+            {
+              "id": "zeroize 1.6.0",
+              "target": "zeroize"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "4.1.1"
+      },
+      "license": "BSD-3-Clause"
+    },
     "darling 0.14.4": {
       "name": "darling",
       "version": "0.14.4",
@@ -7039,6 +7102,62 @@
         "version": "2.2.1"
       },
       "license": "Apache-2.0 OR MIT"
+    },
+    "ed25519-consensus 2.1.0": {
+      "name": "ed25519-consensus",
+      "version": "2.1.0",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/ed25519-consensus/2.1.0/download",
+          "sha256": "3c8465edc8ee7436ffea81d21a019b16676ee3db267aa8d5a8d729581ecf998b"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "ed25519_consensus",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "ed25519_consensus",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "curve25519-dalek-ng 4.1.1",
+              "target": "curve25519_dalek_ng",
+              "alias": "curve25519_dalek"
+            },
+            {
+              "id": "hex 0.4.3",
+              "target": "hex"
+            },
+            {
+              "id": "rand_core 0.6.4",
+              "target": "rand_core"
+            },
+            {
+              "id": "sha2 0.9.9",
+              "target": "sha2"
+            },
+            {
+              "id": "zeroize 1.6.0",
+              "target": "zeroize"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "2.1.0"
+      },
+      "license": "MIT OR Apache-2.0"
     },
     "ed25519-dalek 1.0.1": {
       "name": "ed25519-dalek",
@@ -13405,19 +13524,19 @@
               "target": "signal_hook"
             },
             {
-              "id": "tendermint 0.28.0",
+              "id": "tendermint 0.29.1",
               "target": "tendermint"
             },
             {
-              "id": "tendermint-abci 0.28.0",
+              "id": "tendermint-abci 0.29.1",
               "target": "tendermint_abci"
             },
             {
-              "id": "tendermint-proto 0.28.0",
+              "id": "tendermint-proto 0.29.1",
               "target": "tendermint_proto"
             },
             {
-              "id": "tendermint-rpc 0.28.0",
+              "id": "tendermint-rpc 0.29.1",
               "target": "tendermint_rpc"
             },
             {
@@ -24400,6 +24519,36 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
+    "subtle-ng 2.5.0": {
+      "name": "subtle-ng",
+      "version": "2.5.0",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/subtle-ng/2.5.0/download",
+          "sha256": "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "subtle_ng",
+            "crate_root": "src/lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "subtle_ng",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "2.5.0"
+      },
+      "license": "BSD-3-Clause"
+    },
     "syn 1.0.109": {
       "name": "syn",
       "version": "1.0.109",
@@ -24921,13 +25070,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "tendermint 0.28.0": {
+    "tendermint 0.29.1": {
       "name": "tendermint",
-      "version": "0.28.0",
+      "version": "0.29.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tendermint/0.28.0/download",
-          "sha256": "c518c082146825f10d6f9a32159ae46edcfd7dae8ac630c8067594bb2a784d72"
+          "url": "https://crates.io/api/v1/crates/tendermint/0.29.1/download",
+          "sha256": "cda53c85447577769cdfc94c10a56f34afef2c00e4108badb57fce6b1a0c75eb"
         }
       },
       "targets": [
@@ -24950,6 +25099,9 @@
           "common": [
             "clock",
             "default",
+            "ed25519-consensus",
+            "rust-crypto",
+            "sha2",
             "std"
           ],
           "selects": {}
@@ -24961,12 +25113,16 @@
               "target": "bytes"
             },
             {
+              "id": "digest 0.10.7",
+              "target": "digest"
+            },
+            {
               "id": "ed25519 1.5.3",
               "target": "ed25519"
             },
             {
-              "id": "ed25519-dalek 1.0.1",
-              "target": "ed25519_dalek"
+              "id": "ed25519-consensus 2.1.0",
+              "target": "ed25519_consensus"
             },
             {
               "id": "flex-error 0.4.4",
@@ -25005,7 +25161,7 @@
               "target": "serde_json"
             },
             {
-              "id": "sha2 0.9.9",
+              "id": "sha2 0.10.7",
               "target": "sha2"
             },
             {
@@ -25021,7 +25177,7 @@
               "target": "subtle_encoding"
             },
             {
-              "id": "tendermint-proto 0.28.0",
+              "id": "tendermint-proto 0.29.1",
               "target": "tendermint_proto"
             },
             {
@@ -25045,17 +25201,17 @@
           ],
           "selects": {}
         },
-        "version": "0.28.0"
+        "version": "0.29.1"
       },
       "license": "Apache-2.0"
     },
-    "tendermint-abci 0.28.0": {
+    "tendermint-abci 0.29.1": {
       "name": "tendermint-abci",
-      "version": "0.28.0",
+      "version": "0.29.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tendermint-abci/0.28.0/download",
-          "sha256": "890340677de267793c691648d8e10d5e50f5a7fb5a8b60f96c36041cc68a1f04"
+          "url": "https://crates.io/api/v1/crates/tendermint-abci/0.29.1/download",
+          "sha256": "7bfbe8f0131aa45769055496404359f4f5d3e2cf5d66c7457a5986806941de34"
         }
       },
       "targets": [
@@ -25095,7 +25251,7 @@
               "target": "prost"
             },
             {
-              "id": "tendermint-proto 0.28.0",
+              "id": "tendermint-proto 0.29.1",
               "target": "tendermint_proto"
             },
             {
@@ -25105,18 +25261,18 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "0.28.0"
+        "edition": "2021",
+        "version": "0.29.1"
       },
       "license": "Apache-2.0"
     },
-    "tendermint-config 0.28.0": {
+    "tendermint-config 0.29.1": {
       "name": "tendermint-config",
-      "version": "0.28.0",
+      "version": "0.29.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tendermint-config/0.28.0/download",
-          "sha256": "6f58b86374e3bcfc8135770a6c55388fce101c00de4a5f03224fa5830c9240b7"
+          "url": "https://crates.io/api/v1/crates/tendermint-config/0.29.1/download",
+          "sha256": "dd4eb17618539c95b48501e71ad3c7f4bf047af388aa30dcf3e000782b05abfd"
         }
       },
       "targets": [
@@ -25150,7 +25306,7 @@
               "target": "serde_json"
             },
             {
-              "id": "tendermint 0.28.0",
+              "id": "tendermint 0.29.1",
               "target": "tendermint"
             },
             {
@@ -25164,18 +25320,18 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "0.28.0"
+        "edition": "2021",
+        "version": "0.29.1"
       },
       "license": "Apache-2.0"
     },
-    "tendermint-proto 0.28.0": {
+    "tendermint-proto 0.29.1": {
       "name": "tendermint-proto",
-      "version": "0.28.0",
+      "version": "0.29.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tendermint-proto/0.28.0/download",
-          "sha256": "890f1fb6dee48900c85f0cdf711ebf130e505ac09ad918cee5c34ed477973b05"
+          "url": "https://crates.io/api/v1/crates/tendermint-proto/0.29.1/download",
+          "sha256": "c943f78c929cdf14553842f705f2c30324bc35b9179caaa5c9b80620f60652e6"
         }
       },
       "targets": [
@@ -25235,7 +25391,7 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
+        "edition": "2021",
         "proc_macro_deps": {
           "common": [
             {
@@ -25245,17 +25401,17 @@
           ],
           "selects": {}
         },
-        "version": "0.28.0"
+        "version": "0.29.1"
       },
       "license": "Apache-2.0"
     },
-    "tendermint-rpc 0.28.0": {
+    "tendermint-rpc 0.29.1": {
       "name": "tendermint-rpc",
-      "version": "0.28.0",
+      "version": "0.29.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tendermint-rpc/0.28.0/download",
-          "sha256": "06df4715f9452ec0a21885d6da8d804799455ba50d8bc40be1ec1c800afd4bd8"
+          "url": "https://crates.io/api/v1/crates/tendermint-rpc/0.29.1/download",
+          "sha256": "991779ca9b697471df9d436489774d144a418c0e5da843c58ff9288105d5ddaa"
         }
       },
       "targets": [
@@ -25352,11 +25508,11 @@
               "target": "subtle_encoding"
             },
             {
-              "id": "tendermint 0.28.0",
+              "id": "tendermint 0.29.1",
               "target": "tendermint"
             },
             {
-              "id": "tendermint-config 0.28.0",
+              "id": "tendermint-config 0.29.1",
               "target": "tendermint_config"
             },
             {
@@ -25390,7 +25546,7 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
+        "edition": "2021",
         "proc_macro_deps": {
           "common": [
             {
@@ -25400,7 +25556,7 @@
           ],
           "selects": {}
         },
-        "version": "0.28.0"
+        "version": "0.29.1"
       },
       "license": "Apache-2.0"
     },
