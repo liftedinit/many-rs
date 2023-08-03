@@ -187,8 +187,11 @@ fn main() {
         server,
         server_id,
         subcommand,
+        common_flags,
         ..
     } = Opts::parse();
+
+    common_flags.init_logging().unwrap();
 
     debug!("{:?}", Opts::parse());
 

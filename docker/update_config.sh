@@ -115,7 +115,7 @@ for node in $(seq 0 "$NB_NODES"); do
   # Experimental section for dweb
   if [ $dweb -eq 1 ]; then
     echo "Enabling experimental dweb configuration"
-    update_toml_key "$config_toml_path" rpc max_body_bytes "5000000" # Bump the max tx (rpc) body from 1Mb to 5Mb
+    update_toml_key "$config_toml_path" rpc max_body_bytes "55242880" # Bump the max tx (rpc) body from 1Mb to 5Mb
     update_toml_key "$config_toml_path" mempool max_txs_bytes "5368709120" # Bump the max total size of all txs in the mempool from 5Mb to 25Mb
     update_toml_key "$config_toml_path" mempool max_tx_bytes "5242880" # Bump the max size of a single tx in the mempool from 1Mb to 5Mb
   fi
