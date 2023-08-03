@@ -126,11 +126,11 @@ stop-proxy-%: genfiles-web/docker-compose.json
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web stop proxy-$*
 
 .PHONY: start-nodes-detached
-start-nodes-detached: genfiles-web/generate-tendermint-e2e-config genfiles-web/docker-compose.json genfiles-common/tendermint-docker genfiles-web/many-web-docker genfiles-common/many-abci-docker
+start-nodes-detached: genfiles-web/generate-tendermint-e2e-config genfiles-web/docker-compose.json genfiles-common/tendermint-docker genfiles-web/many-web-docker genfiles-common/many-abci-docker genfiles-common/http-proxy-docker
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up --detach
 
 .PHONY: start-single-node-detached-%
-start-single-node-detached-%: genfiles-web/generate-tendermint-e2e-config genfiles-web/docker-compose.json genfiles-common/tendermint-docker genfiles-web/many-web-docker genfiles-common/many-abci-docker
+start-single-node-detached-%: genfiles-web/generate-tendermint-e2e-config genfiles-web/docker-compose.json genfiles-common/tendermint-docker genfiles-web/many-web-docker genfiles-common/many-abci-docker genfiles-common/http-proxy-docker
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up abci-$* --detach
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up web-$* --detach
 	docker-compose -f genfiles-web/docker-compose.json -p e2e-web up tendermint-$* --detach
