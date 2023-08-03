@@ -782,7 +782,7 @@ version = "3.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae6371b8bdc8b7d3959e9cf7b22d4435ef3e79e138688421ec654acf8c81b008"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "proc-macro-error",
  "proc-macro2",
  "quote",
@@ -795,7 +795,7 @@ version = "4.3.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "54a9bb5758fc5dfe728d1019941681eccaf0cf8a4189b692a0ee2f2ecf90a050"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "proc-macro2",
  "quote",
  "syn 2.0.27",
@@ -1050,6 +1050,35 @@ dependencies = [
 
 [[package]]
 name = "cucumber"
+version = "0.19.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a845da7c9fb958144700201d22e3f61f55114f9e269c13f03fe179d9da500984"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "atty",
+ "clap 4.3.19",
+ "console",
+ "cucumber-codegen 0.19.1",
+ "cucumber-expressions 0.2.1",
+ "derive_more",
+ "drain_filter_polyfill",
+ "either",
+ "futures",
+ "gherkin",
+ "globwalk",
+ "humantime",
+ "inventory",
+ "itertools 0.10.5",
+ "linked-hash-map",
+ "once_cell",
+ "regex",
+ "sealed 0.4.0",
+ "smart-default 0.6.0",
+]
+
+[[package]]
+name = "cucumber"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ead33440b8c33da870588443d745a0f23de153013fe847ae71073d176f75293"
@@ -1058,8 +1087,8 @@ dependencies = [
  "async-trait",
  "clap 4.3.19",
  "console",
- "cucumber-codegen",
- "cucumber-expressions",
+ "cucumber-codegen 0.20.0",
+ "cucumber-expressions 0.3.0",
  "derive_more",
  "drain_filter_polyfill",
  "either",
@@ -1074,10 +1103,26 @@ dependencies = [
  "once_cell",
  "pin-project",
  "regex",
- "sealed",
+ "sealed 0.5.0",
  "serde",
  "serde_json",
- "smart-default",
+ "smart-default 0.7.1",
+]
+
+[[package]]
+name = "cucumber-codegen"
+version = "0.19.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0dfb841fe8742f57fbe94738a189022e7dc858f2560c7fba5da44dc945a139e1"
+dependencies = [
+ "cucumber-expressions 0.2.1",
+ "inflections",
+ "itertools 0.10.5",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn 1.0.109",
+ "synthez 0.2.0",
 ]
 
 [[package]]
@@ -1086,14 +1131,28 @@ version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a8e4a7c46b4b5c81894087a5e3a95138bdd26e2e46fcca258513e07b880a369"
 dependencies = [
- "cucumber-expressions",
+ "cucumber-expressions 0.3.0",
  "inflections",
  "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "regex",
  "syn 2.0.27",
- "synthez",
+ "synthez 0.3.1",
+]
+
+[[package]]
+name = "cucumber-expressions"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d40d2fdf5e1bb4ae7e6b25c97bf9b9d249a02243fc0fbd91075592b5f00a3bc1"
+dependencies = [
+ "derive_more",
+ "either",
+ "nom",
+ "nom_locate",
+ "regex",
+ "regex-syntax 0.6.29",
 ]
 
 [[package]]
@@ -1779,7 +1838,7 @@ name = "gherkin"
 version = "0.13.0"
 source = "git+https://github.com/fmorency/gherkin.git?rev=b378f966281a79b501d59a1bfc2dd7519ad2ac98#b378f966281a79b501d59a1bfc2dd7519ad2ac98"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "peg 0.6.3",
  "quote",
  "serde",
@@ -1923,6 +1982,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7f66481bfee273957b1f20485a4ff3362987f85b2c236580d81b4eb7a326429"
 dependencies = [
  "http",
+]
+
+[[package]]
+name = "heck"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
+dependencies = [
+ "unicode-segmentation",
 ]
 
 [[package]]
@@ -2876,7 +2944,7 @@ dependencies = [
  "clap 3.2.25",
  "const_format",
  "coset",
- "cucumber",
+ "cucumber 0.20.0",
  "fixed",
  "hex",
  "itertools 0.10.5",
@@ -2929,7 +2997,7 @@ version = "0.1.6"
 dependencies = [
  "async-channel",
  "coset",
- "cucumber",
+ "cucumber 0.20.0",
  "itertools 0.10.5",
  "many-error",
  "many-identity",
@@ -2981,7 +3049,7 @@ dependencies = [
  "cbor-diag",
  "ciborium",
  "coset",
- "cucumber",
+ "cucumber 0.20.0",
  "futures",
  "many-client",
  "many-error",
@@ -3126,12 +3194,13 @@ dependencies = [
 
 [[package]]
 name = "many-web"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "base64 0.21.2",
  "clap 3.2.25",
  "coset",
+ "cucumber 0.19.1",
  "hex",
  "json5",
  "many-cli-helpers",
@@ -3144,6 +3213,7 @@ dependencies = [
  "many-server",
  "many-server-cache",
  "many-types",
+ "many-web",
  "merk 2.0.0-ll",
  "minicbor",
  "serde",
@@ -4348,11 +4418,35 @@ dependencies = [
 
 [[package]]
 name = "sealed"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "636b9882a0f4cc2039488df89a10eb4b7976d4b6c1917fc0518f3f0f5e2c72ca"
+dependencies = [
+ "heck 0.3.3",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "sealed"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b5e421024b5e5edfbaa8e60ecf90bda9dbffc602dbb230e6028763f85f0c68c"
+dependencies = [
+ "heck 0.3.3",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "sealed"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f4a8caec23b7800fb97971a1c6ae365b6239aaeddfb934d6265f8505e795699d"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "proc-macro2",
  "quote",
  "syn 2.0.27",
@@ -4645,6 +4739,17 @@ checksum = "62bb4feee49fdd9f707ef802e22365a35de4b7b299de4763d44bfea899442ff9"
 
 [[package]]
 name = "smart-default"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "133659a15339456eeeb07572eb02a91c91e9815e9cbc89566944d2c8d3efdbf6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "smart-default"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0eb01866308440fc64d6c44d9e86c5cc17adfe33c4d6eed55da9145044d0ffc1"
@@ -4739,7 +4844,7 @@ version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "proc-macro2",
  "quote",
  "rustversion",
@@ -4752,7 +4857,7 @@ version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6069ca09d878a33f883cc06aaa9718ede171841d3832450354410b718b097232"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "proc-macro2",
  "quote",
  "rustversion",
@@ -4816,13 +4921,34 @@ dependencies = [
 
 [[package]]
 name = "synthez"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "033178d0acccffc5490021657006e6a8dd586ee9dc6f7c24e7608b125e568cb1"
+dependencies = [
+ "syn 1.0.109",
+ "synthez-codegen 0.2.0",
+ "synthez-core 0.2.0",
+]
+
+[[package]]
+name = "synthez"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3d2c2202510a1e186e63e596d9318c91a8cbe85cd1a56a7be0c333e5f59ec8d"
 dependencies = [
  "syn 2.0.27",
- "synthez-codegen",
- "synthez-core",
+ "synthez-codegen 0.3.1",
+ "synthez-core 0.3.1",
+]
+
+[[package]]
+name = "synthez-codegen"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69263462a40e46960f070618e20094ce69e783a41f86e54bc75545136afd597a"
+dependencies = [
+ "syn 1.0.109",
+ "synthez-core 0.2.0",
 ]
 
 [[package]]
@@ -4832,7 +4958,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f724aa6d44b7162f3158a57bccd871a77b39a4aef737e01bcdff41f4772c7746"
 dependencies = [
  "syn 2.0.27",
- "synthez-core",
+ "synthez-core 0.3.1",
+]
+
+[[package]]
+name = "synthez-core"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb8b5a4089fe1723279f06302afda64a5dacaa11a82bcbb4d08759590d4389d9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "sealed 0.3.0",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -4843,7 +4981,7 @@ checksum = "78bfa6ec52465e2425fd43ce5bbbe0f0b623964f7c63feb6b10980e816c654ea"
 dependencies = [
  "proc-macro2",
  "quote",
- "sealed",
+ "sealed 0.5.0",
  "syn 2.0.27",
 ]
 
@@ -5353,6 +5491,12 @@ checksum = "5c5713f0fc4b5db668a2ac63cdb7bb4469d8c9fed047b1d0292cc7b0ce2ba921"
 dependencies = [
  "tinyvec",
 ]
+
+[[package]]
+name = "unicode-segmentation"
+version = "1.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1dd624098567895118886609431a7c3b8f516e41d30e0643f03d94592a147e36"
 
 [[package]]
 name = "unicode-width"

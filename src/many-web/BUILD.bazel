@@ -66,3 +66,54 @@ rust_image(
         "//src/many-types",
     ],
 )
+
+rust_library(
+    name = "many-web-lib-for-test",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_web",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        ":build_script",
+        "//src/many-error",
+        "//src/many-cli-helpers",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-identity-dsa:many-identity-dsa-for-test",
+        "//src/many-identity-webauthn:many-identity-webauthn-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-protocol:many-protocol-for-test",
+        "//src/many-server:many-server-for-test",
+        "//src/many-server-cache",
+        "//src/many-types:many-types-for-test",
+    ],
+)
+
+rust_test_suite(
+    name = "many-web-test-cucumber-suite",
+    srcs = glob(include = ["tests/**/*.rs"]),
+    data = [
+        "//staging:web-staging",
+    ] + glob(include = ["tests/features/**/*.feature"]),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    use_libtest_harness = False,
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        ":many-web-lib-for-test",
+        "//src/many-error",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-protocol:many-protocol-for-test",
+        "//src/many-types:many-types-for-test",
+    ],
+)
