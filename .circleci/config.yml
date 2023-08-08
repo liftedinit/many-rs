@@ -115,7 +115,7 @@ jobs:
               --test_env=SOFTHSM2_CONF \
               --combined_report=lcov \
               << parameters.bazel_linkopt >> \
-              -- //... -//tests/e2e/ledger:bats-e2e-ledger -//tests/e2e/kvstore:bats-e2e-kvstore
+              -- //... -//tests/e2e/ledger:bats-e2e-ledger -//tests/e2e/kvstore:bats-e2e-kvstore -//tests/e2e/http-proxy:bats-e2e-http-proxy
       - codecov/upload:
           file: bazel-out/_coverage/_coverage_report.dat
 
