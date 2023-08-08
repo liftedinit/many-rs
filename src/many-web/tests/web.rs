@@ -1,3 +1,4 @@
+use cucumber::gherkin::Step;
 use cucumber::{given, then, when, World as _};
 use many_identity::testing::identity;
 use many_modules::kvstore::{GetArgs, KvStoreModuleBackend};
@@ -6,7 +7,6 @@ use many_types::web::{WebDeploymentFilter, WebDeploymentSource};
 use many_web::module::{InitialStateJson, WebModuleImpl};
 use many_web::storage::HTTP_ROOT;
 use std::path::Path;
-use cucumber::gherkin::Step;
 use tempfile::Builder;
 
 #[derive(cucumber::World, Debug)]
@@ -72,10 +72,7 @@ fn when_deploy(w: &mut World, seed: u32) {
 #[when(expr = "the website {string} is removed as identity {int}")]
 fn when_remove(w: &mut World, site_name: String, seed: u32) {
     w.module
-        .remove(
-            &identity(seed),
-            many_modules::web::RemoveArgs { site_name },
-        )
+        .remove(&identity(seed), many_modules::web::RemoveArgs { site_name })
         .expect("Website removal failed");
 }
 
@@ -87,19 +84,16 @@ fn then_live(w: &mut World, step: &Step, file: String, site_name: String, seed: 
         .get(
             &identity(0),
             GetArgs {
-                key: format!(
-                    "{}/{}/{}/{}",
-                    HTTP_ROOT,
-                    identity(seed),
-                    site_name,
-                    file
-                )
-                .into_bytes()
-                .into(),
+                key: format!("{}/{}/{}/{}", HTTP_ROOT, identity(seed), site_name, file)
+                    .into_bytes()
+                    .into(),
             },
         )
         .expect("Website not found");
-    assert_eq!(ret.value.expect("Key is empty"), value.clone().into_bytes().into());
+    assert_eq!(
+        ret.value.expect("Key is empty"),
+        value.clone().into_bytes().into()
+    );
 }
 
 #[then(expr = "{string} of website {string} for identity {int} is empty")]
@@ -109,12 +103,9 @@ fn then_empty(w: &mut World, file: String, site_name: String, seed: u32) {
         .get(
             &identity(seed),
             GetArgs {
-                key: format!(
-                    "{}/{}/{}/{}",
-                    HTTP_ROOT,
-                    identity(seed),
-                    site_name,
-                file).into_bytes().into()
+                key: format!("{}/{}/{}/{}", HTTP_ROOT, identity(seed), site_name, file)
+                    .into_bytes()
+                    .into(),
             },
         )
         .expect("Website not found");
@@ -123,34 +114,70 @@ fn then_empty(w: &mut World, file: String, site_name: String, seed: u32) {
 
 #[then(expr = "the website list should contain {string}")]
 fn then_list(w: &mut World, site_name: String) {
-    let ret =
-    WebModuleBackend::list(&w.module, &identity(0), ListArgs { order: None, filter: None })
-        .expect("Website list failed");
-    assert!(ret.deployments.into_iter().any(|v| v.site_name == site_name));
+    let ret = WebModuleBackend::list(
+        &w.module,
+        &identity(0),
+        ListArgs {
+            order: None,
+            filter: None,
+        },
+    )
+    .expect("Website list failed");
+    assert!(ret
+        .deployments
+        .into_iter()
+        .any(|v| v.site_name == site_name));
 }
 
 #[then(expr = "the website list filtered by identity {int} should contain {string}")]
 fn then_list_filtered(w: &mut World, seed: u32, site_name: String) {
-    let ret =
-        WebModuleBackend::list(&w.module, &identity(0), ListArgs { order: None, filter: Some(vec![WebDeploymentFilter::Owner(identity(seed))]) })
-            .expect("Website list failed");
-    assert!(ret.deployments.into_iter().any(|v| v.site_name == site_name));
+    let ret = WebModuleBackend::list(
+        &w.module,
+        &identity(0),
+        ListArgs {
+            order: None,
+            filter: Some(vec![WebDeploymentFilter::Owner(identity(seed))]),
+        },
+    )
+    .expect("Website list failed");
+    assert!(ret
+        .deployments
+        .into_iter()
+        .any(|v| v.site_name == site_name));
 }
 
 #[then(expr = "the website list should not contain {string}")]
 fn then_list_not(w: &mut World, site_name: String) {
-    let ret =
-        WebModuleBackend::list(&w.module, &identity(0), ListArgs { order: None, filter: None })
-            .expect("Website list failed");
-    assert!(ret.deployments.into_iter().any(|v| v.site_name != site_name));
+    let ret = WebModuleBackend::list(
+        &w.module,
+        &identity(0),
+        ListArgs {
+            order: None,
+            filter: None,
+        },
+    )
+    .expect("Website list failed");
+    assert!(ret
+        .deployments
+        .into_iter()
+        .any(|v| v.site_name != site_name));
 }
 
 #[then(expr = "the website list filtered by identity {int} should not contain {string}")]
 fn then_list_not_filtered(w: &mut World, seed: u32, site_name: String) {
-    let ret =
-        WebModuleBackend::list(&w.module, &identity(0), ListArgs { order: None, filter: Some(vec![WebDeploymentFilter::Owner(identity(seed))]) })
-            .expect("Website list failed");
-    assert!(ret.deployments.into_iter().any(|v| v.site_name != site_name));
+    let ret = WebModuleBackend::list(
+        &w.module,
+        &identity(0),
+        ListArgs {
+            order: None,
+            filter: Some(vec![WebDeploymentFilter::Owner(identity(seed))]),
+        },
+    )
+    .expect("Website list failed");
+    assert!(ret
+        .deployments
+        .into_iter()
+        .any(|v| v.site_name != site_name));
 }
 
 #[then(expr = "the website deployment fails with {string}")]
