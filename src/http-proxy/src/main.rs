@@ -1,4 +1,3 @@
-use base64::{engine::general_purpose, Engine as _};
 use clap::Parser;
 use many_client::client::blocking::ManyClient;
 use many_identity::{Address, AnonymousIdentity, Identity};
@@ -104,29 +103,19 @@ fn process_result(result: Vec<u8>, request: Request) {
 }
 
 fn respond_with_value(value: Vec<u8>, request: Request) {
-    match general_purpose::STANDARD.decode(value) {
-        Ok(value) => {
-            let mimetype = new_mime_guess::from_path(request.url()).first_raw();
-            let mut response = Response::empty(200).with_data(value.as_slice(), Some(value.len()));
+    let mimetype = new_mime_guess::from_path(request.url()).first_raw();
+    let mut response = Response::empty(200).with_data(value.as_slice(), Some(value.len()));
 
-            if let Some(mimetype) = mimetype {
-                if let Ok(header) = Header::from_bytes("Content-Type", mimetype) {
-                    response = response.with_header(header);
-                } else {
-                    warn!("Failed to create header for mimetype: {}", mimetype);
-                }
-            }
+    if let Some(mimetype) = mimetype {
+        if let Ok(header) = Header::from_bytes("Content-Type", mimetype) {
+            response = response.with_header(header);
+        } else {
+            warn!("Failed to create header for mimetype: {}", mimetype);
+        }
+    }
 
-            if let Err(e) = request.respond(response) {
-                warn!("Failed to send response: {}", e);
-            }
-        }
-        Err(e) => {
-            warn!("Failed to decode value: {}", e);
-            if let Err(e) = request.respond(Response::empty(500)) {
-                warn!("Failed to send response: {}", e);
-            }
-        }
+    if let Err(e) = request.respond(response) {
+        warn!("Failed to send response: {}", e);
     }
 }
 

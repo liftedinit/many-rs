@@ -1,5 +1,6 @@
 use crate::error;
 use crate::storage::{url_for_website, WebStorage, HTTP_ROOT};
+use base64::{engine::general_purpose, Engine as _};
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::{
@@ -240,9 +241,18 @@ impl KvStoreModuleBackend for WebModuleImpl {
             return Err(error::key_should_start_with_http());
         }
 
-        Ok(GetReturns {
-            value: self.storage.get(key.as_slice())?.map(|v| v.into()),
-        })
+        let value = self.storage.get(key.as_slice())?;
+        match value {
+            Some(value) => Ok(GetReturns {
+                value: Some(
+                    general_purpose::STANDARD
+                        .decode(value)
+                        .map_err(ManyError::deserialization_error)?
+                        .into(),
+                ),
+            }),
+            None => Ok(GetReturns { value: None }),
+        }
     }
 
     // We do not expose this endpoint
