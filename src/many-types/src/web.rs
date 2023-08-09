@@ -9,9 +9,6 @@ use strum::Display;
 #[cbor(map)]
 pub enum WebDeploymentFilter {
     #[n(0)]
-    All,
-
-    #[n(1)]
     Owner(#[n(0)] Address),
 }
 
@@ -20,7 +17,6 @@ impl FromStr for WebDeploymentFilter {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "all" => Ok(WebDeploymentFilter::All),
             s if s.starts_with("owner:") => {
                 let address = s.trim_start_matches("owner:");
                 let address = Address::from_str(address)?;

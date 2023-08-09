@@ -359,7 +359,6 @@ impl WebStorage {
 
 fn filter_item(filter: &WebDeploymentFilter, _key: &[u8], meta: &WebMeta) -> bool {
     match filter {
-        WebDeploymentFilter::All => true,
         WebDeploymentFilter::Owner(owner) => meta.owner == *owner,
     }
 }
