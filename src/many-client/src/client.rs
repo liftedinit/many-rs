@@ -40,6 +40,8 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
     let bytes = message
         .to_tagged_vec()
         .map_err(|_| ManyError::internal_server_error())?;
+    let len = bytes.len();
+    tracing::debug!("Message length in bytes: {}", len);
 
     let client = reqwest::Client::new();
     tracing::debug!("request {}", hex::encode(&bytes));
@@ -49,9 +51,15 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
         .send()
         .await
         .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
-    let body = response.bytes().await.unwrap();
+    // The HTTP request handler can return errors if the request invalid.
+    match response.status().as_u16() {
+        413 => return Err(ManyError::unexpected_transport_error(format!("413: Content Too Large : {len} bytes"))),
+        500 => return Err(ManyError::unexpected_transport_error("500: Internal Server Error".to_string())),
+        _ => {}
+    }
+    let body = response.bytes().await.map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
     let bytes = body.to_vec();
-    tracing::debug!("reply {}", hex::encode(&bytes));
+    tracing::debug!("Response body length: {}", bytes.len());
     CoseSign1::from_tagged_slice(&bytes)
         .map_err(|e| ManyError::deserialization_error(e.to_string()))
 }
@@ -72,9 +80,12 @@ impl<I: Identity> ManyClient<I> {
         &self,
         message: RequestMessage,
     ) -> Result<ResponseMessage, ManyError> {
+        tracing::info!("Encoding CoseSign1 from request message.");
         let cose = encode_cose_sign1_from_request(message, &self.identity).unwrap();
+        tracing::info!("Sending CoseSign1 to server.");
         let cose_sign1 = send_envelope(self.url.clone(), cose).await?;
 
+        tracing::info!("Decoding and verifying response.");
         ResponseMessage::decode_and_verify(&cose_sign1, &self.verifier)
     }
 
@@ -106,6 +117,7 @@ impl<I: Identity> ManyClient<I> {
         .build()
         .map_err(|_| ManyError::internal_server_error())?;
 
+        tracing::info!("sending message");
         self.send_message(message).await
     }
 
