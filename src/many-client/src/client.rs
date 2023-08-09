@@ -53,11 +53,22 @@ pub async fn send_envelope<S: IntoUrl>(url: S, message: CoseSign1) -> Result<Cos
         .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
     // The HTTP request handler can return errors if the request invalid.
     match response.status().as_u16() {
-        413 => return Err(ManyError::unexpected_transport_error(format!("413: Content Too Large : {len} bytes"))),
-        500 => return Err(ManyError::unexpected_transport_error("500: Internal Server Error".to_string())),
+        413 => {
+            return Err(ManyError::unexpected_transport_error(format!(
+                "413: Content Too Large : {len} bytes"
+            )))
+        }
+        500 => {
+            return Err(ManyError::unexpected_transport_error(
+                "500: Internal Server Error".to_string(),
+            ))
+        }
         _ => {}
     }
-    let body = response.bytes().await.map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
+    let body = response
+        .bytes()
+        .await
+        .map_err(|e| ManyError::unexpected_transport_error(e.to_string()))?;
     let bytes = body.to_vec();
     tracing::debug!("Response body length: {}", bytes.len());
     CoseSign1::from_tagged_slice(&bytes)
