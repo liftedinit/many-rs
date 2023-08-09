@@ -14,6 +14,7 @@ sh_library(
         "test_helper/load.bash",
         "test_helper/many.bash",
         "test_helper/token.bash",
+        "test_helper/web.bash",
     ],
     tags = ["manual"],
 )

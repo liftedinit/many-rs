@@ -1,0 +1,26 @@
+load("@bazel_bats//:rules.bzl", "bats_test_suite")
+
+bats_test_suite(
+    name = "bats-e2e-web",
+    srcs = glob(include = ["*.bats"]),
+    bats_args = [
+        "--formatter",
+        "tap",
+        "--report-formatter",
+        "junit",
+        "--output",
+        ".",
+    ],
+    tags = [
+        "exclusive",
+    ],
+    uses_bats_assert = True,
+    deps = [
+        "//src/http-proxy",
+        "//src/web",
+        "//src/many",
+        "//src/many-web",
+        "//staging:web-staging",
+        "//tests:bats-helpers",
+    ],
+)
