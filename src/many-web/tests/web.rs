@@ -4,11 +4,11 @@ use many_identity::testing::identity;
 use many_modules::kvstore::{GetArgs, KvStoreModuleBackend};
 use many_modules::web::{DeployArgs, ListArgs, WebCommandsModuleBackend, WebModuleBackend};
 use many_types::web::{WebDeploymentFilter, WebDeploymentSource};
+use many_types::Memo;
 use many_web::module::{InitialStateJson, WebModuleImpl};
 use many_web::storage::HTTP_ROOT;
 use std::path::Path;
 use tempfile::Builder;
-use many_types::Memo;
 
 #[derive(cucumber::World, Debug)]
 #[world(init = Self::new)]

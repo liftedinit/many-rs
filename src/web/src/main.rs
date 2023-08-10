@@ -99,7 +99,7 @@ fn deploy(
     site_description: Option<String>,
     source: PathBuf,
     owner: Option<Address>,
-    memo: Option<Memo>
+    memo: Option<Memo>,
 ) -> Result<(), ManyError> {
     // Read the source file
     let source = std::fs::read(source).map_err(ManyError::unknown)?;
@@ -122,7 +122,11 @@ fn remove(
     owner: Option<Address>,
     memo: Option<Memo>,
 ) -> Result<(), ManyError> {
-    let arguments = web::RemoveArgs { owner, site_name, memo };
+    let arguments = web::RemoveArgs {
+        owner,
+        site_name,
+        memo,
+    };
     let response = client.call("web.remove", arguments)?;
     let payload = wait_response(client, response)?;
     println!("{}", minicbor::display(&payload));
@@ -234,7 +238,11 @@ fn main() {
             owner,
             memo,
         }) => deploy(client, site_name, site_description, source, owner, memo),
-        SubCommand::Remove(RemoveOpt { site_name, owner, memo }) => remove(client, site_name, owner, memo),
+        SubCommand::Remove(RemoveOpt {
+            site_name,
+            owner,
+            memo,
+        }) => remove(client, site_name, owner, memo),
         SubCommand::List(ListOpt { order, filter }) => list(client, order, filter),
     };
 
