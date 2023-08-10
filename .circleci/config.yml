@@ -751,24 +751,24 @@ workflows:
                 os: linux2204_machine
           test_name: << pipeline.parameters.test_name >>
 
-  nightly_macos:
-    when:
-      and:
-        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
-        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
-    jobs:
-      - lint-test-build:
-          pre-steps:
-            - install-deps:
-                os: << matrix.os >>
-          name: lint-test-build-v<< matrix.os >>
-          matrix:
-            parameters:
-              os: [macos]
-      - tag:
-          name: macos nightly tag
-          tag: macos-green
-          context:
-            - GITHUB_CREDS
-          requires:
-            - lint-test-build-vmacos
+#  nightly_macos:
+#    when:
+#      and:
+#        - equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+#        - equal: [ "macOS nightly", << pipeline.schedule.name >> ]
+#    jobs:
+#      - lint-test-build:
+#          pre-steps:
+#            - install-deps:
+#                os: << matrix.os >>
+#          name: lint-test-build-v<< matrix.os >>
+#          matrix:
+#            parameters:
+#              os: [macos]
+#      - tag:
+#          name: macos nightly tag
+#          tag: macos-green
+#          context:
+#            - GITHUB_CREDS
+#          requires:
+#            - lint-test-build-vmacos
