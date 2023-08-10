@@ -86,6 +86,7 @@ fn deploy(
     // Read the source file
     let source = std::fs::read(source).map_err(ManyError::unknown)?;
     let arguments = web::DeployArgs {
+        owner: None,
         site_name,
         site_description,
         source: WebDeploymentSource::Zip(source.into()),
@@ -97,7 +98,10 @@ fn deploy(
 }
 
 fn remove(client: ManyClient<impl Identity>, site_name: String) -> Result<(), ManyError> {
-    let arguments = web::RemoveArgs { site_name };
+    let arguments = web::RemoveArgs {
+        owner: None,
+        site_name,
+    };
     let response = client.call("web.remove", arguments)?;
     let payload = wait_response(client, response)?;
     println!("{}", minicbor::display(&payload));

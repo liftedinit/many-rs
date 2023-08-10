@@ -169,10 +169,19 @@ impl WebModuleBackend for WebModuleImpl {
 impl WebCommandsModuleBackend for WebModuleImpl {
     fn deploy(&mut self, sender: &Address, args: DeployArgs) -> Result<DeployReturns, ManyError> {
         let DeployArgs {
+            owner,
             site_name,
             site_description,
             source,
         } = args;
+
+        // Check that the sender is the owner, for now.
+        // TODO: Support accounts
+        if let Some(owner) = owner {
+            if sender != &owner {
+                return Err(error::invalid_owner(owner));
+            }
+        }
 
         trace!("Checking site name is alphanumeric or symbols");
         if !all_alphanumeric_or_symbols(&site_name) {
@@ -217,7 +226,16 @@ impl WebCommandsModuleBackend for WebModuleImpl {
     }
 
     fn remove(&mut self, sender: &Address, args: RemoveArgs) -> Result<RemoveReturns, ManyError> {
-        let RemoveArgs { site_name } = args;
+        let RemoveArgs { owner, site_name } = args;
+
+        // Check that the sender is the owner, for now.
+        // TODO: Support accounts
+        if let Some(owner) = owner {
+            if sender != &owner {
+                return Err(error::invalid_owner(owner));
+            }
+        }
+
         self.storage.remove_website(sender, &site_name)?;
         Ok(RemoveReturns {})
     }

@@ -36,6 +36,7 @@ mod tests {
     fn deploy() {
         let mut mock = MockWebCommandsModuleBackend::new();
         let data = DeployArgs {
+            owner: None,
             site_name: "".to_string(),
             site_description: None,
             source: WebDeploymentSource::Zip(vec![].into()),
@@ -61,6 +62,7 @@ mod tests {
     fn remove() {
         let mut mock = MockWebCommandsModuleBackend::new();
         let data = RemoveArgs {
+            owner: None,
             site_name: "foobar".to_string(),
         };
         mock.expect_remove()

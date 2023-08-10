@@ -61,6 +61,7 @@ fn when_deploy(w: &mut World, seed: u32) {
         .deploy(
             &identity(seed),
             DeployArgs {
+                owner: None,
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
@@ -72,7 +73,13 @@ fn when_deploy(w: &mut World, seed: u32) {
 #[when(expr = "the website {string} is removed as identity {int}")]
 fn when_remove(w: &mut World, site_name: String, seed: u32) {
     w.module
-        .remove(&identity(seed), many_modules::web::RemoveArgs { site_name })
+        .remove(
+            &identity(seed),
+            many_modules::web::RemoveArgs {
+                owner: None,
+                site_name,
+            },
+        )
         .expect("Website removal failed");
 }
 
@@ -186,6 +193,7 @@ fn then_deployment_failed(w: &mut World, error: String) {
         w.module.deploy(
             &identity(0),
             DeployArgs {
+                owner: None,
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
