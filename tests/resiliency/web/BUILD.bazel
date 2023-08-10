@@ -1,0 +1,36 @@
+load("@bazel_bats//:rules.bzl", "bats_test_suite")
+
+# Run the entire test suite with
+#   $ bazel test //tests/resiliency/web:bats-resiliency-web
+# or a single test with
+#   $ bazel test //tests/resiliency/web:bats-resiliency-web_FILE_NAME_MINUS_EXT
+# E.g.
+#   $ bazel test //tests/resiliency/web:bats-resiliency-web_catch-up
+bats_test_suite(
+    name = "bats-resiliency-web",
+    timeout = "long",
+    srcs = glob(include = ["*.bats"]),
+    data = [
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-web:many-web-image.tar",
+        "//src/http-proxy:http-proxy-image.tar",
+    ],
+    tags = [
+        "exclusive",
+        "manual",
+    ],
+    uses_bats_assert = True,
+    bats_args = ["--formatter", "tap", "--report-formatter", "junit", "--output", "."],
+    deps = [
+        "//docker:docker-web-deps",
+        "//src/web",
+        "//src/many",
+        "//src/many-abci",
+        "//src/many-web",
+        "//src/http-proxy",
+        "//tests:bats-helpers",
+    ],
+)

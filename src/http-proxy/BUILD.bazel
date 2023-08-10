@@ -4,8 +4,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
 
 package(default_visibility = [
-    "//:__pkg__",
-    "//tests/e2e:__subpackages__",
+    "//:__subpackages__",
 ])
 
 cargo_build_script(

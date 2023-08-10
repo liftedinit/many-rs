@@ -17,7 +17,7 @@ local abci(i, user, allow_addrs) = {
     ],
     user: "" + user,
     command: [
-        "--verbose",
+        "--verbose", "--verbose",
         "--many", "0.0.0.0:8000",
         "--many-app", "http://web-" + i + ":8000",
         "--many-pem", "/genfiles/abci.pem",
@@ -33,6 +33,7 @@ local proxy(i, user) = {
     ports: [ (8880 + i) + ":8880" ],
     user: "" + user,
     command: [
+        "--verbose", "--verbose",
         "--addr", "0.0.0.0:8880",
         "http://web-" + i + ":8000",
     ],
@@ -47,7 +48,7 @@ local web(i, user) = {
         "./node" + i + ":/genfiles:ro",
     ],
     command: [
-        "--verbose",
+        "--verbose", "--verbose",
         "--abci",
         "--state=/genfiles/web_state.json5",
         "--pem=/genfiles/web.pem",
