@@ -8,7 +8,7 @@ use many_modules::web::ListArgs;
 use many_modules::{r#async, web};
 use many_protocol::ResponseMessage;
 use many_types::web::{WebDeploymentFilter, WebDeploymentSource};
-use many_types::SortOrder;
+use many_types::{Memo, SortOrder};
 use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{debug, error, info};
@@ -62,6 +62,10 @@ struct DeployOpt {
     /// MANY address of the website owner
     #[clap(long)]
     owner: Option<Address>,
+
+    /// A memo to attach to the transaction
+    #[clap(long, parse(try_from_str = Memo::try_from))]
+    memo: Option<Memo>,
 }
 
 #[derive(Debug, Parser)]
@@ -72,6 +76,10 @@ struct RemoveOpt {
     /// MANY address of the website owner
     #[clap(long)]
     owner: Option<Address>,
+
+    // A memo to attach to the transaction
+    #[clap(long, parse(try_from_str = Memo::try_from))]
+    memo: Option<Memo>,
 }
 
 #[derive(Debug, Parser)]
@@ -91,6 +99,7 @@ fn deploy(
     site_description: Option<String>,
     source: PathBuf,
     owner: Option<Address>,
+    memo: Option<Memo>
 ) -> Result<(), ManyError> {
     // Read the source file
     let source = std::fs::read(source).map_err(ManyError::unknown)?;
@@ -99,6 +108,7 @@ fn deploy(
         site_name,
         site_description,
         source: WebDeploymentSource::Zip(source.into()),
+        memo,
     };
     let response = client.call("web.deploy", arguments)?;
     let payload = wait_response(client, response)?;
@@ -110,8 +120,9 @@ fn remove(
     client: ManyClient<impl Identity>,
     site_name: String,
     owner: Option<Address>,
+    memo: Option<Memo>,
 ) -> Result<(), ManyError> {
-    let arguments = web::RemoveArgs { owner, site_name };
+    let arguments = web::RemoveArgs { owner, site_name, memo };
     let response = client.call("web.remove", arguments)?;
     let payload = wait_response(client, response)?;
     println!("{}", minicbor::display(&payload));
@@ -221,8 +232,9 @@ fn main() {
             site_description,
             source,
             owner,
-        }) => deploy(client, site_name, site_description, source, owner),
-        SubCommand::Remove(RemoveOpt { site_name, owner }) => remove(client, site_name, owner),
+            memo,
+        }) => deploy(client, site_name, site_description, source, owner, memo),
+        SubCommand::Remove(RemoveOpt { site_name, owner, memo }) => remove(client, site_name, owner, memo),
         SubCommand::List(ListOpt { order, filter }) => list(client, order, filter),
     };
 

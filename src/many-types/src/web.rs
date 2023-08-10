@@ -31,12 +31,15 @@ impl FromStr for WebDeploymentFilter {
 #[cbor(map)]
 pub struct WebDeploymentInfo {
     #[n(0)]
-    pub site_name: String,
+    pub owner: Address,
 
     #[n(1)]
-    pub site_description: Option<String>,
+    pub site_name: String,
 
     #[n(2)]
+    pub site_description: Option<String>,
+
+    #[n(3)]
     pub url: Option<String>,
 }
 

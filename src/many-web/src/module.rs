@@ -156,11 +156,7 @@ impl WebModuleBackend for WebModuleImpl {
             deployments: self
                 .storage
                 .list(args.order.unwrap_or_default(), args.filter)
-                .map(|(_, meta)| WebDeploymentInfo {
-                    site_name: meta.site_name,
-                    site_description: meta.description,
-                    url: meta.url,
-                })
+                .map(|(_, meta)| meta)
                 .collect(),
         })
     }
@@ -173,15 +169,19 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             site_name,
             site_description,
             source,
+            memo: _memo,
         } = args;
 
         // Check that the sender is the owner, for now.
         // TODO: Support accounts
-        if let Some(owner) = owner {
+        let owner = if let Some(owner) = owner {
             if sender != &owner {
                 return Err(error::invalid_owner(owner));
             }
-        }
+            sender
+        } else {
+            sender
+        };
 
         trace!("Checking site name is alphanumeric or symbols");
         if !all_alphanumeric_or_symbols(&site_name) {
@@ -219,14 +219,31 @@ impl WebCommandsModuleBackend for WebModuleImpl {
         let url = url_for_website(sender, &site_name);
 
         trace!("Storing website");
-        self.storage
-            .store_website(sender, site_name, site_description, serve_path)?;
+        self.storage.store_website(
+            sender,
+            site_name.clone(),
+            site_description.clone(),
+            serve_path,
+        )?;
 
-        Ok(DeployReturns { url })
+        // TODO: Log event
+
+        Ok(DeployReturns {
+            info: WebDeploymentInfo {
+                owner: *owner,
+                site_name,
+                site_description,
+                url: Some(url),
+            },
+        })
     }
 
     fn remove(&mut self, sender: &Address, args: RemoveArgs) -> Result<RemoveReturns, ManyError> {
-        let RemoveArgs { owner, site_name } = args;
+        let RemoveArgs {
+            owner,
+            site_name,
+            memo: _memo,
+        } = args;
 
         // Check that the sender is the owner, for now.
         // TODO: Support accounts
@@ -235,6 +252,8 @@ impl WebCommandsModuleBackend for WebModuleImpl {
                 return Err(error::invalid_owner(owner));
             }
         }
+
+        // TODO: Log event
 
         self.storage.remove_website(sender, &site_name)?;
         Ok(RemoveReturns {})

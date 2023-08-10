@@ -8,6 +8,7 @@ use many_web::module::{InitialStateJson, WebModuleImpl};
 use many_web::storage::HTTP_ROOT;
 use std::path::Path;
 use tempfile::Builder;
+use many_types::Memo;
 
 #[derive(cucumber::World, Debug)]
 #[world(init = Self::new)]
@@ -16,6 +17,7 @@ struct World {
     site_description: Option<String>,
     source: WebDeploymentSource,
     module: WebModuleImpl,
+    memo: Option<Memo>,
 }
 
 impl World {
@@ -33,6 +35,7 @@ impl World {
                 false,
             )
             .expect("Unable to create web module"),
+            memo: None,
         }
     }
 }
@@ -55,6 +58,11 @@ fn given_site_source(w: &mut World, source: String) {
     }
 }
 
+#[given(expr = "a website memo {string}")]
+fn given_site_memo(w: &mut World, memo: String) {
+    w.memo = Some(Memo::try_from(memo).expect("Unable to parse memo"));
+}
+
 #[when(expr = "the website is deployed as identity {int}")]
 fn when_deploy(w: &mut World, seed: u32) {
     w.module
@@ -65,6 +73,7 @@ fn when_deploy(w: &mut World, seed: u32) {
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
+                memo: w.memo.clone(),
             },
         )
         .expect("Website deployment failed");
@@ -78,6 +87,7 @@ fn when_remove(w: &mut World, site_name: String, seed: u32) {
             many_modules::web::RemoveArgs {
                 owner: None,
                 site_name,
+                memo: w.memo.clone(),
             },
         )
         .expect("Website removal failed");
@@ -197,6 +207,7 @@ fn then_deployment_failed(w: &mut World, error: String) {
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
+                memo: w.memo.clone(),
             },
         ),
         Err(e) if e.to_string() == error

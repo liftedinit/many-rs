@@ -28,7 +28,7 @@ mod tests {
         DeployArgs, DeployReturns, MockWebCommandsModuleBackend, RemoveArgs, RemoveReturns,
     };
     use many_identity::testing::identity;
-    use many_types::web::WebDeploymentSource;
+    use many_types::web::{WebDeploymentInfo, WebDeploymentSource};
     use mockall::predicate;
     use std::sync::{Arc, Mutex};
 
@@ -40,13 +40,19 @@ mod tests {
             site_name: "".to_string(),
             site_description: None,
             source: WebDeploymentSource::Zip(vec![].into()),
+            memo: None,
         };
         mock.expect_deploy()
             .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
             .times(1)
-            .returning(|_sender, _args| {
+            .returning(|sender, _args| {
                 Ok(DeployReturns {
-                    url: "foobar".to_string(),
+                    info: WebDeploymentInfo {
+                        owner: *sender,
+                        site_name: "".to_string(),
+                        site_description: None,
+                        url: Some("foobar".to_string()),
+                    },
                 })
             });
         let module = super::WebCommandsModule::new(Arc::new(Mutex::new(mock)));
@@ -55,7 +61,7 @@ mod tests {
             &call_module_cbor(1, &module, "web.deploy", minicbor::to_vec(data).unwrap()).unwrap(),
         )
         .unwrap();
-        assert_eq!(deploy.url, "foobar".to_string());
+        assert_eq!(deploy.info.url, Some("foobar".to_string()));
     }
 
     #[test]
@@ -64,6 +70,7 @@ mod tests {
         let data = RemoveArgs {
             owner: None,
             site_name: "foobar".to_string(),
+            memo: None,
         };
         mock.expect_remove()
             .with(predicate::eq(identity(1)), predicate::eq(data.clone()))

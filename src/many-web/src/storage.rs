@@ -5,10 +5,9 @@ use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::AbciCommitInfo;
 use many_modules::events::EventId;
-use many_types::web::WebDeploymentFilter;
+use many_types::web::{WebDeploymentFilter, WebDeploymentInfo};
 use many_types::{SortOrder, Timestamp};
 use merk::{BatchEntry, Op};
-use minicbor::{Decode, Encode};
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -34,22 +33,6 @@ fn key_for_website_meta(owner: &Address, site_name: &str) -> Vec<u8> {
 
 pub fn url_for_website(owner: &Address, site_name: &str) -> String {
     format!("https://{}.{}.web.liftedinit.tech", site_name, owner)
-}
-
-#[derive(Debug, Encode, Decode)]
-#[cbor(map)]
-pub struct WebMeta {
-    #[n(0)]
-    pub owner: Address,
-
-    #[n(1)]
-    pub site_name: String,
-
-    #[n(2)]
-    pub description: Option<String>,
-
-    #[n(3)]
-    pub url: Option<String>, // TODO: Url type
 }
 
 pub struct WebStorage {
@@ -268,10 +251,10 @@ impl WebStorage {
         batch.push((
             key_for_website_meta(owner, &site_name),
             Op::Put(
-                minicbor::to_vec(WebMeta {
+                minicbor::to_vec(WebDeploymentInfo {
                     owner: *owner,
                     site_name,
-                    description: site_description,
+                    site_description,
                     url: Some(url),
                 })
                 .map_err(ManyError::serialization_error)?,
@@ -339,10 +322,10 @@ impl WebStorage {
         &self,
         order: SortOrder,
         filter: Option<Vec<WebDeploymentFilter>>,
-    ) -> impl Iterator<Item = (Vec<u8>, WebMeta)> + '_ {
+    ) -> impl Iterator<Item = (Vec<u8>, WebDeploymentInfo)> + '_ {
         WebIterator::meta(&self.persistent_store, order).filter_map(move |item| {
             let (k, v) = item.ok()?; // Note: Errors are silently ignored
-            let meta: WebMeta = minicbor::decode(&v).ok()?; // Note: Errors are silently ignored
+            let meta: WebDeploymentInfo = minicbor::decode(&v).ok()?; // Note: Errors are silently ignored
             if let Some(filters) = &filter {
                 if !filters.is_empty() {
                     return if filters.iter().all(|f| filter_item(f, &k, &meta)) {
@@ -357,7 +340,7 @@ impl WebStorage {
     }
 }
 
-fn filter_item(filter: &WebDeploymentFilter, _key: &[u8], meta: &WebMeta) -> bool {
+fn filter_item(filter: &WebDeploymentFilter, _key: &[u8], meta: &WebDeploymentInfo) -> bool {
     match filter {
         WebDeploymentFilter::Owner(owner) => meta.owner == *owner,
     }

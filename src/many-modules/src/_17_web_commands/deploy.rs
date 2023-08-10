@@ -1,5 +1,6 @@
 use many_identity::Address;
-use many_types::web::WebDeploymentSource;
+use many_types::web::{WebDeploymentInfo, WebDeploymentSource};
+use many_types::Memo;
 use minicbor::{Decode, Encode};
 
 #[derive(Clone, Debug, Decode, Encode, PartialEq, Eq)]
@@ -16,11 +17,14 @@ pub struct DeployArgs {
 
     #[n(3)]
     pub source: WebDeploymentSource,
+
+    #[n(4)]
+    pub memo: Option<Memo>,
 }
 
 #[derive(Clone, Debug, Decode, Encode, PartialEq, Eq)]
 #[cbor(map)]
 pub struct DeployReturns {
     #[n(0)]
-    pub url: String,
+    pub info: WebDeploymentInfo,
 }
