@@ -91,12 +91,9 @@ impl<I: Identity> ManyClient<I> {
         &self,
         message: RequestMessage,
     ) -> Result<ResponseMessage, ManyError> {
-        tracing::info!("Encoding CoseSign1 from request message.");
         let cose = encode_cose_sign1_from_request(message, &self.identity).unwrap();
-        tracing::info!("Sending CoseSign1 to server.");
         let cose_sign1 = send_envelope(self.url.clone(), cose).await?;
 
-        tracing::info!("Decoding and verifying response.");
         ResponseMessage::decode_and_verify(&cose_sign1, &self.verifier)
     }
 
@@ -128,7 +125,6 @@ impl<I: Identity> ManyClient<I> {
         .build()
         .map_err(|_| ManyError::internal_server_error())?;
 
-        tracing::info!("sending message");
         self.send_message(message).await
     }
 
