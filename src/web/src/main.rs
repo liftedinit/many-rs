@@ -58,12 +58,20 @@ struct DeployOpt {
 
     /// Site source
     source: PathBuf,
+
+    /// MANY address of the website owner
+    #[clap(long)]
+    owner: Option<Address>,
 }
 
 #[derive(Debug, Parser)]
 struct RemoveOpt {
     /// Site name
     site_name: String,
+
+    /// MANY address of the website owner
+    #[clap(long)]
+    owner: Option<Address>,
 }
 
 #[derive(Debug, Parser)]
@@ -82,11 +90,12 @@ fn deploy(
     site_name: String,
     site_description: Option<String>,
     source: PathBuf,
+    owner: Option<Address>,
 ) -> Result<(), ManyError> {
     // Read the source file
     let source = std::fs::read(source).map_err(ManyError::unknown)?;
     let arguments = web::DeployArgs {
-        owner: None,
+        owner,
         site_name,
         site_description,
         source: WebDeploymentSource::Zip(source.into()),
@@ -97,11 +106,12 @@ fn deploy(
     Ok(())
 }
 
-fn remove(client: ManyClient<impl Identity>, site_name: String) -> Result<(), ManyError> {
-    let arguments = web::RemoveArgs {
-        owner: None,
-        site_name,
-    };
+fn remove(
+    client: ManyClient<impl Identity>,
+    site_name: String,
+    owner: Option<Address>,
+) -> Result<(), ManyError> {
+    let arguments = web::RemoveArgs { owner, site_name };
     let response = client.call("web.remove", arguments)?;
     let payload = wait_response(client, response)?;
     println!("{}", minicbor::display(&payload));
@@ -210,8 +220,9 @@ fn main() {
             site_name,
             site_description,
             source,
-        }) => deploy(client, site_name, site_description, source),
-        SubCommand::Remove(RemoveOpt { site_name }) => remove(client, site_name),
+            owner,
+        }) => deploy(client, site_name, site_description, source, owner),
+        SubCommand::Remove(RemoveOpt { site_name, owner }) => remove(client, site_name, owner),
         SubCommand::List(ListOpt { order, filter }) => list(client, order, filter),
     };
 

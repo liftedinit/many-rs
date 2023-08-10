@@ -33,6 +33,11 @@ function teardown() {
     assert_output '{0: "https://test_dweb.'$(identity 1)'.web.liftedinit.tech"}' # TODO: Final format TBD
 }
 
+@test "$SUITE: dweb website deployment fails if owner is not sender" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip --owner "$(identity 2)"
+    assert_output --partial "Invalid owner: $(identity 2)"
+}
+
 @test "$SUITE: dweb website removal works" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
     assert_output '{0: "https://test_dweb.'$(identity 1)'.web.liftedinit.tech"}' # TODO: Final format TBD
