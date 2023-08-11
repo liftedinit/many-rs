@@ -2,6 +2,7 @@ GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 
 load '../../test_helper/load'
 load '../../test_helper/web'
+load '../../test_helper/kvstore'
 load '../../test_helper/http-proxy'
 
 function setup() {
@@ -56,4 +57,16 @@ function teardown() {
     assert_output --partial 'foobar'
     assert_output --partial "$(identity 1)"
     assert_output --partial "$(identity 2)"
+}
+
+@test "$SUITE: dweg get must start by /http" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
+    assert_output  --partial "https://test_dweb.$(identity 1).web.liftedinit.tech" # TODO: Final format TBD
+
+    # Call the kvstore endpoint of many-web
+    call_kvstore --pem=1 --port=8000 get "foobar"
+    assert_output --partial "Key should start with '/http/'."
+
+    call_kvstore --pem=1 --port=8000 get "/http/$(identity 1)/test_dweb/index.html"
+    assert_output --partial 'Hello Foobar!'
 }
