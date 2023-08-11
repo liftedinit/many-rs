@@ -14,6 +14,7 @@ use many_modules::web::{
 };
 use many_types::web::{WebDeploymentInfo, WebDeploymentSource};
 use many_types::Timestamp;
+use sha2::Digest;
 use std::collections::BTreeMap;
 use std::io::Cursor;
 use std::path::Path;
@@ -21,6 +22,7 @@ use tempfile::Builder;
 use tracing::{info, trace};
 
 pub mod allow_addrs;
+pub mod events;
 
 // The initial state schema, loaded from JSON.
 #[derive(serde::Deserialize, Debug, Default)]
@@ -85,8 +87,8 @@ impl ManyAbciModuleBackend for WebModuleImpl {
                 ("kvstore.get".to_string(), EndpointInfo { is_command: false }),
                 ("kvstore.info".to_string(), EndpointInfo { is_command: false }),
                 // Events
-                // ("events.info".to_string(), EndpointInfo { is_command: false }),
-                // ("events.list".to_string(), EndpointInfo { is_command: false }),
+                ("events.info".to_string(), EndpointInfo { is_command: false }),
+                ("events.list".to_string(), EndpointInfo { is_command: false }),
             ]),
         })
     }
@@ -169,7 +171,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             site_name,
             site_description,
             source,
-            memo: _memo,
+            memo,
         } = args;
 
         // Check that the sender is the owner, for now.
@@ -206,12 +208,13 @@ impl WebCommandsModuleBackend for WebModuleImpl {
         let mut serve_path = tmpdir.path().to_path_buf();
 
         trace!("Checking site source");
-        match &source {
+        let source_hash = match &source {
             WebDeploymentSource::Zip(bytes) => {
                 zip::ZipArchive::new(Cursor::new(bytes.as_slice()))
                     .map_err(error::invalid_zip_file)?
                     .extract(&mut serve_path)
                     .map_err(error::unable_to_extract_zip_file)?;
+                hex::encode(sha2::Sha256::digest(bytes.as_slice()).as_slice())
             }
         };
 
@@ -223,6 +226,8 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             sender,
             site_name.clone(),
             site_description.clone(),
+            memo,
+            source_hash,
             serve_path,
         )?;
 
@@ -242,7 +247,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
         let RemoveArgs {
             owner,
             site_name,
-            memo: _memo,
+            memo,
         } = args;
 
         // Check that the sender is the owner, for now.
@@ -255,7 +260,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
 
         // TODO: Log event
 
-        self.storage.remove_website(sender, &site_name)?;
+        self.storage.remove_website(sender, &site_name, memo)?;
         Ok(RemoveReturns {})
     }
 }

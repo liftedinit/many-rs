@@ -4,9 +4,9 @@ use base64::engine::general_purpose;
 use many_error::ManyError;
 use many_identity::Address;
 use many_modules::abci_backend::AbciCommitInfo;
-use many_modules::events::EventId;
+use many_modules::events::{EventId, EventInfo};
 use many_types::web::{WebDeploymentFilter, WebDeploymentInfo};
-use many_types::{SortOrder, Timestamp};
+use many_types::{Memo, SortOrder, Timestamp};
 use merk::{BatchEntry, Op};
 use std::fs;
 use std::io::Write;
@@ -14,6 +14,7 @@ use std::path::Path;
 use tracing::trace;
 use walkdir::{DirEntry, WalkDir};
 
+pub mod events;
 pub mod iterator;
 
 pub const HTTP_ROOT: &str = "/http"; // Where website files are stored.
@@ -62,6 +63,26 @@ impl WebStorage {
     #[inline]
     pub fn set_time(&mut self, time: Timestamp) {
         self.current_time = Some(time);
+    }
+    #[inline]
+    pub fn now(&self) -> Timestamp {
+        self.current_time.unwrap_or_else(Timestamp::now)
+    }
+
+    #[inline]
+    fn maybe_commit(&mut self) -> Result<(), ManyError> {
+        if !self.blockchain {
+            self.commit_storage()
+        } else {
+            Ok(())
+        }
+    }
+
+    #[inline]
+    fn commit_storage(&mut self) -> Result<(), ManyError> {
+        self.persistent_store
+            .commit(&[])
+            .map_err(error::storage_commit_failed)
     }
 
     pub fn load<P: AsRef<Path>>(persistent_path: P, blockchain: bool) -> Result<Self, String> {
@@ -202,6 +223,8 @@ impl WebStorage {
         owner: &Address,
         site_name: String,
         site_description: Option<String>,
+        memo: Option<Memo>,
+        source_hash: String,
         path: impl AsRef<Path>,
     ) -> Result<(), ManyError> {
         let mut batch: Vec<BatchEntry> = Vec::new();
@@ -253,8 +276,8 @@ impl WebStorage {
             Op::Put(
                 minicbor::to_vec(WebDeploymentInfo {
                     owner: *owner,
-                    site_name,
-                    site_description,
+                    site_name: site_name.clone(),
+                    site_description: site_description.clone(),
                     url: Some(url),
                 })
                 .map_err(ManyError::serialization_error)?,
@@ -269,13 +292,15 @@ impl WebStorage {
             .apply(batch.as_slice())
             .map_err(error::storage_apply_failed)?;
 
-        // TODO: Refactor
-        if !self.blockchain {
-            trace!("Committing batch");
-            self.persistent_store
-                .commit(&[])
-                .map_err(error::storage_commit_failed)?;
-        }
+        self.log_event(EventInfo::WebDeploy {
+            owner: *owner,
+            site_name,
+            site_description,
+            source_hash,
+            memo,
+        })?;
+
+        self.maybe_commit()?;
 
         Ok(())
     }
@@ -284,6 +309,7 @@ impl WebStorage {
         &mut self,
         owner: &Address,
         site_name: S,
+        memo: Option<Memo>,
     ) -> Result<(), ManyError> {
         trace!("Removing website {}", site_name.as_ref());
         let it = WebIterator::website_files(&self.persistent_store, owner, &site_name);
@@ -302,12 +328,13 @@ impl WebStorage {
             .apply(&batch)
             .map_err(error::storage_apply_failed)?;
 
-        // TODO: Refactor
-        if !self.blockchain {
-            self.persistent_store
-                .commit(&[])
-                .map_err(error::storage_commit_failed)?;
-        }
+        self.log_event(EventInfo::WebRemove {
+            owner: *owner,
+            site_name: site_name.as_ref().to_string(),
+            memo,
+        })?;
+
+        self.maybe_commit()?;
 
         Ok(())
     }

@@ -836,6 +836,18 @@ define_event! {
         2     | owner:                  Address                                [ id ],
         3     | new_owner:              Address                                [ id ],
     },
+    [17, 0]     WebDeploy (module::web::DeployArgs) {
+        1     | owner:                  Address                                [ id ],
+        2     | site_name:              String,
+        3     | site_description:       Option<String>,
+        4     | source_hash:            String,
+        5     | memo:                   Option<Memo>                           [ memo ],
+    },
+    [17, 1]     WebRemove (module::web::RemoveArgs) {
+        1     | owner:                  Address                                [ id ],
+        2     | site_name:              String,
+        3     | memo:                   Option<Memo>                           [ memo ],
+    },
 }
 
 /// An Event that happened on the server and that is part of the log.

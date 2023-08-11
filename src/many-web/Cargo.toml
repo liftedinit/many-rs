@@ -30,7 +30,9 @@ minicbor = { version = "0.19.1", features = ["derive", "std"] }
 serde = "=1.0.163"
 serde_json = "1.0"
 serde_yaml = "0.9"
+sha2 = "0.10.6"
 signal-hook = "0.3.15"
+strum = "0.24.1"
 tempfile = "3"
 tokio = { version = "1.28.1", features = [ "full" ] }
 tracing = "0.1.37"

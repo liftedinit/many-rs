@@ -4,7 +4,7 @@ use many_identity::verifiers::AnonymousVerifier;
 use many_identity::{Address, Identity};
 use many_identity_dsa::{CoseKeyIdentity, CoseKeyVerifier};
 use many_identity_webauthn::WebAuthnVerifier;
-use many_modules::{abci_backend, kvstore, web};
+use many_modules::{abci_backend, events, kvstore, web};
 use many_protocol::ManyUrl;
 use many_server::transport::http::HttpServer;
 use many_server::ManyServer;
@@ -173,7 +173,7 @@ fn main() {
         s.add_module(web::WebModule::new(module.clone()));
         // Impl only get and info
         s.add_module(kvstore::KvStoreModule::new(module.clone()));
-        // s.add_module(events::EventsModule::new(module.clone()));
+        s.add_module(events::EventsModule::new(module.clone()));
 
         if abci {
             s.set_timeout(u64::MAX);
