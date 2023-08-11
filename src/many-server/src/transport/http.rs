@@ -49,7 +49,7 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
         let envelope = match CoseSign1::from_tagged_slice(bytes) {
             Ok(cs) => cs,
             Err(e) => {
-                tracing::error!(r#"error description="{}""#, e.to_string());
+                tracing::error!(r#"Error decoding envelope. Error description="{}""#, e.to_string());
                 return Response::empty(500u16).with_data(Cursor::new(vec![]), Some(0));
             }
         };
@@ -62,7 +62,7 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
         let bytes = match response {
             Ok(bytes) => bytes,
             Err(e) => {
-                tracing::error!(r#"error description="{}""#, e);
+                tracing::error!(r#"Error getting response. Error description="{}""#, e);
                 return Response::empty(500u16).with_data(Cursor::new(vec![]), Some(0));
             }
         };
