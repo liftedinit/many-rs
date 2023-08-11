@@ -5704,6 +5704,7 @@ name = "web"
 version = "0.1.6"
 dependencies = [
  "anyhow",
+ "cbor-diag",
  "clap 3.2.25",
  "crc-any",
  "hex",

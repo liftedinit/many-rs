@@ -112,7 +112,10 @@ fn deploy(
     };
     let response = client.call("web.deploy", arguments)?;
     let payload = wait_response(client, response)?;
-    println!("{}", minicbor::display(&payload));
+    println!(
+        "{}",
+        cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
+    );
     Ok(())
 }
 
@@ -129,7 +132,10 @@ fn remove(
     };
     let response = client.call("web.remove", arguments)?;
     let payload = wait_response(client, response)?;
-    println!("{}", minicbor::display(&payload));
+    println!(
+        "{}",
+        cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
+    );
     Ok(())
 }
 
@@ -141,7 +147,10 @@ fn list(
     let args = ListArgs { order, filter };
     let response = client.call("web.list", args)?;
     let payload = wait_response(client, response)?;
-    println!("{}", minicbor::display(&payload));
+    println!(
+        "{}",
+        cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
+    );
     Ok(())
 }
 

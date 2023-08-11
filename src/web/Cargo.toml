@@ -16,6 +16,7 @@ doc = false
 
 [dependencies]
 anyhow = "1.0.71"
+cbor-diag = "0.1.12"
 clap = { version = "3.2.25", features = ["derive"] }
 crc-any = "2.4.3"
 hex = "0.4.3"
