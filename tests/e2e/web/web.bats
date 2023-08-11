@@ -59,7 +59,7 @@ function teardown() {
     assert_output --partial "$(identity 2)"
 }
 
-@test "$SUITE: dweg get must start by /http" {
+@test "$SUITE: dweb get must start by /http" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
     assert_output  --partial "https://test_dweb.$(identity 1).web.liftedinit.tech" # TODO: Final format TBD
 
