@@ -114,7 +114,7 @@ fn deploy(
     let payload = wait_response(client, response)?;
     println!(
         "{}",
-        cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
+        cbor_diag::parse_bytes(payload).unwrap().to_diag_pretty()
     );
     Ok(())
 }
@@ -134,7 +134,7 @@ fn remove(
     let payload = wait_response(client, response)?;
     println!(
         "{}",
-        cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
+        cbor_diag::parse_bytes(payload).unwrap().to_diag_pretty()
     );
     Ok(())
 }
@@ -149,7 +149,7 @@ fn list(
     let payload = wait_response(client, response)?;
     println!(
         "{}",
-        cbor_diag::parse_bytes(&payload).unwrap().to_diag_pretty()
+        cbor_diag::parse_bytes(payload).unwrap().to_diag_pretty()
     );
     Ok(())
 }
