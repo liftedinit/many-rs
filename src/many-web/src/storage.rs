@@ -85,12 +85,13 @@ impl WebStorage {
             .map_err(error::storage_commit_failed)
     }
 
-    pub fn load<P: AsRef<Path>>(persistent_path: P, blockchain: bool) -> Result<Self, String> {
-        let persistent_store = merk::Merk::open(persistent_path).map_err(|e| e.to_string())?;
+    pub fn load<P: AsRef<Path>>(persistent_path: P, blockchain: bool) -> Result<Self, ManyError> {
+        let persistent_store =
+            merk::Merk::open(persistent_path).map_err(error::unable_to_open_storage)?;
 
         let next_subresource = persistent_store
             .get(b"/config/subresource_id")
-            .unwrap()
+            .map_err(error::storage_get_failed)?
             .map_or(0, |x| {
                 let mut bytes = [0u8; 4];
                 bytes.copy_from_slice(x.as_slice());
@@ -100,18 +101,18 @@ impl WebStorage {
         let root_identity: Address = Address::from_bytes(
             &persistent_store
                 .get(b"/config/identity")
-                .expect("Could not open storage.")
-                .expect("Could not find key '/config/identity' in storage."),
+                .map_err(error::storage_get_failed)?
+                .ok_or(error::key_not_found("/config/identity"))?,
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(ManyError::deserialization_error)?;
 
         let latest_event_id = minicbor::decode(
             &persistent_store
                 .get(b"/latest_event_id")
-                .expect("Could not open storage.")
-                .expect("Could not find key '/latest_event_id'"),
+                .map_err(error::storage_get_failed)?
+                .ok_or(error::key_not_found("/latest_event_id"))?,
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(ManyError::deserialization_error)?;
 
         Ok(Self {
             persistent_store,
@@ -128,25 +129,30 @@ impl WebStorage {
         identity: Address,
         persistent_path: P,
         blockchain: bool,
-    ) -> Result<Self, String> {
-        let mut persistent_store = merk::Merk::open(persistent_path).map_err(|e| e.to_string())?;
+    ) -> Result<Self, ManyError> {
+        let mut persistent_store =
+            merk::Merk::open(persistent_path).map_err(error::unable_to_open_storage)?;
 
         let batch: Vec<BatchEntry> =
             vec![(b"/config/identity".to_vec(), Op::Put(identity.to_vec()))];
 
         persistent_store
             .apply(batch.as_slice())
-            .map_err(|e| e.to_string())?;
+            .map_err(error::storage_apply_failed)?;
 
         let latest_event_id = EventId::from(vec![0]);
         persistent_store
             .apply(&[(
                 b"/latest_event_id".to_vec(),
-                Op::Put(minicbor::to_vec(&latest_event_id).expect("Unable to encode event id")),
+                Op::Put(
+                    minicbor::to_vec(&latest_event_id).map_err(ManyError::serialization_error)?,
+                ),
             )])
-            .unwrap();
+            .map_err(error::storage_apply_failed)?;
 
-        persistent_store.commit(&[]).map_err(|e| e.to_string())?;
+        persistent_store
+            .commit(&[])
+            .map_err(error::storage_commit_failed)?;
 
         Ok(Self {
             persistent_store,
@@ -159,48 +165,51 @@ impl WebStorage {
         })
     }
 
-    fn inc_height(&mut self) -> u64 {
-        let current_height = self.get_height();
+    fn inc_height(&mut self) -> Result<u64, ManyError> {
+        let current_height = self.get_height()?;
         self.persistent_store
             .apply(&[(
                 b"/height".to_vec(),
                 Op::Put((current_height + 1).to_be_bytes().to_vec()),
             )])
-            .unwrap();
-        current_height
+            .map_err(error::storage_apply_failed)?;
+        Ok(current_height)
     }
 
-    pub fn get_height(&self) -> u64 {
+    pub fn get_height(&self) -> Result<u64, ManyError> {
         self.persistent_store
             .get(b"/height")
-            .unwrap()
-            .map_or(0u64, |x| {
+            .map_err(error::storage_get_failed)?
+            .map_or(Ok(0u64), |x| {
                 let mut bytes = [0u8; 8];
                 bytes.copy_from_slice(x.as_slice());
-                u64::from_be_bytes(bytes)
+                Ok(u64::from_be_bytes(bytes))
             })
     }
 
-    pub fn commit(&mut self) -> AbciCommitInfo {
+    pub fn commit(&mut self) -> Result<AbciCommitInfo, ManyError> {
         let _ = self.inc_height();
         self.persistent_store
             .apply(&[(
                 b"/latest_event_id".to_vec(),
                 Op::Put(
-                    minicbor::to_vec(&self.latest_event_id).expect("Unable to encode event id"),
+                    minicbor::to_vec(&self.latest_event_id)
+                        .map_err(ManyError::serialization_error)?,
                 ),
             )])
-            .unwrap();
-        self.persistent_store.commit(&[]).unwrap();
+            .map_err(error::storage_apply_failed)?;
+        self.persistent_store
+            .commit(&[])
+            .map_err(error::storage_commit_failed)?;
 
         let retain_height = 0;
         let hash = self.persistent_store.root_hash().to_vec();
         self.current_hash = Some(hash.clone());
 
-        AbciCommitInfo {
+        Ok(AbciCommitInfo {
             retain_height,
             hash: hash.into(),
-        }
+        })
     }
 
     pub fn hash(&self) -> Vec<u8> {

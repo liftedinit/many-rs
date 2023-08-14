@@ -7,7 +7,7 @@ define_attribute_many_error!(
             => "Invalid initial hash. Expected '{expected}', was '{actual}'.",
         3: pub fn invalid_site_description(desc) => "Invalid site description: {desc}.",
         4: pub fn unable_to_create_tempdir(dir) => "Unable to create temporary directory: {dir}.",
-        5: pub fn unable_to_clone_repository(source) => "Unable to clone repository: {source}.",
+        5: pub fn key_not_found(key) => "Key not found: {key}.",
         6: pub fn unable_to_read_entry(entry) => "Unable to read entry: {entry}.",
         7: pub fn key_should_start_with_http() => "Key should start with '/http/'.",
         8: pub fn unable_to_strip_prefix(prefix) => "Unable to strip prefix: {prefix}.",
@@ -16,6 +16,7 @@ define_attribute_many_error!(
         11: pub fn invalid_zip_file(err) => "Invalid zip file: {err}.",
         12: pub fn unable_to_extract_zip_file(err) => "Unable to extract zip file: {err}.",
         13: pub fn invalid_owner(owner) => "Invalid owner: {owner}.",
+        14: pub fn unable_to_open_storage(err) => "Unable to open storage: {err}.",
     }
 );
 

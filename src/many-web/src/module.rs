@@ -64,7 +64,7 @@ impl WebModuleImpl {
         }
 
         info!(
-            height = storage.get_height(),
+            height = storage.get_height()?,
             hash = hex::encode(storage.hash()).as_str()
         );
 
@@ -103,7 +103,7 @@ impl ManyAbciModuleBackend for WebModuleImpl {
         info!(
             "abci.block_begin(): time={:?} curr_height={}",
             time,
-            self.storage.get_height()
+            self.storage.get_height()?
         );
 
         if let Some(time) = time {
@@ -119,17 +119,17 @@ impl ManyAbciModuleBackend for WebModuleImpl {
 
         info!(
             "abci.info(): height={} hash={}",
-            storage.get_height(),
+            storage.get_height()?,
             hex::encode(storage.hash()).as_str()
         );
         Ok(AbciInfo {
-            height: storage.get_height(),
+            height: storage.get_height()?,
             hash: storage.hash().into(),
         })
     }
 
     fn commit(&mut self) -> Result<AbciCommitInfo, ManyError> {
-        let result = self.storage.commit();
+        let result = self.storage.commit()?;
 
         info!(
             "abci.commit(): retain_height={} hash={}",
