@@ -24,7 +24,7 @@ function setup() {
 }
 
 function teardown() {
-    rm dummy.zip
+    rm dummy.zip index.html
 
     (
       cd "$GIT_ROOT/docker/" || exit 1
@@ -36,7 +36,8 @@ function teardown() {
 }
 
 @test "$SUITE: max tx bytes limits" {
-    head -c 5242350 </dev/urandom | zip -0 > dummy.zip
+    head -c 5242350 </dev/urandom >index.html
+    zip -0 dummy.zip index.html
 
     run wc -c dummy.zip
     assert_output --partial "5242546"
@@ -46,7 +47,8 @@ function teardown() {
     assert_output --partial 'https://foobar.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
 
     # Create a new dummy file with one more byte
-    head -c 5242351 </dev/urandom | zip -0 > dummy.zip
+    head -c 5242351 </dev/urandom >index.html
+    zip -0 dummy.zip index.html
 
     run wc -c dummy.zip
     assert_output --partial "5242547"
