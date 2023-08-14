@@ -218,6 +218,12 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             }
         };
 
+        // Look for `index.html` in the root of the serve path
+        let index_path = serve_path.join("index.html");
+        if !index_path.exists() {
+            return Err(error::missing_index_html());
+        }
+
         // TODO: Get real URL for website
         let url = url_for_website(sender, &site_name);
 

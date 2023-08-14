@@ -17,6 +17,7 @@ define_attribute_many_error!(
         12: pub fn unable_to_extract_zip_file(err) => "Unable to extract zip file: {err}.",
         13: pub fn invalid_owner(owner) => "Invalid owner: {owner}.",
         14: pub fn unable_to_open_storage(err) => "Unable to open storage: {err}.",
+        15: pub fn missing_index_html() => "Missing 'index.html' at the root of the archive.",
     }
 );
 
