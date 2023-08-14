@@ -70,3 +70,16 @@ function teardown() {
     call_kvstore --pem=1 --port=8000 get "/http/$(identity 1)/test_dweb/index.html"
     assert_output --partial 'Hello Foobar!'
 }
+
+@test "$SUITE: check for index.html" {
+    xxd -p -r << EOF > dummy.zip
+    504b03040a000000000043540e5716359631060000000600000006001c00
+666f6f62617255540900035d3bda645d3bda6475780b000104e803000004
+e803000048656c6c6f0a504b01021e030a000000000043540e5716359631
+0600000006000000060018000000000000000000a48100000000666f6f62
+617255540500035d3bda6475780b000104e803000004e8030000504b0506
+00000000010001004c000000460000000000
+EOF
+    call_web --pem=1 --port=8000 deploy dummy dummy.zip
+    assert_output --partial "Missing 'index.html' at the root of the archive."
+}
