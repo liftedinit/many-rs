@@ -99,7 +99,7 @@ function teardown() {
     # Give time to the servers to start.
     wait_for_server 8003
     sleep 10
-    check_consistency --pem=1 --value=test_dweb 8000 8001 8002
-    check_consistency --pem=1 --value=test_dweb2 8000 8001 8002
-    check_consistency --pem=1 --value=test_dweb3 8000 8001 8002
+    check_consistency --pem=1 --value=test_dweb 8000 8001 8002 8003
+    check_consistency --pem=1 --value=test_dweb2 8000 8001 8002 8003
+    check_consistency --pem=1 --value=test_dweb3 8000 8001 8002 8003
 }
