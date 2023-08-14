@@ -43,7 +43,7 @@ function teardown() {
 
     # With the header/envelope overhead, the transaction should be exactly 5242880 bytes
     call_web --pem=1 --port=8000 deploy foobar dummy.zip
-    assert_output --partial '{0: "https://foobar.'$(identity 1)'.web.liftedinit.tech"}' # TODO: Final format TBD
+    assert_output --partial 'https://foobar.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
 
     # Create a new dummy file with one more byte
     head -c 5242351 </dev/urandom | zip -0 > dummy.zip

@@ -44,22 +44,22 @@ function teardown() {
 
 @test "$SUITE: Network is consistent" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
-    assert_output --partial '{0: "https://test_dweb.'$(identity 1)'.web.liftedinit.tech"}' # TODO: Final format TBD
+    assert_output --partial 'https://test_dweb.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
     check_consistency --pem=1 --value=test_dweb 8000 8001 8002 8003
 
     call_web --pem=1 --port=8001 deploy test_dweb2 test_dweb.zip
-    assert_output --partial '{0: "https://test_dweb2.'$(identity 1)'.web.liftedinit.tech"}' # TODO: Final format TBD
+    assert_output --partial 'https://test_dweb2.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
     check_consistency --pem=1 --value=test_dweb 8000 8001 8002 8003
     check_consistency --pem=1 --value=test_dweb2 8000 8001 8002 8003
 
     call_web --pem=1 --port=8002 deploy test_dweb3 test_dweb.zip
-    assert_output --partial '{0: "https://test_dweb3.'$(identity 1)'.web.liftedinit.tech"}' # TODO: Final format TBD
+    assert_output --partial 'https://test_dweb3.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
     check_consistency --pem=1 --value=test_dweb 8000 8001 8002 8003
     check_consistency --pem=1 --value=test_dweb2 8000 8001 8002 8003
     check_consistency --pem=1 --value=test_dweb3 8000 8001 8002 8003
 
     call_web --pem=1 --port=8003 deploy test_dweb4 test_dweb.zip
-    assert_output --partial '{0: "https://test_dweb4.'$(identity 1)'.web.liftedinit.tech"}' # TODO: Final format TBD
+    assert_output --partial 'https://test_dweb4.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
     check_consistency --pem=1 --value=test_dweb 8000 8001 8002 8003
     check_consistency --pem=1 --value=test_dweb2 8000 8001 8002 8003
     check_consistency --pem=1 --value=test_dweb3 8000 8001 8002 8003
@@ -76,16 +76,16 @@ function teardown() {
     make -f $MAKEFILE stop-single-node-3
 
     call_web --pem=1 --port=8000 deploy test_dweb "$archive"
-    assert_output --partial '{0: "https://test_dweb.'$(identity 1)'.web.liftedinit.tech"}' # TODO: Final format TBD
+    assert_output --partial 'https://test_dweb.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
     check_consistency --pem=1 --value=test_dweb 8000 8001 8002
 
     call_web --pem=1 --port=8001 deploy test_dweb2 "$archive"
-    assert_output --partial '{0: "https://test_dweb2.'$(identity 1)'.web.liftedinit.tech"}' # TODO: Final format TBD
+    assert_output --partial 'https://test_dweb2.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
     check_consistency --pem=1 --value=test_dweb 8000 8001 8002
     check_consistency --pem=1 --value=test_dweb2 8000 8001 8002
 
     call_web --pem=1 --port=8002 deploy test_dweb3 "$archive"
-    assert_output --partial '{0: "https://test_dweb3.'$(identity 1)'.web.liftedinit.tech"}' # TODO: Final format TBD
+    assert_output --partial 'https://test_dweb3.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
     check_consistency --pem=1 --value=test_dweb 8000 8001 8002
     check_consistency --pem=1 --value=test_dweb2 8000 8001 8002
     check_consistency --pem=1 --value=test_dweb3 8000 8001 8002
