@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.7] - 2023-08-15
+
+### Bug Fixes
+
+- Rustsec-2022-0093 ([#409](https://github.com/liftedinit/many-rs/issues/409))
+
+### CI
+
+- Disable macos nightly for now ([#406](https://github.com/liftedinit/many-rs/issues/406))
+
+### Features
+
+- Http-proxy rework ([#397](https://github.com/liftedinit/many-rs/issues/397))
+- [**breaking**] Kvstore list filters ([#393](https://github.com/liftedinit/many-rs/issues/393))
+
 ## [0.1.6] - 2023-07-20
 
 ### Features

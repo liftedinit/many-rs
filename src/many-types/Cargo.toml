@@ -1,6 +1,6 @@
 [package]
 name = "many-types"
-version = "0.1.6" # managed by release.sh
+version = "0.1.7" # managed by release.sh
 edition = "2021"
 description = "General types related to CBOR encoding, or to the specification."
 license-file = "../../LICENSE"
@@ -11,8 +11,8 @@ authors = ["The Lifted Initiative <crates@liftedinit.org>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-many-error = { path = "../many-error", version = "0.1.6" } # managed by release.sh
-many-identity = { path = "../many-identity", version = "0.1.6" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.1.7" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.1.7" } # managed by release.sh
 base64 = "0.21.2"
 coset = "0.3.4"
 derive_more = "0.99.17"
@@ -28,7 +28,7 @@ strum = { version = "0.25.0", features = ["derive"] }
 
 [dev-dependencies]
 cbor-diag = "0.1.12"
-many-types = { path = ".", features = ["proptest"], version = "0.1.6" } # managed by release.sh
+many-types = { path = ".", features = ["proptest"], version = "0.1.7" } # managed by release.sh
 serde_test = "1.0.163"
 
 [features]
