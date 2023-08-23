@@ -7,7 +7,7 @@ include Makefile.common
 .PHONY: clean
 clean:
 	if [ -d "${PWD}/genfiles-kvstore/docker-compose.json" ]; then \
-		docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore down || true; \
+		docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore down || true; \
 	fi
 	rm -rf genfiles-kvstore
 
@@ -56,68 +56,68 @@ genfiles-kvstore/node%: genfiles-common/tendermint-docker genfiles-common/openss
 
 .PHONY: start-nodes
 start-nodes: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json genfiles-kvstore/many-kvstore-docker genfiles-common/many-abci-docker
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up
 
 .PHONY: start-abci-%
 start-abci-%: genfiles-kvstore/docker-compose.json genfiles-common/many-abci-docker
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up abci-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up abci-$*
 
 .PHONY: start-kvstore-%
 start-kvstore-%: genfiles-kvstore/docker-compose.json genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/many-kvstore-docker
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up kvstore-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up kvstore-$*
 
 .PHONY: start-tendermint-%
 start-tendermint-%: genfiles-kvstore/docker-compose.json genfiles-kvstore/generate-tendermint-e2e-config genfiles-common/tendermint-docker
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up tendermint-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up tendermint-$*
 
 .PHONY: down-nodes
 down-nodes: genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore down
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore down
 
 .PHONY: down-abci-%
 down-abci-%: genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore down abci-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore down abci-$*
 
 .PHONY: down-kvstore-%
 down-kvstore-%: genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore down kvstore-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore down kvstore-$*
 
 .PHONY: down-tendermint-%
 down-tendermint--%: genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore down tendermint-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore down tendermint-$*
 
 .PHONY: stop-nodes
 stop-nodes: genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop
 
 .PHONY: remove-nodes
 remove-nodes: genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore rm -s -f -v
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore rm -s -f -v
 
 .PHONY: stop-single-node-%
 stop-single-node-%: genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop abci-$*
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop kvstore-$*
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop tendermint-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop abci-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop kvstore-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop tendermint-$*
 
 .PHONY: stop-abci-%
 stop-abci-%: genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop abci-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop abci-$*
 
 .PHONY: stop-kvstore-%
 start-kvstore-%: genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop kvstore-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop kvstore-$*
 
 .PHONY: stop-tendermint-%
 stop-tendermint-%: genfiles-kvstore/docker-compose.json
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop tendermint-$*
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore stop tendermint-$*
 
 .PHONY: start-nodes-detached
 start-nodes-detached: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json genfiles-common/tendermint-docker genfiles-kvstore/many-kvstore-docker genfiles-common/many-abci-docker
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up --detach
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up --detach
 
 .PHONY: start-single-node-detached-%
 start-single-node-detached-%: genfiles-kvstore/generate-tendermint-e2e-config genfiles-kvstore/docker-compose.json genfiles-common/tendermint-docker genfiles-kvstore/many-kvstore-docker genfiles-common/many-abci-docker
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up abci-$* --detach
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up kvstore-$* --detach
-	docker-compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up tendermint-$* --detach
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up abci-$* --detach
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up kvstore-$* --detach
+	docker compose -f genfiles-kvstore/docker-compose.json -p e2e-kvstore up tendermint-$* --detach
