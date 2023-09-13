@@ -64,6 +64,7 @@ mod tests {
                 &module,
                 "web.list",
                 minicbor::to_vec(super::ListArgs {
+                    count: None,
                     order: None,
                     filter: None,
                 })

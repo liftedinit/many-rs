@@ -25,7 +25,7 @@ impl World {
         Self {
             site_name: "".to_string(),
             site_description: None,
-            source: WebDeploymentSource::Zip(vec![].into()),
+            source: WebDeploymentSource::Archive(vec![].into()),
             module: WebModuleImpl::new(
                 InitialStateJson::default(),
                 Builder::new()
@@ -54,7 +54,7 @@ fn given_site_description(w: &mut World, description: String) {
 fn given_site_source(w: &mut World, source: String) {
     let b = hex::decode(source).expect("Unable to decode hex string");
     match &mut w.source {
-        WebDeploymentSource::Zip(bytes) => *bytes = b.into(),
+        WebDeploymentSource::Archive(bytes) => *bytes = b.into(),
     }
 }
 
@@ -135,6 +135,7 @@ fn then_list(w: &mut World, site_name: String) {
         &w.module,
         &identity(0),
         ListArgs {
+            count: None,
             order: None,
             filter: None,
         },
@@ -152,6 +153,7 @@ fn then_list_filtered(w: &mut World, seed: u32, site_name: String) {
         &w.module,
         &identity(0),
         ListArgs {
+            count: None,
             order: None,
             filter: Some(vec![WebDeploymentFilter::Owner(identity(seed))]),
         },
@@ -163,12 +165,28 @@ fn then_list_filtered(w: &mut World, seed: u32, site_name: String) {
         .any(|v| v.site_name == site_name));
 }
 
+#[then(expr = "listing websites with count set to {int} result in a list of length count")]
+fn then_list_count(w: &mut World, count: usize) {
+    let ret = WebModuleBackend::list(
+        &w.module,
+        &identity(0),
+        ListArgs {
+            count: Some(count),
+            order: None,
+            filter: None,
+        },
+    )
+    .expect("Website list failed");
+    assert_eq!(ret.deployments.len(), count);
+}
+
 #[then(expr = "the website list should not contain {string}")]
 fn then_list_not(w: &mut World, site_name: String) {
     let ret = WebModuleBackend::list(
         &w.module,
         &identity(0),
         ListArgs {
+            count: None,
             order: None,
             filter: None,
         },
@@ -186,6 +204,7 @@ fn then_list_not_filtered(w: &mut World, seed: u32, site_name: String) {
         &w.module,
         &identity(0),
         ListArgs {
+            count: None,
             order: None,
             filter: Some(vec![WebDeploymentFilter::Owner(identity(seed))]),
         },

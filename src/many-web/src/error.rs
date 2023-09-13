@@ -2,10 +2,9 @@ use many_error::{define_application_many_error, define_attribute_many_error};
 
 define_attribute_many_error!(
     attribute 16 => {
-        1: pub fn invalid_site_name(name) => "Invalid site name: {name}.",
+        1: pub fn not_alphanumeric_or_symbols(s) => "Invalid string: {s}.",
         2: pub fn invalid_initial_hash(expected, actual)
             => "Invalid initial hash. Expected '{expected}', was '{actual}'.",
-        3: pub fn invalid_site_description(desc) => "Invalid site description: {desc}.",
         4: pub fn unable_to_create_tempdir(dir) => "Unable to create temporary directory: {dir}.",
         5: pub fn key_not_found(key) => "Key not found: {key}.",
         6: pub fn unable_to_read_entry(entry) => "Unable to read entry: {entry}.",

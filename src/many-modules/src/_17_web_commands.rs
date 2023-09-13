@@ -4,9 +4,11 @@ use many_macros::many_module;
 
 pub mod deploy;
 pub mod remove;
+pub mod update;
 
 pub use deploy::*;
 pub use remove::*;
+pub use update::*;
 
 #[cfg(test)]
 use mockall::{automock, predicate::*};
@@ -19,6 +21,9 @@ pub trait WebCommandsModuleBackend: Send {
 
     #[many(deny_anonymous)]
     fn remove(&mut self, sender: &Address, args: RemoveArgs) -> Result<RemoveReturns, ManyError>;
+
+    #[many(deny_anonymous)]
+    fn update(&mut self, sender: &Address, args: UpdateArgs) -> Result<UpdateReturns, ManyError>;
 }
 
 #[cfg(test)]
@@ -26,6 +31,7 @@ mod tests {
     use crate::testutils::call_module_cbor;
     use crate::web::{
         DeployArgs, DeployReturns, MockWebCommandsModuleBackend, RemoveArgs, RemoveReturns,
+        UpdateArgs, UpdateReturns,
     };
     use many_identity::testing::identity;
     use many_types::web::{WebDeploymentInfo, WebDeploymentSource};
@@ -39,7 +45,7 @@ mod tests {
             owner: None,
             site_name: "".to_string(),
             site_description: None,
-            source: WebDeploymentSource::Zip(vec![].into()),
+            source: WebDeploymentSource::Archive(vec![].into()),
             memo: None,
         };
         mock.expect_deploy()
@@ -82,5 +88,37 @@ mod tests {
             &call_module_cbor(1, &module, "web.remove", minicbor::to_vec(data).unwrap()).unwrap(),
         )
         .unwrap();
+    }
+
+    #[test]
+    fn update() {
+        let mut mock = MockWebCommandsModuleBackend::new();
+        let data = UpdateArgs {
+            owner: None,
+            site_name: "".to_string(),
+            site_description: None,
+            source: WebDeploymentSource::Archive(vec![].into()),
+            memo: None,
+        };
+        mock.expect_update()
+            .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
+            .times(1)
+            .returning(|sender, _args| {
+                Ok(UpdateReturns {
+                    info: WebDeploymentInfo {
+                        owner: *sender,
+                        site_name: "".to_string(),
+                        site_description: None,
+                        url: Some("foobar".to_string()),
+                    },
+                })
+            });
+        let module = super::WebCommandsModule::new(Arc::new(Mutex::new(mock)));
+
+        let deploy: UpdateReturns = minicbor::decode(
+            &call_module_cbor(1, &module, "web.update", minicbor::to_vec(data).unwrap()).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(deploy.info.url, Some("foobar".to_string()));
     }
 }

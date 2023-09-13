@@ -10,16 +10,18 @@ use many_modules::abci_backend::{
 use many_modules::kvstore::{GetArgs, GetReturns, KvStoreModuleBackend, QueryArgs, QueryReturns};
 use many_modules::web::{
     DeployArgs, DeployReturns, InfoArg, InfoReturns, ListArgs, ListReturns, RemoveArgs,
-    RemoveReturns, WebCommandsModuleBackend, WebModuleBackend,
+    RemoveReturns, UpdateArgs, UpdateReturns, WebCommandsModuleBackend, WebModuleBackend,
 };
 use many_types::web::{WebDeploymentInfo, WebDeploymentSource};
 use many_types::Timestamp;
 use sha2::Digest;
 use std::collections::BTreeMap;
 use std::io::Cursor;
-use std::path::Path;
+use std::path::{Path};
 use tempfile::Builder;
 use tracing::{info, trace};
+
+const MAXIMUM_WEB_COUNT: usize = 100;
 
 pub mod allow_addrs;
 pub mod events;
@@ -146,6 +148,49 @@ fn all_alphanumeric_or_symbols(input: &str) -> bool {
         .all(|c| c.is_alphanumeric() || c.is_ascii_punctuation() || c.is_ascii_whitespace())
 }
 
+fn is_alphanumeric_or_symbols(s: &str) -> Result<(), ManyError> {
+    trace!("Checking {s} is alphanumeric or symbols");
+    if !all_alphanumeric_or_symbols(s) {
+        return Err(error::not_alphanumeric_or_symbols(s));
+    }
+    Ok(())
+}
+
+fn _transform_site_name(site_name: String) -> String {
+    site_name.to_lowercase().trim().replace(' ', "_")
+}
+
+fn _prepare_deployment(
+    site_name: String,
+    site_description: Option<String>,
+    source: WebDeploymentSource,
+    serve_path: impl AsRef<Path>,
+) -> Result<String, ManyError> {
+    is_alphanumeric_or_symbols(&site_name)?;
+    if let Some(site_description) = &site_description {
+        is_alphanumeric_or_symbols(site_description)?;
+    }
+
+    trace!("Checking site source");
+    let source_hash = match &source {
+        WebDeploymentSource::Archive(bytes) => {
+            zip::ZipArchive::new(Cursor::new(bytes.as_slice()))
+                .map_err(error::invalid_zip_file)?
+                .extract( &serve_path)
+                .map_err(error::unable_to_extract_zip_file)?;
+            hex::encode(sha2::Sha256::digest(bytes.as_slice()).as_slice())
+        }
+    };
+
+    // Look for `index.html` in the root of the serve path
+    let index_path = serve_path.as_ref().join("index.html");
+    if !index_path.exists() {
+        return Err(error::missing_index_html());
+    }
+
+    Ok(source_hash)
+}
+
 impl WebModuleBackend for WebModuleImpl {
     fn info(&self, _sender: &Address, _args: InfoArg) -> Result<InfoReturns, ManyError> {
         Ok(InfoReturns {
@@ -159,6 +204,7 @@ impl WebModuleBackend for WebModuleImpl {
                 .storage
                 .list(args.order.unwrap_or_default(), args.filter)
                 .map(|(_, meta)| meta)
+                .take(args.count.unwrap_or(MAXIMUM_WEB_COUNT))
                 .collect(),
         })
     }
@@ -185,17 +231,8 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             sender
         };
 
-        trace!("Checking site name is alphanumeric or symbols");
-        if !all_alphanumeric_or_symbols(&site_name) {
-            return Err(error::invalid_site_name(site_name));
-        }
+        let site_name = _transform_site_name(site_name);
 
-        trace!("Checking site description is alphanumeric or symbols");
-        if let Some(site_description) = &site_description {
-            if !all_alphanumeric_or_symbols(site_description) {
-                return Err(error::invalid_site_description(site_description));
-            }
-        }
         let tmpdir = Builder::new()
             .prefix("dweb-")
             .tempdir()
@@ -205,29 +242,10 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             path = tmpdir.path().display()
         );
 
-        let mut serve_path = tmpdir.path().to_path_buf();
+        let serve_path = tmpdir.path().to_path_buf();
 
-        trace!("Checking site source");
-        let source_hash = match &source {
-            WebDeploymentSource::Zip(bytes) => {
-                zip::ZipArchive::new(Cursor::new(bytes.as_slice()))
-                    .map_err(error::invalid_zip_file)?
-                    .extract(&mut serve_path)
-                    .map_err(error::unable_to_extract_zip_file)?;
-                hex::encode(sha2::Sha256::digest(bytes.as_slice()).as_slice())
-            }
-        };
-
-        // Look for `index.html` in the root of the serve path
-        let index_path = serve_path.join("index.html");
-        if !index_path.exists() {
-            return Err(error::missing_index_html());
-        }
-
-        // TODO: Get real URL for website
-        let url = url_for_website(sender, &site_name);
-
-        trace!("Storing website");
+        let source_hash =
+            _prepare_deployment(site_name.clone(), site_description.clone(), source, &serve_path)?;
         self.storage.store_website(
             sender,
             site_name.clone(),
@@ -237,7 +255,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             serve_path,
         )?;
 
-        // TODO: Log event
+        let url = url_for_website(sender, &site_name);
 
         Ok(DeployReturns {
             info: WebDeploymentInfo {
@@ -264,10 +282,63 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             }
         }
 
-        // TODO: Log event
-
-        self.storage.remove_website(sender, &site_name, memo)?;
+        let site_name = _transform_site_name(site_name);
+        self.storage.remove_website(sender, site_name, memo)?;
         Ok(RemoveReturns {})
+    }
+
+    fn update(&mut self, sender: &Address, args: UpdateArgs) -> Result<UpdateReturns, ManyError> {
+        let UpdateArgs {
+            owner,
+            site_name,
+            site_description,
+            source,
+            memo,
+        } = args;
+
+        // Check that the sender is the owner, for now.
+        // TODO: Support accounts
+        let owner = if let Some(owner) = owner {
+            if sender != &owner {
+                return Err(error::invalid_owner(owner));
+            }
+            sender
+        } else {
+            sender
+        };
+        let site_name = _transform_site_name(site_name);
+
+        let tmpdir = Builder::new()
+            .prefix("dweb-")
+            .tempdir()
+            .map_err(error::unable_to_create_tempdir)?;
+        trace!(
+            "Created temporary directory {path}",
+            path = tmpdir.path().display()
+        );
+
+        let serve_path = tmpdir.path().to_path_buf();
+
+        let source_hash =
+            _prepare_deployment(site_name.clone(), site_description.clone(), source, &serve_path)?;
+        self.storage.update_website(
+            owner,
+            site_name.clone(),
+            site_description.clone(),
+            memo,
+            source_hash,
+            serve_path,
+        )?;
+
+        let url = url_for_website(sender, &site_name);
+        Ok(UpdateReturns {
+            info: WebDeploymentInfo {
+                owner: *owner,
+                site_name,
+                site_description,
+                url: Some(url),
+            },
+        })
     }
 }
 

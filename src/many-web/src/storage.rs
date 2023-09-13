@@ -33,7 +33,7 @@ fn key_for_website_meta(owner: &Address, site_name: &str) -> Vec<u8> {
 }
 
 pub fn url_for_website(owner: &Address, site_name: &str) -> String {
-    format!("https://{}.{}.web.liftedinit.tech", site_name, owner)
+    format!("https://{}.{}.ghostcloud.org", site_name, owner)
 }
 
 pub struct WebStorage {
@@ -227,15 +227,13 @@ impl WebStorage {
             .unwrap_or(false)
     }
 
-    pub fn store_website(
+    fn _store_website(
         &mut self,
         owner: &Address,
-        site_name: String,
-        site_description: Option<String>,
-        memo: Option<Memo>,
-        source_hash: String,
+        site_name: &str,
+        site_description: &Option<String>,
         path: impl AsRef<Path>,
-    ) -> Result<(), ManyError> {
+    ) -> Result<Vec<BatchEntry>, ManyError> {
         let mut batch: Vec<BatchEntry> = Vec::new();
 
         // Walk the directory tree, ignoring hidden files and directories.
@@ -269,23 +267,23 @@ impl WebStorage {
 
             trace!(
                 "Storing file to {}",
-                key_for_website_file(owner, &site_name, file_path)
+                key_for_website_file(owner, site_name, file_path)
             );
             batch.push((
-                key_for_website_file(owner, &site_name, file_path).into_bytes(),
+                key_for_website_file(owner, site_name, file_path).into_bytes(),
                 Op::Put(data),
             ));
         }
 
-        let url = url_for_website(owner, &site_name);
+        let url = url_for_website(owner, site_name);
 
         trace!("Adding website meta to batch");
         batch.push((
-            key_for_website_meta(owner, &site_name),
+            key_for_website_meta(owner, site_name),
             Op::Put(
                 minicbor::to_vec(WebDeploymentInfo {
                     owner: *owner,
-                    site_name: site_name.clone(),
+                    site_name: site_name.to_owned(),
                     site_description: site_description.clone(),
                     url: Some(url),
                 })
@@ -295,6 +293,19 @@ impl WebStorage {
 
         trace!("Sorting batch");
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
+
+        Ok(batch)
+    }
+    pub fn store_website(
+        &mut self,
+        owner: &Address,
+        site_name: String,
+        site_description: Option<String>,
+        memo: Option<Memo>,
+        source_hash: String,
+        path: impl AsRef<Path>,
+    ) -> Result<(), ManyError> {
+        let batch = self._store_website(owner, &site_name, &site_description, path)?;
 
         trace!("Applying batch");
         self.persistent_store
@@ -314,14 +325,14 @@ impl WebStorage {
         Ok(())
     }
 
-    pub fn remove_website<S: AsRef<str>>(
-        &mut self,
+    fn _remove_website(
+        &self,
         owner: &Address,
-        site_name: S,
-        memo: Option<Memo>,
-    ) -> Result<(), ManyError> {
-        trace!("Removing website {}", site_name.as_ref());
+        site_name: &String,
+    ) -> Result<Vec<BatchEntry>, ManyError> {
+        trace!("Removing website {}", site_name);
         let it = WebIterator::website_files(&self.persistent_store, owner, &site_name);
+
         let mut batch: Vec<BatchEntry> = Vec::new();
 
         // Remove each file of the website
@@ -331,7 +342,18 @@ impl WebStorage {
         }
 
         trace!("Removing website meta");
-        batch.push((key_for_website_meta(owner, site_name.as_ref()), Op::Delete));
+        batch.push((key_for_website_meta(owner, site_name), Op::Delete));
+
+        Ok(batch)
+    }
+
+    pub fn remove_website(
+        &mut self,
+        owner: &Address,
+        site_name: String,
+        memo: Option<Memo>,
+    ) -> Result<(), ManyError> {
+        let batch = self._remove_website(owner, &site_name)?;
 
         self.persistent_store
             .apply(&batch)
@@ -339,7 +361,41 @@ impl WebStorage {
 
         self.log_event(EventInfo::WebRemove {
             owner: *owner,
-            site_name: site_name.as_ref().to_string(),
+            site_name,
+            memo,
+        })?;
+
+        self.maybe_commit()?;
+
+        Ok(())
+    }
+
+    pub fn update_website(
+        &mut self,
+        owner: &Address,
+        site_name: String,
+        site_description: Option<String>,
+        memo: Option<Memo>,
+        source_hash: String,
+        path: impl AsRef<Path>,
+    ) -> Result<(), ManyError> {
+        trace!("Removing website prior to update");
+        let batch = self._remove_website(owner, &site_name)?;
+        self.persistent_store
+            .apply(&batch)
+            .map_err(error::storage_apply_failed)?;
+
+        trace!("Storing updated website");
+        let batch = self._store_website(owner, &site_name, &site_description, path)?;
+        self.persistent_store
+            .apply(&batch)
+            .map_err(error::storage_apply_failed)?;
+
+        self.log_event(EventInfo::WebUpdate {
+            owner: *owner,
+            site_name,
+            site_description,
+            source_hash,
             memo,
         })?;
 

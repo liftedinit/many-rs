@@ -84,6 +84,10 @@ struct RemoveOpt {
 
 #[derive(Debug, Parser)]
 struct ListOpt {
+    /// Count
+    #[clap(long)]
+    count: Option<usize>,
+
     /// Order
     #[clap(long)]
     order: Option<SortOrder>,
@@ -107,7 +111,7 @@ fn deploy(
         owner,
         site_name,
         site_description,
-        source: WebDeploymentSource::Zip(source.into()),
+        source: WebDeploymentSource::Archive(source.into()),
         memo,
     };
     let response = client.call("web.deploy", arguments)?;
@@ -141,10 +145,15 @@ fn remove(
 
 fn list(
     client: ManyClient<impl Identity>,
+    count: Option<usize>,
     order: Option<SortOrder>,
     filter: Option<Vec<WebDeploymentFilter>>,
 ) -> Result<(), ManyError> {
-    let args = ListArgs { order, filter };
+    let args = ListArgs {
+        count,
+        order,
+        filter,
+    };
     let response = client.call("web.list", args)?;
     let payload = wait_response(client, response)?;
     println!(
@@ -252,7 +261,11 @@ fn main() {
             owner,
             memo,
         }) => remove(client, site_name, owner, memo),
-        SubCommand::List(ListOpt { order, filter }) => list(client, order, filter),
+        SubCommand::List(ListOpt {
+            count,
+            order,
+            filter,
+        }) => list(client, count, order, filter),
     };
 
     if let Err(err) = result {

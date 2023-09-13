@@ -47,5 +47,5 @@ pub struct WebDeploymentInfo {
 #[cbor(map)]
 pub enum WebDeploymentSource {
     #[n(0)]
-    Zip(#[n(0)] ByteVec),
+    Archive(#[n(0)] ByteVec),
 }

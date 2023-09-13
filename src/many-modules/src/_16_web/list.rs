@@ -6,9 +6,12 @@ use minicbor::{Decode, Encode};
 #[cbor(map)]
 pub struct ListArgs {
     #[n(0)]
-    pub order: Option<SortOrder>,
+    pub count: Option<usize>,
 
     #[n(1)]
+    pub order: Option<SortOrder>,
+
+    #[n(2)]
     pub filter: Option<Vec<WebDeploymentFilter>>,
 }
 
