@@ -395,12 +395,18 @@ impl WebStorage {
     ) -> Result<(), ManyError> {
         trace!("Removing website prior to update");
         let batch = self._remove_website(owner, &site_name)?;
+        trace!("Applying batch");
         self.persistent_store
             .apply(&batch)
             .map_err(error::storage_apply_failed)?;
 
+        // This commit is required in order for `list` to behave correctly
+        self.maybe_commit()?;
+
         trace!("Storing updated website");
         let batch = self._store_website(owner, &site_name, &site_description, path)?;
+
+        trace!("Applying batch");
         self.persistent_store
             .apply(&batch)
             .map_err(error::storage_apply_failed)?;
@@ -412,7 +418,6 @@ impl WebStorage {
             source_hash,
             memo,
         })?;
-
         self.maybe_commit()?;
 
         Ok(())
