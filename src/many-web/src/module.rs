@@ -17,7 +17,7 @@ use many_types::Timestamp;
 use sha2::Digest;
 use std::collections::BTreeMap;
 use std::io::Cursor;
-use std::path::{Path};
+use std::path::Path;
 use tempfile::Builder;
 use tracing::{info, trace};
 
@@ -176,7 +176,7 @@ fn _prepare_deployment(
         WebDeploymentSource::Archive(bytes) => {
             zip::ZipArchive::new(Cursor::new(bytes.as_slice()))
                 .map_err(error::invalid_zip_file)?
-                .extract( &serve_path)
+                .extract(&serve_path)
                 .map_err(error::unable_to_extract_zip_file)?;
             hex::encode(sha2::Sha256::digest(bytes.as_slice()).as_slice())
         }
@@ -244,8 +244,12 @@ impl WebCommandsModuleBackend for WebModuleImpl {
 
         let serve_path = tmpdir.path().to_path_buf();
 
-        let source_hash =
-            _prepare_deployment(site_name.clone(), site_description.clone(), source, &serve_path)?;
+        let source_hash = _prepare_deployment(
+            site_name.clone(),
+            site_description.clone(),
+            source,
+            &serve_path,
+        )?;
         self.storage.store_website(
             sender,
             site_name.clone(),
@@ -306,6 +310,12 @@ impl WebCommandsModuleBackend for WebModuleImpl {
         } else {
             sender
         };
+
+        // Don't update an nonexistent site.
+        if !self.storage.site_exists(owner, &site_name)? {
+            return Err(error::nonexistent_site(site_name));
+        }
+
         let site_name = _transform_site_name(site_name);
 
         let tmpdir = Builder::new()
@@ -319,8 +329,12 @@ impl WebCommandsModuleBackend for WebModuleImpl {
 
         let serve_path = tmpdir.path().to_path_buf();
 
-        let source_hash =
-            _prepare_deployment(site_name.clone(), site_description.clone(), source, &serve_path)?;
+        let source_hash = _prepare_deployment(
+            site_name.clone(),
+            site_description.clone(),
+            source,
+            &serve_path,
+        )?;
         self.storage.update_website(
             owner,
             site_name.clone(),

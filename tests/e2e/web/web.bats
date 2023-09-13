@@ -39,6 +39,27 @@ function teardown() {
     assert_output --partial "Invalid owner: $(identity 2)"
 }
 
+@test "$SUITE: dweb website update works" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
+    assert_output --partial "https://test_dweb.$(identity 1).ghostcloud.org"
+
+    call_web --pem=1 --port=8000 update test_dweb test_dweb.zip
+    assert_output --partial "https://test_dweb.$(identity 1).ghostcloud.org"
+}
+
+@test "$SUITE: dweb website update fails if owner is not sender" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
+    assert_output --partial "https://test_dweb.$(identity 1).ghostcloud.org"
+
+    call_web --pem=1 --port=8000 update test_dweb test_dweb.zip --owner "$(identity 2)"
+    assert_output --partial "Invalid owner: $(identity 2)"
+}
+
+@test "$SUITE: dweb website update fails if nonexistent" {
+    call_web --pem=1 --port=8000 update test_dweb test_dweb.zip --owner "$(identity 1)"
+    assert_output --partial "Nonexistent site: test_dweb"
+}
+
 @test "$SUITE: dweb website removal works" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
     assert_output  --partial "https://test_dweb.$(identity 1).ghostcloud.org"

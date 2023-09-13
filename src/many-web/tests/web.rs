@@ -2,7 +2,9 @@ use cucumber::gherkin::Step;
 use cucumber::{given, then, when, World as _};
 use many_identity::testing::identity;
 use many_modules::kvstore::{GetArgs, KvStoreModuleBackend};
-use many_modules::web::{DeployArgs, ListArgs, WebCommandsModuleBackend, WebModuleBackend};
+use many_modules::web::{
+    DeployArgs, ListArgs, UpdateArgs, WebCommandsModuleBackend, WebModuleBackend,
+};
 use many_types::web::{WebDeploymentFilter, WebDeploymentSource};
 use many_types::Memo;
 use many_web::module::{InitialStateJson, WebModuleImpl};
@@ -77,6 +79,22 @@ fn when_deploy(w: &mut World, seed: u32) {
             },
         )
         .expect("Website deployment failed");
+}
+
+#[when(expr = "the website is updated as identity {int}")]
+fn when_update(w: &mut World, seed: u32) {
+    w.module
+        .update(
+            &identity(seed),
+            UpdateArgs {
+                owner: None,
+                site_name: w.site_name.clone(),
+                site_description: w.site_description.clone(),
+                source: w.source.clone(),
+                memo: w.memo.clone(),
+            },
+        )
+        .expect("Website update failed");
 }
 
 #[when(expr = "the website {string} is removed as identity {int}")]
@@ -222,6 +240,23 @@ fn then_deployment_failed(w: &mut World, error: String) {
         w.module.deploy(
             &identity(0),
             DeployArgs {
+                owner: None,
+                site_name: w.site_name.clone(),
+                site_description: w.site_description.clone(),
+                source: w.source.clone(),
+                memo: w.memo.clone(),
+            },
+        ),
+        Err(e) if e.to_string() == error
+    ));
+}
+
+#[then(expr = "the website update fails with {string}")]
+fn then_update_failed(w: &mut World, error: String) {
+    assert!(matches!(
+        w.module.update(
+            &identity(0),
+            UpdateArgs {
                 owner: None,
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),

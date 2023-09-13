@@ -45,10 +45,34 @@ enum SubCommand {
 
     /// List websites
     List(ListOpt),
+
+    /// Update website
+    Update(UpdateOpt),
 }
 
 #[derive(Debug, Parser)]
 struct DeployOpt {
+    /// Site name
+    site_name: String,
+
+    /// Site description
+    #[clap(long)]
+    site_description: Option<String>,
+
+    /// Site source
+    source: PathBuf,
+
+    /// MANY address of the website owner
+    #[clap(long)]
+    owner: Option<Address>,
+
+    /// A memo to attach to the transaction
+    #[clap(long, parse(try_from_str = Memo::try_from))]
+    memo: Option<Memo>,
+}
+
+#[derive(Debug, Parser)]
+struct UpdateOpt {
     /// Site name
     site_name: String,
 
@@ -115,6 +139,32 @@ fn deploy(
         memo,
     };
     let response = client.call("web.deploy", arguments)?;
+    let payload = wait_response(client, response)?;
+    println!(
+        "{}",
+        cbor_diag::parse_bytes(payload).unwrap().to_diag_pretty()
+    );
+    Ok(())
+}
+
+fn update(
+    client: ManyClient<impl Identity>,
+    site_name: String,
+    site_description: Option<String>,
+    source: PathBuf,
+    owner: Option<Address>,
+    memo: Option<Memo>,
+) -> Result<(), ManyError> {
+    // Read the source file
+    let source = std::fs::read(source).map_err(ManyError::unknown)?;
+    let arguments = web::UpdateArgs {
+        owner,
+        site_name,
+        site_description,
+        source: WebDeploymentSource::Archive(source.into()),
+        memo,
+    };
+    let response = client.call("web.update", arguments)?;
     let payload = wait_response(client, response)?;
     println!(
         "{}",
@@ -266,6 +316,13 @@ fn main() {
             order,
             filter,
         }) => list(client, count, order, filter),
+        SubCommand::Update(UpdateOpt {
+            site_name,
+            site_description,
+            source,
+            owner,
+            memo,
+        }) => update(client, site_name, site_description, source, owner, memo),
     };
 
     if let Err(err) = result {

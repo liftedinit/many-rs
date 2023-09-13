@@ -5,6 +5,7 @@ define_attribute_many_error!(
         1: pub fn not_alphanumeric_or_symbols(s) => "Invalid string: {s}.",
         2: pub fn invalid_initial_hash(expected, actual)
             => "Invalid initial hash. Expected '{expected}', was '{actual}'.",
+        3: pub fn nonexistent_site(site_name) => "Nonexistent site: {site_name}.",
         4: pub fn unable_to_create_tempdir(dir) => "Unable to create temporary directory: {dir}.",
         5: pub fn key_not_found(key) => "Key not found: {key}.",
         6: pub fn unable_to_read_entry(entry) => "Unable to read entry: {entry}.",

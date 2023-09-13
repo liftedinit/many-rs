@@ -165,6 +165,20 @@ impl WebStorage {
         })
     }
 
+    pub fn site_exists(&self, owner: &Address, site_name: &str) -> Result<bool, ManyError> {
+        let key_meta = key_for_website_meta(owner, site_name);
+        let key_index = key_for_website_file(owner, site_name, "index.html");
+        let meta_exists = self
+            .get(&key_meta)
+            .map_err(error::storage_get_failed)?
+            .is_some();
+        let index_exists = self
+            .get(key_index.as_bytes())
+            .map_err(error::storage_get_failed)?
+            .is_some();
+        Ok(meta_exists && index_exists)
+    }
+
     fn inc_height(&mut self) -> Result<u64, ManyError> {
         let current_height = self.get_height()?;
         self.persistent_store
@@ -314,7 +328,7 @@ impl WebStorage {
 
         self.log_event(EventInfo::WebDeploy {
             owner: *owner,
-            site_name,
+            site_name: site_name.clone(),
             site_description,
             source_hash,
             memo,
