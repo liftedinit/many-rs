@@ -233,6 +233,10 @@ impl WebCommandsModuleBackend for WebModuleImpl {
 
         let site_name = _transform_site_name(site_name);
 
+        if self.storage.site_exists(owner, &site_name)? {
+            return Err(error::existent_site(site_name));
+        }
+
         let tmpdir = Builder::new()
             .prefix("dweb-")
             .tempdir()
@@ -311,12 +315,12 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             sender
         };
 
+        let site_name = _transform_site_name(site_name);
+
         // Don't update an nonexistent site.
         if !self.storage.site_exists(owner, &site_name)? {
             return Err(error::nonexistent_site(site_name));
         }
-
-        let site_name = _transform_site_name(site_name);
 
         let tmpdir = Builder::new()
             .prefix("dweb-")
