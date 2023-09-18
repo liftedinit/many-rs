@@ -33,7 +33,8 @@ fn key_for_website_meta(owner: &Address, site_name: &str) -> Vec<u8> {
 }
 
 pub fn url_for_website(owner: &Address, site_name: &str) -> String {
-    format!("https://{}.{}.ghostcloud.org", site_name, owner)
+    let domain = crate::DOMAIN.get_or_init(|| "localhost:8000".to_string());
+    format!("https://{site_name}.{owner}.{domain}")
 }
 
 pub struct WebStorage {

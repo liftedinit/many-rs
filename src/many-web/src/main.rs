@@ -15,12 +15,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info};
 
-mod error;
-mod module;
-mod storage;
-
-use crate::module::allow_addrs::AllowAddrsModule;
-use module::*;
+use many_web::module::allow_addrs::AllowAddrsModule;
+use many_web::module::*;
 
 #[derive(Parser, Debug)]
 #[clap(args_override_self(true))]
@@ -72,6 +68,9 @@ struct Opts {
     /// messages.
     #[clap(long)]
     cache_db: Option<PathBuf>,
+
+    #[clap(long, default_value = "localhost:8000")]
+    domain: String,
 }
 
 fn main() {
@@ -86,8 +85,11 @@ fn main() {
         allow_origin,
         allow_addrs,
         cache_db,
+        domain,
         ..
     } = Opts::parse();
+
+    many_web::DOMAIN.set(domain).unwrap();
 
     common_flags.init_logging().unwrap();
 

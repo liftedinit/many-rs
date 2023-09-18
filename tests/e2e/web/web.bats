@@ -13,7 +13,7 @@ function setup() {
 
     skip_if_missing_background_utilities
 
-    start_web --pem "$(pem 0)"
+    start_web --pem "$(pem 0)" --domain ghostcloud.org
 
     xxd -p -r << EOF > test_dweb.zip
 504b03040a0300000000af680857dbff951917000000170000000a000000

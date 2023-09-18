@@ -21,6 +21,33 @@ rust_binary(
     name = "many-web",
     srcs = glob(include = ["src/**/*.rs"]),
     aliases = aliases(),
+    crate_name = "many_web",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":many-web-lib",
+        ":build_script",
+        "//src/many-cli-helpers",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-server-cache",
+        "//src/many-types",
+    ],
+)
+
+rust_library(
+    name = "many-web-lib",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_web",
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
     ),
@@ -40,6 +67,7 @@ rust_binary(
         "//src/many-types",
     ],
 )
+
 
 rust_image(
     name = "many-web-image",
