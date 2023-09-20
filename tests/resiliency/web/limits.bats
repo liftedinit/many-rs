@@ -44,7 +44,7 @@ function teardown() {
 
     # With the header/envelope overhead, the transaction should be exactly 5242880 bytes
     call_web --pem=1 --port=8000 deploy foobar dummy.zip
-    assert_output --partial 'https://foobar.'$(identity 1)'.ghostcloud.org'
+    assert_output --partial 'https://foobar-'$(identity 1)'.ghostcloud.org'
 
     # Create a new dummy file with one more byte
     head -c 5242377 </dev/urandom >index.html

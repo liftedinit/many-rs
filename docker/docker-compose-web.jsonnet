@@ -54,7 +54,7 @@ local web(i, user) = {
         "--pem=/genfiles/web.pem",
         "--persistent=/persistent/web.db",
         "--addr=0.0.0.0:8000",
-        "--domain ghostcloud.org"
+        "--domain=ghostcloud.org"
     ],
 };
 
