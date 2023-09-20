@@ -19,6 +19,7 @@ define_attribute_many_error!(
         14: pub fn unable_to_open_storage(err) => "Unable to open storage: {err}.",
         15: pub fn missing_index_html() => "Missing 'index.html' at the root of the archive.",
         16: pub fn existent_site(site_name) => "Existent site: {site_name}. Use 'update' instead.",
+        17: pub fn site_name_too_long(site_name) => "Site name too long: {site_name}.",
     }
 );
 

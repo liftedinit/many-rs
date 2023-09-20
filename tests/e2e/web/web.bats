@@ -31,7 +31,7 @@ function teardown() {
 
 @test "$SUITE: dweb website deployment works" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
-    assert_output --partial "https://test_dweb.$(identity 1).ghostcloud.org"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
 }
 
 @test "$SUITE: dweb website deployment fails if owner is not sender" {
@@ -41,15 +41,15 @@ function teardown() {
 
 @test "$SUITE: dweb website update works" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
-    assert_output --partial "https://test_dweb.$(identity 1).ghostcloud.org"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
 
     call_web --pem=1 --port=8000 update test_dweb test_dweb.zip
-    assert_output --partial "https://test_dweb.$(identity 1).ghostcloud.org"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
 }
 
 @test "$SUITE: dweb website update fails if owner is not sender" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
-    assert_output --partial "https://test_dweb.$(identity 1).ghostcloud.org"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
 
     call_web --pem=1 --port=8000 update test_dweb test_dweb.zip --owner "$(identity 2)"
     assert_output --partial "Invalid owner: $(identity 2)"
@@ -62,7 +62,7 @@ function teardown() {
 
 @test "$SUITE: dweb website removal works" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
-    assert_output  --partial "https://test_dweb.$(identity 1).ghostcloud.org"
+    assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
     call_web --pem=1 --port=8000 remove test_dweb
     call_web --pem=1 --port=8000 list
     assert_output '{0: []}'
@@ -70,9 +70,9 @@ function teardown() {
 
 @test "$SUITE: dweb website listing works" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
-    assert_output  --partial "https://test_dweb.$(identity 1).ghostcloud.org"
+    assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
     call_web --pem=2 --port=8000 deploy foobar test_dweb.zip
-    assert_output  --partial "https://foobar.$(identity 2).ghostcloud.org"
+    assert_output  --partial "https://foobar-$(identity 2).ghostcloud.org"
     call_web --pem=1 --port=8000 list
     assert_output --partial 'test_dweb'
     assert_output --partial 'foobar'
@@ -82,7 +82,7 @@ function teardown() {
 
 @test "$SUITE: dweb get must start by /http" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
-    assert_output  --partial "https://test_dweb.$(identity 1).ghostcloud.org"
+    assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
 
     # Call the kvstore endpoint of many-web
     call_kvstore --pem=1 --port=8000 get "foobar"

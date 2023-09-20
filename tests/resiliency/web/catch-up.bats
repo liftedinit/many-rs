@@ -47,16 +47,16 @@ function teardown() {
 
 @test "$SUITE: Node can catch up" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
-    assert_output --partial 'https://test_dweb.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
+    assert_output --partial 'https://test_dweb-'$(identity 1)'.ghostcloud.org'
     check_consistency --pem=1 --value=test_dweb 8000 8001 8002
 
     call_web --pem=1 --port=8001 deploy test_dweb2 test_dweb.zip
-    assert_output --partial 'https://test_dweb2.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
+    assert_output --partial 'https://test_dweb2-'$(identity 1)'.ghostcloud.org'
     check_consistency --pem=1 --value=test_dweb 8000 8001 8002
     check_consistency --pem=1 --value=test_dweb2 8000 8001 8002
 
     call_web --pem=1 --port=8002 deploy test_dweb3 test_dweb.zip
-    assert_output --partial 'https://test_dweb3.'$(identity 1)'.web.liftedinit.tech' # TODO: Final format TBD
+    assert_output --partial 'https://test_dweb3.'$(identity 1)'.ghostcloud.org'
     check_consistency --pem=1 --value=test_dweb 8000 8001 8002
     check_consistency --pem=1 --value=test_dweb2 8000 8001 8002
     check_consistency --pem=1 --value=test_dweb3 8000 8001 8002

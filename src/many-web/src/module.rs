@@ -231,6 +231,10 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             sender
         };
 
+        if site_name.len() > 12 {
+            return Err(error::site_name_too_long(site_name));
+        }
+
         let site_name = _transform_site_name(site_name);
 
         if self.storage.site_exists(owner, &site_name)? {
@@ -314,6 +318,10 @@ impl WebCommandsModuleBackend for WebModuleImpl {
         } else {
             sender
         };
+
+        if site_name.len() > 12 {
+            return Err(error::site_name_too_long(site_name));
+        }
 
         let site_name = _transform_site_name(site_name);
 

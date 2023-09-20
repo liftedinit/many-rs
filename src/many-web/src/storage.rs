@@ -33,8 +33,8 @@ fn key_for_website_meta(owner: &Address, site_name: &str) -> Vec<u8> {
 }
 
 pub fn url_for_website(owner: &Address, site_name: &str) -> String {
-    let domain = crate::DOMAIN.get_or_init(|| "localhost:8000".to_string());
-    format!("https://{site_name}.{owner}.{domain}")
+    let domain = crate::DOMAIN.get_or_init(|| "localhost:8880".to_string());
+    format!("https://{site_name}-{owner}.{domain}")
 }
 
 pub struct WebStorage {

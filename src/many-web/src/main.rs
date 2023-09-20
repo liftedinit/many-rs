@@ -69,7 +69,7 @@ struct Opts {
     #[clap(long)]
     cache_db: Option<PathBuf>,
 
-    #[clap(long, default_value = "localhost:8000")]
+    #[clap(long, default_value = "localhost:8880")]
     domain: String,
 }
 

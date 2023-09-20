@@ -28,7 +28,7 @@ struct Opts {
     server: String,
 
     /// Port and address to bind to.
-    #[clap(long)]
+    #[clap(long, default_value = "127.0.0.1:8880")]
     addr: SocketAddr,
 
     /// The identity of the server (an identity string), or anonymous if you don't know it.
@@ -63,9 +63,12 @@ fn handle_get_request(client: &Client, request: Request) {
     let url = request.url();
     let maybe_host = request.headers().iter().find(|h| h.field.equiv("host"));
     if let Some(host) = maybe_host {
-        let parts: Vec<_> = host.value.as_str().splitn(3, '.').collect();
-        if let [site_name, addr, _] = parts.as_slice() {
-            path = format!("{path}/{addr}/{site_name}")
+        let parts: Vec<_> = host.value.as_str().splitn(2, '.').collect();
+        if let [site_name_and_addr, _] = parts.as_slice() {
+            let parts = site_name_and_addr.rsplitn(2, '-').collect::<Vec<_>>();
+            if let [addr, site_name] = parts.as_slice() {
+                path = format!("{path}/{addr}/{site_name}");
+            }
         }
     }
     debug!("Received request for path: {path}{url}");

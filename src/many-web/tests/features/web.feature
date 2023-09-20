@@ -143,6 +143,18 @@ Scenario: Update nonexistent website
   Then the "index.html" value of website "test_dweb" for owner identity 2 is
     """<h1>Hello Foobar!</h1>
 """
-  Given a website name "test_dweb_foo"
+  Given a website name "test_dweb_f"
   And a website description "This is a test foo"
-  Then the website update fails with "Nonexistent site: test_dweb_foo."
+  Then the website update fails with "Nonexistent site: test_dweb_f."
+
+@web
+Scenario: Site name too long in update
+  Given a website zip source "504b03040a0300000000af680857dbff951917000000170000000a000000696e6465782e68746d6c3c68313e48656c6c6f20466f6f626172213c2f68313e0a504b01023f030a0300000000af680857dbff951917000000170000000a0024000000000000002080a48100000000696e6465782e68746d6c0a00200000000000010018000029f7881acad9010029f7881acad9010029f7881acad901504b050600000000010001005c0000003f0000000000"
+  And a website name "this_is_a_really_long_name_that_is_too_long_for_the_website_name_field"
+  Then the website update fails with "Site name too long: this_is_a_really_long_name_that_is_too_long_for_the_website_name_field."
+
+@web
+Scenario: Site name too long in deploy
+  Given a website zip source "504b03040a0300000000af680857dbff951917000000170000000a000000696e6465782e68746d6c3c68313e48656c6c6f20466f6f626172213c2f68313e0a504b01023f030a0300000000af680857dbff951917000000170000000a0024000000000000002080a48100000000696e6465782e68746d6c0a00200000000000010018000029f7881acad9010029f7881acad9010029f7881acad901504b050600000000010001005c0000003f0000000000"
+  And a website name "this_is_a_really_long_name_that_is_too_long_for_the_website_name_field"
+  Then the website deployment fails with "Site name too long: this_is_a_really_long_name_that_is_too_long_for_the_website_name_field."
