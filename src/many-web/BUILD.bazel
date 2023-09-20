@@ -82,6 +82,7 @@ rust_image(
         normal = True,
     ) + [
         ":build_script",
+        ":many-web-lib",
         "//src/many-cli-helpers",
         "//src/many-error",
         "//src/many-identity",
