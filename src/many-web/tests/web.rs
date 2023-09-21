@@ -11,10 +11,12 @@ use many_web::module::{InitialStateJson, WebModuleImpl};
 use many_web::storage::HTTP_ROOT;
 use std::path::Path;
 use tempfile::Builder;
+use many_identity::Address;
 
 #[derive(cucumber::World, Debug)]
 #[world(init = Self::new)]
 struct World {
+    owner: Option<Address>,
     site_name: String,
     site_description: Option<String>,
     source: WebDeploymentSource,
@@ -25,6 +27,7 @@ struct World {
 impl World {
     fn new() -> Self {
         Self {
+            owner: None,
             site_name: "".to_string(),
             site_description: None,
             source: WebDeploymentSource::Archive(vec![].into()),
@@ -65,13 +68,18 @@ fn given_site_memo(w: &mut World, memo: String) {
     w.memo = Some(Memo::try_from(memo).expect("Unable to parse memo"));
 }
 
+#[given(expr = "a website owner identity {int}")]
+fn given_site_owner(w: &mut World, seed: u32) {
+    w.owner = Some(identity(seed));
+}
+
 #[when(expr = "the website is deployed as identity {int}")]
 fn when_deploy(w: &mut World, seed: u32) {
     w.module
         .deploy(
             &identity(seed),
             DeployArgs {
-                owner: None,
+                owner: w.owner.clone(),
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
@@ -87,7 +95,7 @@ fn when_update(w: &mut World, seed: u32) {
         .update(
             &identity(seed),
             UpdateArgs {
-                owner: None,
+                owner: w.owner.clone(),
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
@@ -103,7 +111,7 @@ fn when_remove(w: &mut World, site_name: String, seed: u32) {
         .remove(
             &identity(seed),
             many_modules::web::RemoveArgs {
-                owner: None,
+                owner: w.owner.clone(),
                 site_name,
                 memo: w.memo.clone(),
             },
@@ -236,11 +244,12 @@ fn then_list_not_filtered(w: &mut World, seed: u32, site_name: String) {
 
 #[then(expr = "the website deployment fails with {string}")]
 fn then_deployment_failed(w: &mut World, error: String) {
+    println!("owner: {:?}", w.owner);
     assert!(matches!(
         w.module.deploy(
             &identity(0),
             DeployArgs {
-                owner: None,
+                owner: w.owner.clone(),
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
@@ -257,12 +266,27 @@ fn then_update_failed(w: &mut World, error: String) {
         w.module.update(
             &identity(0),
             UpdateArgs {
-                owner: None,
+                owner: w.owner.clone(),
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
                 memo: w.memo.clone(),
             },
+        ),
+        Err(e) if e.to_string() == error
+    ));
+}
+
+#[then(expr = "the website removal fails with {string}")]
+fn then_remove_failed(w: &mut World, error: String) {
+    assert!(matches!(
+        w.module.remove(
+            &identity(0),
+            many_modules::web::RemoveArgs {
+                owner: w.owner.clone(),
+                site_name: w.site_name.clone(),
+                memo: w.memo.clone()
+                }
         ),
         Err(e) if e.to_string() == error
     ));
