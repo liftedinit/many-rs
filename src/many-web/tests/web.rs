@@ -1,6 +1,7 @@
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when, World as _};
 use many_identity::testing::identity;
+use many_identity::Address;
 use many_modules::kvstore::{GetArgs, KvStoreModuleBackend};
 use many_modules::web::{
     DeployArgs, ListArgs, UpdateArgs, WebCommandsModuleBackend, WebModuleBackend,
@@ -11,7 +12,6 @@ use many_web::module::{InitialStateJson, WebModuleImpl};
 use many_web::storage::HTTP_ROOT;
 use std::path::Path;
 use tempfile::Builder;
-use many_identity::Address;
 
 #[derive(cucumber::World, Debug)]
 #[world(init = Self::new)]
@@ -79,7 +79,7 @@ fn when_deploy(w: &mut World, seed: u32) {
         .deploy(
             &identity(seed),
             DeployArgs {
-                owner: w.owner.clone(),
+                owner: w.owner,
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
@@ -95,7 +95,7 @@ fn when_update(w: &mut World, seed: u32) {
         .update(
             &identity(seed),
             UpdateArgs {
-                owner: w.owner.clone(),
+                owner: w.owner,
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
@@ -111,7 +111,7 @@ fn when_remove(w: &mut World, site_name: String, seed: u32) {
         .remove(
             &identity(seed),
             many_modules::web::RemoveArgs {
-                owner: w.owner.clone(),
+                owner: w.owner,
                 site_name,
                 memo: w.memo.clone(),
             },
@@ -249,7 +249,7 @@ fn then_deployment_failed(w: &mut World, error: String) {
         w.module.deploy(
             &identity(0),
             DeployArgs {
-                owner: w.owner.clone(),
+                owner: w.owner,
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
@@ -266,7 +266,7 @@ fn then_update_failed(w: &mut World, error: String) {
         w.module.update(
             &identity(0),
             UpdateArgs {
-                owner: w.owner.clone(),
+                owner: w.owner,
                 site_name: w.site_name.clone(),
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
@@ -283,7 +283,7 @@ fn then_remove_failed(w: &mut World, error: String) {
         w.module.remove(
             &identity(0),
             many_modules::web::RemoveArgs {
-                owner: w.owner.clone(),
+                owner: w.owner,
                 site_name: w.site_name.clone(),
                 memo: w.memo.clone()
                 }
