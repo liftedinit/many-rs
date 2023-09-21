@@ -2,9 +2,8 @@ use crate::impls::check_key;
 use coset::cbor::value::Value;
 use coset::iana::{EnumI64, OkpKeyParameter};
 use coset::{CoseKey, CoseSign1, CoseSign1Builder, Label};
-use ed25519::pkcs8::PrivateKeyInfo;
-use ed25519_dalek::ed25519::signature::{Signature, Signer, Verifier as _};
-use ed25519_dalek::Keypair;
+use ed25519::pkcs8::DecodePrivateKey;
+use ed25519_dalek::{Signer, SigningKey, Verifier as _};
 use many_error::ManyError;
 use many_identity::{cose, Address, Identity, Verifier};
 use std::collections::BTreeSet;
@@ -69,7 +68,7 @@ pub fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
     }
 }
 
-fn key_pair(cose_key: &CoseKey) -> Result<Keypair, ManyError> {
+fn key_pair(cose_key: &CoseKey) -> Result<SigningKey, ManyError> {
     check_key(
         cose_key,
         true,
@@ -79,35 +78,35 @@ fn key_pair(cose_key: &CoseKey) -> Result<Keypair, ManyError> {
         Some(("Ed25519", coset::iana::EllipticCurve::Ed25519)),
     )?;
 
-    let mut maybe_x = None;
     let mut maybe_d = None;
     for (k, v) in cose_key.params.iter() {
-        if k == &Label::Int(OkpKeyParameter::X.to_i64()) {
-            maybe_x = Some(v);
-        } else if k == &Label::Int(OkpKeyParameter::D.to_i64()) {
+        if k == &Label::Int(OkpKeyParameter::D.to_i64()) {
             maybe_d = Some(v);
         }
     }
 
-    let x = maybe_x
-        .ok_or_else(|| ManyError::unknown("Could not find the X parameter in key"))?
-        .as_bytes()
-        .ok_or_else(|| ManyError::unknown("Could not convert the X parameter to bytes"))?
-        .as_slice();
     let d = maybe_d
         .ok_or_else(|| ManyError::unknown("Could not find the D parameter in key"))?
         .as_bytes()
         .ok_or_else(|| ManyError::unknown("Could not convert the D parameter to bytes"))?
         .as_slice();
 
-    Keypair::from_bytes(&vec![d, x].concat())
-        .map_err(|e| ManyError::unknown(format!("Invalid Ed25519 keypair from bytes: {e}")))
+    let d_len = d.len();
+    if d_len != 32 {
+        return Err(ManyError::unknown(format!(
+            "Invalid Ed25519 secret key length: {d_len}"
+        )));
+    }
+
+    let mut result = [0u8; 32];
+    result.copy_from_slice(d);
+    Ok(SigningKey::from_bytes(&result))
 }
 
 struct Ed25519IdentityInner {
     address: Address,
     public_key: CoseKey,
-    key_pair: Keypair,
+    key_pair: SigningKey,
 }
 
 impl Clone for Ed25519IdentityInner {
@@ -115,7 +114,7 @@ impl Clone for Ed25519IdentityInner {
         Ed25519IdentityInner {
             address: self.address,
             public_key: self.public_key.clone(),
-            key_pair: Keypair::from_bytes(&self.key_pair.to_bytes()).unwrap(),
+            key_pair: SigningKey::from_bytes(&self.key_pair.to_bytes()),
         }
     }
 }
@@ -136,7 +135,7 @@ impl Ed25519IdentityInner {
     pub(crate) fn try_sign(&self, bytes: &[u8]) -> Result<Vec<u8>, ManyError> {
         self.key_pair
             .try_sign(bytes)
-            .map(|x| x.as_bytes().to_vec())
+            .map(|x| x.to_vec())
             .map_err(ManyError::unknown)
     }
 }
@@ -183,31 +182,12 @@ impl Ed25519Identity {
     }
 
     pub fn from_pem<P: AsRef<str>>(pem: P) -> Result<Self, ManyError> {
-        let (_, doc) =
-            ed25519::pkcs8::Document::from_pem(pem.as_ref()).map_err(ManyError::unknown)?;
-        let pk: PrivateKeyInfo = doc.decode_msg().map_err(ManyError::unknown)?;
-
-        // Ed25519 OID
-        if pk.algorithm.oid != "1.3.101.112".parse().unwrap() {
-            return Err(ManyError::unknown(format!(
-                "Invalid OID: {}",
-                pk.algorithm.oid
-            )));
-        }
-
-        // Remove the 0420 header that's in all private keys in pkcs8 for some reason.
-        let sk = ed25519_dalek::SecretKey::from_bytes(&pk.private_key[2..])
-            .map_err(ManyError::unknown)?;
-        let pk: ed25519_dalek::PublicKey = (&sk).into();
-        let keypair: Keypair = Keypair {
-            secret: sk,
-            public: pk,
-        };
-        let keypair = Keypair::from_bytes(&keypair.to_bytes()).unwrap();
+        let signing_key = SigningKey::from_pkcs8_pem(pem.as_ref()).map_err(ManyError::unknown)?;
+        let verifying_key = signing_key.verifying_key();
 
         let cose_key = eddsa_cose_key(
-            keypair.public.to_bytes().to_vec(),
-            Some(keypair.secret.to_bytes().to_vec()),
+            verifying_key.to_bytes().to_vec(),
+            Some(signing_key.to_bytes().to_vec()),
         );
         Self::from_key(&cose_key)
     }
@@ -239,7 +219,7 @@ impl Identity for Ed25519Identity {
 #[derive(Clone, Debug)]
 pub struct Ed25519Verifier {
     address: Address,
-    public_key: ed25519_dalek::PublicKey,
+    public_key: ed25519_dalek::VerifyingKey,
 }
 
 impl Ed25519Verifier {
@@ -277,7 +257,16 @@ impl Ed25519Verifier {
             .as_bytes()
             .ok_or_else(|| ManyError::unknown("Could not convert the X parameter to bytes"))?
             .as_slice();
-        let public_key = ed25519_dalek::PublicKey::from_bytes(x)
+
+        let x_len = x.len();
+        if x_len != 32 {
+            return Err(ManyError::unknown(format!(
+                "Invalid Ed25519 public key length: {x_len}"
+            )));
+        }
+        let mut result = [0u8; 32];
+        result.copy_from_slice(x);
+        let public_key = ed25519_dalek::VerifyingKey::from_bytes(&result)
             .map_err(|_| ManyError::unknown("Could not create a public key from X."))?;
 
         Ok(Self {
@@ -305,14 +294,14 @@ impl Verifier for Ed25519Verifier {
 
 #[cfg(feature = "testing")]
 pub(crate) fn generate_random_ed25519_cose_key() -> CoseKey {
-    use rand_07::rngs::OsRng;
-
-    let mut csprng = OsRng {};
-    let keypair: Keypair = Keypair::generate(&mut csprng);
+    use rand::rngs::OsRng;
+    let mut csprng = OsRng;
+    let signing_key: SigningKey = SigningKey::generate(&mut csprng);
+    let verifying_key = signing_key.verifying_key();
 
     eddsa_cose_key(
-        keypair.public.to_bytes().to_vec(),
-        Some(keypair.secret.to_bytes().to_vec()),
+        verifying_key.to_bytes().to_vec(),
+        Some(signing_key.to_bytes().to_vec()),
     )
 }
 

@@ -17,7 +17,7 @@ include Makefile.common
 .PHONY: clean
 clean:
 	if [ -d "${PWD}/genfiles-ledger/docker-compose.json" ]; then \
-		docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger down || true; \
+		docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger down || true; \
 	fi
 	rm -rf genfiles-ledger
 
@@ -77,68 +77,68 @@ endif
 
 .PHONY: start-nodes
 start-nodes: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up
 
 .PHONY: start-abci-%
 start-abci-%: genfiles-ledger/docker-compose.json genfiles-common/many-abci-docker
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up abci-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up abci-$*
 
 .PHONY: start-ledger-%
 start-ledger-%: genfiles-ledger/docker-compose.json genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/many-ledger-docker
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up ledger-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up ledger-$*
 
 .PHONY: start-tendermint-%
 start-tendermint-%: genfiles-ledger/docker-compose.json genfiles-ledger/generate-tendermint-e2e-config genfiles-common/tendermint-docker
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up tendermint-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up tendermint-$*
 
 .PHONY: down-nodes
 down-nodes: genfiles-ledger/docker-compose.json
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger down
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger down
 
 .PHONY: down-abci-%
 down-abci-%: genfiles-ledger/docker-compose.json
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger down abci-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger down abci-$*
 
 .PHONY: down-ledger-%
 down-ledger-%: genfiles-ledger/docker-compose.json
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger down ledger-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger down ledger-$*
 
 .PHONY: down-tendermint-%
 down-tendermint--%: genfiles-ledger/docker-compose.json
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger down tendermint-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger down tendermint-$*
 
 .PHONY: stop-nodes
 stop-nodes: genfiles-ledger/docker-compose.json
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop
 
 .PHONY: remove-nodes
 remove-nodes: genfiles-ledger/docker-compose.json
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger rm -s -f -v
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger rm -s -f -v
 
 .PHONY: stop-single-node-%
 stop-single-node-%: genfiles-ledger/docker-compose.json
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop abci-$*
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop ledger-$*
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop tendermint-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop abci-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop ledger-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop tendermint-$*
 
 .PHONY: stop-abci-%
 stop-abci-%: genfiles-ledger/docker-compose.json
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop abci-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop abci-$*
 
 .PHONY: stop-ledger-%
 start-ledger-%: genfiles-ledger/docker-compose.json
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop ledger-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop ledger-$*
 
 .PHONY: stop-tendermint-%
 stop-tendermint-%: genfiles-ledger/docker-compose.json
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop tendermint-$*
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger stop tendermint-$*
 
 .PHONY: start-nodes-detached
 start-nodes-detached: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-common/tendermint-docker genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up --detach
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up --detach
 
 .PHONY: start-single-node-detached-%
 start-single-node-detached-%: genfiles-ledger/generate-tendermint-e2e-config genfiles-ledger/docker-compose.json genfiles-common/tendermint-docker genfiles-ledger/many-ledger-docker genfiles-common/many-abci-docker
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up abci-$* --detach
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up ledger-$* --detach
-	docker-compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up tendermint-$* --detach
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up abci-$* --detach
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up ledger-$* --detach
+	docker compose -f genfiles-ledger/docker-compose.json -p e2e-ledger up tendermint-$* --detach

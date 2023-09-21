@@ -1,6 +1,6 @@
 [package]
 name = "many-client-macros"
-version = "0.1.6" # managed by release.sh
+version = "0.1.7" # managed by release.sh
 edition = "2021"
 description = "`many-client` procedural macro."
 license-file = "../../LICENSE"
@@ -16,4 +16,4 @@ proc-macro = true
 [dependencies]
 syn = { version = "2.0.17", features = ["full", "extra-traits"] }
 quote = "1.0.28"
-proc-macro2 = "1.0.56"
+proc-macro2 = "1.0.66"
