@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2023-09-22
+
+### Features
+
+- Decentralized web hosting ([#403](https://github.com/liftedinit/many-rs/issues/403))
+
+### Miscellaneous Tasks
+
+- Rename `docker-compose` to `docker compose` ([#410](https://github.com/liftedinit/many-rs/issues/410))
+
 ## [0.1.7] - 2023-08-15
 
 ### Bug Fixes

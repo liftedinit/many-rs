@@ -1,5 +1,5 @@
 {
-  "checksum": "e90dc940a9ec98290014ae94414df4b1e919470aaf3d3eeb72792759f5c172d1",
+  "checksum": "c7240887a840ef783010ee6458f1c748410e98df4aec46013ac438b839516898",
   "crates": {
     "addr2line 0.21.0": {
       "name": "addr2line",
@@ -9510,9 +9510,9 @@
       },
       "license": "MIT"
     },
-    "genesis-from-db 0.1.7": {
+    "genesis-from-db 0.2.0": {
       "name": "genesis-from-db",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -9583,7 +9583,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
@@ -10842,9 +10842,9 @@
       },
       "license": "MIT"
     },
-    "http-proxy 0.1.7": {
+    "http-proxy 0.2.0": {
       "name": "http-proxy",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -10877,7 +10877,7 @@
               "target": "hex"
             },
             {
-              "id": "http-proxy 0.1.7",
+              "id": "http-proxy 0.2.0",
               "target": "build_script_build"
             },
             {
@@ -10916,7 +10916,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -11478,9 +11478,9 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "idstore-export 0.1.7": {
+    "idstore-export 0.2.0": {
       "name": "idstore-export",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -11523,7 +11523,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
@@ -12430,9 +12430,9 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
-    "kvstore 0.1.7": {
+    "kvstore 0.2.0": {
       "name": "kvstore",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -12482,7 +12482,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
@@ -12656,9 +12656,9 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "ledger 0.1.7": {
+    "ledger 0.2.0": {
       "name": "ledger",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -12732,13 +12732,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "ledger-db 0.1.7": {
+    "ledger-db 0.2.0": {
       "name": "ledger-db",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -12768,7 +12768,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
@@ -13749,9 +13749,9 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "many 0.1.7": {
+    "many 0.2.0": {
       "name": "many",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -13826,13 +13826,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-abci 0.1.7": {
+    "many-abci 0.2.0": {
       "name": "many-abci",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -13898,7 +13898,7 @@
               "target": "linkme"
             },
             {
-              "id": "many-abci 0.1.7",
+              "id": "many-abci 0.2.0",
               "target": "build_script_build"
             },
             {
@@ -13962,7 +13962,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -13980,9 +13980,9 @@
       },
       "license": null
     },
-    "many-cli-helpers 0.1.7": {
+    "many-cli-helpers 0.2.0": {
       "name": "many-cli-helpers",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14034,13 +14034,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-client 0.1.7": {
+    "many-client 0.2.0": {
       "name": "many-client",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14171,13 +14171,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-client-macros 0.1.7": {
+    "many-client-macros 0.2.0": {
       "name": "many-client-macros",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14213,13 +14213,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-compute 0.1.7": {
+    "many-compute 0.2.0": {
       "name": "many-compute",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14265,7 +14265,7 @@
               "target": "json5"
             },
             {
-              "id": "many-compute 0.1.7",
+              "id": "many-compute 0.2.0",
               "target": "build_script_build"
             },
             {
@@ -14317,7 +14317,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -14335,9 +14335,9 @@
       },
       "license": null
     },
-    "many-error 0.1.7": {
+    "many-error 0.2.0": {
       "name": "many-error",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14389,13 +14389,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-identity 0.1.7": {
+    "many-identity 0.2.0": {
       "name": "many-identity",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14483,13 +14483,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-identity-dsa 0.1.7": {
+    "many-identity-dsa 0.2.0": {
       "name": "many-identity-dsa",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14590,13 +14590,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-identity-hsm 0.1.7": {
+    "many-identity-hsm 0.2.0": {
       "name": "many-identity-hsm",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14652,13 +14652,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-identity-webauthn 0.1.7": {
+    "many-identity-webauthn 0.2.0": {
       "name": "many-identity-webauthn",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14762,13 +14762,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-kvstore 0.1.7": {
+    "many-kvstore 0.2.0": {
       "name": "many-kvstore",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14818,7 +14818,7 @@
               "target": "lazy_static"
             },
             {
-              "id": "many-kvstore 0.1.7",
+              "id": "many-kvstore 0.2.0",
               "target": "build_script_build"
             },
             {
@@ -14887,7 +14887,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -14905,9 +14905,9 @@
       },
       "license": null
     },
-    "many-ledger 0.1.7": {
+    "many-ledger 0.2.0": {
       "name": "many-ledger",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -14988,7 +14988,7 @@
               "target": "linkme"
             },
             {
-              "id": "many-ledger 0.1.7",
+              "id": "many-ledger 0.2.0",
               "target": "build_script_build"
             },
             {
@@ -15077,7 +15077,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -15095,9 +15095,9 @@
       },
       "license": null
     },
-    "many-ledger-test-macros 0.1.7": {
+    "many-ledger-test-macros 0.2.0": {
       "name": "many-ledger-test-macros",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15129,13 +15129,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": "Apache-2.0"
     },
-    "many-ledger-test-utils 0.1.7": {
+    "many-ledger-test-utils 0.2.0": {
       "name": "many-ledger-test-utils",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15203,13 +15203,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": "Apache-2.0"
     },
-    "many-macros 0.1.7": {
+    "many-macros 0.2.0": {
       "name": "many-macros",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15257,13 +15257,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-migration 0.1.7": {
+    "many-migration 0.2.0": {
       "name": "many-migration",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15316,13 +15316,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-mock 0.1.7": {
+    "many-mock 0.2.0": {
       "name": "many-mock",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15400,13 +15400,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-modules 0.1.7": {
+    "many-modules 0.2.0": {
       "name": "many-modules",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15506,13 +15506,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-protocol 0.1.7": {
+    "many-protocol 0.2.0": {
       "name": "many-protocol",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15602,13 +15602,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-server 0.1.7": {
+    "many-server 0.2.0": {
       "name": "many-server",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15749,13 +15749,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-server-cache 0.1.7": {
+    "many-server-cache 0.2.0": {
       "name": "many-server-cache",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15791,13 +15791,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-types 0.1.7": {
+    "many-types 0.2.0": {
       "name": "many-types",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15894,13 +15894,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
-    "many-web 0.1.7": {
+    "many-web 0.2.0": {
       "name": "many-web",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [
         {
@@ -15950,7 +15950,7 @@
               "target": "json5"
             },
             {
-              "id": "many-web 0.1.7",
+              "id": "many-web 0.2.0",
               "target": "build_script_build"
             },
             {
@@ -16027,7 +16027,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -28995,9 +28995,9 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "web 0.1.7": {
+    "web 0.2.0": {
       "name": "web",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -29075,7 +29075,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.7"
+        "version": "0.2.0"
       },
       "license": null
     },
@@ -31460,37 +31460,37 @@
   },
   "binary_crates": [],
   "workspace_members": {
-    "genesis-from-db 0.1.7": "src/genesis-from-db",
-    "http-proxy 0.1.7": "src/http-proxy",
-    "idstore-export 0.1.7": "src/idstore-export",
-    "kvstore 0.1.7": "src/kvstore",
-    "ledger 0.1.7": "src/ledger",
-    "ledger-db 0.1.7": "src/ledger-db",
-    "many 0.1.7": "src/many",
-    "many-abci 0.1.7": "src/many-abci",
-    "many-cli-helpers 0.1.7": "src/many-cli-helpers",
-    "many-client 0.1.7": "src/many-client",
-    "many-client-macros 0.1.7": "src/many-client-macros",
-    "many-compute 0.1.7": "src/many-compute",
-    "many-error 0.1.7": "src/many-error",
-    "many-identity 0.1.7": "src/many-identity",
-    "many-identity-dsa 0.1.7": "src/many-identity-dsa",
-    "many-identity-hsm 0.1.7": "src/many-identity-hsm",
-    "many-identity-webauthn 0.1.7": "src/many-identity-webauthn",
-    "many-kvstore 0.1.7": "src/many-kvstore",
-    "many-ledger 0.1.7": "src/many-ledger",
-    "many-ledger-test-macros 0.1.7": "src/many-ledger/test-macros",
-    "many-ledger-test-utils 0.1.7": "src/many-ledger/test-utils",
-    "many-macros 0.1.7": "src/many-macros",
-    "many-migration 0.1.7": "src/many-migration",
-    "many-mock 0.1.7": "src/many-mock",
-    "many-modules 0.1.7": "src/many-modules",
-    "many-protocol 0.1.7": "src/many-protocol",
-    "many-server 0.1.7": "src/many-server",
-    "many-server-cache 0.1.7": "src/many-server-cache",
-    "many-types 0.1.7": "src/many-types",
-    "many-web 0.1.7": "src/many-web",
-    "web 0.1.7": "src/web"
+    "genesis-from-db 0.2.0": "src/genesis-from-db",
+    "http-proxy 0.2.0": "src/http-proxy",
+    "idstore-export 0.2.0": "src/idstore-export",
+    "kvstore 0.2.0": "src/kvstore",
+    "ledger 0.2.0": "src/ledger",
+    "ledger-db 0.2.0": "src/ledger-db",
+    "many 0.2.0": "src/many",
+    "many-abci 0.2.0": "src/many-abci",
+    "many-cli-helpers 0.2.0": "src/many-cli-helpers",
+    "many-client 0.2.0": "src/many-client",
+    "many-client-macros 0.2.0": "src/many-client-macros",
+    "many-compute 0.2.0": "src/many-compute",
+    "many-error 0.2.0": "src/many-error",
+    "many-identity 0.2.0": "src/many-identity",
+    "many-identity-dsa 0.2.0": "src/many-identity-dsa",
+    "many-identity-hsm 0.2.0": "src/many-identity-hsm",
+    "many-identity-webauthn 0.2.0": "src/many-identity-webauthn",
+    "many-kvstore 0.2.0": "src/many-kvstore",
+    "many-ledger 0.2.0": "src/many-ledger",
+    "many-ledger-test-macros 0.2.0": "src/many-ledger/test-macros",
+    "many-ledger-test-utils 0.2.0": "src/many-ledger/test-utils",
+    "many-macros 0.2.0": "src/many-macros",
+    "many-migration 0.2.0": "src/many-migration",
+    "many-mock 0.2.0": "src/many-mock",
+    "many-modules 0.2.0": "src/many-modules",
+    "many-protocol 0.2.0": "src/many-protocol",
+    "many-server 0.2.0": "src/many-server",
+    "many-server-cache 0.2.0": "src/many-server-cache",
+    "many-types 0.2.0": "src/many-types",
+    "many-web 0.2.0": "src/many-web",
+    "web 0.2.0": "src/web"
   },
   "conditions": {
     "aarch64-linux-android": [
