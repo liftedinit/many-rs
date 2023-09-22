@@ -81,6 +81,7 @@ fn mint_tokens(w: &mut BurnWorld, id: SomeId) {
     refresh_token_info(w);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "{id} has {int} tokens")]
 fn id_has_tokens(w: &mut BurnWorld, id: SomeId, amount: u64) {
     let addr = id.as_address(w);
@@ -100,18 +101,21 @@ fn id_has_tokens(w: &mut BurnWorld, id: SomeId, amount: u64) {
     assert_eq!(*balance, amount);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the circulating supply is {int} tokens")]
 fn circulating_supply(w: &mut BurnWorld, amount: u64) {
     let amount: TokenAmount = amount.into();
     assert_eq!(w.info.supply.circulating, amount);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the total supply is {int} tokens")]
 fn total_supply(w: &mut BurnWorld, amount: u64) {
     let amount: TokenAmount = amount.into();
     assert_eq!(w.info.supply.total, amount);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the memo is {string}")]
 fn memo_is(w: &mut BurnWorld, memo: String) {
     let res = EventsModuleBackend::list(

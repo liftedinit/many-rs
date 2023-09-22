@@ -121,7 +121,7 @@ impl LedgerStorage {
 
         let batch = vec![
             (
-                vec![
+                [
                     IDSTORE_ROOT,
                     IdStoreRootSeparator::RecallPhrase.value(),
                     &recall_phrase_cbor,
@@ -130,7 +130,7 @@ impl LedgerStorage {
                 Op::Put(value.clone()),
             ),
             (
-                vec![
+                [
                     IDSTORE_ROOT,
                     IdStoreRootSeparator::Address.value(),
                     &address.to_vec(),
@@ -147,13 +147,13 @@ impl LedgerStorage {
         self.maybe_commit().map(|_| {
             vec![
                 recall_phrase_cbor.clone(),
-                vec![
+                [
                     IDSTORE_ROOT,
                     IdStoreRootSeparator::RecallPhrase.value(),
                     &recall_phrase_cbor,
                 ]
                 .concat(),
-                vec![
+                [
                     IDSTORE_ROOT,
                     IdStoreRootSeparator::Address.value(),
                     &address.to_vec(),
@@ -168,7 +168,7 @@ impl LedgerStorage {
         key: &Vec<u8>,
         sep: IdStoreRootSeparator,
     ) -> Result<(Option<Vec<u8>>, Vec<u8>), ManyError> {
-        let key = vec![IDSTORE_ROOT, sep.value(), key].concat();
+        let key = [IDSTORE_ROOT, sep.value(), key].concat();
         self.persistent_store
             .get(&key)
             .map_err(error::storage_get_failed)

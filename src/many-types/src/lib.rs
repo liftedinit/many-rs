@@ -124,7 +124,7 @@ impl<T> From<Vec<T>> for VecOrSingle<T> {
 
 impl<T: Ord> From<VecOrSingle<T>> for BTreeSet<T> {
     fn from(v: VecOrSingle<T>) -> BTreeSet<T> {
-        BTreeSet::from_iter(v.into_iter())
+        BTreeSet::from_iter(v)
     }
 }
 
@@ -538,7 +538,7 @@ impl<'b, C> Decode<'b, C> for AttributeRelatedIndex {
     fn decode(d: &mut Decoder<'b>, _: &mut C) -> Result<Self, decode::Error> {
         let mut index = match d.datatype()? {
             Type::Array => match d.array()? {
-                Some(x) if x == 2 => Self::new(d.decode()?),
+                Some(2) => Self::new(d.decode()?),
                 _ => return Err(decode::Error::message("Expected array of 2 elements")),
             },
             Type::U8 | Type::U16 | Type::U32 | Type::U64 => return Ok(Self::new(d.decode()?)),
@@ -548,7 +548,7 @@ impl<'b, C> Decode<'b, C> for AttributeRelatedIndex {
         loop {
             index = match d.datatype()? {
                 Type::Array => match d.array()? {
-                    Some(x) if x == 2 => index.with_index(d.decode()?),
+                    Some(2) => index.with_index(d.decode()?),
                     _ => return Err(decode::Error::message("Expected array of 2 elements")),
                 },
                 Type::U8 | Type::U16 | Type::U32 | Type::U64 => {

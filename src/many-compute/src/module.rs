@@ -251,7 +251,7 @@ deployment:
         let response: TxLog = serde_json::from_slice(&output.stdout).map_err(ManyError::unknown)?;
 
         let mut seq_values: HashMap<String, u64> = HashMap::new();
-        let keys = vec!["dseq", "gseq", "oseq"];
+        let keys = ["dseq", "gseq", "oseq"];
 
         for log in response.logs {
             for event in log.events {

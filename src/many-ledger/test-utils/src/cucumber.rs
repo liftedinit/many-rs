@@ -291,6 +291,7 @@ pub fn create_default_token<T: TokenWorld + LedgerWorld + AccountWorld>(w: &mut 
     _create_default_token(w, id, Some(TokenAmount::from(100000000u64)));
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 pub fn verify_error_role<T: LedgerWorld, U: TryInto<Role>>(w: &mut T, role: U)
 where
     U::Error: Debug,
@@ -299,6 +300,7 @@ where
     assert_eq!(err_addr, role.try_into().unwrap())
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 pub fn verify_error_addr<T: LedgerWorld, U: TryInto<Address>>(w: &mut T, addr: U)
 where
     U::Error: Debug,
@@ -308,10 +310,12 @@ where
     assert_eq!(err_addr, addr.try_into().unwrap())
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 pub fn verify_error_code<T: LedgerWorld>(w: &mut T, code: ManyErrorCode) {
     assert_eq!(w.error().as_ref().expect("Expecting an error").code(), code);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 pub fn verify_error_ticker<T: LedgerWorld>(w: &mut T, ticker: String) {
     assert_eq!(
         ticker,

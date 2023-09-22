@@ -245,10 +245,7 @@ impl base::BaseModuleBackend for ManyServer {
 
             builder.name(fb_status.name).extras(fb_status.extras);
 
-            attributes = attributes
-                .into_iter()
-                .chain(fb_status.attributes.into_iter())
-                .collect();
+            attributes = attributes.into_iter().chain(fb_status.attributes).collect();
         }
 
         builder.attributes(attributes.into_iter().collect());

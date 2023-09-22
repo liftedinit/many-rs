@@ -77,19 +77,15 @@ impl<'d, C> Decode<'d, C> for ProofOperation {
                 Err(_) | Ok(None) => Err(decode::Error::message(
                     "Error parsing array type into array",
                 )),
-                Ok(Some(array_length)) if array_length == 2 => {
-                    d.u8().and_then(|value| match value {
-                        1 => d.bytes().map(|hash| KeyValueHash(hash.to_vec())),
-                        2 => d.bytes().map(|hash| NodeHash(hash.to_vec())),
-                        variant => Err(decode::Error::unknown_variant(variant.into())),
-                    })
-                }
-                Ok(Some(array_length)) if array_length == 3 => {
-                    d.u8().and_then(|_| d.bytes()).and_then(|key| {
-                        d.bytes()
-                            .map(|value| KeyValuePair(key.to_vec().into(), value.to_vec().into()))
-                    })
-                }
+                Ok(Some(2)) => d.u8().and_then(|value| match value {
+                    1 => d.bytes().map(|hash| KeyValueHash(hash.to_vec())),
+                    2 => d.bytes().map(|hash| NodeHash(hash.to_vec())),
+                    variant => Err(decode::Error::unknown_variant(variant.into())),
+                }),
+                Ok(Some(3)) => d.u8().and_then(|_| d.bytes()).and_then(|key| {
+                    d.bytes()
+                        .map(|value| KeyValuePair(key.to_vec().into(), value.to_vec().into()))
+                }),
                 Ok(Some(array_length)) => Err(decode::Error::message(format!(
                     "Unexpected array size {array_length}"
                 ))),

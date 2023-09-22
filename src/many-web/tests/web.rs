@@ -119,6 +119,7 @@ fn when_remove(w: &mut World, site_name: String, seed: u32) {
         .expect("Website removal failed");
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the {string} value of website {string} for owner identity {int} is")]
 fn then_live(w: &mut World, step: &Step, file: String, site_name: String, seed: u32) {
     let value = step.docstring().expect("Docstring is empty");
@@ -139,6 +140,7 @@ fn then_live(w: &mut World, step: &Step, file: String, site_name: String, seed: 
     );
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "{string} of website {string} for identity {int} is empty")]
 fn then_empty(w: &mut World, file: String, site_name: String, seed: u32) {
     let ret = w
@@ -155,6 +157,7 @@ fn then_empty(w: &mut World, file: String, site_name: String, seed: u32) {
     assert_eq!(ret.value, None);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the website list should contain {string}")]
 fn then_list(w: &mut World, site_name: String) {
     let ret = WebModuleBackend::list(
@@ -173,6 +176,7 @@ fn then_list(w: &mut World, site_name: String) {
         .any(|v| v.site_name == site_name));
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the website list filtered by identity {int} should contain {string}")]
 fn then_list_filtered(w: &mut World, seed: u32, site_name: String) {
     let ret = WebModuleBackend::list(
@@ -191,6 +195,7 @@ fn then_list_filtered(w: &mut World, seed: u32, site_name: String) {
         .any(|v| v.site_name == site_name));
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "listing websites with count set to {int} result in a list of length count")]
 fn then_list_count(w: &mut World, count: usize) {
     let ret = WebModuleBackend::list(
@@ -206,6 +211,7 @@ fn then_list_count(w: &mut World, count: usize) {
     assert_eq!(ret.deployments.len(), count);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the website list should not contain {string}")]
 fn then_list_not(w: &mut World, site_name: String) {
     let ret = WebModuleBackend::list(
@@ -224,6 +230,7 @@ fn then_list_not(w: &mut World, site_name: String) {
         .any(|v| v.site_name != site_name));
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the website list filtered by identity {int} should not contain {string}")]
 fn then_list_not_filtered(w: &mut World, seed: u32, site_name: String) {
     let ret = WebModuleBackend::list(

@@ -164,11 +164,9 @@ impl WebAuthnVerifier {
                 let key = self.get_cose_key_for_identity(sign1, &id).ok_or_else(|| {
                     ManyError::unknown("Could not find a public key in the envelope")
                 })?;
-                let protected =
-                    BTreeMap::from_iter(sign1.protected.header.rest.clone().into_iter());
+                let protected = BTreeMap::from_iter(sign1.protected.header.rest.clone());
                 if protected.contains_key(&Label::Text("webauthn".to_string())) {
-                    let unprotected =
-                        BTreeMap::from_iter(sign1.unprotected.rest.clone().into_iter());
+                    let unprotected = BTreeMap::from_iter(sign1.unprotected.rest.clone());
                     self._verify_webauthn(sign1, unprotected, key)?;
                 } else {
                     self._verify(key, sign1)?;

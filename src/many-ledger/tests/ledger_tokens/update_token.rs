@@ -121,21 +121,25 @@ fn when_update_ticker(w: &mut UpdateWorld, id: SomeId) {
     w.info = res.info;
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token new ticker is {word}")]
 fn then_new_ticker(w: &mut UpdateWorld, ticker: String) {
     assert_eq!(w.info.summary.ticker, ticker);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token new name is {word}")]
 fn then_new_name(w: &mut UpdateWorld, name: String) {
     assert_eq!(w.info.summary.name, name);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token new decimal is {int}")]
 fn then_new_decimal(w: &mut UpdateWorld, decimal: u64) {
     assert_eq!(w.info.summary.decimals, decimal);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the memo is {string}")]
 fn then_memo(w: &mut UpdateWorld, memo: String) {
     let res = EventsModuleBackend::list(
@@ -156,12 +160,14 @@ fn then_memo(w: &mut UpdateWorld, memo: String) {
     assert_eq!(event.content.memo().unwrap(), &memo);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token new owner is {id}")]
 fn then_new_owner(w: &mut UpdateWorld, owner: SomeId) {
     let owner = owner.as_address(w);
     assert_eq!(w.info.owner, Some(owner));
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token owner is removed")]
 fn then_rm_owner(w: &mut UpdateWorld) {
     assert!(w.info.owner.is_none());

@@ -17,7 +17,7 @@ use {
 
 /// Returns informations about the given account
 fn account_info(
-    module_impl: &mut LedgerModuleImpl,
+    module_impl: &LedgerModuleImpl,
     id: &Address,
     account_id: Address,
 ) -> account::InfoReturn {
@@ -34,7 +34,7 @@ fn account_info(
 
 /// Returns the multisig account feature arguments
 fn account_arguments(
-    module_impl: &mut LedgerModuleImpl,
+    module_impl: &LedgerModuleImpl,
     id: &Address,
     account_id: Address,
 ) -> multisig::MultisigAccountFeatureArg {
@@ -65,7 +65,7 @@ fn submit_args(
 
 /// Returns the multisig transaction info
 fn tx_info(
-    module_impl: &mut LedgerModuleImpl,
+    module_impl: &LedgerModuleImpl,
     id: Address,
     token: &minicbor::bytes::ByteVec,
 ) -> multisig::InfoReturn {
@@ -107,7 +107,7 @@ fn set_defaults() {
     );
     assert!(result.is_ok());
 
-    let arguments = account_arguments(&mut module_impl, &id, account_id);
+    let arguments = account_arguments(&module_impl, &id, account_id);
     assert_eq!(arguments.threshold, Some(1));
     assert_eq!(arguments.timeout_in_secs, Some(12));
     assert_eq!(arguments.execute_automatically, Some(true));
@@ -123,7 +123,7 @@ proptest! {
         let result = module_impl.multisig_submit_transaction(&id, submit_args.clone());
         assert!(result.is_ok());
 
-        let tx_info = tx_info(&mut module_impl, id, &result.unwrap().token);
+        let tx_info = tx_info(&module_impl, id, &result.unwrap().token);
         assert_eq!(tx_info.memo, submit_args.memo);
         assert_eq!(tx_info.transaction, tx);
         assert_eq!(tx_info.submitter, id);
@@ -177,7 +177,7 @@ proptest! {
             account::errors::user_needs_role("").code()
         );
 
-        let arguments = account_arguments(&mut module_impl, &id, account_id);
+        let arguments = account_arguments(&module_impl, &id, account_id);
         assert_eq!(arguments.threshold, Some(3));
         assert_eq!(
             arguments.timeout_in_secs,
@@ -195,7 +195,7 @@ proptest! {
         let result = module_impl.multisig_submit_transaction(&id, submit_args(account_id, tx, None));
         assert!(result.is_ok());
         let submit_return = result.unwrap();
-        let info = tx_info(&mut module_impl, id, &submit_return.token);
+        let info = tx_info(&module_impl, id, &submit_return.token);
         assert!(get_approbation(&info, &id));
         assert_eq!(info.threshold, 3);
 
@@ -207,7 +207,7 @@ proptest! {
         );
         assert!(result.is_ok());
         assert!(get_approbation(
-            &tx_info(&mut module_impl, id, &submit_return.token),
+            &tx_info(&module_impl, id, &submit_return.token),
             &identity(2)
         ));
 
@@ -219,7 +219,7 @@ proptest! {
         );
         assert!(result.is_ok());
         assert!(get_approbation(
-            &tx_info(&mut module_impl, id, &submit_return.token),
+            &tx_info(&module_impl, id, &submit_return.token),
             &identity(3)
         ));
     }
@@ -230,7 +230,7 @@ proptest! {
         let result = module_impl.multisig_submit_transaction(&id, submit_args(account_id, tx, None));
         assert!(result.is_ok());
         let submit_return = result.unwrap();
-        let info = tx_info(&mut module_impl, id, &submit_return.token);
+        let info = tx_info(&module_impl, id, &submit_return.token);
         assert!(get_approbation(&info, &id));
         assert_eq!(info.threshold, 3);
 
@@ -253,7 +253,7 @@ proptest! {
         let result = module_impl.multisig_submit_transaction(&id, submit_args(account_id, tx, None));
         assert!(result.is_ok());
         let token = result.unwrap().token;
-        let info = tx_info(&mut module_impl, id, &token);
+        let info = tx_info(&module_impl, id, &token);
         assert!(get_approbation(&info, &id));
         assert_eq!(info.threshold, 3);
 
@@ -265,7 +265,7 @@ proptest! {
                 },
             );
             assert!(result.is_ok());
-            assert!(get_approbation(&tx_info(&mut module_impl, i, &token), &i));
+            assert!(get_approbation(&tx_info(&module_impl, i, &token), &i));
 
             let result = module_impl.multisig_revoke(
                 &i,
@@ -274,7 +274,7 @@ proptest! {
                 },
             );
             assert!(result.is_ok());
-            assert!(!get_approbation(&tx_info(&mut module_impl, i, &token), &i));
+            assert!(!get_approbation(&tx_info(&module_impl, i, &token), &i));
         }
     }
 
@@ -284,7 +284,7 @@ proptest! {
         let result = module_impl.multisig_submit_transaction(&id, submit_args(account_id, tx, None));
         assert!(result.is_ok());
         let token = result.unwrap().token;
-        assert!(get_approbation(&tx_info(&mut module_impl, id, &token), &id));
+        assert!(get_approbation(&tx_info(&module_impl, id, &token), &id));
 
         let result = module_impl.multisig_revoke(&identity(6), multisig::RevokeArgs { token });
         assert!(result.is_err());
@@ -306,7 +306,7 @@ proptest! {
         let result = module_impl.multisig_submit_transaction(&id, submit_args(account_id, tx, Some(execute_automatically)));
         assert!(result.is_ok());
         let token = result.unwrap().token;
-        let info = tx_info(&mut module_impl, id, &token);
+        let info = tx_info(&module_impl, id, &token);
         assert!(get_approbation(&info, &id));
         assert_eq!(info.threshold, 3);
 
@@ -362,7 +362,7 @@ proptest! {
                     result.unwrap_err().code(),
                     account::features::multisig::errors::cannot_execute_transaction().code()
                 );
-                assert!(get_approbation(&tx_info(&mut module_impl, i, &token), &i));
+                assert!(get_approbation(&tx_info(&module_impl, i, &token), &i));
             }
         }
     }

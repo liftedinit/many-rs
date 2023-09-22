@@ -579,9 +579,7 @@ mod module_tests {
                     .ok_or_else(|| errors::unknown_account(args.account))?;
 
                 Ok(ListRolesReturn {
-                    roles: BTreeSet::from_iter(
-                        vec![Role::Owner, Role::CanLedgerTransact].into_iter(),
-                    ),
+                    roles: BTreeSet::from_iter(vec![Role::Owner, Role::CanLedgerTransact]),
                 })
             }
         });

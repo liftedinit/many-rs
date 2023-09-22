@@ -109,11 +109,13 @@ fn create_default_token(w: &mut RemoveExtInfoWorld, id: SomeId) {
     refresh_token_info(w);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[given(expr = "the token has a memo")]
 fn given_has_memo(w: &mut RemoveExtInfoWorld) {
     assert!(w.ext_info.memo().is_some());
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[given(expr = "the token has a logo")]
 fn given_has_logo(w: &mut RemoveExtInfoWorld) {
     assert!(w.ext_info.visual_logo().is_some());
@@ -138,11 +140,13 @@ fn when_rm_ext_info(w: &mut RemoveExtInfoWorld, ext_info_type: ExtendedInfoType,
     refresh_token_info(w);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token has no memo")]
 fn then_no_memo(w: &mut RemoveExtInfoWorld) {
     assert!(w.ext_info.memo().is_none());
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token has no logo")]
 fn then_no_logo(w: &mut RemoveExtInfoWorld) {
     assert!(w.ext_info.visual_logo().is_none());
@@ -168,6 +172,7 @@ fn then_error_role(w: &mut RemoveExtInfoWorld, role: String) {
     verify_error_role(w, role.as_str());
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the event memo is {string}")]
 fn then_memo(w: &mut RemoveExtInfoWorld, memo: String) {
     let res = EventsModuleBackend::list(

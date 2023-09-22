@@ -161,7 +161,7 @@ impl<'d, C, T: FromIterator<u8>> Decode<'d, C> for Base64Encoder<T> {
             .decode(b64)
             .map_err(|e| minicbor::decode::Error::message(e.to_string()))?;
 
-        Ok(Self(T::from_iter(bytes.into_iter())))
+        Ok(Self(T::from_iter(bytes)))
     }
 }
 

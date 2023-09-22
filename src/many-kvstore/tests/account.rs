@@ -180,7 +180,7 @@ fn add_roles() {
         },
     );
     assert!(result.is_ok());
-    let identities = vec![identity(4)];
+    let identities = [identity(4)];
     assert!(account_info(&setup.module_impl(), &id, &account_id)
         .roles
         .into_iter()

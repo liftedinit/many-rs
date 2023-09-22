@@ -138,36 +138,43 @@ fn then_error_role(w: &mut CreateWorld, role: String) {
     verify_error_role(w, role.as_str());
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token symbol is a subresource")]
 fn then_token_symbol(w: &mut CreateWorld) {
     assert!(w.info.symbol.is_subresource());
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token ticker is {word}")]
 fn then_token_ticker(w: &mut CreateWorld, ticker: String) {
     assert_eq!(w.info.summary.ticker, ticker);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token name is {word}")]
 fn then_token_name(w: &mut CreateWorld, name: String) {
     assert_eq!(w.info.summary.name, name);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token owner is {id}")]
 fn then_token_owner(w: &mut CreateWorld, id: SomeId) {
     assert_eq!(id.as_address(w), w.info.owner.unwrap())
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the owner is removed")]
 fn then_token_rm_owner(w: &mut CreateWorld) {
     assert!(w.info.owner.is_none());
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token total supply is {int}")]
 fn then_initial_supply(w: &mut CreateWorld, total_supply: u64) {
     assert_eq!(w.info.supply.total, TokenAmount::from(total_supply));
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token circulating supply is {int}")]
 fn then_circulating_supply(w: &mut CreateWorld, circulating_supply: u64) {
     assert_eq!(
@@ -176,11 +183,13 @@ fn then_circulating_supply(w: &mut CreateWorld, circulating_supply: u64) {
     );
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token maximum supply has no maximum")]
 fn then_maximum_supply(w: &mut CreateWorld) {
     assert_eq!(w.info.supply.maximum, None);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the memo is {string}")]
 fn then_memo(w: &mut CreateWorld, memo: String) {
     let res = EventsModuleBackend::list(
