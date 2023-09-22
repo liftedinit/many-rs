@@ -403,7 +403,6 @@ impl InnerAddress {
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, ManyError> {
-        let bytes = bytes;
         if bytes.is_empty() {
             return Err(ManyError::invalid_identity());
         }

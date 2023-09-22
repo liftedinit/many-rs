@@ -165,13 +165,10 @@ mod tests {
             name: "Foobar".to_string(),
             public_key: Some(public_key),
             identity: address,
-            attributes: AttributeSet::from_iter(
-                [Attribute {
-                    id: 0,
-                    arguments: vec![],
-                }]
-                .into_iter(),
-            ),
+            attributes: AttributeSet::from_iter([Attribute {
+                id: 0,
+                arguments: vec![],
+            }]),
             server_version: Some("1.0.0".to_string()),
             timeout: Some(300),
             extras: BTreeMap::new(),
@@ -204,14 +201,11 @@ mod tests {
     #[test]
     fn endpoints() {
         let mut mock = MockBaseModuleBackend::new();
-        let endpoints = Endpoints(BTreeSet::from_iter(
-            [
-                "status".to_string(),
-                "endpoints".to_string(),
-                "heartbeat".to_string(),
-            ]
-            .into_iter(),
-        ));
+        let endpoints = Endpoints(BTreeSet::from_iter([
+            "status".to_string(),
+            "endpoints".to_string(),
+            "heartbeat".to_string(),
+        ]));
         mock.expect_endpoints()
             .times(1)
             .return_const(Ok(endpoints.clone()));

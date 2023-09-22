@@ -23,7 +23,7 @@ function setup() {
     ) > /dev/null
 
     # Give time to the servers to start.
-    wait_for_server 8000 8001 8002 8003
+    wait_for_server 8000 8001 8002
 }
 
 function teardown() {

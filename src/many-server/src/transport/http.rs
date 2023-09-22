@@ -10,8 +10,8 @@ use std::time::Duration;
 use tiny_http::{Request, Response};
 use tracing::info;
 
-/// Maximum of 2MB per HTTP request.
-const READ_BUFFER_LEN: usize = 1024 * 1024 * 2;
+/// Maximum of 5MB per HTTP request.
+const READ_BUFFER_LEN: usize = 1024 * 1024 * 5;
 
 #[derive(Debug)]
 pub struct HttpServer<E: LowLevelManyRequestHandler> {
@@ -31,7 +31,9 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
         match request.body_length() {
             Some(x) if x > READ_BUFFER_LEN => {
                 // This is a transport error, and as such an HTTP error.
-                return Response::empty(500u16).with_data(Cursor::new(vec![]), Some(0));
+                // Return a "413: Content Too Large" error.
+                tracing::error!("413: Content Too Large : {x} bytes");
+                return Response::empty(413u16).with_data(Cursor::new(vec![]), Some(0));
             }
             _ => {}
         }
@@ -47,7 +49,10 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
         let envelope = match CoseSign1::from_tagged_slice(bytes) {
             Ok(cs) => cs,
             Err(e) => {
-                tracing::debug!(r#"error description="{}""#, e.to_string());
+                tracing::error!(
+                    r#"Error decoding envelope. Error description="{}""#,
+                    e.to_string()
+                );
                 return Response::empty(500u16).with_data(Cursor::new(vec![]), Some(0));
             }
         };
@@ -59,7 +64,8 @@ impl<E: LowLevelManyRequestHandler> HttpServer<E> {
             .and_then(|r| r.to_tagged_vec().map_err(|e| e.to_string()));
         let bytes = match response {
             Ok(bytes) => bytes,
-            Err(_e) => {
+            Err(e) => {
+                tracing::error!(r#"Error getting response. Error description="{}""#, e);
                 return Response::empty(500u16).with_data(Cursor::new(vec![]), Some(0));
             }
         };

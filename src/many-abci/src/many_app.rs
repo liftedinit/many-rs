@@ -94,6 +94,7 @@ impl<C: Client + Sync> AbciModuleMany<C> {
                     return Err(ManyError::invalid_from_identity());
                 }
 
+                // The returned error if broadcast_tx_sync fails is not very helpful.
                 let response = self
                     .client
                     .broadcast_tx_sync(data)

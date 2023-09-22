@@ -1,0 +1,27 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = [
+    "//:__subpackages__",
+])
+
+rust_binary(
+    name = "web",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+             "//src/many-cli-helpers",
+             "//src/many-client",
+             "//src/many-error",
+             "//src/many-identity",
+             "//src/many-identity-dsa",
+             "//src/many-modules",
+             "//src/many-protocol",
+             "//src/many-types",
+         ],
+)

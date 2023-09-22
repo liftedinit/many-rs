@@ -13,7 +13,7 @@ fn setup() -> LedgerStorage {
     let id1 = identity(1);
     let id2 = identity(2);
 
-    let symbols = BTreeMap::from_iter(vec![(symbol0, "MFX".to_string())].into_iter());
+    let symbols = BTreeMap::from_iter(vec![(symbol0, "MFX".to_string())]);
     let balances = BTreeMap::from([(id0, BTreeMap::from([(symbol0, TokenAmount::from(1000u16))]))]);
     let persistent_path = tempfile::tempdir().unwrap();
 

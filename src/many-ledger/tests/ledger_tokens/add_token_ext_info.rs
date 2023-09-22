@@ -120,12 +120,14 @@ fn add_ext_info(w: &mut AddExtInfoWorld, id: SomeId) {
     refresh_token_info(w);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token has the memo {string}")]
 fn then_has_memo(w: &mut AddExtInfoWorld, memo: String) {
     assert!(w.ext_info.memo().is_some());
     assert_eq!(w.ext_info.memo().unwrap(), &Memo::try_from(memo).unwrap());
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token has the unicode logo {word}")]
 fn then_has_unicode_logo(w: &mut AddExtInfoWorld, unicode_char: char) {
     assert!(w.ext_info.visual_logo().is_some());
@@ -134,6 +136,7 @@ fn then_has_unicode_logo(w: &mut AddExtInfoWorld, unicode_char: char) {
     assert_eq!(w.ext_info.visual_logo().unwrap(), &logo);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the token has the {word} image logo {string}")]
 fn then_has_image_logo(w: &mut AddExtInfoWorld, content_type: String, data: String) {
     assert!(w.ext_info.visual_logo().is_some());
@@ -154,6 +157,7 @@ fn then_error_role(w: &mut AddExtInfoWorld, role: String) {
     verify_error_role(w, role.as_str());
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(expr = "the event memo is {string}")]
 fn then_memo(w: &mut AddExtInfoWorld, memo: String) {
     let res = EventsModuleBackend::list(

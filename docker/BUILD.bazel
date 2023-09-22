@@ -2,8 +2,7 @@ load("@io_bazel_rules_docker//container:image.bzl", "container_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
 package(default_visibility = [
-    "//:__pkg__",
-    "//tests/resiliency:__subpackages__",
+    "//:__subpackages__",
 ])
 
 filegroup(
@@ -12,6 +11,8 @@ filegroup(
         "//src/many-abci:many-abci-image",
         "//src/many-kvstore:many-kvstore-image",
         "//src/many-ledger:many-ledger-image",
+        "//src/many-web:many-web-image",
+        "//src/http-proxy:http-proxy-image",
     ],
     tags = ["manual"],
 )
@@ -26,6 +27,19 @@ filegroup(
         "generate-allow-addrs.sh",
         "update_config.sh",
         "//staging:kvstore-staging",
+    ],
+)
+
+filegroup(
+    name = "docker-web-deps",
+    srcs = [
+        "Makefile",
+        "Makefile.common",
+        "Makefile.dweb",
+        "docker-compose-web.jsonnet",
+        "generate-allow-addrs.sh",
+        "update_config.sh",
+        "//staging:web-staging",
     ],
 )
 
@@ -88,6 +102,26 @@ container_push(
     image = "//src/many-kvstore:many-kvstore-image",
     registry = "index.docker.io",
     repository = "lifted/many-kvstore",
+    tag = "nightly",
+    tags = ["manual"],
+)
+
+container_push(
+    name = "many-web-push-docker",
+    format = "Docker",
+    image = "//src/many-web:many-web-image",
+    registry = "index.docker.io",
+    repository = "lifted/many-web",
+    tag = "nightly",
+    tags = ["manual"],
+)
+
+container_push(
+    name = "http-proxy-push-docker",
+    format = "Docker",
+    image = "//src/http-proxy:http-proxy-image",
+    registry = "index.docker.io",
+    repository = "lifted/http-proxy",
     tag = "nightly",
     tags = ["manual"],
 )

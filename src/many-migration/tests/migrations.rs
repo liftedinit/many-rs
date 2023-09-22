@@ -187,7 +187,7 @@ fn update_extra() {
     for i in 20..26 {
         migrations["F"].update(&mut storage, i).unwrap();
         match i {
-            20 | 21 | 22 => assert_eq!(storage[&StorageKey::Counter], 0),
+            20..=22 => assert_eq!(storage[&StorageKey::Counter], 0),
             23 => assert_eq!(storage[&StorageKey::Counter], 5),
             24 => assert_eq!(storage[&StorageKey::Counter], 10),
             25 => assert_eq!(storage[&StorageKey::Counter], 15),

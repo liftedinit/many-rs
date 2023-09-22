@@ -1,4 +1,3 @@
-use base64::{engine::general_purpose, Engine as _};
 use clap::Parser;
 use many_client::client::blocking::ManyClient;
 use many_identity::{Address, AnonymousIdentity, Identity};
@@ -29,7 +28,7 @@ struct Opts {
     server: String,
 
     /// Port and address to bind to.
-    #[clap(long)]
+    #[clap(long, default_value = "127.0.0.1:8880")]
     addr: SocketAddr,
 
     /// The identity of the server (an identity string), or anonymous if you don't know it.
@@ -60,11 +59,23 @@ fn process_request(http: Arc<Server>, client: Client) -> impl Fn() {
 }
 
 fn handle_get_request(client: &Client, request: Request) {
-    let path = request.url();
+    let mut path = "/http".to_string();
+    let url = request.url();
+    let maybe_host = request.headers().iter().find(|h| h.field.equiv("host"));
+    if let Some(host) = maybe_host {
+        let parts: Vec<_> = host.value.as_str().splitn(2, '.').collect();
+        if let [site_name_and_addr, _] = parts.as_slice() {
+            let parts = site_name_and_addr.rsplitn(2, '-').collect::<Vec<_>>();
+            if let [addr, site_name] = parts.as_slice() {
+                path = format!("{path}/{addr}/{site_name}");
+            }
+        }
+    }
+    debug!("Received request for path: {path}{url}");
     let result = client.call_(
         "kvstore.get",
         GetArgs {
-            key: format!("http{path}").into_bytes().into(),
+            key: format!("{path}{url}").into_bytes().into(),
         },
     );
     match result {
@@ -95,29 +106,19 @@ fn process_result(result: Vec<u8>, request: Request) {
 }
 
 fn respond_with_value(value: Vec<u8>, request: Request) {
-    match general_purpose::STANDARD.decode(value) {
-        Ok(value) => {
-            let mimetype = new_mime_guess::from_path(request.url()).first_raw();
-            let mut response = Response::empty(200).with_data(value.as_slice(), Some(value.len()));
+    let mimetype = new_mime_guess::from_path(request.url()).first_raw();
+    let mut response = Response::empty(200).with_data(value.as_slice(), Some(value.len()));
 
-            if let Some(mimetype) = mimetype {
-                if let Ok(header) = Header::from_bytes("Content-Type", mimetype) {
-                    response = response.with_header(header);
-                } else {
-                    warn!("Failed to create header for mimetype: {}", mimetype);
-                }
-            }
+    if let Some(mimetype) = mimetype {
+        if let Ok(header) = Header::from_bytes("Content-Type", mimetype) {
+            response = response.with_header(header);
+        } else {
+            warn!("Failed to create header for mimetype: {}", mimetype);
+        }
+    }
 
-            if let Err(e) = request.respond(response) {
-                warn!("Failed to send response: {}", e);
-            }
-        }
-        Err(e) => {
-            warn!("Failed to decode value: {}", e);
-            if let Err(e) = request.respond(Response::empty(500)) {
-                warn!("Failed to send response: {}", e);
-            }
-        }
+    if let Err(e) = request.respond(response) {
+        warn!("Failed to send response: {}", e);
     }
 }
 

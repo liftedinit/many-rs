@@ -306,7 +306,7 @@ mod tests {
         assert_eq!(async_attr.token.as_ref(), token.as_ref());
 
         // Valid async attr - try_from_set
-        let attr_set = AttributeSet::from_iter(vec![attr].into_iter());
+        let attr_set = AttributeSet::from_iter(vec![attr]);
         let async_attr = AsyncAttribute::try_from_set(&attr_set).unwrap();
         assert_eq!(async_attr.token.as_ref(), token.as_ref());
 
@@ -316,7 +316,7 @@ mod tests {
         assert!(async_attr.is_err());
 
         // Invalid async attr - try_from_set
-        let attr_set = AttributeSet::from_iter(vec![invalid_attr].into_iter());
+        let attr_set = AttributeSet::from_iter(vec![invalid_attr]);
         let async_attr = AsyncAttribute::try_from_set(&attr_set);
         assert!(async_attr.is_err());
 

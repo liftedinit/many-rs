@@ -1,10 +1,10 @@
 load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
 
 package(default_visibility = [
-    "//:__pkg__",
-    "//tests/e2e:__subpackages__",
+    "//:__subpackages__",
 ])
 
 cargo_build_script(
@@ -21,6 +21,27 @@ rust_binary(
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
     ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":build_script",
+        "//src/many-cli-helpers",
+        "//src/many-client",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-modules",
+    ],
+)
+
+rust_image(
+    name = "http-proxy-image",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    base = "//:ubuntu_image",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    tags = ["manual"],
     deps = all_crate_deps(
         normal = True,
     ) + [

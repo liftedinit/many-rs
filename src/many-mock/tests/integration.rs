@@ -71,12 +71,14 @@ async fn make_request(w: &mut MockWorld, method: String) {
     w.response = Some(response);
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(regex = "it should be (.*)")]
 async fn full_value(w: &mut MockWorld, value: String) {
     let json_value: Value = serde_json::from_str(&value).unwrap();
     assert_eq!(w.response, Some(json_value));
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 #[then(regex = r#""(.*)" should be (.*)"#)]
 async fn field_value(w: &mut MockWorld, field_name: String, value: String) {
     let object: BTreeMap<String, Value> = w

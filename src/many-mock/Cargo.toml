@@ -26,7 +26,7 @@ many-server = { path = "../many-server", version = "0.1.7" } # managed by releas
 cbor-diag = "0.1.12"
 
 [dev-dependencies]
-cucumber = { version = "0.19.1", features = ["libtest"] }
+cucumber = { version = "0.20.0", features = ["libtest"] }
 futures = "0.3.28"
 many-client = { path = "../many-client", version = "0.1.7" } # managed by release.sh
 serde_json = "1.0.96"

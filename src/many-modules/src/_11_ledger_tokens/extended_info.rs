@@ -95,7 +95,7 @@ impl PartialEq for ExtendedInfo {
 
 impl PartialOrd for ExtendedInfo {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.index().partial_cmp(&other.index())
+        Some(self.cmp(other))
     }
 }
 

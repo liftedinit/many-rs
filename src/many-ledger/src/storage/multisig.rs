@@ -27,7 +27,7 @@ pub(super) fn key_for_multisig_transaction(token: &[u8]) -> Vec<u8> {
     let mut exp_token = [0u8; EVENT_ID_KEY_SIZE_IN_BYTES];
     exp_token[(EVENT_ID_KEY_SIZE_IN_BYTES - token.len())..].copy_from_slice(token);
 
-    vec![MULTISIG_TRANSACTIONS_ROOT, &exp_token[..]]
+    [MULTISIG_TRANSACTIONS_ROOT, &exp_token[..]]
         .concat()
         .to_vec()
 }

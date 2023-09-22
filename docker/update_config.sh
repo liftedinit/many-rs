@@ -51,7 +51,8 @@ END_OF_USAGE
 ip_range=10.254.254.%
 port=26656
 config_root=""
-while getopts ":i:p:c:r:" opt; do
+dweb=0
+while getopts ":i:p:c:r:d:" opt; do
     case "${opt}" in
         i)  ip_range="${OPTARG}"
             ;;
@@ -61,6 +62,8 @@ while getopts ":i:p:c:r:" opt; do
         c)  config_root="${OPTARG}"
             ;;
         r)  tm_root="${OPTARG}"
+            ;;
+        d)  dweb="${OPTARG}"
             ;;
         *)  usage
             ;;
@@ -108,6 +111,14 @@ for node in $(seq 0 "$NB_NODES"); do
   update_toml_key "$config_toml_path" consensus timeout_commit "\"2s\""
   update_toml_key "$config_toml_path" consensus timeout_precommit "\"2s\""
   update_toml_key "$config_toml_path" p2p max_packet_msg_payload_size "1400"
+
+  # Experimental section for dweb
+  if [ $dweb -eq 1 ]; then
+    echo "Enabling experimental dweb configuration"
+    update_toml_key "$config_toml_path" rpc max_body_bytes "10485760" # Bump the max tx (rpc) body from 1Mb to 10Mb
+    update_toml_key "$config_toml_path" mempool max_txs_bytes "5368709120" # Bump the max total size of all txs in the mempool from 5Mb to 25Mb
+    update_toml_key "$config_toml_path" mempool max_tx_bytes "5242880" # Bump the max size of a single tx in the mempool from 1Mb to 5Mb
+  fi
 
   # update_toml_key "$config_toml_path" p2p bootstrap-peers "\"$peers\""
 done

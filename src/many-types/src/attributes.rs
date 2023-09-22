@@ -119,7 +119,7 @@ impl Eq for Attribute {}
 
 impl PartialOrd for Attribute {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.id.partial_cmp(&other.id)
+        Some(self.cmp(other))
     }
 }
 
@@ -253,7 +253,7 @@ mod tests {
 
         #[test]
         fn ord(id1 in arb_id(), id2 in arb_id()) {
-            let mut v = vec![id1, id2];
+            let mut v = [id1, id2];
             v.sort_unstable();
             let (attr1, attr2) = (Attribute::id(v[0]), Attribute::id(v[1]));
             assert_eq!(attr1.cmp(&attr2), Ordering::Less);

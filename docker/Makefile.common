@@ -24,3 +24,8 @@ genfiles-common/many-abci-docker:
 	@mkdir -p genfiles-common
 	docker load < ../src/many-abci/many-abci-image.tar
 	touch $@
+
+genfiles-common/http-proxy-docker:
+	@mkdir -p genfiles-common
+	docker load < ../src/http-proxy/http-proxy-image.tar
+	touch $@

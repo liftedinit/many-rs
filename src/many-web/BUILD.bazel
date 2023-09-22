@@ -1,0 +1,148 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test_suite")
+load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
+load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
+
+package(default_visibility = [
+    "//:__pkg__",
+    "//docker:__pkg__",
+    "//tests/e2e:__subpackages__",
+    "//tests/resiliency:__subpackages__",
+])
+
+cargo_build_script(
+    name = "build_script",
+    srcs = ["build.rs"],
+    data = ["//:.git"],
+    deps = all_crate_deps(build = True),
+)
+
+rust_binary(
+    name = "many-web",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_web",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":many-web-lib",
+        ":build_script",
+        "//src/many-cli-helpers",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-server-cache",
+        "//src/many-types",
+    ],
+)
+
+rust_library(
+    name = "many-web-lib",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_web",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":build_script",
+        "//src/many-cli-helpers",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-server-cache",
+        "//src/many-types",
+    ],
+)
+
+
+rust_image(
+    name = "many-web-image",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    base = "//:ubuntu_image",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+    ),
+    tags = ["manual"],
+    deps = all_crate_deps(
+        normal = True,
+    ) + [
+        ":build_script",
+        ":many-web-lib",
+        "//src/many-cli-helpers",
+        "//src/many-error",
+        "//src/many-identity",
+        "//src/many-identity-dsa",
+        "//src/many-identity-webauthn",
+        "//src/many-modules",
+        "//src/many-protocol",
+        "//src/many-server",
+        "//src/many-server-cache",
+        "//src/many-types",
+    ],
+)
+
+rust_library(
+    name = "many-web-lib-for-test",
+    srcs = glob(include = ["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "many_web",
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        ":build_script",
+        "//src/many-error",
+        "//src/many-cli-helpers",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-identity-dsa:many-identity-dsa-for-test",
+        "//src/many-identity-webauthn:many-identity-webauthn-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-protocol:many-protocol-for-test",
+        "//src/many-server:many-server-for-test",
+        "//src/many-server-cache",
+        "//src/many-types:many-types-for-test",
+    ],
+)
+
+rust_test_suite(
+    name = "many-web-test-cucumber-suite",
+    srcs = glob(include = ["tests/**/*.rs"]),
+    data = [
+        "//staging:web-staging",
+    ] + glob(include = ["tests/features/**/*.feature"]),
+    proc_macro_deps = all_crate_deps(
+        proc_macro = True,
+        proc_macro_dev = True,
+    ),
+    use_libtest_harness = False,
+    deps = all_crate_deps(
+        normal = True,
+        normal_dev = True,
+    ) + [
+        ":many-web-lib-for-test",
+        "//src/many-error",
+        "//src/many-identity:many-identity-for-test",
+        "//src/many-modules:many-modules-for-test",
+        "//src/many-protocol:many-protocol-for-test",
+        "//src/many-types:many-types-for-test",
+    ],
+)

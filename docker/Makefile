@@ -30,7 +30,20 @@ stop-kvstore-cluster:
 start-kvstore-cluster-detached:
 	make -f Makefile.kvstore start-nodes-detached
 
+.PHONY: start-web-cluster
+start-web-cluster:
+	make -f Makefile.dweb start-nodes
+
+.PHONY: stop-web-cluster
+stop-web-cluster:
+	make -f Makefile.dweb stop-nodes
+
+.PHONY: start-web-cluster-detached
+start-web-cluster-detached:
+	make -f Makefile.dweb start-nodes-detached
+
 .PHONY: clean
 clean:
 	make -f Makefile.ledger clean
 	make -f Makefile.kvstore clean
+	make -f Makefile.dweb clean

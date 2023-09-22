@@ -155,7 +155,7 @@ impl KvStoreStorage {
         // Initialize DB with ACL
         for (k, v) in acl.into_iter() {
             batch.push((
-                vec![KVSTORE_ACL_ROOT.to_vec(), k.key.to_vec()].concat(),
+                [KVSTORE_ACL_ROOT.to_vec(), k.key.to_vec()].concat(),
                 Op::Put(minicbor::to_vec(v).map_err(|e| e.to_string())?),
             ));
         }
@@ -237,7 +237,7 @@ impl KvStoreStorage {
 
     fn _get(&self, key: &[u8], prefix: &[u8]) -> Result<Option<Vec<u8>>, ManyError> {
         self.persistent_store
-            .get(&vec![prefix.to_vec(), key.to_vec()].concat())
+            .get(&[prefix.to_vec(), key.to_vec()].concat())
             .map_err(|e| ManyError::unknown(e.to_string()))
     }
 
@@ -290,14 +290,14 @@ impl KvStoreStorage {
         self.persistent_store
             .apply(&[
                 (
-                    vec![KVSTORE_ACL_ROOT.to_vec(), key.to_vec()].concat(),
+                    [KVSTORE_ACL_ROOT.to_vec(), key.to_vec()].concat(),
                     Op::Put(
                         minicbor::to_vec(meta)
                             .map_err(|e| ManyError::serialization_error(e.to_string()))?,
                     ),
                 ),
                 (
-                    vec![KVSTORE_ROOT.to_vec(), key.to_vec()].concat(),
+                    [KVSTORE_ROOT.to_vec(), key.to_vec()].concat(),
                     Op::Put(value.clone()),
                 ),
             ])
@@ -318,7 +318,7 @@ impl KvStoreStorage {
     pub fn disable(&mut self, meta: &KvStoreMetadata, key: &[u8]) -> Result<(), ManyError> {
         self.persistent_store
             .apply(&[(
-                vec![KVSTORE_ACL_ROOT.to_vec(), key.to_vec()].concat(),
+                [KVSTORE_ACL_ROOT.to_vec(), key.to_vec()].concat(),
                 Op::Put(
                     minicbor::to_vec(meta)
                         .map_err(|e| ManyError::serialization_error(e.to_string()))?,
@@ -355,7 +355,7 @@ impl KvStoreStorage {
         let new_owner = meta.owner;
         self.persistent_store
             .apply(&[(
-                vec![KVSTORE_ACL_ROOT.to_vec(), key.to_vec()].concat(),
+                [KVSTORE_ACL_ROOT.to_vec(), key.to_vec()].concat(),
                 Op::Put(
                     minicbor::to_vec(meta)
                         .map_err(|e| ManyError::serialization_error(e.to_string()))?,

@@ -13,7 +13,7 @@ proc-macro = true
 
 [dependencies]
 inflections = "1.1.1"
-proc-macro2 = "1.0.56"
+proc-macro2 = "1.0.66"
 quote = "1.0.28"
 serde = "=1.0.163"
 serde_tokenstream = "0.2.0"

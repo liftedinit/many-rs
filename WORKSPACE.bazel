@@ -3,15 +3,17 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 ## RUST SECTION ##
 http_archive(
     name = "rules_rust",
-    sha256 = "950a3ad4166ae60c8ccd628d1a8e64396106e7f98361ebe91b0bcfe60d8e4b60",
-    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.20.0/rules_rust-v0.20.0.tar.gz"],
+    #    sha256 = "950a3ad4166ae60c8ccd628d1a8e64396106e7f98361ebe91b0bcfe60d8e4b60",
+    #    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.20.0/rules_rust-v0.20.0.tar.gz"],
+    sha256 = "4a9cb4fda6ccd5b5ec393b2e944822a62e050c7c06f1ea41607f14c4fdec57a2",
+    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.25.1/rules_rust-v0.25.1.tar.gz"],
 )
 
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
 
 rules_rust_dependencies()
 
-RUST_VERSION = "nightly/2023-05-07"
+RUST_VERSION = "nightly/2023-09-20"
 
 rust_register_toolchains(
     edition = "2021",
@@ -77,7 +79,9 @@ crates_repository(
         "//src/many-server:Cargo.toml",
         "//src/many-server-cache:Cargo.toml",
         "//src/many-types:Cargo.toml",
+        "//src/many-web:Cargo.toml",
         "//src/many:Cargo.toml",
+        "//src/web:Cargo.toml",
     ],
     rust_version = RUST_VERSION,
 )

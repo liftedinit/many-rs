@@ -18,8 +18,10 @@ use tracing::{debug, info};
 
 mod error;
 mod module;
+mod opt;
 mod storage;
 
+use crate::opt::AkashOpt;
 use module::*;
 
 #[derive(Debug, Parser)]
@@ -66,35 +68,6 @@ struct Opts {
 
     #[clap(flatten)]
     akash_opt: AkashOpt,
-}
-
-#[derive(Debug, Parser)]
-pub struct AkashOpt {
-    akash_wallet: String,
-
-    #[clap(long, default_value = "akashnet-2")]
-    akash_chain_id: String,
-
-    // Akash needs the port number in the url even if the schema is known.
-    // Unfortunately, the `url` crate drops the port number from the serialization when the schema is known.
-    // TODO: Make `ManyUrl` a real wrapper with a `to_string_with_port` method.
-    #[clap(long, default_value = "https://rpc.akashnet.net:443")]
-    akash_rpc: String,
-
-    #[clap(long, default_value = "auto")]
-    akash_gas: String,
-
-    #[clap(long, default_value = "1.25")]
-    akash_gas_adjustment: f64,
-
-    #[clap(long, default_value = "0.025uakt")]
-    akash_gas_price: String,
-
-    #[clap(long, default_value = "amino-json")]
-    akash_sign_mode: String,
-
-    #[clap(long, default_value = "os")]
-    akash_keyring_backend: String,
 }
 
 fn main() {

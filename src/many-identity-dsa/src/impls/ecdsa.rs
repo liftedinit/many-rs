@@ -48,7 +48,7 @@ pub fn ecdsa_cose_key((x, y): (Vec<u8>, Vec<u8>), d: Option<Vec<u8>>) -> CoseKey
 }
 
 pub fn public_key(key: &CoseKey) -> Result<Option<CoseKey>, ManyError> {
-    let params = BTreeMap::from_iter(key.params.clone().into_iter());
+    let params = BTreeMap::from_iter(key.params.clone());
     match key.alg {
         Some(coset::Algorithm::Assigned(Algorithm::ES256)) => {
             let x = params.get(&Label::Int(Ec2KeyParameter::X.to_i64()));
@@ -214,7 +214,7 @@ impl EcDsaVerifier {
         check_key(cose_key, false, true, KeyType::EC2, Algorithm::ES256, None)?;
         let address = unsafe { cose::address_unchecked(&public_key) }?;
 
-        let params = BTreeMap::from_iter(cose_key.params.clone().into_iter());
+        let params = BTreeMap::from_iter(cose_key.params.clone());
         let x = params
             .get(&Label::Int(Ec2KeyParameter::X.to_i64()))
             .ok_or_else(|| ManyError::unknown("Could not find the X parameter in key"))?

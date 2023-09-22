@@ -3,9 +3,11 @@ load(":rules.bzl", "basic_naming")
 
 # Visibility for Docker image
 package(default_visibility = [
+    "//src/http-proxy:__pkg__",
     "//src/many-abci:__pkg__",
     "//src/many-kvstore:__pkg__",
     "//src/many-ledger:__pkg__",
+    "//src/many-web:__pkg__",
 ])
 
 # Required for Vergen
@@ -36,9 +38,12 @@ pkg_tar(
         "//src/many-compute",
         "//src/many-kvstore",
         "//src/many-ledger",
+        "//src/many-web",
+        "//src/web",
         "//staging:abci-ledger-migrations",
         "//staging:compute-staging",
         "//staging:kvstore-staging",
+        "//staging:web-staging",
         "//staging:ledger-migrations",
         "//staging:ledger-staging",
     ],
@@ -167,6 +172,52 @@ run_make(
     tags = ["manual"],
 )
 
+
+run_make(
+    name = "start-web-cluster",
+    src = "Makefile",
+    cmd = "start-web-cluster",
+    data = [
+        "//docker:docker-web-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-web:many-web-image.tar",
+        "//src/http-proxy:http-proxy-image.tar",
+    ],
+    tags = ["manual"],
+)
+
+run_make(
+    name = "start-web-cluster-detached",
+    src = "Makefile",
+    cmd = "start-web-cluster-detached",
+    data = [
+        "//docker:docker-web-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+        "//src/many-abci:many-abci-image.tar",
+        "//src/many-web:many-web-image.tar",
+        "//src/http-proxy:http-proxy-image.tar",
+    ],
+    tags = ["manual"],
+)
+
+run_make(
+    name = "stop-web-cluster",
+    src = "Makefile",
+    cmd = "stop-web-cluster",
+    data = [
+        "//docker:docker-web-deps",
+        "//docker:jsonnet_image.tar",
+        "//docker:openssl_image.tar",
+        "//docker:tendermint_image.tar",
+    ],
+    tags = ["manual"],
+)
+
 run_make(
     name = "clean-cluster",
     src = "Makefile",
@@ -174,6 +225,7 @@ run_make(
     data = [
         "//docker:docker-kvstore-deps",
         "//docker:docker-ledger-deps",
+        "//docker:docker-web-deps",
         "//docker:jsonnet_image.tar",
         "//docker:openssl_image.tar",
         "//docker:tendermint_image.tar",

@@ -26,7 +26,7 @@ fn key_for_event(id: events::EventId) -> Vec<u8> {
 
     let mut exp_id = [0u8; EVENT_ID_KEY_SIZE_IN_BYTES];
     exp_id[(EVENT_ID_KEY_SIZE_IN_BYTES - id.len())..].copy_from_slice(id);
-    vec![EVENTS_ROOT.to_vec(), exp_id.to_vec()].concat()
+    [EVENTS_ROOT.to_vec(), exp_id.to_vec()].concat()
 }
 
 impl KvStoreStorage {

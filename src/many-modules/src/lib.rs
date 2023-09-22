@@ -1,3 +1,6 @@
+#![feature(box_patterns)]
+#![feature(const_trait_impl)]
+
 use async_trait::async_trait;
 use many_error::ManyError;
 use many_protocol::{RequestMessage, ResponseMessage};
@@ -30,6 +33,7 @@ reexport_module!(
     r#async: _8_async;
     account: _9_account;
     compute: _15_compute;
+    web: _16_web + _17_web_commands;
     abci_backend: _1000_abci_backend;
     abci_frontend: _1001_abci_frontend;
     idstore: _1002_idstore;
