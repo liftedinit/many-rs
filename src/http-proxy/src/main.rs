@@ -60,7 +60,10 @@ fn process_request(http: Arc<Server>, client: Client) -> impl Fn() {
 
 fn handle_get_request(client: &Client, request: Request) {
     let mut path = "/http".to_string();
-    let url = request.url();
+    let mut url = request.url().to_string();
+    if url == "/" {
+        url.push_str("index.html");
+    }
     let maybe_host = request.headers().iter().find(|h| h.field.equiv("host"));
     if let Some(host) = maybe_host {
         let parts: Vec<_> = host.value.as_str().splitn(2, '.').collect();
