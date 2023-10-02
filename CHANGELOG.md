@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2023-10-02
+
+### Bug Fixes
+
+- Push index.html if url is root ([#411](https://github.com/liftedinit/many-rs/issues/411))
+
 ## [0.2.0] - 2023-09-22
 
 ### Features

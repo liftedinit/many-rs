@@ -1807,7 +1807,7 @@ dependencies = [
 
 [[package]]
 name = "genesis-from-db"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.21.2",
  "clap 3.2.25",
@@ -2095,7 +2095,7 @@ dependencies = [
 
 [[package]]
 name = "http-proxy"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.21.2",
  "clap 3.2.25",
@@ -2226,7 +2226,7 @@ dependencies = [
 
 [[package]]
 name = "idstore-export"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.21.2",
  "clap 3.2.25",
@@ -2418,7 +2418,7 @@ dependencies = [
 
 [[package]]
 name = "kvstore"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap 3.2.25",
  "hex",
@@ -2475,7 +2475,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
 name = "ledger"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap 3.2.25",
@@ -2504,7 +2504,7 @@ dependencies = [
 
 [[package]]
 name = "ledger-db"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap 3.2.25",
  "hex",
@@ -2654,7 +2654,7 @@ dependencies = [
 
 [[package]]
 name = "many"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2686,7 +2686,7 @@ dependencies = [
 
 [[package]]
 name = "many-abci"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "base64 0.21.2",
@@ -2727,7 +2727,7 @@ dependencies = [
 
 [[package]]
 name = "many-cli-helpers"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap 3.2.25",
@@ -2741,7 +2741,7 @@ dependencies = [
 
 [[package]]
 name = "many-client"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2779,7 +2779,7 @@ dependencies = [
 
 [[package]]
 name = "many-client-macros"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2788,7 +2788,7 @@ dependencies = [
 
 [[package]]
 name = "many-compute"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "clap 3.2.25",
@@ -2819,7 +2819,7 @@ dependencies = [
 
 [[package]]
 name = "many-error"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "backtrace",
  "minicbor",
@@ -2831,7 +2831,7 @@ dependencies = [
 
 [[package]]
 name = "many-identity"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base32",
  "coset",
@@ -2851,7 +2851,7 @@ dependencies = [
 
 [[package]]
 name = "many-identity-dsa"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base32",
  "coset",
@@ -2876,7 +2876,7 @@ dependencies = [
 
 [[package]]
 name = "many-identity-hsm"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "asn1",
  "coset",
@@ -2893,7 +2893,7 @@ dependencies = [
 
 [[package]]
 name = "many-identity-webauthn"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "authenticator-ctap2-2021",
  "base64 0.21.2",
@@ -2922,7 +2922,7 @@ dependencies = [
 
 [[package]]
 name = "many-kvstore"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -2957,7 +2957,7 @@ dependencies = [
 
 [[package]]
 name = "many-ledger"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -3007,7 +3007,7 @@ dependencies = [
 
 [[package]]
 name = "many-ledger-test-macros"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "quote",
  "syn 2.0.18",
@@ -3015,7 +3015,7 @@ dependencies = [
 
 [[package]]
 name = "many-ledger-test-utils"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-channel",
  "coset",
@@ -3040,7 +3040,7 @@ dependencies = [
 
 [[package]]
 name = "many-macros"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "inflections",
  "proc-macro2",
@@ -3052,7 +3052,7 @@ dependencies = [
 
 [[package]]
 name = "many-migration"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "linkme",
  "many-error",
@@ -3065,7 +3065,7 @@ dependencies = [
 
 [[package]]
 name = "many-mock"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "cbor-diag",
@@ -3090,7 +3090,7 @@ dependencies = [
 
 [[package]]
 name = "many-modules"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -3117,7 +3117,7 @@ dependencies = [
 
 [[package]]
 name = "many-protocol"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-channel",
  "base64 0.21.2",
@@ -3140,7 +3140,7 @@ dependencies = [
 
 [[package]]
 name = "many-server"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3181,7 +3181,7 @@ dependencies = [
 
 [[package]]
 name = "many-server-cache"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "coset",
  "many-error",
@@ -3193,7 +3193,7 @@ dependencies = [
 
 [[package]]
 name = "many-types"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.21.2",
  "cbor-diag",
@@ -3216,7 +3216,7 @@ dependencies = [
 
 [[package]]
 name = "many-web"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "base64 0.21.2",
@@ -5677,7 +5677,7 @@ checksum = "ed9d5b4305409d1fc9482fee2d7f9bcbf24b3972bf59817ef757e23982242a93"
 
 [[package]]
 name = "web"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "cbor-diag",
