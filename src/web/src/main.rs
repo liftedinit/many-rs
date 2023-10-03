@@ -69,6 +69,8 @@ struct DeployOpt {
     /// A memo to attach to the transaction
     #[clap(long, parse(try_from_str = Memo::try_from))]
     memo: Option<Memo>,
+
+    domain: Option<String>,
 }
 
 #[derive(Debug, Parser)]
@@ -90,6 +92,8 @@ struct UpdateOpt {
     /// A memo to attach to the transaction
     #[clap(long, parse(try_from_str = Memo::try_from))]
     memo: Option<Memo>,
+
+    domain: Option<String>,
 }
 
 #[derive(Debug, Parser)]
@@ -128,6 +132,7 @@ fn deploy(
     source: PathBuf,
     owner: Option<Address>,
     memo: Option<Memo>,
+    domain: Option<String>,
 ) -> Result<(), ManyError> {
     // Read the source file
     let source = std::fs::read(source).map_err(ManyError::unknown)?;
@@ -137,6 +142,7 @@ fn deploy(
         site_description,
         source: WebDeploymentSource::Archive(source.into()),
         memo,
+        domain,
     };
     let response = client.call("web.deploy", arguments)?;
     let payload = wait_response(client, response)?;
@@ -154,6 +160,7 @@ fn update(
     source: PathBuf,
     owner: Option<Address>,
     memo: Option<Memo>,
+    domain: Option<String>,
 ) -> Result<(), ManyError> {
     // Read the source file
     let source = std::fs::read(source).map_err(ManyError::unknown)?;
@@ -163,6 +170,7 @@ fn update(
         site_description,
         source: WebDeploymentSource::Archive(source.into()),
         memo,
+        domain,
     };
     let response = client.call("web.update", arguments)?;
     let payload = wait_response(client, response)?;
@@ -305,7 +313,8 @@ fn main() {
             source,
             owner,
             memo,
-        }) => deploy(client, site_name, site_description, source, owner, memo),
+            domain,
+        }) => deploy(client, site_name, site_description, source, owner, memo, domain),
         SubCommand::Remove(RemoveOpt {
             site_name,
             owner,
@@ -322,7 +331,8 @@ fn main() {
             source,
             owner,
             memo,
-        }) => update(client, site_name, site_description, source, owner, memo),
+            domain,
+        }) => update(client, site_name, site_description, source, owner, memo, domain),
     };
 
     if let Err(err) = result {

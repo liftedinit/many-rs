@@ -20,4 +20,7 @@ pub struct ListArgs {
 pub struct ListReturns {
     #[n(0)]
     pub deployments: Vec<WebDeploymentInfo>,
+
+    #[n(1)]
+    pub total_count: u64,
 }

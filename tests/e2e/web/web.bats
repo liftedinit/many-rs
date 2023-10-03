@@ -65,7 +65,7 @@ function teardown() {
     assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
     call_web --pem=1 --port=8000 remove test_dweb
     call_web --pem=1 --port=8000 list
-    assert_output '{0: []}'
+    assert_output '{0: [], 1: 0}'
 }
 
 @test "$SUITE: dweb website listing works" {

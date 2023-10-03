@@ -842,6 +842,7 @@ define_event! {
         3     | site_description:       Option<String>,
         4     | source_hash:            String,
         5     | memo:                   Option<Memo>                           [ memo ],
+        6     | domain:                 Option<String>,
     },
     [17, 1]     WebRemove (module::web::RemoveArgs) {
         1     | owner:                  Address                                [ id ],
@@ -854,6 +855,7 @@ define_event! {
         3     | site_description:       Option<String>,
         4     | source_hash:            String,
         5     | memo:                   Option<Memo>                           [ memo ],
+        6     | domain:                 Option<String>,
     },
 }
 

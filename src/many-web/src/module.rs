@@ -200,6 +200,7 @@ impl WebModuleBackend for WebModuleImpl {
 
     fn list(&self, _sender: &Address, args: ListArgs) -> Result<ListReturns, ManyError> {
         Ok(ListReturns {
+            total_count: self.storage.get_deployment_count()?,
             deployments: self
                 .storage
                 .list(args.order.unwrap_or_default(), args.filter)
@@ -218,6 +219,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             site_description,
             source,
             memo,
+            domain,
         } = args;
 
         // Check that the sender is the owner, for now.
@@ -230,6 +232,8 @@ impl WebCommandsModuleBackend for WebModuleImpl {
         } else {
             sender
         };
+
+        // TODO: Parse domain
 
         if site_name.len() > 12 {
             return Err(error::site_name_too_long(site_name));
@@ -265,6 +269,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             memo,
             source_hash,
             serve_path,
+            domain.clone(),
         )?;
 
         let url = url_for_website(sender, &site_name);
@@ -275,6 +280,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
                 site_name,
                 site_description,
                 url: Some(url),
+                domain,
             },
         })
     }
@@ -306,6 +312,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             site_description,
             source,
             memo,
+            domain,
         } = args;
 
         // Check that the sender is the owner, for now.
@@ -318,6 +325,8 @@ impl WebCommandsModuleBackend for WebModuleImpl {
         } else {
             sender
         };
+
+        // TODO: Parse domain
 
         if site_name.len() > 12 {
             return Err(error::site_name_too_long(site_name));
@@ -354,6 +363,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             memo,
             source_hash,
             serve_path,
+            domain.clone(),
         )?;
 
         let url = url_for_website(sender, &site_name);
@@ -363,6 +373,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
                 site_name,
                 site_description,
                 url: Some(url),
+                domain,
             },
         })
     }
