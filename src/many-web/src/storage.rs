@@ -42,7 +42,6 @@ fn key_for_deployment_count() -> Vec<u8> {
     format!("{STORAGE_INFO_ROOT}/total_deployment_count").into_bytes()
 }
 
-
 pub struct WebStorage {
     persistent_store: merk::Merk,
 
@@ -77,7 +76,8 @@ impl WebStorage {
     }
 
     pub fn get_deployment_count(&self) -> Result<u64, ManyError> {
-        let current_count = self.persistent_store
+        let current_count = self
+            .persistent_store
             .get(&key_for_deployment_count())
             .map_err(error::storage_get_failed)?
             .map_or(0u64, |x| {
@@ -329,11 +329,9 @@ impl WebStorage {
         trace!("Increasing deployment counter");
         let count = self.get_deployment_count()?;
         batch.push((
-                key_for_deployment_count(),
-                Op::Put(
-                    (count + 1).to_be_bytes().to_vec(),
-                ),
-            ));
+            key_for_deployment_count(),
+            Op::Put((count + 1).to_be_bytes().to_vec()),
+        ));
 
         trace!("Sorting batch");
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
@@ -393,9 +391,7 @@ impl WebStorage {
         let count = self.get_deployment_count()?;
         batch.push((
             key_for_deployment_count(),
-            Op::Put(
-                (count - 1).to_be_bytes().to_vec(),
-            ),
+            Op::Put((count - 1).to_be_bytes().to_vec()),
         ));
 
         trace!("Removing website meta");

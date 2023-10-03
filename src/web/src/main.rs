@@ -314,7 +314,15 @@ fn main() {
             owner,
             memo,
             domain,
-        }) => deploy(client, site_name, site_description, source, owner, memo, domain),
+        }) => deploy(
+            client,
+            site_name,
+            site_description,
+            source,
+            owner,
+            memo,
+            domain,
+        ),
         SubCommand::Remove(RemoveOpt {
             site_name,
             owner,
@@ -332,7 +340,15 @@ fn main() {
             owner,
             memo,
             domain,
-        }) => update(client, site_name, site_description, source, owner, memo, domain),
+        }) => update(
+            client,
+            site_name,
+            site_description,
+            source,
+            owner,
+            memo,
+            domain,
+        ),
     };
 
     if let Err(err) = result {
