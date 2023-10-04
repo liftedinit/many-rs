@@ -159,7 +159,11 @@ fn is_alphanumeric_or_symbols(s: &str) -> Result<(), ManyError> {
 
 fn extract_valid_domain(domain: Option<String>) -> Result<Option<String>, ManyError> {
     if let Some(domain) = domain {
-        Ok(Some(Name::from_utf8(&domain).map_err(error::invalid_domain)?.to_string()))
+        Ok(Some(
+            Name::from_utf8(domain)
+                .map_err(error::invalid_domain)?
+                .to_string(),
+        ))
     } else {
         Ok(None)
     }
@@ -455,7 +459,13 @@ mod tests {
 
     #[test]
     fn valid_long_domain() {
-        let domain = "a".repeat(63) + "." + &*"b".repeat(63) + "." + &*"c".repeat(63) + "." + &*"d".repeat(62);
+        let domain = "a".repeat(63)
+            + "."
+            + &*"b".repeat(63)
+            + "."
+            + &*"c".repeat(63)
+            + "."
+            + &*"d".repeat(62);
         let result = super::extract_valid_domain(Some(domain.to_string()));
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Some(domain.to_string()));
@@ -504,7 +514,8 @@ mod tests {
     }
 
     #[test]
-    fn invalid_domain_with_underscore_and_hyphen_and_dot_and_space_and_newline_and_tab_and_carriage_return() {
+    fn invalid_domain_with_underscore_and_hyphen_and_dot_and_space_and_newline_and_tab_and_carriage_return(
+    ) {
         let domain = "foo_bar-bar.com. \n\t\r";
         let result = super::extract_valid_domain(Some(domain.to_string()));
         assert!(result.is_err());
@@ -519,7 +530,13 @@ mod tests {
 
     #[test]
     fn invalid_domain_too_long() {
-        let domain = "a".repeat(63) + "." + &*"b".repeat(63) + "." + &*"c".repeat(63) + "." + &*"d".repeat(63);
+        let domain = "a".repeat(63)
+            + "."
+            + &*"b".repeat(63)
+            + "."
+            + &*"c".repeat(63)
+            + "."
+            + &*"d".repeat(63);
         let result = super::extract_valid_domain(Some(domain.to_string()));
         assert!(result.is_err());
     }

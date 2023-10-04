@@ -4,7 +4,7 @@ use many_identity::Address;
 use many_modules::events;
 use many_types::{CborRange, Timestamp, VecOrSingle};
 
-const MAXIMUM_EVENT_COUNT: usize = 100;
+const MAXIMUM_EVENT_COUNT: usize = 1000;
 
 impl events::EventsModuleBackend for WebModuleImpl {
     fn info(&self, _args: events::InfoArgs) -> Result<events::InfoReturn, ManyError> {
