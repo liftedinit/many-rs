@@ -70,6 +70,8 @@ struct DeployOpt {
     #[clap(long, parse(try_from_str = Memo::try_from))]
     memo: Option<Memo>,
 
+    /// Custom domain to attach to the website
+    #[clap(long)]
     domain: Option<String>,
 }
 
@@ -93,6 +95,8 @@ struct UpdateOpt {
     #[clap(long, parse(try_from_str = Memo::try_from))]
     memo: Option<Memo>,
 
+    /// Custom domain to attach to the website
+    #[clap(long)]
     domain: Option<String>,
 }
 
