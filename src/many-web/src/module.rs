@@ -20,6 +20,7 @@ use std::io::Cursor;
 use std::path::Path;
 use tempfile::Builder;
 use tracing::{info, trace};
+use trust_dns_resolver::Name;
 
 const MAXIMUM_WEB_COUNT: usize = 100;
 
@@ -156,6 +157,14 @@ fn is_alphanumeric_or_symbols(s: &str) -> Result<(), ManyError> {
     Ok(())
 }
 
+fn extract_valid_domain(domain: Option<String>) -> Result<Option<String>, ManyError> {
+    if let Some(domain) = domain {
+        Ok(Some(Name::from_utf8(&domain).map_err(error::invalid_domain)?.to_string()))
+    } else {
+        Ok(None)
+    }
+}
+
 fn _transform_site_name(site_name: String) -> String {
     site_name.to_lowercase().trim().replace(' ', "_")
 }
@@ -233,7 +242,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             sender
         };
 
-        // TODO: Parse domain
+        let domain = extract_valid_domain(domain)?;
 
         if site_name.len() > 12 {
             return Err(error::site_name_too_long(site_name));
@@ -326,7 +335,7 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             sender
         };
 
-        // TODO: Parse domain
+        let domain = extract_valid_domain(domain)?;
 
         if site_name.len() > 12 {
             return Err(error::site_name_too_long(site_name));
@@ -423,5 +432,95 @@ impl KvStoreModuleBackend for WebModuleImpl {
         _args: many_modules::kvstore::list::ListArgs,
     ) -> Result<many_modules::kvstore::list::ListReturns, ManyError> {
         Err(ManyError::unknown("Unimplemented"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn valid_domain() {
+        let domain = "foobar.com";
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(domain.to_string()));
+    }
+
+    #[test]
+    fn valid_subdomain() {
+        let domain = "foo.bar.com";
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(domain.to_string()));
+    }
+
+    #[test]
+    fn valid_long_domain() {
+        let domain = "a".repeat(63) + "." + &*"b".repeat(63) + "." + &*"c".repeat(63) + "." + &*"d".repeat(62);
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(domain.to_string()));
+    }
+
+    #[test]
+    fn invalid_domain_with_underscore() {
+        let domain = "foo_bar.com";
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invalid_domain_with_underscore_and_hyphen() {
+        let domain = "foo_bar-bar.com";
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invalid_domain_with_underscore_and_hyphen_and_dot() {
+        let domain = "foo_bar-bar.com.";
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invalid_domain_with_underscore_and_hyphen_and_dot_and_space() {
+        let domain = "foo_bar-bar.com. ";
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invalid_domain_with_underscore_and_hyphen_and_dot_and_space_and_newline() {
+        let domain = "foo_bar-bar.com. \n";
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invalid_domain_with_underscore_and_hyphen_and_dot_and_space_and_newline_and_tab() {
+        let domain = "foo_bar-bar.com. \n\t";
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invalid_domain_with_underscore_and_hyphen_and_dot_and_space_and_newline_and_tab_and_carriage_return() {
+        let domain = "foo_bar-bar.com. \n\t\r";
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invalid_domain_label_too_long() {
+        let domain = "a".repeat(64) + ".com";
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invalid_domain_too_long() {
+        let domain = "a".repeat(63) + "." + &*"b".repeat(63) + "." + &*"c".repeat(63) + "." + &*"d".repeat(63);
+        let result = super::extract_valid_domain(Some(domain.to_string()));
+        assert!(result.is_err());
     }
 }
