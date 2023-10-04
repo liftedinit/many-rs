@@ -104,3 +104,39 @@ EOF
     call_web --pem=1 --port=8000 deploy dummy dummy.zip
     assert_output --partial "Missing 'index.html' at the root of the archive."
 }
+
+@test "$SUITE: dweb deployment counter works" {
+    call_web --pem=1 --port=8000 list
+    assert_output --partial '1: 0'
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
+    assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    call_web --port=8000 list
+    assert_output --partial '1: 1'
+    call_web --pem=2 --port=8000 deploy foobar test_dweb.zip
+    assert_output  --partial "https://foobar-$(identity 2).ghostcloud.org"
+    call_web --port=8000 list
+    assert_output --partial '1: 2'
+    call_web --pem=1 --port=8000 remove test_dweb
+    call_web --port=8000 list
+    assert_output --partial '1: 1'
+    call_web --pem=2 --port=8000 remove foobar
+    call_web --port=8000 list
+    assert_output '{0: [], 1: 0}'
+}
+
+@test "$SUITE: dweb deployment with custom domain works" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip --domain "foobar.com"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    assert_output --partial "foobar.com"
+}
+
+@test "$SUITE: dweb update with custom domain works" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip --domain "foobar.com"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    assert_output --partial "foobar.com"
+
+    call_web --pem=1 --port=8000 update test_dweb test_dweb.zip --domain "barfoo.com"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    assert_output --partial "barfoo.com"
+    refute_output --partial "foobar.com"
+}
