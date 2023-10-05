@@ -212,13 +212,23 @@ impl WebModuleBackend for WebModuleImpl {
     }
 
     fn list(&self, _sender: &Address, args: ListArgs) -> Result<ListReturns, ManyError> {
+        let page_number = args.page.unwrap_or(1);
+        let page_size = args.count.unwrap_or(MAXIMUM_WEB_COUNT);
+
+        if page_size > MAXIMUM_WEB_COUNT {
+            return Err(error::page_size_too_large(page_size));
+        }
+
+        let offset = (page_number - 1) * page_size;
+
         Ok(ListReturns {
             total_count: self.storage.get_deployment_count()?,
             deployments: self
                 .storage
                 .list(args.order.unwrap_or_default(), args.filter)
                 .map(|(_, meta)| meta)
-                .take(args.count.unwrap_or(MAXIMUM_WEB_COUNT))
+                .skip(offset)
+                .take(page_size)
                 .collect(),
         })
     }

@@ -68,6 +68,7 @@ mod tests {
                     count: None,
                     order: None,
                     filter: None,
+                    page: None,
                 })
                 .unwrap(),
             )

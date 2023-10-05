@@ -127,6 +127,10 @@ struct ListOpt {
     /// Filter
     #[clap(long)]
     filter: Option<Vec<WebDeploymentFilter>>,
+
+    /// Page
+    #[clap(long)]
+    page: Option<usize>,
 }
 
 fn deploy(
@@ -210,11 +214,13 @@ fn list(
     count: Option<usize>,
     order: Option<SortOrder>,
     filter: Option<Vec<WebDeploymentFilter>>,
+    page: Option<usize>,
 ) -> Result<(), ManyError> {
     let args = ListArgs {
         count,
         order,
         filter,
+        page,
     };
     let response = client.call("web.list", args)?;
     let payload = wait_response(client, response)?;
@@ -336,7 +342,8 @@ fn main() {
             count,
             order,
             filter,
-        }) => list(client, count, order, filter),
+            page,
+        }) => list(client, count, order, filter, page),
         SubCommand::Update(UpdateOpt {
             site_name,
             site_description,

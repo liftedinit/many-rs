@@ -176,6 +176,7 @@ fn then_list(w: &mut World, site_name: String) {
             count: None,
             order: None,
             filter: None,
+            page: None,
         },
     )
     .expect("Website list failed");
@@ -195,6 +196,7 @@ fn then_list_filtered(w: &mut World, seed: u32, site_name: String) {
             count: None,
             order: None,
             filter: Some(vec![WebDeploymentFilter::Owner(identity(seed))]),
+            page: None,
         },
     )
     .expect("Website list failed");
@@ -214,6 +216,7 @@ fn then_list_count(w: &mut World, count: usize) {
             count: Some(count),
             order: None,
             filter: None,
+            page: None,
         },
     )
     .expect("Website list failed");
@@ -230,6 +233,7 @@ fn then_list_not(w: &mut World, site_name: String) {
             count: None,
             order: None,
             filter: None,
+            page: None,
         },
     )
     .expect("Website list failed");
@@ -249,6 +253,7 @@ fn then_list_not_filtered(w: &mut World, seed: u32, site_name: String) {
             count: None,
             order: None,
             filter: Some(vec![WebDeploymentFilter::Owner(identity(seed))]),
+            page: None,
         },
     )
     .expect("Website list failed");

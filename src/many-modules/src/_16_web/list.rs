@@ -13,6 +13,9 @@ pub struct ListArgs {
 
     #[n(2)]
     pub filter: Option<Vec<WebDeploymentFilter>>,
+
+    #[n(3)]
+    pub page: Option<usize>,
 }
 
 #[derive(Clone, Debug, Encode, Decode, PartialEq, Eq)]

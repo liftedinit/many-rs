@@ -20,7 +20,8 @@ define_attribute_many_error!(
         15: pub fn missing_index_html() => "Missing 'index.html' at the root of the archive.",
         16: pub fn existent_site(site_name) => "Existent site: {site_name}. Use 'update' instead.",
         17: pub fn site_name_too_long(site_name) => "Site name too long: {site_name}.",
-        18: pub fn invalid_domain(domain) => "Invalid domain: {domain}",
+        18: pub fn invalid_domain(domain) => "Invalid domain: {domain}.",
+        19: pub fn page_size_too_large(size) => "Page size too large: {size}.",
     }
 );
 
