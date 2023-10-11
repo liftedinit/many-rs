@@ -219,17 +219,22 @@ impl WebModuleBackend for WebModuleImpl {
             return Err(error::page_size_too_large(page_size));
         }
 
+        let order = args.order.unwrap_or_default();
+        let filter = args.filter;
         let offset = (page_number - 1) * page_size;
 
+        let count = self.storage.list(order.clone(), filter.clone()).count();
+        let deployments: Vec<WebDeploymentInfo> = self
+            .storage
+            .list(order, filter)
+            .map(|(_, meta)| meta)
+            .skip(offset)
+            .take(page_size)
+            .collect();
+
         Ok(ListReturns {
-            total_count: self.storage.get_deployment_count()?,
-            deployments: self
-                .storage
-                .list(args.order.unwrap_or_default(), args.filter)
-                .map(|(_, meta)| meta)
-                .skip(offset)
-                .take(page_size)
-                .collect(),
+            total_count: count as u64,
+            deployments,
         })
     }
 }
