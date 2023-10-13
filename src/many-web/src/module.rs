@@ -85,6 +85,7 @@ impl ManyAbciModuleBackend for WebModuleImpl {
                 ("web.info".to_string(), EndpointInfo { is_command: false }),
                 ("web.deploy".to_string(), EndpointInfo { is_command: true }),
                 ("web.remove".to_string(), EndpointInfo { is_command: true }),
+                ("web.update".to_string(), EndpointInfo { is_command: true }),
                 ("web.list".to_string(), EndpointInfo { is_command: false }),
                 // KvStore
                 ("kvstore.get".to_string(), EndpointInfo { is_command: false }),
