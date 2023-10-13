@@ -19,6 +19,7 @@ pub mod iterator;
 
 pub const HTTP_ROOT: &str = "/http"; // Where website files are stored.
 const META_ROOT: &str = "/meta"; // Where website metadata are stored.
+const STORAGE_INFO_ROOT: &str = "/info"; // Where storage metadata are stored.
 
 fn key_for_website(owner: &Address, site_name: &str) -> Vec<u8> {
     format!("{HTTP_ROOT}/{owner}/{site_name}/").into_bytes()
@@ -35,6 +36,10 @@ fn key_for_website_meta(owner: &Address, site_name: &str) -> Vec<u8> {
 pub fn url_for_website(owner: &Address, site_name: &str) -> String {
     let domain = crate::DOMAIN.get_or_init(|| "localhost:8880".to_string());
     format!("https://{site_name}-{owner}.{domain}")
+}
+
+fn key_for_deployment_count() -> Vec<u8> {
+    format!("{STORAGE_INFO_ROOT}/total_deployment_count").into_bytes()
 }
 
 pub struct WebStorage {
@@ -68,6 +73,19 @@ impl WebStorage {
     #[inline]
     pub fn now(&self) -> Timestamp {
         self.current_time.unwrap_or_else(Timestamp::now)
+    }
+
+    pub fn get_deployment_count(&self) -> Result<u64, ManyError> {
+        let current_count = self
+            .persistent_store
+            .get(&key_for_deployment_count())
+            .map_err(error::storage_get_failed)?
+            .map_or(0u64, |x| {
+                let mut bytes = [0u8; 8];
+                bytes.copy_from_slice(x.as_slice());
+                u64::from_be_bytes(bytes)
+            });
+        Ok(current_count)
     }
 
     #[inline]
@@ -248,6 +266,7 @@ impl WebStorage {
         site_name: &str,
         site_description: &Option<String>,
         path: impl AsRef<Path>,
+        domain: &Option<String>,
     ) -> Result<Vec<BatchEntry>, ManyError> {
         let mut batch: Vec<BatchEntry> = Vec::new();
 
@@ -301,9 +320,17 @@ impl WebStorage {
                     site_name: site_name.to_owned(),
                     site_description: site_description.clone(),
                     url: Some(url),
+                    domain: domain.to_owned(),
                 })
                 .map_err(ManyError::serialization_error)?,
             ),
+        ));
+
+        trace!("Increasing deployment counter");
+        let count = self.get_deployment_count()?;
+        batch.push((
+            key_for_deployment_count(),
+            Op::Put((count + 1).to_be_bytes().to_vec()),
         ));
 
         trace!("Sorting batch");
@@ -311,6 +338,8 @@ impl WebStorage {
 
         Ok(batch)
     }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn store_website(
         &mut self,
         owner: &Address,
@@ -319,8 +348,9 @@ impl WebStorage {
         memo: Option<Memo>,
         source_hash: String,
         path: impl AsRef<Path>,
+        domain: Option<String>,
     ) -> Result<(), ManyError> {
-        let batch = self._store_website(owner, &site_name, &site_description, path)?;
+        let batch = self._store_website(owner, &site_name, &site_description, path, &domain)?;
 
         trace!("Applying batch");
         self.persistent_store
@@ -333,6 +363,7 @@ impl WebStorage {
             site_description,
             source_hash,
             memo,
+            domain,
         })?;
 
         self.maybe_commit()?;
@@ -355,6 +386,13 @@ impl WebStorage {
             let (key, _) = item.map_err(error::storage_get_failed)?;
             batch.push((key.to_vec(), Op::Delete));
         }
+
+        trace!("Decreasing deployment counter");
+        let count = self.get_deployment_count()?;
+        batch.push((
+            key_for_deployment_count(),
+            Op::Put((count - 1).to_be_bytes().to_vec()),
+        ));
 
         trace!("Removing website meta");
         batch.push((key_for_website_meta(owner, site_name), Op::Delete));
@@ -385,6 +423,7 @@ impl WebStorage {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update_website(
         &mut self,
         owner: &Address,
@@ -393,6 +432,7 @@ impl WebStorage {
         memo: Option<Memo>,
         source_hash: String,
         path: impl AsRef<Path>,
+        domain: Option<String>,
     ) -> Result<(), ManyError> {
         trace!("Removing website prior to update");
         let batch = self._remove_website(owner, &site_name)?;
@@ -405,7 +445,7 @@ impl WebStorage {
         self.maybe_commit()?;
 
         trace!("Storing updated website");
-        let batch = self._store_website(owner, &site_name, &site_description, path)?;
+        let batch = self._store_website(owner, &site_name, &site_description, path, &domain)?;
 
         trace!("Applying batch");
         self.persistent_store
@@ -418,6 +458,7 @@ impl WebStorage {
             site_description,
             source_hash,
             memo,
+            domain,
         })?;
         self.maybe_commit()?;
 

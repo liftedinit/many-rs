@@ -65,7 +65,7 @@ function teardown() {
     assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
     call_web --pem=1 --port=8000 remove test_dweb
     call_web --pem=1 --port=8000 list
-    assert_output '{0: []}'
+    assert_output '{0: [], 1: 0}'
 }
 
 @test "$SUITE: dweb website listing works" {
@@ -103,4 +103,124 @@ e803000048656c6c6f0a504b01021e030a000000000043540e5716359631
 EOF
     call_web --pem=1 --port=8000 deploy dummy dummy.zip
     assert_output --partial "Missing 'index.html' at the root of the archive."
+}
+
+@test "$SUITE: dweb deployment counter works" {
+    call_web --pem=1 --port=8000 list
+    assert_output --partial '1: 0'
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
+    assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    call_web --port=8000 list
+    assert_output --partial '1: 1'
+    call_web --pem=2 --port=8000 deploy foobar test_dweb.zip
+    assert_output  --partial "https://foobar-$(identity 2).ghostcloud.org"
+    call_web --port=8000 list
+    assert_output --partial '1: 2'
+    call_web --pem=1 --port=8000 remove test_dweb
+    call_web --port=8000 list
+    assert_output --partial '1: 1'
+    call_web --pem=2 --port=8000 remove foobar
+    call_web --port=8000 list
+    assert_output '{0: [], 1: 0}'
+}
+
+@test "$SUITE: dweb deployment with custom domain works" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip --domain "foobar.com"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    assert_output --partial "foobar.com"
+}
+
+@test "$SUITE: dweb update with custom domain works" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip --domain "foobar.com"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    assert_output --partial "foobar.com"
+
+    call_web --pem=1 --port=8000 update test_dweb test_dweb.zip --domain "barfoo.com"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    assert_output --partial "barfoo.com"
+    refute_output --partial "foobar.com"
+}
+
+@test "$SUITE: dweb pagination works" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
+    assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    call_web --pem=1 --port=8000 deploy foobar test_dweb.zip
+    assert_output  --partial "https://foobar-$(identity 1).ghostcloud.org"
+    call_web --port=8000 list --page 1 --filter owner:"$(identity 1)" --count 1 --order ascending
+    assert_output  --partial "https://foobar-$(identity 1).ghostcloud.org"
+    refute_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    call_web --port=8000 list --page 1 --filter owner:"$(identity 1)" --count 1 --order descending
+    refute_output  --partial "https://foobar-$(identity 1).ghostcloud.org"
+    assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    call_web --port=8000 list --page 1 --filter owner:"$(identity 1)" --count 2
+    assert_output  --partial "https://foobar-$(identity 1).ghostcloud.org"
+    assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    call_web --port=8000 list --page 2 --filter owner:"$(identity 1)" --count 2
+    refute_output  --partial "https://foobar-$(identity 1).ghostcloud.org"
+    refute_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+}
+
+function assert_page() {
+  local start=$1
+  local end=$2
+  for i in $(seq $start $end);
+  do
+    num=$(printf "%02d" $i)
+    assert_output  --partial "test_$num"
+  done
+}
+
+function refute_page() {
+  local start=$1
+  local end=$2
+  for i in $(seq $start $end);
+  do
+    num=$(printf "%02d" $i)
+    refute_output  --partial "test_$num"
+  done
+}
+
+@test "$SUITE: dweb big pagination" {
+  # Deploy 50 websites
+  for i in {1..50};
+  do
+    num=$(printf "%02d" $i)
+    call_web --pem=1 --port=8000 deploy test_$num test_dweb.zip
+  done
+
+  # List only the first one
+  call_web --port=8000 list --page 1 --count 1 --order ascending
+  assert_output  --partial "test_01"
+  refute_page 2 50
+
+  # List the first page of 10 elements
+  call_web --port=8000 list --page 1 --count 10 --order ascending
+  assert_page 1 10
+  refute_page 11 50
+
+  # List the second page of 10 elements
+  call_web --port=8000 list --page 2 --count 10 --order ascending
+  assert_page 11 20
+  refute_page 1 10
+  refute_page 21 50
+
+  # List the third page of 10 elements
+  call_web --port=8000 list --page 3 --count 10 --order ascending
+  assert_page 21 30
+  refute_page 1 20
+  refute_page 31 50
+
+  # List all elements on a single page
+  call_web --port=8000 list --page 1 --count 50 --order ascending
+  assert_page 1 50
+}
+
+@test "$SUITE: dweb page size too large" {
+  call_web --port=8000 list --page 1 --count 101 --order ascending
+  assert_output --partial "Page size too large: 101"
+}
+
+@test "$SUITE: dweb empty page" {
+  call_web --port=8000 list --page 2 --count 10 --order ascending
+  assert_output --partial "[]"
 }

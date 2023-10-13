@@ -20,6 +20,9 @@ pub struct UpdateArgs {
 
     #[n(4)]
     pub memo: Option<Memo>,
+
+    #[n(5)]
+    pub domain: Option<String>,
 }
 
 #[derive(Clone, Debug, Decode, Encode, PartialEq, Eq)]

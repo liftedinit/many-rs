@@ -13,6 +13,9 @@ pub struct ListArgs {
 
     #[n(2)]
     pub filter: Option<Vec<WebDeploymentFilter>>,
+
+    #[n(3)]
+    pub page: Option<usize>,
 }
 
 #[derive(Clone, Debug, Encode, Decode, PartialEq, Eq)]
@@ -20,4 +23,7 @@ pub struct ListArgs {
 pub struct ListReturns {
     #[n(0)]
     pub deployments: Vec<WebDeploymentInfo>,
+
+    #[n(1)]
+    pub total_count: u64,
 }

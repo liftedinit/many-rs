@@ -22,6 +22,7 @@ struct World {
     source: WebDeploymentSource,
     module: WebModuleImpl,
     memo: Option<Memo>,
+    domain: Option<String>,
 }
 
 impl World {
@@ -41,6 +42,7 @@ impl World {
             )
             .expect("Unable to create web module"),
             memo: None,
+            domain: None,
         }
     }
 }
@@ -68,6 +70,11 @@ fn given_site_memo(w: &mut World, memo: String) {
     w.memo = Some(Memo::try_from(memo).expect("Unable to parse memo"));
 }
 
+#[given(expr = "a website domain {string}")]
+fn given_site_domain(w: &mut World, domain: String) {
+    w.domain = Some(domain);
+}
+
 #[given(expr = "a website owner identity {int}")]
 fn given_site_owner(w: &mut World, seed: u32) {
     w.owner = Some(identity(seed));
@@ -84,6 +91,7 @@ fn when_deploy(w: &mut World, seed: u32) {
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
                 memo: w.memo.clone(),
+                domain: w.domain.clone(),
             },
         )
         .expect("Website deployment failed");
@@ -100,6 +108,7 @@ fn when_update(w: &mut World, seed: u32) {
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
                 memo: w.memo.clone(),
+                domain: w.domain.clone(),
             },
         )
         .expect("Website update failed");
@@ -167,6 +176,7 @@ fn then_list(w: &mut World, site_name: String) {
             count: None,
             order: None,
             filter: None,
+            page: None,
         },
     )
     .expect("Website list failed");
@@ -186,6 +196,7 @@ fn then_list_filtered(w: &mut World, seed: u32, site_name: String) {
             count: None,
             order: None,
             filter: Some(vec![WebDeploymentFilter::Owner(identity(seed))]),
+            page: None,
         },
     )
     .expect("Website list failed");
@@ -205,6 +216,7 @@ fn then_list_count(w: &mut World, count: usize) {
             count: Some(count),
             order: None,
             filter: None,
+            page: None,
         },
     )
     .expect("Website list failed");
@@ -221,6 +233,7 @@ fn then_list_not(w: &mut World, site_name: String) {
             count: None,
             order: None,
             filter: None,
+            page: None,
         },
     )
     .expect("Website list failed");
@@ -240,6 +253,7 @@ fn then_list_not_filtered(w: &mut World, seed: u32, site_name: String) {
             count: None,
             order: None,
             filter: Some(vec![WebDeploymentFilter::Owner(identity(seed))]),
+            page: None,
         },
     )
     .expect("Website list failed");
@@ -251,7 +265,6 @@ fn then_list_not_filtered(w: &mut World, seed: u32, site_name: String) {
 
 #[then(expr = "the website deployment fails with {string}")]
 fn then_deployment_failed(w: &mut World, error: String) {
-    println!("owner: {:?}", w.owner);
     assert!(matches!(
         w.module.deploy(
             &identity(0),
@@ -261,6 +274,7 @@ fn then_deployment_failed(w: &mut World, error: String) {
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
                 memo: w.memo.clone(),
+                domain: w.domain.clone(),
             },
         ),
         Err(e) if e.to_string() == error
@@ -278,6 +292,7 @@ fn then_update_failed(w: &mut World, error: String) {
                 site_description: w.site_description.clone(),
                 source: w.source.clone(),
                 memo: w.memo.clone(),
+                domain: w.domain.clone(),
             },
         ),
         Err(e) if e.to_string() == error

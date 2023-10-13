@@ -47,6 +47,7 @@ mod tests {
             site_description: None,
             source: WebDeploymentSource::Archive(vec![].into()),
             memo: None,
+            domain: None,
         };
         mock.expect_deploy()
             .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
@@ -58,6 +59,7 @@ mod tests {
                         site_name: "".to_string(),
                         site_description: None,
                         url: Some("foobar".to_string()),
+                        domain: None,
                     },
                 })
             });
@@ -99,6 +101,7 @@ mod tests {
             site_description: None,
             source: WebDeploymentSource::Archive(vec![].into()),
             memo: None,
+            domain: None,
         };
         mock.expect_update()
             .with(predicate::eq(identity(1)), predicate::eq(data.clone()))
@@ -110,6 +113,7 @@ mod tests {
                         site_name: "".to_string(),
                         site_description: None,
                         url: Some("foobar".to_string()),
+                        domain: None,
                     },
                 })
             });

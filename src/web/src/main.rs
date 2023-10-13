@@ -69,6 +69,10 @@ struct DeployOpt {
     /// A memo to attach to the transaction
     #[clap(long, parse(try_from_str = Memo::try_from))]
     memo: Option<Memo>,
+
+    /// Custom domain to attach to the website
+    #[clap(long)]
+    domain: Option<String>,
 }
 
 #[derive(Debug, Parser)]
@@ -90,6 +94,10 @@ struct UpdateOpt {
     /// A memo to attach to the transaction
     #[clap(long, parse(try_from_str = Memo::try_from))]
     memo: Option<Memo>,
+
+    /// Custom domain to attach to the website
+    #[clap(long)]
+    domain: Option<String>,
 }
 
 #[derive(Debug, Parser)]
@@ -119,6 +127,10 @@ struct ListOpt {
     /// Filter
     #[clap(long)]
     filter: Option<Vec<WebDeploymentFilter>>,
+
+    /// Page
+    #[clap(long)]
+    page: Option<usize>,
 }
 
 fn deploy(
@@ -128,6 +140,7 @@ fn deploy(
     source: PathBuf,
     owner: Option<Address>,
     memo: Option<Memo>,
+    domain: Option<String>,
 ) -> Result<(), ManyError> {
     // Read the source file
     let source = std::fs::read(source).map_err(ManyError::unknown)?;
@@ -137,6 +150,7 @@ fn deploy(
         site_description,
         source: WebDeploymentSource::Archive(source.into()),
         memo,
+        domain,
     };
     let response = client.call("web.deploy", arguments)?;
     let payload = wait_response(client, response)?;
@@ -154,6 +168,7 @@ fn update(
     source: PathBuf,
     owner: Option<Address>,
     memo: Option<Memo>,
+    domain: Option<String>,
 ) -> Result<(), ManyError> {
     // Read the source file
     let source = std::fs::read(source).map_err(ManyError::unknown)?;
@@ -163,6 +178,7 @@ fn update(
         site_description,
         source: WebDeploymentSource::Archive(source.into()),
         memo,
+        domain,
     };
     let response = client.call("web.update", arguments)?;
     let payload = wait_response(client, response)?;
@@ -198,11 +214,13 @@ fn list(
     count: Option<usize>,
     order: Option<SortOrder>,
     filter: Option<Vec<WebDeploymentFilter>>,
+    page: Option<usize>,
 ) -> Result<(), ManyError> {
     let args = ListArgs {
         count,
         order,
         filter,
+        page,
     };
     let response = client.call("web.list", args)?;
     let payload = wait_response(client, response)?;
@@ -305,7 +323,16 @@ fn main() {
             source,
             owner,
             memo,
-        }) => deploy(client, site_name, site_description, source, owner, memo),
+            domain,
+        }) => deploy(
+            client,
+            site_name,
+            site_description,
+            source,
+            owner,
+            memo,
+            domain,
+        ),
         SubCommand::Remove(RemoveOpt {
             site_name,
             owner,
@@ -315,14 +342,24 @@ fn main() {
             count,
             order,
             filter,
-        }) => list(client, count, order, filter),
+            page,
+        }) => list(client, count, order, filter, page),
         SubCommand::Update(UpdateOpt {
             site_name,
             site_description,
             source,
             owner,
             memo,
-        }) => update(client, site_name, site_description, source, owner, memo),
+            domain,
+        }) => update(
+            client,
+            site_name,
+            site_description,
+            source,
+            owner,
+            memo,
+            domain,
+        ),
     };
 
     if let Err(err) = result {

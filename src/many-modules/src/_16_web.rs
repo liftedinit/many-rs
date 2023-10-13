@@ -53,6 +53,7 @@ mod tests {
         let mut mock = MockWebModuleBackend::new();
         mock.expect_list().times(1).returning(|_sender, _args| {
             Ok(ListReturns {
+                total_count: 0,
                 deployments: vec![],
             })
         });
@@ -67,6 +68,7 @@ mod tests {
                     count: None,
                     order: None,
                     filter: None,
+                    page: None,
                 })
                 .unwrap(),
             )

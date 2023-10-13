@@ -41,6 +41,9 @@ pub struct WebDeploymentInfo {
 
     #[n(3)]
     pub url: Option<String>,
+
+    #[n(4)]
+    pub domain: Option<String>,
 }
 
 #[derive(Clone, Debug, Encode, Decode, Display, Eq, PartialEq)]
