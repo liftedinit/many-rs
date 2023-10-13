@@ -1,6 +1,6 @@
 [package]
 name = "http-proxy"
-version = "0.2.2" # managed by release.sh
+version = "0.2.3" # managed by release.sh
 edition = "2021"
 description = "HTTP proxy prototype."
 license-file = "../../LICENSE"
@@ -19,11 +19,11 @@ clap = { version = "3.2.25", features = ["derive"] }
 hex = "0.4.3"
 log-panics = { version = "2.1.0", features = ["with-backtrace"]}
 minicbor = { version = "0.19.1", features = ["derive", "std"] }
-many-client = { path = "../many-client", version = "0.2.2" } # managed by release.sh
-many-cli-helpers = { path = "../many-cli-helpers", version = "0.2.2" } # managed by release.sh
-many-identity = { path = "../many-identity", version = "0.2.2" } # managed by release.sh
-many-identity-dsa = { path = "../many-identity-dsa", version = "0.2.2" } # managed by release.sh
-many-modules = { path = "../many-modules", version = "0.2.2" } # managed by release.sh
+many-client = { path = "../many-client", version = "0.2.3" } # managed by release.sh
+many-cli-helpers = { path = "../many-cli-helpers", version = "0.2.3" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.2.3" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", version = "0.2.3" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.2.3" } # managed by release.sh
 new_mime_guess = "4.0.1"
 syslog-tracing = "0.2.0"
 tiny_http = "0.12.0"

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3] - 2023-10-13
+
+### Bug Fixes
+
+- Export web.update to abci ([#415](https://github.com/liftedinit/many-rs/issues/415))
+
 ## [0.2.2] - 2023-10-13
 
 ### Features
