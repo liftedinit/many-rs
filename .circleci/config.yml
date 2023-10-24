@@ -223,7 +223,7 @@ jobs:
       bazel_linkopt:
         type: string
         default: *bazel_linux_linkopt
-    parallelism: 3
+    parallelism: 4
     steps:
       - checkout
       - run:
