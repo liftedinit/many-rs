@@ -60,6 +60,29 @@ function teardown() {
     assert_output --partial "Nonexistent site: test_dweb"
 }
 
+@test "$SUITE dweb deploy fails if domain already in use" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip --domain foobar.com
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    assert_output --partial "foobar.com"
+
+    # We check all websites, not just the ones owned by the sender
+    call_web --pem=2 --port=8000 deploy test_dweb2 test_dweb.zip --domain foobar.com
+    assert_output --partial "Domain already in use: foobar.com."
+}
+
+@test "$SUITE dweb update fails if domain already in use" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip --domain foobar.com
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    assert_output --partial "foobar.com"
+
+    call_web --pem=1 --port=8000 deploy test_dweb2 test_dweb.zip
+    assert_output --partial "https://test_dweb2-$(identity 1).ghostcloud.org"
+    refute_output --partial "foobar.com"
+
+    call_web --pem=1 --port=8000 update test_dweb2 test_dweb.zip --domain foobar.com
+    assert_output --partial "Domain already in use: foobar.com."
+}
+
 @test "$SUITE: dweb website removal works" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
     assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
