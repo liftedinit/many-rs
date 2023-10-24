@@ -294,10 +294,6 @@ impl WebStorage {
         let url = url_for_website(owner, site_name);
 
         trace!("Adding website meta to batch");
-        tracing::debug!(
-            "Key: {}",
-            String::from_utf8(key_for_website_meta(owner, site_name)).unwrap()
-        );
         batch.push((
             key_for_website_meta(owner, site_name),
             Op::Put(
@@ -367,10 +363,6 @@ impl WebStorage {
         }
 
         trace!("Removing website meta");
-        tracing::debug!(
-            "Key: {}",
-            String::from_utf8(key_for_website_meta(owner, site_name)).unwrap()
-        );
         batch.push((key_for_website_meta(owner, site_name), Op::Delete));
 
         Ok(batch)
