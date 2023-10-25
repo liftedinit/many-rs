@@ -1,6 +1,6 @@
 [package]
 name = "many-error"
-version = "0.2.3" # managed by release.sh
+version = "0.2.4" # managed by release.sh
 edition = "2021"
 description = "Error and Reason types, as defined by the specification."
 license-file = "../../LICENSE"

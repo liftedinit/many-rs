@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2023-10-25
+
+### Bug Fixes
+
+- [**breaking**] `web.update` storage batch apply ([#416](https://github.com/liftedinit/many-rs/issues/416))
+- Prevent domain duplication  ([#417](https://github.com/liftedinit/many-rs/issues/417))
+
 ## [0.2.3] - 2023-10-13
 
 ### Bug Fixes
