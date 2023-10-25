@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - 2023-10-25
+
+### Bug Fixes
+
+- Update same domain ([#418](https://github.com/liftedinit/many-rs/issues/418))
+
 ## [0.2.4] - 2023-10-25
 
 ### Bug Fixes
