@@ -375,7 +375,8 @@ impl WebCommandsModuleBackend for WebModuleImpl {
         }
 
         if let Some(domain) = &domain {
-            if self.storage.has_domain(domain) {
+            let meta = self.storage.get_deployment_meta(owner, &site_name)?;
+            if meta.domain.as_ref() != Some(domain) && self.storage.has_domain(domain) {
                 return Err(error::domain_already_in_use(domain));
             }
         }
