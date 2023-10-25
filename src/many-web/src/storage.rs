@@ -19,7 +19,6 @@ pub mod iterator;
 
 pub const HTTP_ROOT: &str = "/http"; // Where website files are stored.
 const META_ROOT: &str = "/meta"; // Where website metadata are stored.
-const STORAGE_INFO_ROOT: &str = "/info"; // Where storage metadata are stored.
 
 fn key_for_website(owner: &Address, site_name: &str) -> Vec<u8> {
     format!("{HTTP_ROOT}/{owner}/{site_name}/").into_bytes()
@@ -36,10 +35,6 @@ fn key_for_website_meta(owner: &Address, site_name: &str) -> Vec<u8> {
 pub fn url_for_website(owner: &Address, site_name: &str) -> String {
     let domain = crate::DOMAIN.get_or_init(|| "localhost:8880".to_string());
     format!("https://{site_name}-{owner}.{domain}")
-}
-
-fn key_for_deployment_count() -> Vec<u8> {
-    format!("{STORAGE_INFO_ROOT}/total_deployment_count").into_bytes()
 }
 
 pub struct WebStorage {
@@ -73,19 +68,6 @@ impl WebStorage {
     #[inline]
     pub fn now(&self) -> Timestamp {
         self.current_time.unwrap_or_else(Timestamp::now)
-    }
-
-    pub fn get_deployment_count(&self) -> Result<u64, ManyError> {
-        let current_count = self
-            .persistent_store
-            .get(&key_for_deployment_count())
-            .map_err(error::storage_get_failed)?
-            .map_or(0u64, |x| {
-                let mut bytes = [0u8; 8];
-                bytes.copy_from_slice(x.as_slice());
-                u64::from_be_bytes(bytes)
-            });
-        Ok(current_count)
     }
 
     #[inline]
@@ -326,13 +308,6 @@ impl WebStorage {
             ),
         ));
 
-        trace!("Increasing deployment counter");
-        let count = self.get_deployment_count()?;
-        batch.push((
-            key_for_deployment_count(),
-            Op::Put((count + 1).to_be_bytes().to_vec()),
-        ));
-
         trace!("Sorting batch");
         batch.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
@@ -387,13 +362,6 @@ impl WebStorage {
             batch.push((key.to_vec(), Op::Delete));
         }
 
-        trace!("Decreasing deployment counter");
-        let count = self.get_deployment_count()?;
-        batch.push((
-            key_for_deployment_count(),
-            Op::Put((count - 1).to_be_bytes().to_vec()),
-        ));
-
         trace!("Removing website meta");
         batch.push((key_for_website_meta(owner, site_name), Op::Delete));
 
@@ -435,21 +403,42 @@ impl WebStorage {
         domain: Option<String>,
     ) -> Result<(), ManyError> {
         trace!("Removing website prior to update");
-        let batch = self._remove_website(owner, &site_name)?;
-        trace!("Applying batch");
-        self.persistent_store
-            .apply(&batch)
-            .map_err(error::storage_apply_failed)?;
-
-        // This commit is required in order for `list` to behave correctly
-        self.maybe_commit()?;
+        let batch_r = self._remove_website(owner, &site_name)?;
 
         trace!("Storing updated website");
-        let batch = self._store_website(owner, &site_name, &site_description, path, &domain)?;
+        let batch_s = self._store_website(owner, &site_name, &site_description, path, &domain)?;
 
-        trace!("Applying batch");
+        // `merk` doesn't support applying `b1` and `b2` where
+        // - `b1` contains a `Delete` operation and
+        // - `b2` contains a `Put` operation
+        // over the same key.
+        //
+        // E.g.
+        // ```
+        // let b1 = vec![(b"key".to_vec(), Op::Delete)];
+        // storage.apply(&b1)?;
+        // let b2 = vec![(b"key".to_vec(), Op::Put(b"value".to_vec()))];
+        // storage.apply(&b2)?;
+        // storage.commit(&[])?;
+        // ```
+        //
+        // The above doesn't work. The `Put` operation in `b2` is ignored.
+
+        trace!("Combining batches");
+        // The "website storing" batch is first so that if there's any duplicated keys the "remove website"
+        // operation gets removed from the batch by the `dedup` operation.
+        let mut combined: Vec<_> = batch_s.into_iter().chain(batch_r).collect();
+
+        trace!("Sorting batch");
+        // Sort the combined batches by key. Any duplicated keys will be next to each other.
+        combined.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
+
+        trace!("Deduping batch");
+        // Remove duplicate keys. The first item of the duplicated keys will be kept.
+        combined.dedup_by(|(k1, _), (k2, _)| k1 == k2);
+
         self.persistent_store
-            .apply(&batch)
+            .apply(&combined)
             .map_err(error::storage_apply_failed)?;
 
         self.log_event(EventInfo::WebUpdate {
