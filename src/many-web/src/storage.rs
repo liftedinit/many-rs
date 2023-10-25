@@ -460,6 +460,12 @@ impl WebStorage {
             .map_err(error::storage_get_failed)
     }
 
+    // Check all websites for a given domain
+    pub fn has_domain(&self, domain: &String) -> bool {
+        self.list(SortOrder::Descending, None)
+            .any(|(_, meta)| meta.domain.as_ref() == Some(domain))
+    }
+
     pub fn list(
         &self,
         order: SortOrder,

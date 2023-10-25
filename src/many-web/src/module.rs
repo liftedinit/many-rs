@@ -274,6 +274,12 @@ impl WebCommandsModuleBackend for WebModuleImpl {
             return Err(error::existent_site(site_name));
         }
 
+        if let Some(domain) = &domain {
+            if self.storage.has_domain(domain) {
+                return Err(error::domain_already_in_use(domain));
+            }
+        }
+
         let tmpdir = Builder::new()
             .prefix("dweb-")
             .tempdir()
@@ -366,6 +372,12 @@ impl WebCommandsModuleBackend for WebModuleImpl {
         // Don't update an nonexistent site.
         if !self.storage.site_exists(owner, &site_name)? {
             return Err(error::nonexistent_site(site_name));
+        }
+
+        if let Some(domain) = &domain {
+            if self.storage.has_domain(domain) {
+                return Err(error::domain_already_in_use(domain));
+            }
         }
 
         let tmpdir = Builder::new()

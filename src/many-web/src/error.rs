@@ -22,6 +22,7 @@ define_attribute_many_error!(
         17: pub fn site_name_too_long(site_name) => "Site name too long: {site_name}.",
         18: pub fn invalid_domain(domain) => "Invalid domain: {domain}.",
         19: pub fn page_size_too_large(size) => "Page size too large: {size}.",
+        20: pub fn domain_already_in_use(domain) => "Domain already in use: {domain}.",
     }
 );
 
