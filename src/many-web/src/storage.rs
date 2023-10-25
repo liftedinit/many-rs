@@ -28,8 +28,8 @@ fn key_for_website_file(owner: &Address, site_name: &str, file_name: &str) -> St
     format!("{HTTP_ROOT}/{owner}/{site_name}/{file_name}")
 }
 
-fn key_for_website_meta(owner: &Address, site_name: &str) -> Vec<u8> {
-    format!("{META_ROOT}/{owner}/{site_name}").into_bytes()
+fn key_for_website_meta(owner: &Address, site_name: &str) -> String {
+    format!("{META_ROOT}/{owner}/{site_name}")
 }
 
 pub fn url_for_website(owner: &Address, site_name: &str) -> String {
@@ -170,7 +170,7 @@ impl WebStorage {
         let key_meta = key_for_website_meta(owner, site_name);
         let key_index = key_for_website_file(owner, site_name, "index.html");
         let meta_exists = self
-            .get(&key_meta)
+            .get(&key_meta.into_bytes())
             .map_err(error::storage_get_failed)?
             .is_some();
         let index_exists = self
@@ -178,6 +178,21 @@ impl WebStorage {
             .map_err(error::storage_get_failed)?
             .is_some();
         Ok(meta_exists && index_exists)
+    }
+
+    pub fn get_deployment_meta(
+        &self,
+        owner: &Address,
+        site_name: &str,
+    ) -> Result<WebDeploymentInfo, ManyError> {
+        let key_meta = key_for_website_meta(owner, site_name);
+        let meta = self
+            .get(key_meta.as_bytes())
+            .map_err(error::storage_get_failed)?
+            .ok_or(error::key_not_found(key_meta))?;
+        let meta: WebDeploymentInfo =
+            minicbor::decode(&meta).map_err(ManyError::deserialization_error)?;
+        Ok(meta)
     }
 
     fn inc_height(&mut self) -> Result<u64, ManyError> {
@@ -295,7 +310,7 @@ impl WebStorage {
 
         trace!("Adding website meta to batch");
         batch.push((
-            key_for_website_meta(owner, site_name),
+            key_for_website_meta(owner, site_name).into_bytes(),
             Op::Put(
                 minicbor::to_vec(WebDeploymentInfo {
                     owner: *owner,
@@ -363,7 +378,10 @@ impl WebStorage {
         }
 
         trace!("Removing website meta");
-        batch.push((key_for_website_meta(owner, site_name), Op::Delete));
+        batch.push((
+            key_for_website_meta(owner, site_name).into_bytes(),
+            Op::Delete,
+        ));
 
         Ok(batch)
     }

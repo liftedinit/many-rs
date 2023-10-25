@@ -83,6 +83,17 @@ function teardown() {
     assert_output --partial "Domain already in use: foobar.com."
 }
 
+@test "$SUITE: dweb update success if domain already in use by same website" {
+    call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip --domain foobar.com
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    assert_output --partial "foobar.com"
+
+    call_web --pem=1 --port=8000 update test_dweb test_dweb.zip --domain foobar.com --site-description "barfoo"
+    assert_output --partial "https://test_dweb-$(identity 1).ghostcloud.org"
+    assert_output --partial "foobar.com"
+    assert_output --partial "barfoo"
+}
+
 @test "$SUITE: dweb website removal works" {
     call_web --pem=1 --port=8000 deploy test_dweb test_dweb.zip
     assert_output  --partial "https://test_dweb-$(identity 1).ghostcloud.org"
