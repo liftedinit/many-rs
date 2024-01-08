@@ -7,7 +7,8 @@ use many_modules::events::{
     EventFilterAttributeSpecific, EventFilterAttributeSpecificIndex, EventInfo, EventLog,
 };
 use many_types::{CborRange, Timestamp, VecOrSingle};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, Bound};
+use std::ops::RangeBounds;
 
 const MAXIMUM_EVENT_COUNT: usize = 100;
 
@@ -121,10 +122,24 @@ impl events::EventsModuleBackend for LedgerModuleImpl {
 
         let storage = &self.storage;
         let nb_events = storage.nb_events()?;
-        let iter = storage.iter_events(
-            filter.id_range.unwrap_or_default(),
-            order.unwrap_or_default(),
-        );
+
+        // Check that the id range is valid.
+        // Return an error if any key doesn't exist
+        let id_range = filter.id_range.unwrap_or_default();
+        match id_range.start_bound() {
+            Bound::Included(x) | Bound::Excluded(x) => {
+                storage.check_event_id(x)?;
+            }
+            Bound::Unbounded => {}
+        }
+        match id_range.end_bound() {
+            Bound::Included(x) | Bound::Excluded(x) => {
+                storage.check_event_id(x)?;
+            }
+            Bound::Unbounded => {}
+        }
+
+        let iter = storage.iter_events(id_range, order.unwrap_or_default());
 
         let iter = Box::new(iter.map(|item| {
             let (_k, v) = item.map_err(ManyError::unknown)?;

@@ -21,6 +21,12 @@ define_attribute_many_error!(
 );
 
 define_attribute_many_error!(
+    attribute 4 => {
+        1: pub fn event_not_found(id) => "Event not found: {id}.",
+    }
+);
+
+define_attribute_many_error!(
     attribute 11 => {
         1: pub fn token_info_not_found(symbol) => "Token information not found in persistent storage: {symbol}.",
         2: pub fn ext_info_not_found(symbol) => "Token extended information not found in persistent storage: {symbol}.",
