@@ -42,7 +42,7 @@
     "disabled": true
   },
   {
-    "name": "Disable Token Mint/Burn Migration",
+    "name": "Disable Token Mint Migration",
     "block_height": 0,
     "disabled": true
   }

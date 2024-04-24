@@ -6,7 +6,7 @@ use many_migration::{InnerMigration, MigrationSet};
 pub mod block_9400;
 pub mod data;
 pub mod disable_token_create;
-pub mod disable_token_mint_burn;
+pub mod disable_token_mint;
 pub mod legacy_remove_roles;
 pub mod memo;
 pub mod token_create;
