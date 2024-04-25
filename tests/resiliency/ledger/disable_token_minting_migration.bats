@@ -1,6 +1,4 @@
-# Resiliency test verifying the Token Migration
-# New token metadata are stored in the DB after the migration
-# Token endpoints should be activated after the migration
+# Resiliency test verifying the Disable Token Minting Migration
 
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 MIGRATION_ROOT="$GIT_ROOT/staging/ledger_migrations.json"
@@ -84,4 +82,9 @@ function teardown() {
     check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
     check_consistency --pem=2 --balance=123 8000 8001 8002 8003
     check_consistency --pem=3 --balance=456 8000 8001 8002 8003
+
+    # Token burn should still work
+    call_ledger --pem=1 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\''' --error-on-under-burn
+    check_consistency --pem=2 --balance=0 8000 8001 8002 8003
+    check_consistency --pem=3 --balance=0 8000 8001 8002 8003
 }
