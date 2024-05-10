@@ -1,4 +1,5 @@
 use crate::error;
+use crate::migration::disable_token_mint::DISABLE_TOKEN_MINT_MIGRATION;
 use crate::migration::tokens::TOKEN_MIGRATION;
 use crate::module::LedgerModuleImpl;
 use crate::storage::ledger_tokens::verify_tokens_sender;
@@ -27,6 +28,16 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
     ) -> Result<TokenMintReturns, ManyError> {
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.mint"));
+        }
+
+        if self
+            .storage
+            .migrations()
+            .is_active(&DISABLE_TOKEN_MINT_MIGRATION)
+        {
+            return Err(ManyError::unknown(
+                "Token minting is disabled on this network",
+            ));
         }
 
         let TokenMintArgs {

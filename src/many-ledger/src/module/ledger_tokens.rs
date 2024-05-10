@@ -1,4 +1,5 @@
 use crate::error;
+use crate::migration::disable_token_create::DISABLE_TOKEN_CREATE_MIGRATION;
 use crate::migration::token_create::TOKEN_CREATE_MIGRATION;
 use crate::migration::tokens::TOKEN_MIGRATION;
 use crate::module::LedgerModuleImpl;
@@ -31,6 +32,16 @@ impl LedgerTokensModuleBackend for LedgerModuleImpl {
     ) -> Result<TokenCreateReturns, ManyError> {
         if !self.storage.migrations().is_active(&TOKEN_MIGRATION) {
             return Err(ManyError::invalid_method_name("tokens.create"));
+        }
+
+        if self
+            .storage
+            .migrations()
+            .is_active(&DISABLE_TOKEN_CREATE_MIGRATION)
+        {
+            return Err(ManyError::unknown(
+                "Token creation is disabled on this network",
+            ));
         }
 
         if !self.storage.migrations().is_active(&TOKEN_CREATE_MIGRATION) {

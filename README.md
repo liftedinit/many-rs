@@ -43,7 +43,7 @@ Features
 1. Tests
     ```shell
     # Unit/integration tests
-    $ bazel test //...
+    $ bazel test --config=all-features //...
    
     # E2E integration tests
     $ bazel test --config=all-features //tests/e2e/kvstore:bats-e2e-kvstore
@@ -52,7 +52,7 @@ Features
    
     # Resiliency integration tests (Linux only - requires Docker)
     $ bazel test //tests/resiliency/kvstore:bats-resiliency-kvstore 
-    $ bazel test --config=bats-resiliency-ledger //tests/resiliency/ledger:bats-resiliency-ledger
+    $ bazel test --config=all-features //tests/resiliency/ledger:bats-resiliency-ledger
     ```
 
 # Usage example
