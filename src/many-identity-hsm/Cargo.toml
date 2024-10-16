@@ -1,6 +1,6 @@
 [package]
 name = "many-identity-hsm"
-version = "0.2.5" # managed by release.sh
+version = "0.2.6" # managed by release.sh
 edition = "2021"
 description = "Hardware Security Module based identity, verifiers and utility functions."
 license-file = "../../LICENSE"
@@ -15,9 +15,9 @@ asn1 = "0.15.2"
 coset = "0.3.4"
 cryptoki = { version = "0.3.1", features = ["generate-bindings"] }
 hex = "0.4.3"
-many-error = { path = "../many-error", version = "0.2.5" } # managed by release.sh
-many-identity = { path = "../many-identity", version = "0.2.5" } # managed by release.sh
-many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa"], version = "0.2.5" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.2.6" } # managed by release.sh
+many-identity = { path = "../many-identity", version = "0.2.6" } # managed by release.sh
+many-identity-dsa = { path = "../many-identity-dsa", features = ["ecdsa"], version = "0.2.6" } # managed by release.sh
 once_cell = "1.17.1"
 p256 = "0.13.2"
 sha2 = "0.10.6"

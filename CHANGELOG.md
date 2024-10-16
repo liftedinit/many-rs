@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] - 2024-10-16
+
+### CI
+
+- Fix ubuntu image ([#421](https://github.com/liftedinit/many-rs/issues/421))
+
+### Features
+
+- Migrations disabling token creation and minting ([#420](https://github.com/liftedinit/many-rs/issues/420))
+
 ## [0.2.5] - 2023-10-25
 
 ### Bug Fixes

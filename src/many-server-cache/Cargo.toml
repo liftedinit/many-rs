@@ -1,6 +1,6 @@
 [package]
 name = "many-server-cache"
-version = "0.2.5" # managed by release.sh
+version = "0.2.6" # managed by release.sh
 edition = "2021"
 description = "Caching services for many-server."
 license-file = "../../LICENSE"
@@ -13,9 +13,9 @@ name = "many_server_cache"
 
 [dependencies]
 coset = "0.3"
-many-error = { path = "../many-error", version = "0.2.5" } # managed by release.sh
-many-protocol = { path = "../many-protocol", version = "0.2.5" } # managed by release.sh
-many-server = { path = "../many-server", version = "0.2.5" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.2.6" } # managed by release.sh
+many-protocol = { path = "../many-protocol", version = "0.2.6" } # managed by release.sh
+many-server = { path = "../many-server", version = "0.2.6" } # managed by release.sh
 rocksdb = { version = "0.19", default-features = false } # Need 0.19 and no default features to be the same as merk.
 sha2 ="0.10"
 
