@@ -32,6 +32,8 @@ function create_token() {
         assert_output --partial "Invalid Identity; the sender cannot be anonymous."
     elif [[ $error = "invalid_sender" ]]; then
         assert_output --partial "Unauthorised Token endpoints sender."
+    elif [[ $error = "disabled" ]]; then
+      assert_output --partial "Token creation is disabled on this network"
     else
         SYMBOL=$(echo $output | grep -oE '"m[a-z0-9]+"' | head -n 1)
         assert [ ${#SYMBOL} -eq 57 ]     # Check the account ID has the right length (55 chars + "")
