@@ -11,7 +11,7 @@ orbs:
 executors:
   linux2204:
     docker:
-      - image: cimg/rust:1.67
+      - image: cimg/rust:1.81
     resource_class: xlarge # 8 cores, 16Gb
   linux2204_machine:
     machine:
