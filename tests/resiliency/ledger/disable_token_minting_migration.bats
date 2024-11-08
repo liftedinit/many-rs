@@ -73,18 +73,35 @@ function teardown() {
     check_consistency --pem=2 --balance=123 8000 8001 8002 8003
     check_consistency --pem=3 --balance=456 8000 8001 8002 8003
 
+    # Create a new token
+    create_token --pem=1 --port=8000
+    call_ledger --pem=1 --port=8000 token update --name "\"ZZZ name\"" \
+        --ticker "ZZZ" \
+        --decimals "6" \
+        --memo "\"Update memo\"" \
+        --owner "$(identity 2)" \
+        "${SYMBOL}"
+
     # Disable Token Minting
     wait_for_block 35
 
-    # Token endpoints should be disabled
+    # MFX minting should still work
     call_ledger --pem=1 --port=8000 token mint MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
-    assert_output --partial "Token minting is disabled on this network"
+    refute_output --partial "Token minting is disabled on this network"
     check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
-    check_consistency --pem=2 --balance=123 8000 8001 8002 8003
-    check_consistency --pem=3 --balance=456 8000 8001 8002 8003
+    check_consistency --pem=2 --balance=246 8000 8001 8002 8003
+    check_consistency --pem=3 --balance=912 8000 8001 8002 8003
 
     # Token burn should still work
     call_ledger --pem=1 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\''' --error-on-under-burn
     check_consistency --pem=2 --balance=0 8000 8001 8002 8003
     check_consistency --pem=3 --balance=0 8000 8001 8002 8003
+
+    # ZZZ minting should fail
+    call_ledger --pem=1 --port=8000 token mint ZZZ ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
+    assert_output --partial "Token minting is disabled on this network"
+
+    call_ledger --port=8000 token info "${SYMBOL}"
+    assert_output --regexp "total:.*(.*0,.*)"
+    assert_output --regexp "circulating:.*(.*0,.*)"
 }
