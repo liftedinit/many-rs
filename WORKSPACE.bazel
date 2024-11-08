@@ -13,7 +13,7 @@ load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_regi
 
 rules_rust_dependencies()
 
-RUST_VERSION = "nightly/2023-09-20"
+RUST_VERSION = "stable"
 
 rust_register_toolchains(
     edition = "2021",
