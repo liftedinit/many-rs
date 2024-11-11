@@ -6,7 +6,7 @@ orbs:
   codecov: codecov/codecov@3.2.4
   detect: circleci/os-detect@0.3.0
   docker: circleci/docker@2.2.0
-  rust: circleci/rust@1.6.1
+  rust: circleci/rust@1.6.0
 
 executors:
   linux2204:
@@ -46,7 +46,6 @@ jobs:
           condition:
             equal: [ "linux2204", << parameters.os >> ]
           steps:
-            - rust/install
             - run:
                 name: install cbor-diag
                 command: cargo install --force cbor-diag-cli
