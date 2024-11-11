@@ -9,16 +9,20 @@ use many_modules::events::EventInfo;
 use many_modules::ledger;
 use many_modules::ledger::{TokenBurnArgs, TokenBurnReturns, TokenMintArgs, TokenMintReturns};
 use many_types::ledger::Symbol;
+use once_cell::sync::Lazy;
 use std::collections::BTreeSet;
 use std::str::FromStr;
-use once_cell::sync::Lazy;
 
 pub static MFX: Lazy<Address> = if cfg!(migration_testing) {
     // Test network MFX address
-    Lazy::new(|| { Address::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap() })
+    Lazy::new(|| {
+        Address::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap()
+    })
 } else {
     // Production network MFX address
-    Lazy::new(|| { Address::from_str("mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l").unwrap() })
+    Lazy::new(|| {
+        Address::from_str("mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l").unwrap()
+    })
 };
 
 /// Check if a symbol exists in the storage
@@ -48,9 +52,9 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
 
         if symbol != *MFX
             && self
-            .storage
-            .migrations()
-            .is_active(&DISABLE_TOKEN_MINT_MIGRATION)
+                .storage
+                .migrations()
+                .is_active(&DISABLE_TOKEN_MINT_MIGRATION)
         {
             return Err(ManyError::unknown(
                 "Token minting is disabled on this network",
@@ -129,11 +133,11 @@ impl LedgerModuleImpl {
                 .get_identity(crate::storage::ledger_tokens::TOKEN_IDENTITY_ROOT)
                 .or_else(|_| self.storage.get_identity(crate::storage::IDENTITY_ROOT))?,
         )
-            // Are we the token owner?
-            .or_else(|_| match self.storage.get_owner(symbol) {
-                Ok((Some(token_owner), _)) => verify_tokens_sender(sender, token_owner),
-                _ => Err(error::no_token_owner()),
-            })?;
+        // Are we the token owner?
+        .or_else(|_| match self.storage.get_owner(symbol) {
+            Ok((Some(token_owner), _)) => verify_tokens_sender(sender, token_owner),
+            _ => Err(error::no_token_owner()),
+        })?;
         Ok(())
     }
 }
