@@ -46,8 +46,7 @@ jobs:
           condition:
             equal: [ "linux2204", << parameters.os >> ]
           steps:
-            - rust/install:
-                version: nightly
+            - rust/install
             - run:
                 name: install cbor-diag
                 command: cargo install --force cbor-diag-cli
