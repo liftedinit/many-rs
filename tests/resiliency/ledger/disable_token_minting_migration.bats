@@ -34,7 +34,11 @@ function setup() {
 
     cp "$GIT_ROOT/staging/ledger_state.json5" "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
+    # Use production MFX address
     sed -i.bak 's/mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz/mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l/g' "$BATS_TEST_ROOTDIR/ledger_state.json5"
+
+    # Skip hash check
+    sed -i.bak 's/hash/\/\/hash/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
 
     (
       cd "$GIT_ROOT/docker/" || exit
