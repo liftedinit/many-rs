@@ -3,7 +3,7 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 MIGRATION_ROOT="$GIT_ROOT/staging/ledger_migrations.json"
 MAKEFILE="Makefile.ledger"
-MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
+MFX_ADDRESS=mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -32,11 +32,16 @@ function setup() {
         }' \
         "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
+    cp "$GIT_ROOT/staging/ledger_state.json5" "$BATS_TEST_ROOTDIR/ledger_state.json5"
+
+    sed -i.bak 's/mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz/mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l/g' "$BATS_TEST_ROOTDIR/ledger_state.json5"
+
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
       make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000" \
+          STATE="$BATS_TEST_ROOTDIR/ledger_state.json5" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
         echo '# Could not start nodes...' >&3
         exit 1

@@ -13,14 +13,7 @@ use once_cell::sync::Lazy;
 use std::collections::BTreeSet;
 use std::str::FromStr;
 
-// Test network MFX address
-#[cfg(migration_testing)]
-pub static MFX: Lazy<Address> = Lazy::new(|| {
-    Address::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap()
-});
-
 // Production network MFX address
-#[cfg(not(migration_testing))]
 pub static MFX: Lazy<Address> = Lazy::new(|| {
     Address::from_str("mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l").unwrap()
 });
