@@ -57,7 +57,7 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
                 .is_active(&DISABLE_TOKEN_MINT_MIGRATION)
         {
             return Err(ManyError::unknown(
-                "Token minting is disabled on this network",
+                "Token minting is disabled on this network: {symbol}",
             ));
         }
 
