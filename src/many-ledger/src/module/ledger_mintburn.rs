@@ -13,17 +13,17 @@ use once_cell::sync::Lazy;
 use std::collections::BTreeSet;
 use std::str::FromStr;
 
-pub static MFX: Lazy<Address> = if cfg!(migration_testing) {
-    // Test network MFX address
-    Lazy::new(|| {
-        Address::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap()
-    })
-} else {
-    // Production network MFX address
-    Lazy::new(|| {
-        Address::from_str("mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l").unwrap()
-    })
-};
+// Test network MFX address
+#[cfg(migration_testing)]
+pub static MFX: Lazy<Address> = Lazy::new(|| {
+    Address::from_str("mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz").unwrap()
+});
+
+// Production network MFX address
+#[cfg(not(migration_testing))]
+pub static MFX: Lazy<Address> = Lazy::new(|| {
+    Address::from_str("mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l").unwrap()
+});
 
 /// Check if a symbol exists in the storage
 fn check_symbol_exists(symbol: &Symbol, symbols: BTreeSet<Symbol>) -> Result<(), ManyError> {
@@ -52,9 +52,9 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
 
         if symbol != *MFX
             && self
-                .storage
-                .migrations()
-                .is_active(&DISABLE_TOKEN_MINT_MIGRATION)
+            .storage
+            .migrations()
+            .is_active(&DISABLE_TOKEN_MINT_MIGRATION)
         {
             return Err(ManyError::unknown(
                 format!("Token minting is disabled on this network: {symbol} != {}", *MFX),
@@ -133,11 +133,11 @@ impl LedgerModuleImpl {
                 .get_identity(crate::storage::ledger_tokens::TOKEN_IDENTITY_ROOT)
                 .or_else(|_| self.storage.get_identity(crate::storage::IDENTITY_ROOT))?,
         )
-        // Are we the token owner?
-        .or_else(|_| match self.storage.get_owner(symbol) {
-            Ok((Some(token_owner), _)) => verify_tokens_sender(sender, token_owner),
-            _ => Err(error::no_token_owner()),
-        })?;
+            // Are we the token owner?
+            .or_else(|_| match self.storage.get_owner(symbol) {
+                Ok((Some(token_owner), _)) => verify_tokens_sender(sender, token_owner),
+                _ => Err(error::no_token_owner()),
+            })?;
         Ok(())
     }
 }
