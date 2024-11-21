@@ -1,6 +1,7 @@
 # Options
 NB_NODES ?= 4
 ID_WITH_BALANCES ?=
+TOKEN ?=
 
 # Constants
 SHELL = bash
