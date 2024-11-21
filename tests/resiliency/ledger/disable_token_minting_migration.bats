@@ -103,7 +103,7 @@ function teardown() {
     check_consistency --pem=3 --balance=912 8000 8001 8002 8003
 
     # Token burn should still work
-    call_ledger --pem=1 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\''' --error-on-under-burn
+    call_ledger --pem=1 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 246, "'$(identity 3)'": 912}'\''' --error-on-under-burn
     check_consistency --pem=2 --balance=0 8000 8001 8002 8003
     check_consistency --pem=3 --balance=0 8000 8001 8002 8003
 
