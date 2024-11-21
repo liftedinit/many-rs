@@ -45,13 +45,14 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
 
         if symbol != *MFX
             && self
-            .storage
-            .migrations()
-            .is_active(&DISABLE_TOKEN_MINT_MIGRATION)
+                .storage
+                .migrations()
+                .is_active(&DISABLE_TOKEN_MINT_MIGRATION)
         {
-            return Err(ManyError::unknown(
-                format!("Token minting is disabled on this network: {symbol} != {}", *MFX),
-            ));
+            return Err(ManyError::unknown(format!(
+                "Token minting is disabled on this network: {symbol} != {}",
+                *MFX
+            )));
         }
 
         self.verify_mint_burn_identity(sender, &symbol)?;
@@ -126,11 +127,11 @@ impl LedgerModuleImpl {
                 .get_identity(crate::storage::ledger_tokens::TOKEN_IDENTITY_ROOT)
                 .or_else(|_| self.storage.get_identity(crate::storage::IDENTITY_ROOT))?,
         )
-            // Are we the token owner?
-            .or_else(|_| match self.storage.get_owner(symbol) {
-                Ok((Some(token_owner), _)) => verify_tokens_sender(sender, token_owner),
-                _ => Err(error::no_token_owner()),
-            })?;
+        // Are we the token owner?
+        .or_else(|_| match self.storage.get_owner(symbol) {
+            Ok((Some(token_owner), _)) => verify_tokens_sender(sender, token_owner),
+            _ => Err(error::no_token_owner()),
+        })?;
         Ok(())
     }
 }
