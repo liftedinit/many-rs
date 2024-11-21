@@ -3,7 +3,7 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 MIGRATION_ROOT="$GIT_ROOT/staging/ledger_migrations.json"
 MAKEFILE="Makefile.ledger"
-MFX_ADDRESS=mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l
+MFX_ADDRESS_PROD=mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -22,13 +22,13 @@ function setup() {
         (.migrations[] | select(.name == "Token Migration")) |= . + {
             "token_identity": "'$(identity 1)'",
             "token_next_subresource": 0,
-            "symbol": "'${MFX_ADDRESS}'",
+            "symbol": "'${MFX_ADDRESS_PROD}'",
             "symbol_name": "Manifest Network Token",
             "symbol_decimals": 9,
             "symbol_total": 100000000000000,
             "symbol_circulating": 100000000000000,
             "symbol_maximum": null,
-            "symbol_owner": "'${MFX_ADDRESS}'"
+            "symbol_owner": "'${MFX_ADDRESS_PROD}'"
         }' \
         "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
@@ -46,7 +46,7 @@ function setup() {
       make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000" \
           STATE="$BATS_TEST_ROOTDIR/ledger_state.json5" \
-          TOKEN="$MFX_ADDRESS" \
+          TOKEN="$MFX_ADDRESS_PROD" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
         echo '# Could not start nodes...' >&3
         exit 1
@@ -71,7 +71,7 @@ function teardown() {
     check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
 
     # Token endpoints should be disabled
-    call_ledger --pem=1 --port=8000 token info ${MFX_ADDRESS}
+    call_ledger --pem=1 --port=8000 token info ${MFX_ADDRESS_PROD}
     assert_output --partial "Invalid method name"
 
     # Enable Token Migration
