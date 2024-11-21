@@ -46,6 +46,7 @@ function setup() {
       make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000" \
           STATE="$BATS_TEST_ROOTDIR/ledger_state.json5" \
+          TOKEN="$MFX_ADDRESS" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
         echo '# Could not start nodes...' >&3
         exit 1
