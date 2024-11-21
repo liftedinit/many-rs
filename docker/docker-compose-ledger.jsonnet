@@ -1,6 +1,6 @@
 //
 
-local generate_balance_flags(id_with_balances, token) =
+local generate_balance_flags(id_with_balances="", token="mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz") =
     if std.length(id_with_balances) == 0 then
         []
     else std.map(
