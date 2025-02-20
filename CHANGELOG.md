@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2025-02-20
+
+### Bug Fixes
+
+- Allow mfx minting only ([#422](https://github.com/liftedinit/many-rs/issues/422))
+
 ## [0.2.6] - 2024-10-16
 
 ### CI

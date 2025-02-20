@@ -1,6 +1,6 @@
 [package]
 name = "genesis-from-db"
-version = "0.2.6" # managed by release.sh
+version = "0.3.0" # managed by release.sh
 edition = "2021"
 description = "Create new genesis file from existing storage."
 license-file = "../../LICENSE"
@@ -17,10 +17,10 @@ base64 = "0.21.2"
 clap = { version = "3.2.25", features = ["derive"] }
 const_format = "0.2.31"
 hex = "0.4.3"
-many-error = { path = "../many-error", version = "0.2.6" } # managed by release.sh
-many-ledger = { path = "../many-ledger", version = "0.2.6" } # managed by release.sh
-many-modules = { path = "../many-modules", version = "0.2.6" } # managed by release.sh
-many-types = { path = "../many-types", version = "0.2.6" } # managed by release.sh
+many-error = { path = "../many-error", version = "0.3.0" } # managed by release.sh
+many-ledger = { path = "../many-ledger", version = "0.3.0" } # managed by release.sh
+many-modules = { path = "../many-modules", version = "0.3.0" } # managed by release.sh
+many-types = { path = "../many-types", version = "0.3.0" } # managed by release.sh
 merk = { git = "https://github.com/liftedinit/merk.git", rev = "857bf81963d9282ab03438da5013e1f816bd9da1" }
 minicbor = "0.19.1"
 serde = "=1.0.163"
